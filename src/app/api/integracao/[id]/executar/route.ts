@@ -11,6 +11,11 @@ function maskSensitive(value: string): string {
   return value.slice(0, 4) + "****" + value.slice(-4)
 }
 
+const loginTokenCache = new Map<
+  number,
+  { token: string; expiresAt: number }
+>()
+
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const startTime = Date.now()
   try {
@@ -37,19 +42,75 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     }
 
     const { searchParams: reqParams } = new URL(req.url)
+    let baseUrl = integracao.baseUrl
+    const extras: [string, string][] = []
+    reqParams.forEach((value: any, key: any) => {
+      if (key === "tela") return
+      const token = `{${key}}`
+      if (baseUrl.includes(token)) {
+        baseUrl = baseUrl.split(token).join(encodeURIComponent(value))
+      } else {
+        extras.push([key, value])
+      }
+    })
     let url: URL
     try {
-      url = new URL(integracao.baseUrl)
+      url = new URL(baseUrl)
     } catch {
       return NextResponse.json({ error: "URL base inválida" }, { status: 400 })
     }
-    reqParams.forEach((value: any, key: any) => {
-      if (key !== "tela") {
-        url.searchParams.set(key, value)
-      }
-    })
+    for (const [key, value] of extras) {
+      url.searchParams.set(key, value)
+    }
 
     switch (integracao.tipoAuth) {
+      case "login": {
+        const loginUrl = authConfig.login_url as string
+        const email = authConfig.email as string
+        const senha = authConfig.senha as string
+        const emailField = (authConfig.email_field as string) || "email"
+        const senhaField = (authConfig.senha_field as string) || "senha"
+        const tokenField = (authConfig.token_field as string) || "token"
+        if (loginUrl && email && senha) {
+          const cached = loginTokenCache.get(id)
+          if (!cached || cached.expiresAt < Date.now()) {
+            const loginRes = await fetch(loginUrl, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ [emailField]: email, [senhaField]: senha }),
+              signal: AbortSignal.timeout(15000),
+            })
+            if (!loginRes.ok) {
+              const errText = await loginRes.text().catch(() => "unknown")
+              return NextResponse.json({
+                success: false,
+                error: `Falha no login: ${loginRes.status} ${errText}`,
+                status: loginRes.status,
+                time: Date.now() - startTime,
+              })
+            }
+            const loginData = await loginRes.json()
+            const token = loginData?.[tokenField] as string | undefined
+            if (!token) {
+              return NextResponse.json({
+                success: false,
+                error: "Login não retornou token",
+                status: loginRes.status,
+                time: Date.now() - startTime,
+              })
+            }
+            const expiraMin = Number(loginData?.expira_em_minutos || 25)
+            loginTokenCache.set(id, {
+              token,
+              expiresAt: Date.now() + expiraMin * 60 * 1000,
+            })
+            headers["Authorization"] = `Bearer ${token}`
+          } else {
+            headers["Authorization"] = `Bearer ${cached.token}`
+          }
+        }
+        break
+      }
       case "bearer": {
         const token = authConfig.token as string
         if (token) headers["Authorization"] = `Bearer ${token}`

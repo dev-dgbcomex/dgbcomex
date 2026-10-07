@@ -5,6 +5,7 @@ export const TIPO_AUTH_LABEL: Record<string, string> = {
   basic: "Basic Auth",
   api_key: "API Key",
   bearer: "Bearer Token",
+  login: "Login",
 }
 
 export const TIPO_AUTH_ICON: Record<string, string> = {
@@ -12,6 +13,7 @@ export const TIPO_AUTH_ICON: Record<string, string> = {
   basic: "text-blue-600 bg-blue-50 dark:bg-blue-950/50",
   api_key: "text-amber-600 bg-amber-50 dark:bg-amber-950/50",
   bearer: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/50",
+  login: "text-rose-600 bg-rose-50 dark:bg-rose-950/50",
 }
 
 export const PDM_CAMPOS_POR_TELA: Record<string, { label: string; value: string }[]> = {
@@ -105,6 +107,15 @@ export function getAuthPlaceholder(tipo: TipoAuth): string {
     basic: JSON.stringify({ username: "admin", password: "123456" }, null, 2),
     api_key: JSON.stringify({ key: "abc123", key_name: "x-api-key", in: "header" }, null, 2),
     bearer: JSON.stringify({ token: "abc123xyz" }, null, 2),
+    login: JSON.stringify(
+      {
+        login_url: "https://api.exemplo.com/auth/login",
+        email: "servico@empresa.com",
+        senha: "123456",
+      },
+      null,
+      2
+    ),
   }
   return examples[tipo]
 }

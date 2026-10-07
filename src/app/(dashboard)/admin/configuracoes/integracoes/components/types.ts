@@ -1,4 +1,4 @@
-export type TipoAuth = "oauth2" | "basic" | "api_key" | "bearer"
+export type TipoAuth = "oauth2" | "basic" | "api_key" | "bearer" | "login"
 
 export interface Integracao {
   id: number
