@@ -448,6 +448,14 @@ export const searchRegistry: SearchItem[] = [
     module: "Administrativo",
   },
   {
+    id: "bi-integracoes",
+    label: "BI Integrações",
+    keywords: ["bi", "kpi", "integracoes", "indicadores", "dashboard", "microdata", "faturamento"],
+    href: "/bi/integracoes",
+    description: "KPIs consumidos das integrações cadastradas",
+    module: "BI",
+  },
+  {
     id: "admin-permissoes",
     label: "Permissões",
     keywords: ["permissao", "acesso", "admin", "seguranca", "role"],
@@ -1324,16 +1332,7 @@ export const searchRegistry: SearchItem[] = [
   {
     id: "chamados",
     label: "Chamados",
-    keywords: [
-      "chamado",
-      "ticket",
-      "suporte",
-      "ti",
-      "manutencao",
-      "sla",
-      "atendimento",
-      "lista",
-    ],
+    keywords: ["chamado", "ticket", "suporte", "ti", "manutencao", "sla", "atendimento", "lista"],
     href: "/chamados",
     description: "Lista de chamados de TI e manutenção com filas, SLAs e acompanhamento",
     module: "Chamados",

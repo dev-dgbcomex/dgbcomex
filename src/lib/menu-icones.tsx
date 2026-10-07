@@ -185,6 +185,7 @@ const URL_ICONES: [string, LucideIcon][] = [
   ["/cadastros", Database],
   ["/dashboard/relatorios", BarChart3],
   ["/dashboard", LayoutDashboard],
+  ["/bi/integracoes", BarChart3],
   ["/bi", BarChart3],
   ["/documentos/romaneios", Truck],
   ["/documentos", FileText],
