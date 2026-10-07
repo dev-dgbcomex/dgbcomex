@@ -110,26 +110,32 @@ const resumoComparativo = (campo: string): ResumoKpi[] => [
 
 export const BI_KPI_METADADOS: Record<string, IntegracaoKpiMeta> = {
   "Faturamento do Dia": {
+    titulo: "Faturamento",
     descricao:
-      "Faturamento do MÊS selecionado — não de um dia. O seletor de data define qual mês; o valor soma as notas de 1º até o último dia daquele mês. Para um dia específico, use o card 'Faturamento Dia (diário)'.",
+      "Faturamento do MÊS selecionado — não de um dia. O seletor de data define qual mês; o valor soma as notas de 1º até o último dia daquele mês e compara com o mês anterior e o acumulado do ano (atual e anterior). Para um dia específico, use o card 'Faturamento Dia (diário)'.",
     resumo: [
       {
-        rotulo: "Faturamento do mês",
-        caminho: ["Faturamento"],
+        rotulo: "Faturamento mês atual",
+        caminho: ["MesAtual", "Faturamento"],
         formato: "brl",
         destaque: true,
       },
+      { rotulo: "Mês anterior", caminho: ["MesAnterior", "Faturamento"], formato: "brl" },
+      { rotulo: "Ano atual", caminho: ["AnoAtual", "Faturamento"], formato: "brl" },
+      { rotulo: "Ano anterior", caminho: ["AnoAnterior", "Faturamento"], formato: "brl" },
     ],
     campos: { Faturamento },
+    janelas: janelasComparativas(Faturamento),
     regras: [
-      "Janela: mês inteiro da data selecionada (1º dia até o último dia).",
-      "Fórmula: Σ(Vr_Total + Acres_Desc) das notas emitidas no mês — mesma uspFaturamento do legado.",
+      "Janela do mês atual: 1º dia até o último dia do mês da data selecionada.",
+      "Fórmula: Σ(Vr_Total + Acres_Desc) das notas emitidas — vwFaturamento ao vivo (a mesma fonte do card 'Custos Administrativos Mensal').",
+      "Ano atual acumula de 1º de janeiro até o fim do mês selecionado; ano anterior é o ano inteiro.",
     ],
     exemplos: [
       {
-        titulo: "Mês inteiro",
+        titulo: "Mês inteiro com comparativo",
         descricao:
-          "Com o seletor em 06/10/2026, o valor soma todas as notas emitidas de 01 a 31/10/2026.",
+          "Com o seletor em 06/10/2026, o 'Faturamento mês atual' soma as notas emitidas de 01 a 31/10/2026; 'Mês anterior' compara com setembro; 'Ano atual' é o acumulado de jan/out; 'Ano anterior', o total de todo o ano passado.",
       },
       {
         titulo: "Não confunda com o card diário",

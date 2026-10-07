@@ -56,7 +56,12 @@ function montarFetch(handler: (params: { method: string; url: string }) => any) 
 }
 
 const respostas = {
-  1: { Faturamento: 256034.34 },
+  1: {
+    MesAtual: { Faturamento: 373631.58 },
+    MesAnterior: { Faturamento: 1508833.55 },
+    AnoAtual: { Faturamento: 7861871.64 },
+    AnoAnterior: { Faturamento: 26430276.47 },
+  },
   2: {
     Faturamento: { Total: 27522110.16, Media: 2293509.18 },
     Administrativo: { Total: 9906460.7, Media: 825538.39 },
@@ -101,12 +106,13 @@ describe("BiIntegracoesPage", () => {
     const element = await BiIntegracoesPage()
     renderPage(element)
 
-    expect(await screen.findByText("Faturamento do Dia")).toBeInTheDocument()
+    expect(await screen.findByText("Faturamento")).toBeInTheDocument()
     expect(screen.getByText("Média – Custo administrativo 12 meses")).toBeInTheDocument()
     expect(screen.getByText("Custos Administrativos Mensal")).toBeInTheDocument()
 
     await waitFor(() => {
-      expect(screen.getByText("Faturamento do mês")).toBeInTheDocument()
+      expect(screen.getByText("Faturamento mês atual")).toBeInTheDocument()
+      expect(screen.getAllByText("R$ 373.631,58").length).toBeGreaterThanOrEqual(2)
       expect(screen.getByText("R$ 2.293.509,18")).toBeInTheDocument()
       expect(screen.getByText("R$ 825.538,39")).toBeInTheDocument()
       expect(screen.getByText("R$ 9.906.460,70")).toBeInTheDocument()
@@ -114,6 +120,9 @@ describe("BiIntegracoesPage", () => {
       expect(screen.getByText("Custo administrativo do mês atual")).toBeInTheDocument()
       expect(screen.getByText("Mês anterior — custo administrativo")).toBeInTheDocument()
       expect(screen.getByText("Mês atual")).toBeInTheDocument()
+      expect(screen.getAllByText("Mês anterior").length).toBeGreaterThanOrEqual(2)
+      expect(screen.getAllByText("Ano atual").length).toBeGreaterThanOrEqual(2)
+      expect(screen.getByText("R$ 26.430.276,47")).toBeInTheDocument()
       expect(screen.getByText("R$ 3.347.037,43")).toBeInTheDocument()
       expect(screen.queryByText(/Armazenagem/)).not.toBeInTheDocument()
     })
