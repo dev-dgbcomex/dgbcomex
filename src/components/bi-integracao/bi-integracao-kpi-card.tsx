@@ -96,7 +96,7 @@ export function BiIntegracaoKpiCard({
             setInfoAberta(true)
           }
         }}
-        className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 card-hover cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+        className="h-full flex flex-col rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 card-hover cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
       >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
@@ -178,7 +178,7 @@ export function BiIntegracaoKpiCard({
         </div>
       </div>
 
-      <div className="mt-3 space-y-1">
+      <div className="mt-3 flex-1 space-y-1">
         {isError && (
           <p className="text-xs text-red-600 dark:text-red-400">{(error as Error).message}</p>
         )}

@@ -51,7 +51,7 @@ function CardOrdenado({
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform ?? null), transition }}
-      className={isDragging ? "z-10" : "z-0"}
+      className={`h-full ${isDragging ? "z-10" : "z-0"}`}
     >
       <BiIntegracaoKpiCard
         integracao={integracao}
@@ -227,7 +227,7 @@ export function BiIntegracaoDashboard() {
             items={ordenadas.map((i) => i.id)}
             strategy={verticalListSortingStrategy}
           >
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="grid gap-4 auto-rows-fr sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {ordenadas.map((integracao) => (
                 <CardOrdenado
                   key={integracao.id}
