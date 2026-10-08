@@ -236,6 +236,71 @@ describe("BiIntegracoesPage", () => {
     expect(await screen.findByText(/Nenhuma integração com a tela/)).toBeInTheDocument()
   })
 
+  it("cards enriquecidos mostram 3 dias no diário e o mês nos programados", async () => {
+    const lista = [
+      {
+        id: 11,
+        nome: "Faturamento Dia (diário)",
+        baseUrl: "http://127.0.0.1:58245/faturamento-dia/{data}",
+        tipoAuth: "login",
+        telas: ["bi"],
+      },
+      {
+        id: 12,
+        nome: "Contas a Receber Programado",
+        baseUrl: "http://127.0.0.1:58245/contas-receber-programado",
+        tipoAuth: "login",
+        telas: ["bi"],
+      },
+      {
+        id: 13,
+        nome: "Contas a Pagar Programado",
+        baseUrl: "http://127.0.0.1:58245/contas-pagar-programado",
+        tipoAuth: "login",
+        telas: ["bi"],
+      },
+    ]
+    const corpos: Record<number, unknown> = {
+      11: { Faturamento: 405873.56, Ontem: 1508833.55, Anteontem: 987654.32 },
+      12: { QtdeDoc: 876, ValorTotal: 3339914.63, QtdeDocMes: 310, ValorTotalMes: 1234567.89 },
+      13: { QtdeDoc: 112, ValorTotal: 3863206.88, QtdeDocMes: 45, ValorTotalMes: 765432.1 },
+    }
+    const fetchMock = createFetchMock(({ method, url }) => {
+      if (url === "/api/integracao/listar?tela=bi") return { json: lista }
+      if (url === "/api/integracao/ordem") {
+        if (method === "GET") return { json: { ids: [] } }
+        if (method === "PUT") return { json: { success: true } }
+      }
+      const execucao = url.match(/\/api\/integracao\/(\d+)\/executar/)
+      if (execucao) {
+        return {
+          json: { success: true, status: 200, time: 1, responseBody: corpos[Number(execucao[1])] },
+        }
+      }
+      return { status: 404, json: { error: `Rota não mockada: ${method} ${url}` } }
+    })
+    vi.stubGlobal("fetch", fetchMock.fn)
+    const element = await BiIntegracoesPage()
+    renderPage(element)
+
+    await waitFor(() => {
+      expect(screen.getByText("Hoje")).toBeInTheDocument()
+      expect(screen.getByText("Ontem")).toBeInTheDocument()
+      expect(screen.getByText("Anteontem")).toBeInTheDocument()
+      expect(screen.getByText("R$ 405.873,56")).toBeInTheDocument()
+      expect(screen.getByText("R$ 1.508.833,55")).toBeInTheDocument()
+      expect(screen.getByText("R$ 987.654,32")).toBeInTheDocument()
+      expect(screen.getByText("Títulos a receber no mês")).toBeInTheDocument()
+      expect(screen.getByText("A receber no mês")).toBeInTheDocument()
+      expect(screen.getByText("R$ 1.234.567,89")).toBeInTheDocument()
+      expect(screen.getByText("Títulos a pagar no mês")).toBeInTheDocument()
+      expect(screen.getByText("A pagar no mês")).toBeInTheDocument()
+      expect(screen.getByText("R$ 765.432,10")).toBeInTheDocument()
+      expect(screen.getByText("310")).toBeInTheDocument()
+      expect(screen.getByText("45")).toBeInTheDocument()
+    })
+  })
+
   it("aplica a ordem salva pelo usuário e permite reordenar com as setas", async () => {
     const fetchMock = montarFetch(
       ({ url }) => {

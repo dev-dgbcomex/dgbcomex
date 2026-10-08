@@ -146,24 +146,43 @@ export const BI_KPI_METADADOS: Record<string, IntegracaoKpiMeta> = {
   },
   "Faturamento Dia (diário)": {
     descricao:
-      "Faturamento do DIA selecionado. Soma das notas emitidas apenas na data escolhida no seletor de data. Para o mês inteiro, use o card 'Faturamento do Dia'.",
+      "Faturamento de hoje, ontem e anteontem (relativos à data escolhida no seletor — por padrão, hoje). Soma das notas emitidas em cada dia. Para o mês inteiro, use o card 'Faturamento do Dia'.",
     resumo: [
       {
-        rotulo: "Faturamento do dia",
+        rotulo: "Hoje",
         caminho: ["Faturamento"],
         formato: "brl",
         destaque: true,
       },
+      { rotulo: "Ontem", caminho: ["Ontem"], formato: "brl" },
+      { rotulo: "Anteontem", caminho: ["Anteontem"], formato: "brl" },
     ],
-    campos: { Faturamento },
+    campos: {
+      Faturamento: {
+        rotulo: "Hoje",
+        descricao: "Faturamento do dia selecionado (hoje, quando o seletor está em hoje).",
+        formato: "brl",
+      },
+      Ontem: {
+        rotulo: "Ontem",
+        descricao: "Faturamento do dia anterior ao selecionado.",
+        formato: "brl",
+      },
+      Anteontem: {
+        rotulo: "Anteontem",
+        descricao: "Faturamento de dois dias antes do selecionado.",
+        formato: "brl",
+      },
+    },
     regras: [
-      "Janela: apenas a data selecionada (Data_Nota = data).",
+      "Janela: cada dia é calculado isoladamente (Data_Nota = dia).",
       "Sem movimento no dia, o valor é R$ 0,00 (comportamento do legado, ISNULL(...,0)).",
+      "Hoje, Ontem e Anteontem são relativos à data escolhida no seletor de data.",
     ],
     exemplos: [
       {
         titulo: "Um dia específico",
-        descricao: "Com o seletor em 06/10/2026, o valor soma apenas as notas emitidas nesse dia.",
+        descricao: "Com o seletor em 06/10/2026, 'Hoje' é 06/10, 'Ontem' é 05/10 e 'Anteontem' é 04/10.",
       },
     ],
   },
@@ -400,7 +419,7 @@ export const BI_KPI_METADADOS: Record<string, IntegracaoKpiMeta> = {
   },
   "Contas a Receber Programado": {
     descricao:
-      "O que ainda falta receber: títulos com vencimento a partir de hoje. Inclui os vencidos do mês corrente que ainda não entraram.",
+      "O que ainda falta receber: títulos com vencimento a partir de hoje, com destaque para o que vence neste mês. Inclui os vencidos do mês corrente que ainda não entraram.",
     resumo: [
       {
         rotulo: "Títulos a receber",
@@ -409,6 +428,8 @@ export const BI_KPI_METADADOS: Record<string, IntegracaoKpiMeta> = {
         destaque: true,
       },
       { rotulo: "Total a receber", caminho: ["ValorTotal"], formato: "brl" },
+      { rotulo: "Títulos a receber no mês", caminho: ["QtdeDocMes"], formato: "qtde" },
+      { rotulo: "A receber no mês", caminho: ["ValorTotalMes"], formato: "brl" },
     ],
     campos: {
       QtdeDoc: {
@@ -421,22 +442,33 @@ export const BI_KPI_METADADOS: Record<string, IntegracaoKpiMeta> = {
         descricao: "Soma dos valores a receber com vencimento a partir de hoje.",
         formato: "brl",
       },
+      QtdeDocMes: {
+        rotulo: "Títulos a receber no mês",
+        descricao: "Quantidade de documentos com vencimento entre 1º e o último dia do mês corrente.",
+        formato: "qtde",
+      },
+      ValorTotalMes: {
+        rotulo: "A receber no mês",
+        descricao: "Soma dos valores com vencimento entre 1º e o último dia do mês corrente.",
+        formato: "brl",
+      },
     },
     regras: [
       "Janela: vencimento ≥ 1º dia do mês corrente até 2050-12-31 (rede de segurança).",
       "Inclui títulos vencidos do mês corrente que ainda não foram recebidos.",
+      "Janela do mês: vencimento entre 1º e o último dia do mês corrente — é a parte do total que vence neste mês.",
     ],
     exemplos: [
       {
         titulo: "Como ler",
         descricao:
-          "12 títulos somando R$ 450 mil = ainda há R$ 450 mil para entrar no caixa (contas com vencimento de hoje em diante).",
+          "876 títulos somando R$ 3,34 mi = ainda há R$ 3,34 mi para entrar no caixa; dos quais 310 títulos (R$ 1,23 mi) vencem neste mês.",
       },
     ],
   },
   "Contas a Pagar Programado": {
     descricao:
-      "O que ainda falta pagar: títulos com vencimento a partir de hoje. Inclui os vencidos do mês corrente que ainda não foram pagos.",
+      "O que ainda falta pagar: títulos com vencimento a partir de hoje, com destaque para o que vence neste mês. Inclui os vencidos do mês corrente que ainda não foram pagos.",
     resumo: [
       {
         rotulo: "Títulos a pagar",
@@ -445,6 +477,8 @@ export const BI_KPI_METADADOS: Record<string, IntegracaoKpiMeta> = {
         destaque: true,
       },
       { rotulo: "Total a pagar", caminho: ["ValorTotal"], formato: "brl" },
+      { rotulo: "Títulos a pagar no mês", caminho: ["QtdeDocMes"], formato: "qtde" },
+      { rotulo: "A pagar no mês", caminho: ["ValorTotalMes"], formato: "brl" },
     ],
     campos: {
       QtdeDoc: {
@@ -457,16 +491,27 @@ export const BI_KPI_METADADOS: Record<string, IntegracaoKpiMeta> = {
         descricao: "Soma dos valores a pagar com vencimento a partir de hoje.",
         formato: "brl",
       },
+      QtdeDocMes: {
+        rotulo: "Títulos a pagar no mês",
+        descricao: "Documentos distintos com vencimento entre 1º e o último dia do mês corrente.",
+        formato: "qtde",
+      },
+      ValorTotalMes: {
+        rotulo: "A pagar no mês",
+        descricao: "Soma dos valores com vencimento entre 1º e o último dia do mês corrente.",
+        formato: "brl",
+      },
     },
     regras: [
       "Janela: vencimento ≥ 1º dia do mês corrente até 2050-12-31 (rede de segurança).",
       "A contagem considera documentos DISTINTOS (diferença do receber, que conta linhas).",
+      "Janela do mês: vencimento entre 1º e o último dia do mês corrente — é a parte do total que vence neste mês.",
     ],
     exemplos: [
       {
         titulo: "Como ler",
         descricao:
-          "8 títulos somando R$ 90 mil = ainda há R$ 90 mil comprometidos para pagar (contas com vencimento de hoje em diante).",
+          "112 títulos somando R$ 3,86 mi = ainda há R$ 3,86 mi comprometidos para pagar; dos quais 45 títulos (R$ 765 mil) vencem neste mês.",
       },
     ],
   },
