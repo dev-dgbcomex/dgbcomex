@@ -4,8 +4,7 @@ import { useEffect, useRef, useState, useCallback } from "react"
 import Link from "next/link"
 import { ArrowRight, ShoppingCart, Settings, PenTool, Users, Wrench } from "lucide-react"
 
-const PDM_TOOLTIP =
-  "PDM·PRO·TÊXTIL — Plataforma completa de gestão para a indústria têxtil. Integra Comercial, CRM, Desenvolvimento (Tecelagem e Beneficiamento), PCP e Admin em um único sistema. Gestão de clientes, leads, propostas, amostras, fichas técnicas, receitas, roteiros de produção, e-mail marketing, notificações inteligentes e exportação para ERP."
+const TOOLTIP_TEXT = "Sistema de Operações DGBCOMEX"
 
 const DEPARTMENTS = [
   {
@@ -219,21 +218,24 @@ export default function LandingPage() {
                     tooltipAbove ? "bottom-full mb-3" : "top-full mt-3"
                   }`}
                 >
-                  {PDM_TOOLTIP}
+                  {TOOLTIP_TEXT}
                 </div>
               )}
             </div>
-            <p className="text-xl text-slate-400 mb-12 font-light bg-slate-900/50 px-4 py-2 rounded-lg border border-slate-800 inline-block">
-              Sistema Operacional Comex
-            </p>
-
-            <Link
-              href="/login"
-              className="inline-flex items-center gap-2 px-8 py-4 bg-white text-black font-medium rounded-lg hover:bg-slate-200 transition-colors"
-            >
-              Acessar Sistema
-              <ArrowRight size={18} />
-            </Link>
+            <div className="text-center mb-12">
+              <p className="text-xl text-slate-400 font-light bg-slate-900/50 px-4 py-2 rounded-lg border border-slate-800 inline-block">
+                Sistema Operacional Comex
+              </p>
+              <div className="mt-8 flex justify-center">
+                <Link
+                  href="/login"
+                  className="inline-flex items-center gap-2 px-8 py-4 bg-white text-black font-medium rounded-lg hover:bg-slate-200 transition-colors"
+                >
+                  Acessar Sistema
+                  <ArrowRight size={18} />
+                </Link>
+              </div>
+            </div>
 
             <div className="mt-16 grid grid-cols-2 md:grid-cols-5 gap-4 text-center">
               {DEPARTMENTS.map((dept: any) => (

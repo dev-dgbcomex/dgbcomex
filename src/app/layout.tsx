@@ -4,7 +4,7 @@ import "leaflet/dist/leaflet.css"
 import { cn } from "@/lib/utils"
 
 export const metadata: Metadata = {
-  title: "PDM Pro Moda",
+  title: "DGBCOMEX",
   description: "Sistema de gestão de desenvolvimento de produtos têxteis",
 }
 
