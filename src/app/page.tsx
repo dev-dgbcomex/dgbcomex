@@ -2,18 +2,12 @@
 
 import { useEffect, useRef, useState, useCallback } from "react"
 import Link from "next/link"
-import { ArrowRight, Factory, ShoppingCart, Settings, PenTool, Users, Wrench } from "lucide-react"
+import { ArrowRight, ShoppingCart, Settings, PenTool, Users, Wrench } from "lucide-react"
 
 const PDM_TOOLTIP =
   "PDM·PRO·TÊXTIL — Plataforma completa de gestão para a indústria têxtil. Integra Comercial, CRM, Desenvolvimento (Tecelagem e Beneficiamento), PCP e Admin em um único sistema. Gestão de clientes, leads, propostas, amostras, fichas técnicas, receitas, roteiros de produção, e-mail marketing, notificações inteligentes e exportação para ERP."
 
 const DEPARTMENTS = [
-  {
-    icon: Factory,
-    abbr: "PCP",
-    label: "Planejamento",
-    phrase: "Controle total da produção — do fio ao tecido acabado",
-  },
   {
     icon: ShoppingCart,
     abbr: "COM",
@@ -199,7 +193,7 @@ export default function LandingPage() {
 
       <div className="relative z-10 min-h-screen flex flex-col">
         <header className="px-8 py-6 flex justify-between items-center">
-          <div className="text-xl font-bold text-white tracking-wide">PDM·PRO·TÊXTIL</div>
+          <div className="text-xl font-bold text-white tracking-wide">DGBCOMEX</div>
           <Link
             href="/login"
             className="px-5 py-2 text-sm text-slate-300 hover:text-white transition-colors border border-slate-600 hover:border-slate-400 rounded"
@@ -216,7 +210,7 @@ export default function LandingPage() {
                 onMouseEnter={() => setShowTooltip(true)}
                 onMouseLeave={() => setShowTooltip(false)}
               >
-                PDM·PRO·TÊXTIL
+                DGBCOMEX
               </h1>
               {showTooltip && (
                 <div
@@ -230,7 +224,7 @@ export default function LandingPage() {
               )}
             </div>
             <p className="text-xl text-slate-400 mb-12 font-light bg-slate-900/50 px-4 py-2 rounded-lg border border-slate-800 inline-block">
-              Sistema de gestão de desenvolvimento de produtos têxteis
+              Sistema Operacional Comex
             </p>
 
             <Link
@@ -241,7 +235,7 @@ export default function LandingPage() {
               <ArrowRight size={18} />
             </Link>
 
-            <div className="mt-16 grid grid-cols-2 md:grid-cols-6 gap-4 text-center">
+            <div className="mt-16 grid grid-cols-2 md:grid-cols-5 gap-4 text-center">
               {DEPARTMENTS.map((dept: any) => (
                 <div
                   key={dept.abbr}
@@ -261,7 +255,7 @@ export default function LandingPage() {
 
         <footer className="px-8 py-4 text-center">
           <p className="text-xs text-slate-600">
-            © 2026 PDM·PRO·TÊXTIL | @devtiagoabreu · Todos os direitos reservados
+            © 2026 DGBCOMEX | AtriosTech · Todos os direitos reservados
           </p>
         </footer>
       </div>

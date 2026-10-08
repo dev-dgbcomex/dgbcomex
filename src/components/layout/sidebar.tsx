@@ -92,9 +92,9 @@ function SidebarContent({ onClose, collapsed }: { onClose?: () => void; collapse
           href={paginaInicial}
           onClick={onClose}
           className="flex items-center justify-center w-10 h-10 rounded-lg bg-blue-600 shadow-sm mb-3"
-          title="PDM Pro Moda"
+          title="DGBCOMEX"
         >
-          <span className="text-sm font-bold text-white">PM</span>
+          <span className="text-sm font-bold text-white">DG</span>
         </NavLink>
         {loading ? (
           <div className="py-4">
@@ -152,10 +152,10 @@ function SidebarContent({ onClose, collapsed }: { onClose?: () => void; collapse
       <div className="flex h-16 items-center justify-between border-b border-slate-200 dark:border-slate-800 px-6">
         <NavLink href={paginaInicial} className="flex items-center gap-2.5" onClick={onClose}>
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 shadow-sm">
-            <span className="text-sm font-bold text-white">PM</span>
+            <span className="text-sm font-bold text-white">DG</span>
           </div>
           <span className="text-base font-semibold text-slate-900 dark:text-slate-50">
-            PDM Pro Moda
+            DGBCOMEX
           </span>
         </NavLink>
         {onClose && (
@@ -372,7 +372,7 @@ function SidebarContent({ onClose, collapsed }: { onClose?: () => void; collapse
         <div className="rounded-lg bg-slate-50 dark:bg-slate-900 p-3">
           <p className="text-xs text-slate-500 dark:text-slate-400">Versão 1.0.0</p>
           <p className="text-xs text-slate-400 dark:text-slate-500">
-            © 2026 PDM·PRO·TÊXTIL | @devtiagoabreu · Todos os direitos reservados
+            © 2026 DGBCOMEX | AtriosTech · Todos os direitos reservados
           </p>
         </div>
       </div>

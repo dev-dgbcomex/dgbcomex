@@ -79,7 +79,7 @@ function LoginForm() {
         <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary">
           <LayoutDashboard className="h-6 w-6 text-primary-foreground" />
         </div>
-        <h1 className="text-2xl font-bold tracking-tight">PDM Pro Moda</h1>
+        <h1 className="text-2xl font-bold tracking-tight">DGBCOMEX</h1>
       </div>
 
       <Card className="w-full max-w-md">

@@ -200,7 +200,7 @@ export function ReceitaDialog({
         .instrucoes { margin-top: 24px; padding: 16px; background: #f8fafc; border-radius: 8px; white-space: pre-wrap; font-size: 13px; }
         .footer { margin-top: 32px; font-size: 11px; color: #94a3b8; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 16px; }
       </style></head><body>${html}
-      <div class="footer">Sistema PDM Têxtil — ${new Date().toLocaleDateString("pt-BR")}</div>
+      <div class="footer">Sistema DGBCOMEX — ${new Date().toLocaleDateString("pt-BR")}</div>
       </body></html>
     `)
     w.document.close()

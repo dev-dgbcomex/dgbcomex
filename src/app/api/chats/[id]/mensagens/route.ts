@@ -150,7 +150,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 </div>
 <p><a href="${SITE_URL}${chatLink}" style="background:#1e3a5f;color:#fff;padding:10px 20px;text-decoration:none;border-radius:6px;display:inline-block">Abrir conversa</a></p>
 <hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0" />
-<p style="color:#94a3b8;font-size:12px">Sistema PDM Têxtil</p>
+<p style="color:#94a3b8;font-size:12px">Sistema DGBCOMEX</p>
 </div>`,
         })
       }

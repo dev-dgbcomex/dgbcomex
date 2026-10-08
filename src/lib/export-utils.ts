@@ -70,7 +70,7 @@ export function exportPDF(title: string, contentHtml: string) {
       <p class="subtitle">Exportado em ${new Date().toLocaleString("pt-BR")}</p>
       <div class="stats" id="pdf-stats"></div>
       <div id="pdf-content">${contentHtml}</div>
-      <p class="footer">PDM PRO TÊXTIL — Relatório gerado automaticamente</p>
+      <p class="footer">DGBCOMEX — Relatório gerado automaticamente</p>
       <script>
         document.title = "${safeTitle.replace(/"/g, '\\"')}";
         window.onload = function() { window.print(); }
@@ -119,7 +119,7 @@ export async function exportPDFRelatorio(options: {
   doc.rect(0, 0, pageW, 28, "F")
   doc.setTextColor(255, 255, 255)
   doc.setFontSize(13).setFont("helvetica", "bold")
-  doc.text(empresa?.nome || "PDM PRO TÊXTIL", marginX, 11)
+  doc.text(empresa?.nome || "DGBCOMEX", marginX, 11)
   doc.setFontSize(7).setFont("helvetica", "normal")
   let headerY = 17
   const headerParts: string[] = []
@@ -220,7 +220,7 @@ export async function exportPDFRelatorio(options: {
       doc.setPage(i)
       doc.setFontSize(6).setFont("helvetica", "normal")
       doc.setTextColor(80, 80, 80)
-      const empresaNome = empresa?.nome || "PDM PRO TÊXTIL"
+      const empresaNome = empresa?.nome || "DGBCOMEX"
       doc.text(`${empresaNome} — Relatório gerado automaticamente`, marginX, pageH - 6)
       doc.text(`Página ${i}`, pageW - marginX, pageH - 6, { align: "right" })
     }

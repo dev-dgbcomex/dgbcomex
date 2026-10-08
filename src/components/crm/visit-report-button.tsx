@@ -93,7 +93,7 @@ export default function VisitReportButton({ visita }: { visita: Visita }) {
       doc.rect(0, 0, pageW, 28, "F")
       doc.setTextColor(255, 255, 255)
       doc.setFontSize(13).setFont("helvetica", "bold")
-      doc.text(empresa?.nome || "PDM PRO TEXTIL", marginX, 11)
+        doc.text(empresa?.nome || "DGBCOMEX", marginX, 11)
       doc.setFontSize(7).setFont("helvetica", "normal")
       const headerParts: string[] = []
       if (empresa?.documento) headerParts.push(`CNPJ: ${empresa.documento}`)
@@ -388,7 +388,7 @@ export default function VisitReportButton({ visita }: { visita: Visita }) {
         doc.setPage(i)
         doc.setFontSize(6).setFont("helvetica", "normal")
         doc.setTextColor(80, 80, 80)
-        const empresaNome = empresa?.nome || "PDM PRO TEXTIL"
+        const empresaNome = empresa?.nome || "DGBCOMEX"
         doc.text(`${empresaNome} — Relatorio gerado automaticamente`, marginX, pageH - 6)
         doc.text(`Pagina ${i}/${pageCount}`, pageW - marginX, pageH - 6, { align: "right" })
       }
