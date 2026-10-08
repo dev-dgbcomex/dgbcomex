@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { Info, RefreshCw } from "lucide-react"
+import { ChevronDown, ChevronUp, GripVertical, Info, RefreshCw } from "lucide-react"
 import { BiIntegracaoResumo } from "./bi-integracao-dashboard"
 import { BiIntegracaoKpiModal } from "./bi-integracao-kpi-modal"
 import { BI_KPI_METADADOS, formatarKpi } from "@/lib/bi-kpi-metadados"
@@ -47,9 +47,13 @@ function LinhaResumo({
 export function BiIntegracaoKpiCard({
   integracao,
   data,
+  dragHandleProps,
+  aoMover,
 }: {
   integracao: BiIntegracaoResumo
   data?: string
+  dragHandleProps?: Record<string, unknown>
+  aoMover?: (delta: 1 | -1) => void
 }) {
   const {
     data: resultado,
@@ -80,7 +84,20 @@ export function BiIntegracaoKpiCard({
   const titulo = meta?.titulo ?? integracao.nome
 
   return (
-    <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 card-hover">
+    <>
+      <div
+        onClick={() => setInfoAberta(true)}
+        role="button"
+        tabIndex={0}
+        aria-label={`Abrir detalhes de ${titulo}`}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault()
+            setInfoAberta(true)
+          }
+        }}
+        className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 card-hover cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+      >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <h3
@@ -93,10 +110,53 @@ export function BiIntegracaoKpiCard({
             {integracao.baseUrl.replace(/^https?:\/\/[^/]+/, "")}
           </p>
         </div>
-        <div className="flex items-center gap-1 shrink-0">
+        <div className="flex items-start gap-1 shrink-0">
+          {dragHandleProps && (
+            <button
+              type="button"
+              {...dragHandleProps}
+              onClick={(e) => e.stopPropagation()}
+              aria-label={`Arrastar ${titulo} para reordenar`}
+              title="Arrastar para reordenar"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-grab active:cursor-grabbing touch-none"
+            >
+              <GripVertical className="w-4 h-4" />
+            </button>
+          )}
+          {aoMover && (
+            <div className="flex flex-col -space-y-1 mt-0.5">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  aoMover(-1)
+                }}
+                aria-label={`Mover ${titulo} para cima`}
+                title="Mover para cima"
+                className="p-0.5 rounded text-slate-400 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                <ChevronUp className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  aoMover(1)
+                }}
+                aria-label={`Mover ${titulo} para baixo`}
+                title="Mover para baixo"
+                className="p-0.5 rounded text-slate-400 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                <ChevronDown className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
           <button
             type="button"
-            onClick={() => setInfoAberta(true)}
+            onClick={(e) => {
+              e.stopPropagation()
+              setInfoAberta(true)
+            }}
             aria-label={`Sobre ${titulo}`}
             title={`O que significa cada número de ${titulo}`}
             className="inline-flex items-center justify-center w-6 h-6 rounded-full border border-blue-400 text-blue-500 hover:bg-blue-50 dark:border-blue-500 dark:text-blue-400 dark:hover:bg-blue-950/50 transition-colors"
@@ -105,7 +165,10 @@ export function BiIntegracaoKpiCard({
           </button>
           <button
             type="button"
-            onClick={() => refetch()}
+            onClick={(e) => {
+              e.stopPropagation()
+              refetch()
+            }}
             disabled={isFetching}
             className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50"
             aria-label={`Atualizar ${integracao.nome}`}
@@ -156,14 +219,16 @@ export function BiIntegracaoKpiCard({
       {typeof resultado?.time === "number" && !isError && (
         <p className="mt-3 text-[10px] text-slate-400">{resultado.time} ms</p>
       )}
+      </div>
 
       <BiIntegracaoKpiModal
         integracao={integracao}
         meta={meta}
         body={body}
+        data={data}
         aberto={infoAberta}
         aoFechar={() => setInfoAberta(false)}
       />
-    </div>
+    </>
   )
 }

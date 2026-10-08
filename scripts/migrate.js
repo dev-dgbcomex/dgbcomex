@@ -1586,6 +1586,10 @@ async function migrate() {
     await sql`CREATE INDEX IF NOT EXISTS idx_proc_diagramas_area_id ON proc_diagramas (area_id)`
     console.log("✓ Coluna area_id adicionada em proc_diagramas")
 
+    // ===== bi_ordem_cards: ordem dos cards do BI por usuário =====
+    await sql`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS bi_ordem_cards JSONB DEFAULT '[]'::jsonb`
+    console.log("✓ Coluna bi_ordem_cards adicionada em usuarios (ordem dos cards do BI)")
+
     console.log("\n✅ Migration concluída com sucesso!")
     
   } catch (error) {

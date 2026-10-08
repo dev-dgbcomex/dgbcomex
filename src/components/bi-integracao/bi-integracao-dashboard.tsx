@@ -1,9 +1,21 @@
 "use client"
 
-import { useState } from "react"
-import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMemo, useState } from "react"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import {
+  DndContext,
+  PointerSensor,
+  TouchSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core"
+import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable"
+import { CSS } from "@dnd-kit/utilities"
 import { RefreshCw } from "lucide-react"
 import Link from "next/link"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { BiIntegracaoKpiCard } from "./bi-integracao-kpi-card"
 
@@ -20,6 +32,35 @@ export interface BiIntegracaoResumo {
   baseUrl: string
   tipoAuth: string
   telas?: string[]
+}
+
+function CardOrdenado({
+  integracao,
+  data,
+  aoMover,
+}: {
+  integracao: BiIntegracaoResumo
+  data?: string
+  aoMover: (delta: 1 | -1) => void
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: integracao.id,
+  })
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform ?? null), transition }}
+      className={isDragging ? "z-10" : "z-0"}
+    >
+      <BiIntegracaoKpiCard
+        integracao={integracao}
+        data={data}
+        dragHandleProps={{ ...attributes, ...listeners }}
+        aoMover={aoMover}
+      />
+    </div>
+  )
 }
 
 export function BiIntegracaoDashboard() {
@@ -42,6 +83,80 @@ export function BiIntegracaoDashboard() {
     },
     retry: false,
   })
+
+  const { data: ordem } = useQuery<{ ids: number[] }>({
+    queryKey: ["bi-integracao-ordem"],
+    queryFn: async () => {
+      const res = await fetch("/api/integracao/ordem")
+      if (!res.ok) return { ids: [] }
+      const json = await res.json()
+      return { ids: Array.isArray(json?.ids) ? json.ids : [] }
+    },
+    retry: false,
+  })
+
+  const salvarOrdem = useMutation({
+    mutationFn: async (ids: number[]) => {
+      const res = await fetch("/api/integracao/ordem", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || "Erro ao salvar a ordem")
+      }
+      return res.json()
+    },
+    onSuccess: () => toast.success("Ordem dos cards salva"),
+    onError: (erro) => {
+      toast.error(erro instanceof Error ? erro.message : "Erro ao salvar a ordem")
+      queryClient.invalidateQueries({ queryKey: ["bi-integracao-ordem"] })
+    },
+  })
+
+  const idsDaOrdem = ordem?.ids ?? []
+
+  const ordenadas = useMemo(() => {
+    if (!integracoes) return []
+    const posicaoPorId = new Map(idsDaOrdem.map((id, i) => [id, i]))
+    const posicionadas: (BiIntegracaoResumo | undefined)[] = []
+    const semPosicao: BiIntegracaoResumo[] = []
+    for (const integracao of integracoes) {
+      const posicao = posicaoPorId.get(integracao.id)
+      if (posicao === undefined) semPosicao.push(integracao)
+      else posicionadas[posicao] = integracao
+    }
+    return [...posicionadas.filter((i): i is BiIntegracaoResumo => Boolean(i)), ...semPosicao]
+  }, [integracoes, idsDaOrdem])
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 6 } })
+  )
+
+  function reordenar(novosIds: number[]) {
+    queryClient.setQueryData(["bi-integracao-ordem"], { ids: novosIds })
+    salvarOrdem.mutate(novosIds)
+  }
+
+  function aoArrastar(evento: DragEndEvent) {
+    const { active, over } = evento
+    if (!over || active.id === over.id) return
+    const atuais = ordenadas.map((i) => i.id)
+    const de = atuais.indexOf(Number(active.id))
+    const para = atuais.indexOf(Number(over.id))
+    if (de < 0 || para < 0) return
+    reordenar(arrayMove(atuais, de, para))
+  }
+
+  function mover(id: number, delta: 1 | -1) {
+    const atuais = ordenadas.map((i) => i.id)
+    const de = atuais.indexOf(id)
+    const para = de + delta
+    if (de < 0 || para < 0 || para >= atuais.length) return
+    reordenar(arrayMove(atuais, de, para))
+  }
 
   return (
     <div className="space-y-6">
@@ -107,15 +222,23 @@ export function BiIntegracaoDashboard() {
       )}
 
       {!isLoading && !error && integracoes && integracoes.length > 0 && (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {integracoes.map((integracao) => (
-            <BiIntegracaoKpiCard
-              key={integracao.id}
-              integracao={integracao}
-              data={integracao.baseUrl.includes("{") ? data : undefined}
-            />
-          ))}
-        </div>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={aoArrastar}>
+          <SortableContext
+            items={ordenadas.map((i) => i.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {ordenadas.map((integracao) => (
+                <CardOrdenado
+                  key={integracao.id}
+                  integracao={integracao}
+                  data={integracao.baseUrl.includes("{") ? data : undefined}
+                  aoMover={(delta) => mover(integracao.id, delta)}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
       )}
     </div>
   )

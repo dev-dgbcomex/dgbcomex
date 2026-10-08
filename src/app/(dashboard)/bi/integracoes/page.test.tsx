@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from "vitest"
 import { screen, waitFor, fireEvent } from "@testing-library/react"
-import { createFetchMock, renderPage } from "@/test/harness"
+import { createFetchMock, renderPage, toastMock } from "@/test/harness"
+import { exportCSV, exportPDFRelatorio } from "@/lib/export-utils"
 import BiIntegracoesPage from "./page"
 
 vi.mock("next-auth", () => ({
@@ -10,6 +11,12 @@ vi.mock("next-auth", () => ({
 
 vi.mock("@/lib/auth", () => ({
   authOptions: {},
+}))
+
+vi.mock("@/lib/export-utils", () => ({
+  exportCSV: vi.fn(),
+  exportPDF: vi.fn(),
+  exportPDFRelatorio: vi.fn(),
 }))
 
 const integracoes = [
@@ -43,10 +50,14 @@ const integracoes = [
   },
 ]
 
-function montarFetch(handler: (params: { method: string; url: string }) => any) {
+function montarFetch(handler: (params: { method: string; url: string }) => any, ordemIds: number[] = []) {
   return createFetchMock(({ method, url }) => {
     if (url === "/api/integracao/listar?tela=bi") {
       return { json: integracoes }
+    }
+    if (url === "/api/integracao/ordem") {
+      if (method === "GET") return { json: { ids: ordemIds } }
+      if (method === "PUT") return { json: { success: true } }
     }
     const corpo = handler({ method, url })
     if (corpo !== undefined)
@@ -223,5 +234,80 @@ describe("BiIntegracoesPage", () => {
     renderPage(element)
 
     expect(await screen.findByText(/Nenhuma integração com a tela/)).toBeInTheDocument()
+  })
+
+  it("aplica a ordem salva pelo usuário e permite reordenar com as setas", async () => {
+    const fetchMock = montarFetch(
+      ({ url }) => {
+        const id = Number(url.split("/")[3])
+        return respostas[id as keyof typeof respostas]
+      },
+      [3, 1, 4, 2]
+    )
+    vi.stubGlobal("fetch", fetchMock.fn)
+    const element = await BiIntegracoesPage()
+    renderPage(element)
+
+    await waitFor(() => {
+      const titulos = screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent)
+      expect(titulos).toEqual([
+        "Custos Administrativos Mensal",
+        "Faturamento",
+        "Contas Pagas",
+        "Média – Custo administrativo 12 meses",
+      ])
+    })
+
+    fireEvent.click(screen.getByLabelText("Mover Custos Administrativos Mensal para baixo"))
+
+    await waitFor(() => {
+      const titulos = screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent)
+      expect(titulos).toEqual([
+        "Faturamento",
+        "Custos Administrativos Mensal",
+        "Contas Pagas",
+        "Média – Custo administrativo 12 meses",
+      ])
+    })
+
+    await waitFor(() => {
+      const put = fetchMock.calls.find((c) => c.url === "/api/integracao/ordem" && c.method === "PUT")
+      expect(put).toBeDefined()
+      expect(put!.body.ids).toEqual([1, 3, 4, 2])
+      expect(toastMock.success).toHaveBeenCalledWith("Ordem dos cards salva")
+    })
+  })
+
+  it("abre o modal ao clicar no card e oferece exportar CSV/PDF", async () => {
+    const fetchMock = montarFetch(({ url }) => {
+      const id = Number(url.split("/")[3])
+      return respostas[id as keyof typeof respostas]
+    })
+    vi.stubGlobal("fetch", fetchMock.fn)
+    const element = await BiIntegracoesPage()
+    renderPage(element)
+
+    await waitFor(() => {
+      expect(screen.getByText("Faturamento mês atual")).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByText("Faturamento"))
+
+    expect(screen.getByText("Valores por período")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Exportar CSV" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Exportar PDF" })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole("button", { name: "Exportar CSV" }))
+    expect(exportCSV).toHaveBeenCalledTimes(1)
+    const [nome, colunas, linhas] = vi.mocked(exportCSV).mock.calls[0]
+    expect(nome).toBe("Faturamento")
+    expect(colunas[0]).toBe("Período")
+    expect(linhas.length).toBeGreaterThan(0)
+
+    fireEvent.click(screen.getByRole("button", { name: "Exportar PDF" }))
+    expect(exportPDFRelatorio).toHaveBeenCalledTimes(1)
+    expect(exportPDFRelatorio).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Faturamento", filename: "Faturamento" })
+    )
   })
 })

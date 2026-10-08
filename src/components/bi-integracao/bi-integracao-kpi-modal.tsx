@@ -1,8 +1,10 @@
 "use client"
 
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
-import { Info, X } from "lucide-react"
+import { FileDown, FileText, Info, X } from "lucide-react"
 import { formatarKpi, IntegracaoKpiMeta } from "@/lib/bi-kpi-metadados"
+import { exportCSV, exportPDFRelatorio } from "@/lib/export-utils"
+import { montarTabelaKpi } from "@/lib/kpi-export"
 import type { BiIntegracaoResumo } from "./bi-integracao-dashboard"
 
 function LinhaValor({
@@ -35,12 +37,14 @@ export function BiIntegracaoKpiModal({
   integracao,
   meta,
   body,
+  data,
   aberto,
   aoFechar,
 }: {
   integracao: BiIntegracaoResumo
   meta?: IntegracaoKpiMeta
   body?: Record<string, unknown> | null
+  data?: string
   aberto: boolean
   aoFechar: () => void
 }) {
@@ -48,6 +52,11 @@ export function BiIntegracaoKpiModal({
   const caminho = integracao.baseUrl.replace(/^https?:\/\/[^/]+/, "")
   const campos = meta?.campos
   const subcampos = meta?.subcampos
+  const tabela = body ? montarTabelaKpi(body, meta) : null
+  const consultadoEm = data
+    ? new Date(`${data}T00:00:00`).toLocaleDateString("pt-BR")
+    : new Date().toLocaleString("pt-BR")
+  const nomeArquivo = titulo.replace(/[\\/:*?"<>|]/g, "-")
 
   return (
     <DialogPrimitive.Root open={aberto} onOpenChange={(next) => (!next ? aoFechar() : undefined)}>
@@ -221,6 +230,33 @@ export function BiIntegracaoKpiModal({
                 </div>
               )}
             </div>
+
+            {tabela && (
+              <div className="flex items-center justify-end gap-2 border-t border-slate-200 dark:border-slate-700 px-5 py-3">
+                <button
+                  type="button"
+                  onClick={() => exportCSV(nomeArquivo, tabela.colunas, tabela.linhas)}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                >
+                  <FileDown size={13} /> Exportar CSV
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    exportPDFRelatorio({
+                      title: titulo,
+                      orientation: "portrait",
+                      stats: { "Data da consulta": consultadoEm, "Fonte": caminho },
+                      tables: [{ headers: tabela.colunas, rows: tabela.linhas }],
+                      filename: nomeArquivo,
+                    })
+                  }
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700 transition-colors"
+                >
+                  <FileText size={13} /> Exportar PDF
+                </button>
+              </div>
+            )}
           </div>
         </DialogPrimitive.Popup>
       </DialogPrimitive.Portal>
