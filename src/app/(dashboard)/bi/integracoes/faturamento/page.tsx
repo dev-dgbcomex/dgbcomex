@@ -285,12 +285,10 @@ export default function FaturamentoDetalhePage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" className="gap-2" asChild>
-            <Link href="/bi/integracoes">
-              <ArrowLeft className="w-4 h-4" />
-              Voltar
-            </Link>
-          </Button>
+          <Link href="/bi/integracoes" className="inline-flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100">
+            <ArrowLeft className="w-4 h-4" />
+            Voltar
+          </Link>
           <div>
             <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
               Faturamento — Detalhe dos itens de nota
