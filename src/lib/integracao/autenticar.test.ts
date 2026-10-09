@@ -32,19 +32,20 @@ describe("autenticarIntegracao", () => {
   })
 
   it("começa com os headers base de JSON", async () => {
-    const { ok, headers } = await autenticarIntegracao(integracao({ tipoAuth: "bearer" }))
-    expect(ok).toBe(true)
-    if (ok) {
-      expect(headers["Content-Type"]).toBe("application/json")
-      expect(headers["Accept"]).toBe("application/json")
+    const res = await autenticarIntegracao(integracao({ tipoAuth: "bearer" }))
+    expect(res.ok).toBe(true)
+    if (res.ok) {
+      expect(res.headers["Content-Type"]).toBe("application/json")
+      expect(res.headers["Accept"]).toBe("application/json")
     }
   })
 
   it("anexa o token bearer", async () => {
-    const { headers } = await autenticarIntegracao(
+    const res = await autenticarIntegracao(
       integracao({ tipoAuth: "bearer", authConfig: { token: "segredo123" } })
     )
-    expect(headers).toMatchObject({ Authorization: "Bearer segredo123" })
+    expect(res.ok).toBe(true)
+    if (res.ok) expect(res.headers.Authorization).toBe("Bearer segredo123")
   })
 
   it("faz login e guarda o token em cache com a janela do servidor", async () => {

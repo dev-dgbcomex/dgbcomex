@@ -250,6 +250,7 @@ export async function consultar(
   const db = await abrir()
   const todos = (await pedirTodos(db, STORE_ITENS)).map((linha: unknown) => paraItem(linha as Record<string, unknown>))
   const filtrados = todos.filter(combinar(filtros)).sort(ordenar)
+  const resumo: ResumoFaturamento = {
     itens: filtrados.length,
     notas: new Set(filtrados.map((item) => `${item.empresa}|${item.nr_nota}`)).size,
     pedidos: new Set(filtrados.map((item) => `${item.empresa}|${item.pedido}`)).size,
@@ -282,6 +283,7 @@ export async function consultar(
 export async function opcoes(): Promise<{ representantes: string[]; produtos: string[] }> {
   const db = await abrir()
   const todos = (await pedirTodos(db, STORE_ITENS)).map((linha: unknown) => paraItem(linha as Record<string, unknown>))
+  const representantes = [...new Set(todos.map((item) => item.representante).filter(Boolean))].sort()
   const produtos = [...new Set(todos.map((item) => item.cod_produto).filter(Boolean))].sort()
   return { representantes, produtos }
 }
