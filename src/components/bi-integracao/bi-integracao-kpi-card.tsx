@@ -2,7 +2,8 @@
 
 import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { ChevronDown, ChevronUp, GripVertical, Info, RefreshCw } from "lucide-react"
+import { ChevronDown, ChevronUp, ExternalLink, GripVertical, Info, RefreshCw } from "lucide-react"
+import Link from "next/link"
 import { BiIntegracaoResumo } from "./bi-integracao-dashboard"
 import { BiIntegracaoKpiModal } from "./bi-integracao-kpi-modal"
 import { BI_KPI_METADADOS, formatarKpi } from "@/lib/bi-kpi-metadados"
@@ -111,6 +112,17 @@ export function BiIntegracaoKpiCard({
           </p>
         </div>
         <div className="flex items-start gap-1 shrink-0">
+          {meta?.titulo === "Faturamento" && (
+            <Link
+              href="/bi/integracoes/faturamento"
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center justify-center w-6 h-6 rounded-full border border-emerald-400 text-emerald-500 hover:bg-emerald-50 dark:border-emerald-500 dark:text-emerald-400 dark:hover:bg-emerald-950/50 transition-colors"
+              aria-label="Ver detalhes do faturamento"
+              title="Ver detalhes do faturamento"
+            >
+              <ExternalLink size={13} />
+            </Link>
+          )}
           {dragHandleProps && (
             <button
               type="button"
