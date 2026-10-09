@@ -1,9 +1,9 @@
 "use client"
 
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { useQuery } from "@tanstack/react-query"
-import { ArrowLeft, Download, FileText, RefreshCw } from "lucide-react"
+import { ArrowLeft, Database, Download, FileText, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   consultar,
@@ -57,13 +57,17 @@ function paraItem(item: Record<string, unknown>): Omit<ItemFaturamento, "chave">
   }
 }
 
-/** Baixa a página inteira do dump da API de origem, para popular o IndexedDB. */
-async function baixarTodosItens(integracaoId: number, caminho: string): Promise<Omit<ItemFaturamento, "chave">[]> {
+/**
+ * Baixa a base completa que já está no Neon, para popular o IndexedDB de um navegador
+ * novo sem passar pelo ERP. O caminho vai sempre preenchido: `faturamento-detalhe/`
+ * com barra final vira `["faturamento-detalhe", ""]` no catch-all e quebra a chamada.
+ */
+async function baixarBaseDoNeon(integracaoId: number): Promise<Omit<ItemFaturamento, "chave">[]> {
   const lista: Omit<ItemFaturamento, "chave">[] = []
   let pagina = 1
   for (;;) {
     const res = await fetch(
-      `/api/integracao/${integracaoId}/detalhe/faturamento-detalhe/${caminho}?pagina=${pagina}&por_pagina=500`
+      `/api/integracao/${integracaoId}/detalhe/faturamento-detalhe?pagina=${pagina}&por_pagina=500`
     )
     const json = await res.json()
     if (!res.ok) throw new Error(json?.detail || json?.error || "Erro ao baixar itens")
@@ -74,6 +78,12 @@ async function baixarTodosItens(integracaoId: number, caminho: string): Promise<
     pagina += 1
   }
   return lista
+}
+
+/** Itens que o `carga`/`sync` já devolveram no corpo — dispensa a leitura do Neon. */
+function itensDaResposta(json: Record<string, unknown>): Omit<ItemFaturamento, "chave">[] {
+  const itens: Record<string, unknown>[] = Array.isArray(json.itens) ? json.itens : []
+  return itens.map(paraItem)
 }
 
 export default function FaturamentoDetalhePage() {
@@ -102,6 +112,7 @@ export default function FaturamentoDetalhePage() {
       return res.json()
     },
     retry: false,
+    staleTime: 5 * 60 * 1000,
   })
 
   const integracao = integracoes?.find(
@@ -118,11 +129,21 @@ export default function FaturamentoDetalhePage() {
     return f
   }, [aplicados])
 
-  const {
-    data: consulta,
-    isLoading: carregandoDb,
-    refetch: recarregarDb,
-  } = useQuery<ConsultaFaturamento>({
+  // A janela com que o cache foi populado é a base de todo filtro: sem ela a tela
+  // consulta o IndexedDB com a janela padrão de 12 meses e parece que a base sumiu.
+  const [janelaDoCache, setJanelaDoCache] = useState<{ inicio: string; fim: string } | null>(null)
+  useEffect(() => {
+    let ativo = true
+    void estadoSalvo().then((salvo) => {
+      if (!ativo || !salvo) return
+      setJanelaDoCache({ inicio: salvo.janela_inicio, fim: salvo.janela_fim })
+    })
+    return () => {
+      ativo = false
+    }
+  }, [])
+
+  const { data: consulta, isLoading: carregandoDb, refetch: recarregarDb } = useQuery<ConsultaFaturamento>({
     queryKey: ["faturamento-detalhe-consulta", consultaFiltros, pagina],
     queryFn: () => consultar(consultaFiltros, pagina, ITENS_POR_PAGINA),
     retry: false,
@@ -158,7 +179,15 @@ export default function FaturamentoDetalhePage() {
   )
 
   const paginacao = consulta?.paginacao
-  const temBase = estado?.carga_completa ?? false
+  const temCacheLocal = estado?.carga_completa ?? false
+
+  // O cache local só é válido se cobrir a janela que o filtro está pedindo.
+  const janelaAtual = `${filtros.dataInicio}|${filtros.dataFim}`
+  const janelaCache = janelaDoCache ?? (estado ? { inicio: estado.janela_inicio, fim: estado.janela_fim } : null)
+  const cacheDesatualizado = Boolean(
+    janelaCache && `${janelaCache.inicio}|${janelaCache.fim}` !== janelaAtual
+  )
+  const precisaPopularCache = !temCacheLocal || cacheDesatualizado
 
   function aplicarFiltros() {
     setAplicados(filtros)
@@ -177,6 +206,11 @@ export default function FaturamentoDetalhePage() {
     setExpandedNfs(new Set())
   }
 
+  /**
+   * Carga inicial: lê 12 meses do ERP e **reescreve o Neon**. É a operação cara, e
+   * só precisa ser feita uma vez por instalação — quem já rodou não precisa repetir.
+   * O `carga` devolve os itens no corpo, então o IndexedDB é populado sem reler o Neon.
+   */
   async function carregarBase() {
     setErro("")
     if (!integracao) {
@@ -190,7 +224,8 @@ export default function FaturamentoDetalhePage() {
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json?.detail || json?.error || "Erro ao carregar a base")
-      const lista = await baixarTodosItens(integracao.id, "")
+      const lista = itensDaResposta(json)
+      if (!lista.length) throw new Error("A API não devolveu itens na carga.")
       await limpar()
       await substituirBase(lista)
       await salvarEstado({
@@ -200,6 +235,7 @@ export default function FaturamentoDetalhePage() {
         janela_inicio: filtros.dataInicio,
         janela_fim: filtros.dataFim,
       })
+      setJanelaDoCache({ inicio: filtros.dataInicio, fim: filtros.dataFim })
       setPagina(1)
       setSelectedNfs(new Set())
       setExpandedNfs(new Set())
@@ -211,6 +247,42 @@ export default function FaturamentoDetalhePage() {
     }
   }
 
+  /**
+   * Base já existente no Neon: popula o IndexedDB deste navegador com uma leitura
+   * do espelho, sem tocar no ERP e sem reescrever o Neon. É o caminho de quem entra
+   * pela segunda vez ou em um navegador novo.
+   */
+  async function usarBaseExistente() {
+    setErro("")
+    if (!integracao) {
+      setErro("Integração de faturamento não encontrada. Cadastre-a em Admin → Integrações.")
+      return
+    }
+    setAcao("carregando")
+    try {
+      const lista = await baixarBaseDoNeon(integracao.id)
+      if (!lista.length) throw new Error("A base do Neon está vazia. Use Carregar base.")
+      await limpar()
+      await substituirBase(lista)
+      await salvarEstado({
+        carga_completa: true,
+        contagem: lista.length,
+        ultima_data: estado?.ultima_data ?? null,
+        janela_inicio: filtros.dataInicio,
+        janela_fim: filtros.dataFim,
+      })
+      setJanelaDoCache({ inicio: filtros.dataInicio, fim: filtros.dataFim })
+      setPagina(1)
+      setSelectedNfs(new Set())
+      setExpandedNfs(new Set())
+      await recarregarDb()
+      setAcao("idle")
+    } catch (err) {
+      setAcao("erro")
+      setErro(err instanceof Error ? err.message : "Erro ao usar a base existente")
+    }
+  }
+
   async function atualizarDelta() {
     setErro("")
     if (!integracao) {
@@ -219,7 +291,7 @@ export default function FaturamentoDetalhePage() {
     }
     const st = await estadoSalvo()
     if (!st?.carga_completa) {
-      setErro("Carregue a base completa antes de atualizar (botão Carregar base).")
+      setErro("Popule o cache antes de atualizar (botão Usar base do Neon ou Carregar base).")
       return
     }
     setAcao("atualizando")
@@ -229,8 +301,9 @@ export default function FaturamentoDetalhePage() {
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json?.detail || json?.error || "Erro ao atualizar")
-      const novos = await baixarTodosItens(integracao.id, "")
-      await mergeDelta(novos, filtros.dataInicio, filtros.dataFim)
+      // O sync devolve so o delta; o IndexedDB faz merge em vez de substituido.
+      const novos = itensDaResposta(json)
+      if (novos.length) await mergeDelta(novos, filtros.dataInicio, filtros.dataFim)
       await salvarEstado({
         carga_completa: true,
         contagem: Number(json.contagem || novos.length),
@@ -344,22 +417,50 @@ export default function FaturamentoDetalhePage() {
               {integracao ? integracao.nome : "integração não encontrada"} · última carga:{" "}
               {estado?.ultima_data ?? "—"}
             </p>
+            {cacheDesatualizado && janelaCache && (
+              <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">
+                O cache local foi populado de {janelaCache.inicio} a {janelaCache.fim}. Ajuste a
+                janela ou use <strong>Usar base do Neon</strong> para repopular.
+              </p>
+            )}
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button type="button" onClick={carregarBase} disabled={acao !== "idle"} className="gap-2">
-            <RefreshCw className={`w-4 h-4 ${acao === "carregando" ? "animate-spin" : ""}`} />
-            Carregar base
+          <Button
+            type="button"
+            variant="outline"
+            onClick={usarBaseExistente}
+            disabled={acao !== "idle" || !precisaPopularCache}
+            className="gap-2"
+            title={
+              precisaPopularCache
+                ? "Baixa do Neon a base de 12 meses para este navegador, sem ler o ERP"
+                : "O cache local já cobre a janela atual"
+            }
+          >
+            <Download className={`w-4 h-4 ${acao === "carregando" ? "animate-spin" : ""}`} />
+            Usar base do Neon
+          </Button>
+          <Button
+            type="button"
+            onClick={atualizarDelta}
+            disabled={acao !== "idle" || !temCacheLocal}
+            className="gap-2"
+            title="Traz só as notas novas desde a última carga (lê o delta no ERP e faz merge no cache)"
+          >
+            <RefreshCw className={`w-4 h-4 ${acao === "atualizando" ? "animate-spin" : ""}`} />
+            Atualizar
           </Button>
           <Button
             type="button"
             variant="outline"
-            onClick={atualizarDelta}
-            disabled={acao !== "idle" || !temBase}
+            onClick={carregarBase}
+            disabled={acao !== "idle"}
             className="gap-2"
+            title="Lê 12 meses no ERP e reescreve a base do Neon — só na primeira vez"
           >
-            <RefreshCw className={`w-4 h-4 ${acao === "atualizando" ? "animate-spin" : ""}`} />
-            Atualizar
+            <Database className="w-4 h-4" />
+            {acao === "carregando" ? "Carregando..." : "Carregar base (1ª vez)"}
           </Button>
           <Button
             type="button"

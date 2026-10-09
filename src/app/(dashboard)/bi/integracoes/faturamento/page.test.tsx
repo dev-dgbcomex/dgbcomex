@@ -160,7 +160,7 @@ describe("página de detalhe do faturamento", () => {
     expect(screen.queryByText(/nota selecionada/)).toBeNull()
   })
 
-  it("avisa quando a base ainda não foi carregada e bloqueia a atualização", async () => {
+  it("avisa quando o cache local está vazio e bloqueia a atualização", async () => {
     estadoSalvo.mockResolvedValue(null)
     consultar.mockResolvedValue(consultaDe([]))
     renderPage(<FaturamentoDetalhePage />)
@@ -168,6 +168,7 @@ describe("página de detalhe do faturamento", () => {
     await screen.findByText(/Nenhuma nota encontrada/)
     expect(screen.getByRole("button", { name: "Atualizar" })).toHaveProperty("disabled", true)
     expect(screen.getByRole("button", { name: /Exportar CSV/ })).toHaveProperty("disabled", true)
+    expect(screen.getByRole("button", { name: /Usar base do Neon/ })).toHaveProperty("disabled", false)
   })
 
   it("avisa quando a integração de faturamento não está cadastrada", async () => {
@@ -206,6 +207,93 @@ describe("página de detalhe do faturamento", () => {
 
     await waitFor(() => expect(screen.queryByText("1-100")).toBeNull())
     expect(screen.getByText("1-200")).toBeTruthy()
+  })
+
+  it("popula o cache lendo do Neon sem chamar a carga do ERP", async () => {
+    estadoSalvo.mockResolvedValue(null)
+    consultar.mockResolvedValue(consultaDe([]))
+    fetchMock = createFetchMock(({ url, method }) => {
+      if (url.startsWith("/api/integracao/listar")) return { json: [INTEGRACAO] }
+      if (method === "POST") return { json: { erro: "não deveria chamar o ERP" } }
+      if (url.includes("por_pagina=500")) {
+        return {
+          json: {
+            itens: ITENS,
+            paginacao: { total: ITENS.length, pagina: 1, por_pagina: 500, total_paginas: 1 },
+          },
+        }
+      }
+      return { json: null }
+    })
+    vi.stubGlobal("fetch", fetchMock.fn)
+    renderPage(<FaturamentoDetalhePage />)
+
+    await waitFor(() => expect(screen.getByText(/Faturamento Detalhe/)).toBeTruthy())
+    fireEvent.click(screen.getByRole("button", { name: /Usar base do Neon/ }))
+
+    await waitFor(() => expect(substituirBase).toHaveBeenCalled())
+    expect(substituirBase.mock.calls[0][0]).toHaveLength(ITENS.length)
+    expect(fetchMock.calls.some((c) => c.method === "POST")).toBe(false)
+    // A URL do dump não pode terminar com barra: o catch-all vira ["faturamento-detalhe", ""].
+    const dump = fetchMock.calls.find((c) => c.url.includes("por_pagina=500"))
+    expect(dump?.url).toContain("/detalhe/faturamento-detalhe?pagina=1")
+    expect(dump?.url).not.toContain("faturamento-detalhe/?")
+  })
+
+  it("popula o cache direto dos itens devolvidos pela carga, sem reler o Neon", async () => {
+    estadoSalvo.mockResolvedValue(null)
+    consultar.mockResolvedValue(consultaDe([]))
+    fetchMock = createFetchMock(({ url, method }) => {
+      if (url.startsWith("/api/integracao/listar")) return { json: [INTEGRACAO] }
+      if (url.endsWith("/carga")) {
+        return { json: { processados: 3, contagem: 3, ultima_data: "2026-02-11", itens: ITENS } }
+      }
+      return { json: { erro: "não deveria ler o Neon" } }
+    })
+    vi.stubGlobal("fetch", fetchMock.fn)
+    renderPage(<FaturamentoDetalhePage />)
+
+    await waitFor(() => expect(screen.getByText(/Faturamento Detalhe/)).toBeTruthy())
+    fireEvent.click(screen.getByRole("button", { name: /Carregar base/ }))
+
+    await waitFor(() => expect(salvarEstado).toHaveBeenCalled())
+    expect(substituirBase.mock.calls[0][0]).toHaveLength(ITENS.length)
+    expect(fetchMock.calls.some((c) => c.url.includes("por_pagina=500"))).toBe(false)
+  })
+
+  it("faz merge do delta no cache em vez de substituir a base", async () => {
+    fetchMock = createFetchMock(({ url, method }) => {
+      if (url.startsWith("/api/integracao/listar")) return { json: [INTEGRACAO] }
+      if (url.endsWith("/sync")) {
+        return { json: { processados: 1, contagem: 4, ultima_data: "2026-03-01", itens: [ITENS[0]] } }
+      }
+      return { json: { erro: "não deveria ler o Neon" } }
+    })
+    vi.stubGlobal("fetch", fetchMock.fn)
+    renderPage(<FaturamentoDetalhePage />)
+
+    await screen.findByText("1-100")
+    fireEvent.click(screen.getByRole("button", { name: "Atualizar" }))
+
+    await waitFor(() => expect(mergeDelta).toHaveBeenCalled())
+    expect(substituirBase).not.toHaveBeenCalled()
+    expect(fetchMock.calls.some((c) => c.url.includes("por_pagina=500"))).toBe(false)
+  })
+
+  it("avisa quando o cache foi populado com outra janela", async () => {
+    estadoSalvo.mockResolvedValue({
+      carga_completa: true,
+      contagem: 3,
+      ultima_data: "2026-02-11",
+      janela_inicio: "2020-01-01",
+      janela_fim: "2020-12-31",
+    } satisfies EstadoFaturamentoDetalhe)
+    consultar.mockResolvedValue(consultaDe([]))
+    renderPage(<FaturamentoDetalhePage />)
+
+    await waitFor(() =>
+      expect(screen.getByText(/cache local foi populado de 2020-01-01/)).toBeTruthy()
+    )
   })
 
   it("restaura filtros padrão ao limpar", async () => {
