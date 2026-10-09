@@ -185,7 +185,7 @@ export async function mergeDelta(
   await transacao(db, [STORE_ITENS], "readwrite", async (tx) => {
     const store = tx.objectStore(STORE_ITENS)
     for (const item of comChave) store.put(item)
-    const todos = (await pedirMais(store)).map(paraItem)
+    const todos = (await pedirMais(store)).map((linha: unknown) => paraItem(linha as Record<string, unknown>))
     const foraDaJanela = todos.filter(
       (item) => item.data_nota < janelaInicio || item.data_nota > janelaFim
     )
@@ -248,8 +248,7 @@ export async function consultar(
   porPagina = 100
 ): Promise<ConsultaFaturamento> {
   const db = await abrir()
-  const todos = (await pedirTodos(db, STORE_ITENS)).map(paraItem)
-  const filtrados = todos.filter(combinar(filtros)).sort(ordenar)
+  const todos = (await pedirTodos(db, STORE_ITENS)).map((linha: unknown) => paraItem(linha as Record<string, unknown>))
   const resumo: ResumoFaturamento = {
     itens: filtrados.length,
     notas: new Set(filtrados.map((item) => `${item.empresa}|${item.nr_nota}`)).size,
@@ -282,8 +281,7 @@ export async function consultar(
 /** Opções dos filtros, espelhando `GET /faturamento-detalhe/opcoes`. */
 export async function opcoes(): Promise<{ representantes: string[]; produtos: string[] }> {
   const db = await abrir()
-  const todos = (await pedirTodos(db, STORE_ITENS)).map(paraItem)
-  const representantes = [...new Set(todos.map((item) => item.representante).filter(Boolean))].sort()
+  const todos = (await pedirTodos(db, STORE_ITENS)).map((linha: unknown) => paraItem(linha as Record<string, unknown>))
   const produtos = [...new Set(todos.map((item) => item.cod_produto).filter(Boolean))].sort()
   return { representantes, produtos }
 }
