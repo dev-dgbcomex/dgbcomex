@@ -92,6 +92,47 @@ export async function renderGrupoPdf(doc: any, grupo: GrupoFaturamento, isLandsc
   if (grupo.romaneio) doc.text('Romaneio: ' + grupo.romaneio, pageWidth - margin - 70, y + 8)
   doc.text('Itens: ' + grupo.totalItens, pageWidth - margin - 70, y + 12)
   y += 20
+
+  const cabecalho = isLandscape
+    ? ['Pedido', 'Item', 'Produto', 'Romaneio', 'Metros', 'Vlr. unit.', 'Vlr. total', 'Acres/Desc', 'Peso']
+    : ['Pedido', 'Item', 'Produto', 'Metros', 'Vlr. total', 'Peso']
+  const corpo = grupo.itens.map((item) =>
+    isLandscape
+      ? [
+          item.pedido,
+          String(item.item),
+          item.cod_produto,
+          item.romaneio,
+          formatarMetragem(item.metros),
+          formatarValor(item.vr_unitario),
+          formatarValor(item.vr_total),
+          formatarValor(item.acres_desc),
+          formatarPeso(item.peso),
+        ]
+      : [
+          item.pedido,
+          String(item.item),
+          item.cod_produto,
+          formatarMetragem(item.metros),
+          formatarValor(item.vr_total),
+          formatarPeso(item.peso),
+        ]
+  )
+  const totais = isLandscape
+    ? ['', '', 'TOTAL', '', formatarMetragem(grupo.totalMetros), '', formatarValor(grupo.totalVrTotal), formatarValor(grupo.totalAcresDesc), formatarPeso(grupo.totalPeso)]
+    : ['', '', 'TOTAL', formatarMetragem(grupo.totalMetros), formatarValor(grupo.totalVrTotal), formatarPeso(grupo.totalPeso)]
+
+  doc.autoTable({
+    startY: y,
+    head: [cabecalho],
+    body: [...corpo, totais],
+    styles: { fontSize: isLandscape ? 7 : 6.5, cellPadding: 1.5 },
+    headStyles: { fillColor: [226, 232, 240], textColor: [15, 23, 42], fontStyle: 'bold' },
+    alternateRowStyles: { fillColor: [248, 250, 252] },
+    didParseCell: (data: { section: string; row: { index: number } }) =>
+      data.row.index === corpo.length ? { styles: { fontStyle: 'bold' } } : {},
+    margin: { left: margin, right: margin },
+  })
 }
 
 export async function gerarPdfGrupo(grupo: GrupoFaturamento, orient: OrientacaoPdf): Promise<void> {
@@ -104,11 +145,31 @@ export async function gerarPdfGrupo(grupo: GrupoFaturamento, orient: OrientacaoP
 export async function gerarPdfConsolidado(grupos: GrupoFaturamento[], chaves: string[], orient: OrientacaoPdf): Promise<void> {
   const { doc, isLandscape, pageWidth } = await criarDocPdf(orient)
   const { empresa, logoImg } = await carregarEmpresa()
-  for (let i = 0; i < chaves.length; i++) {
-    const grupo = grupos.find((g) => g.chave_nf === chaves[i])
+  const distintas = [...new Set(chaves)]
+  let paginas = 0
+  for (const chave of distintas) {
+    const grupo = grupos.find((g) => g.chave_nf === chave)
     if (!grupo) continue
-    if (i > 0) doc.addPage()
+    if (paginas > 0) doc.addPage()
     await renderGrupoPdf(doc, grupo, isLandscape, pageWidth, empresa, logoImg)
+    paginas++
   }
-  doc.save('faturamento_notas_consolidado.pdf')
+  const carimbo = new Date().toLocaleString('pt-BR')
+  const margem = 8
+  const altura = doc.internal.pageSize.getHeight()
+  const largura = doc.internal.pageSize.getWidth()
+  const totalPaginas = doc.getNumberOfPages()
+  for (let p = 1; p <= totalPaginas; p++) {
+    doc.setPage(p)
+    doc.setFontSize(7)
+    doc.setTextColor(120, 120, 120)
+    doc.text('Gerado em ' + carimbo, margem, altura - 6)
+    doc.text('Pagina ' + p + '/' + totalPaginas, largura - margem, altura - 6, { align: 'right' })
+  }
+  doc.setTextColor(0, 0, 0)
+  doc.save(
+    distintas.length === 1 && grupos.find((g) => g.chave_nf === distintas[0])
+      ? 'faturamento_nf_' + grupos.find((g) => g.chave_nf === distintas[0])!.empresa + '_' + grupos.find((g) => g.chave_nf === distintas[0])!.nr_nota + '.pdf'
+      : 'faturamento_notas_consolidado.pdf'
+  )
 }

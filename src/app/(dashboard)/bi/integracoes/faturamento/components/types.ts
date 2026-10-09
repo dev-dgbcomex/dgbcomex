@@ -1,4 +1,9 @@
-export type OrientacaoPdf = 'portrait' | 'landscape'
+import type { ItemFaturamento } from "@/lib/bi/faturamento-detalhe-db"
+
+export type OrientacaoPdf = "portrait" | "landscape"
+
+/** Item da listagem como chega do `consultar()` — sem a chave do IndexedDB. */
+export type ItemDetalhe = Omit<ItemFaturamento, "chave">
 
 export interface GrupoFaturamento {
   chave_nf: string
@@ -11,11 +16,18 @@ export interface GrupoFaturamento {
   data_nota: string
   romaneio?: string
   vr_nota?: number
-  itens: any[]
+  itens: ItemDetalhe[]
   totalItens: number
   totalMetros: number
   totalPeso: number
   totalVrTotal: number
   totalAcresDesc: number
   faturamento: number
+}
+
+export interface IntegracaoBi {
+  id: number
+  nome: string
+  baseUrl: string
+  tipoAuth: string
 }

@@ -1,0 +1,222 @@
+// @vitest-environment jsdom
+import { describe, it, expect, vi, beforeEach } from "vitest"
+import { fireEvent, screen, waitFor, within } from "@testing-library/react"
+import { createFetchMock, renderPage } from "@/test/harness"
+import type { ConsultaFaturamento, EstadoFaturamentoDetalhe } from "@/lib/bi/faturamento-detalhe-db"
+import FaturamentoDetalhePage from "./page"
+
+const consultar = vi.fn()
+const estadoSalvo = vi.fn()
+const substituirBase = vi.fn()
+const mergeDelta = vi.fn()
+const salvarEstado = vi.fn()
+const limpar = vi.fn()
+const gerarPdfConsolidado = vi.fn()
+
+vi.mock("@/lib/bi/faturamento-detalhe-db", () => ({
+  consultar: (...args: unknown[]) => consultar(...args),
+  estadoSalvo: (...args: unknown[]) => estadoSalvo(...args),
+  substituirBase: (...args: unknown[]) => substituirBase(...args),
+  mergeDelta: (...args: unknown[]) => mergeDelta(...args),
+  salvarEstado: (...args: unknown[]) => salvarEstado(...args),
+  limpar: (...args: unknown[]) => limpar(...args),
+}))
+
+vi.mock("./components/faturamento-pdf", () => ({
+  gerarPdfConsolidado: (...args: unknown[]) => gerarPdfConsolidado(...args),
+  gerarPdfGrupo: vi.fn(),
+}))
+
+const INTEGRACAO = { id: 7, nome: "Faturamento Detalhe", baseUrl: "http://erp/faturamento-detalhe", tipoAuth: "login" }
+
+function item(over: Partial<Record<string, unknown>>) {
+  return {
+    empresa: "1",
+    pedido: "P1",
+    item: 1,
+    nr_nota: "100",
+    data_nota: "2026-01-10",
+    cliente: "C1",
+    nome_cliente: "Cliente Um",
+    cod_produto: "PRD-A",
+    metros: 10,
+    vr_unitario: 5,
+    vr_total: 50,
+    acres_desc: 0,
+    peso: 3,
+    vr_nota: 50,
+    romaneio: "ROM-1",
+    representante_codigo: "7",
+    representante: "Ana",
+    ...over,
+  }
+}
+
+function consultaDe(itens: ReturnType<typeof item>[]): ConsultaFaturamento {
+  return {
+    resumo: {
+      itens: itens.length,
+      notas: new Set(itens.map((i) => `${i.empresa}|${i.nr_nota}`)).size,
+      pedidos: new Set(itens.map((i) => `${i.empresa}|${i.pedido}`)).size,
+      metros: itens.reduce((s, i) => s + i.metros, 0),
+      peso: itens.reduce((s, i) => s + i.peso, 0),
+      faturamento: itens.reduce((s, i) => s + i.vr_total + i.acres_desc, 0),
+    },
+    paginacao: { total: itens.length, pagina: 1, por_pagina: 500, total_paginas: 1 },
+    itens: itens as ConsultaFaturamento["itens"],
+  }
+}
+
+const ITENS = [
+  item({}),
+  item({ item: 2, cod_produto: "PRD-B", vr_total: 30, metros: 5 }),
+  item({ nr_nota: "200", pedido: "P2", data_nota: "2026-02-11", nome_cliente: "Cliente Dois", romaneio: "ROM-2", vr_total: 70 }),
+]
+
+let fetchMock: ReturnType<typeof createFetchMock>
+
+beforeEach(() => {
+  vi.clearAllMocks()
+  consultar.mockResolvedValue(consultaDe(ITENS))
+  estadoSalvo.mockResolvedValue({
+    carga_completa: true,
+    contagem: ITENS.length,
+    ultima_data: "2026-02-11",
+    janela_inicio: "2025-01-01",
+    janela_fim: "2026-12-31",
+  } satisfies EstadoFaturamentoDetalhe)
+  fetchMock = createFetchMock(({ url }) =>
+    url.startsWith("/api/integracao/listar") ? { json: [INTEGRACAO] } : { json: null }
+  )
+  vi.stubGlobal("fetch", fetchMock.fn)
+})
+
+describe("página de detalhe do faturamento", () => {
+  it("agrupa os itens da página por nota fiscal", async () => {
+    renderPage(<FaturamentoDetalhePage />)
+
+    expect(await screen.findByText("1-100")).toBeTruthy()
+    expect(screen.getByText("1-200")).toBeTruthy()
+    expect(screen.getByText(/2 itens/)).toBeTruthy()
+    expect(screen.getByText(/1 itens/)).toBeTruthy()
+  })
+
+  it("mostra o consolidado da nota com métragem, peso e valor", async () => {
+    renderPage(<FaturamentoDetalhePage />)
+
+    const card = (await screen.findByText("1-100")).closest("div.rounded-xl") as HTMLElement
+    expect(within(card).getByTitle("Metragem").textContent).toContain("15,00")
+    expect(within(card).getByTitle("Peso").textContent).toContain("6,00")
+    expect(within(card).getByTitle("Valor total da nota").textContent).toContain("80,00")
+  })
+
+  it("expande a nota e revela os itens", async () => {
+    renderPage(<FaturamentoDetalhePage />)
+
+    expect(screen.queryByText("PRD-A")).toBeNull()
+    fireEvent.click(await screen.findByText("1-100"))
+
+    await waitFor(() => expect(screen.getByText("PRD-A")).toBeTruthy())
+    expect(screen.getByText("PRD-B")).toBeTruthy()
+    expect(screen.getByText("Total da nota")).toBeTruthy()
+  })
+
+  it("filtra as notas pela busca livre", async () => {
+    renderPage(<FaturamentoDetalhePage />)
+    await screen.findByText("1-100")
+
+    fireEvent.change(screen.getByLabelText("Buscar nas notas carregadas"), {
+      target: { value: "Cliente Dois" },
+    })
+
+    await waitFor(() => expect(screen.queryByText("1-100")).toBeNull())
+    expect(screen.getByText("1-200")).toBeTruthy()
+  })
+
+  it("seleciona notas e gera o PDF consolidado na orientação escolhida", async () => {
+    renderPage(<FaturamentoDetalhePage />)
+
+    fireEvent.click(await screen.findByLabelText("Selecionar nota 1-200"))
+    expect(screen.getByText(/nota selecionada/)).toBeTruthy()
+
+    fireEvent.change(screen.getByLabelText("Orientação do PDF"), { target: { value: "landscape" } })
+    fireEvent.click(screen.getByRole("button", { name: /Gerar PDF das selecionadas/ }))
+
+    await waitFor(() =>
+      expect(gerarPdfConsolidado).toHaveBeenCalledWith(
+        expect.any(Array),
+        ["1|200"],
+        "landscape"
+      )
+    )
+  })
+
+  it("limpa a seleção ao pedir", async () => {
+    renderPage(<FaturamentoDetalhePage />)
+
+    fireEvent.click(await screen.findByLabelText("Selecionar nota 1-100"))
+    fireEvent.click(screen.getByRole("button", { name: "Limpar seleção" }))
+
+    expect(screen.queryByText(/nota selecionada/)).toBeNull()
+  })
+
+  it("avisa quando a base ainda não foi carregada e bloqueia a atualização", async () => {
+    estadoSalvo.mockResolvedValue(null)
+    consultar.mockResolvedValue(consultaDe([]))
+    renderPage(<FaturamentoDetalhePage />)
+
+    await screen.findByText(/Nenhuma nota encontrada/)
+    expect(screen.getByRole("button", { name: "Atualizar" })).toHaveProperty("disabled", true)
+    expect(screen.getByRole("button", { name: /Exportar CSV/ })).toHaveProperty("disabled", true)
+  })
+
+  it("avisa quando a integração de faturamento não está cadastrada", async () => {
+    fetchMock = createFetchMock(() => ({ json: [] }))
+    vi.stubGlobal("fetch", fetchMock.fn)
+    renderPage(<FaturamentoDetalhePage />)
+
+    await waitFor(() => expect(screen.getByText(/integração não encontrada/)).toBeTruthy())
+    fireEvent.click(screen.getByRole("button", { name: /Carregar base/ }))
+
+    await waitFor(() =>
+      expect(screen.getByRole("alert").textContent).toContain("Cadastre-a em Admin")
+    )
+  })
+
+  it("aplica os filtros de período e texto na consulta do IndexedDB", async () => {
+    renderPage(<FaturamentoDetalhePage />)
+    await screen.findByText("1-100")
+
+    fireEvent.change(screen.getByLabelText("Representante"), { target: { value: "ana" } })
+    fireEvent.click(screen.getByRole("button", { name: /Aplicar filtros/ }))
+
+    await waitFor(() => {
+      const ultimo = consultar.mock.calls.at(-1)
+      expect(ultimo?.[0]).toMatchObject({ representante: "ana" })
+      expect(ultimo?.[1]).toBe(1)
+    })
+  })
+
+  it("filtra as notas pelo número da nota informado nos filtros", async () => {
+    renderPage(<FaturamentoDetalhePage />)
+    await screen.findByText("1-100")
+
+    fireEvent.change(screen.getByLabelText("Nº nota"), { target: { value: "200" } })
+    fireEvent.click(screen.getByRole("button", { name: /Aplicar filtros/ }))
+
+    await waitFor(() => expect(screen.queryByText("1-100")).toBeNull())
+    expect(screen.getByText("1-200")).toBeTruthy()
+  })
+
+  it("restaura filtros padrão ao limpar", async () => {
+    renderPage(<FaturamentoDetalhePage />)
+    await screen.findByText("1-100")
+
+    fireEvent.change(screen.getByLabelText("Cliente"), { target: { value: "zzz" } })
+    fireEvent.click(screen.getByRole("button", { name: /Aplicar filtros/ }))
+    fireEvent.click(screen.getByRole("button", { name: /Limpar/ }))
+
+    await waitFor(() => expect((screen.getByLabelText("Cliente") as HTMLInputElement).value).toBe(""))
+    expect(screen.getByText("1-100")).toBeTruthy()
+  })
+})
