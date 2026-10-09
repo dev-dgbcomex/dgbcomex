@@ -135,12 +135,16 @@ describe("página de detalhe do faturamento", () => {
   it("expande a nota e revela os itens", async () => {
     renderPage(<FaturamentoDetalhePage />)
 
-    expect(screen.queryByText("PRD-A")).toBeNull()
+    // PRD-A também aparece na legenda de participação por produto; aqui é a
+    // tabela da nota expandida que interessa.
+    expect(screen.queryByRole("table")).toBeNull()
     fireEvent.click(await screen.findByText("1-100"))
 
-    await waitFor(() => expect(screen.getByText("PRD-A")).toBeTruthy())
-    expect(screen.getByText("PRD-B")).toBeTruthy()
-    expect(screen.getByText("Total da nota")).toBeTruthy()
+    await waitFor(() => expect(screen.getByRole("table")).toBeTruthy())
+    const tabela = within(screen.getByRole("table"))
+    expect(tabela.getByText("PRD-A")).toBeTruthy()
+    expect(tabela.getByText("PRD-B")).toBeTruthy()
+    expect(tabela.getByText("Total da nota")).toBeTruthy()
   })
 
   it("filtra as notas pela busca livre", async () => {

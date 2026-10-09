@@ -173,5 +173,6 @@ declare module "@dnd-kit/sortable" {
 
   export const verticalListSortingStrategy: any
   export const horizontalListSortingStrategy: any
+  export const rectSortingStrategy: any
   export const sortableKeyboardCoordinates: any
 }
