@@ -249,7 +249,7 @@ export async function consultar(
 ): Promise<ConsultaFaturamento> {
   const db = await abrir()
   const todos = (await pedirTodos(db, STORE_ITENS)).map((linha: unknown) => paraItem(linha as Record<string, unknown>))
-  const resumo: ResumoFaturamento = {
+  const filtrados = todos.filter(combinar(filtros)).sort(ordenar)
     itens: filtrados.length,
     notas: new Set(filtrados.map((item) => `${item.empresa}|${item.nr_nota}`)).size,
     pedidos: new Set(filtrados.map((item) => `${item.empresa}|${item.pedido}`)).size,
