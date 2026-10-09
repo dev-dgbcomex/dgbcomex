@@ -29,6 +29,14 @@ vi.mock("./components/faturamento-pdf", () => ({
 
 const INTEGRACAO = { id: 7, nome: "Faturamento Detalhe", baseUrl: "http://erp/faturamento-detalhe", tipoAuth: "login" }
 
+/** O card "Faturamento Dia (diário)" também tem "faturamento" no nome, mas serve outro endpoint. */
+const INTEGRACAO_CARD = {
+  id: 3,
+  nome: "Faturamento Dia (diário)",
+  baseUrl: "http://erp/faturamento/{data}",
+  tipoAuth: "login",
+}
+
 function item(over: Partial<Record<string, unknown>>) {
   return {
     empresa: "1",
@@ -54,7 +62,16 @@ function item(over: Partial<Record<string, unknown>>) {
 
 /** A barra de seleção rotula a contagem; o texto em si fica quebrado em varios nós. */
 function contagemSelecionada(): string {
-  return screen.getByRole("status").getAttribute("aria-label") ?? ""
+  return screen.getByRole("status", { name: /nota selecionada|notas selecionadas/ }).getAttribute(
+    "aria-label"
+  ) ?? ""
+}
+
+/** O toolbar rotula o total de notas do período filtrado. */
+function contagemNoPeriodo(): string {
+  return screen.getByRole("status", { name: /nota no período|notas no período/ }).getAttribute(
+    "aria-label"
+  ) ?? ""
 }
 
 function consultaDe(itens: ReturnType<typeof item>[]): ConsultaFaturamento {
@@ -350,7 +367,41 @@ describe("página de detalhe do faturamento", () => {
     )
   })
 
-  it("restaura filtros padrão ao limpar", async () => {
+  it("escolhe a integração de detalhe, não o card de faturamento diário", async () => {
+    // O card vem primeiro na lista; casar por nome pegava ele e a tela mostrava
+    // "Faturamento Dia (diário)" no cabeçalho.
+    fetchMock = createFetchMock(({ url }) =>
+      url.startsWith("/api/integracao/listar")
+        ? { json: [INTEGRACAO_CARD, INTEGRACAO] }
+        : { json: null }
+    )
+    vi.stubGlobal("fetch", fetchMock.fn)
+    renderPage(<FaturamentoDetalhePage />)
+
+    expect(await screen.findByText(/Faturamento Detalhe/)).toBeTruthy()
+    expect(screen.queryByText(/Faturamento Dia/)).toBeNull()
+  })
+
+it("traz o período inteiro, atravessando as páginas do cache local", async () => {
+    const pagina1 = Array.from({ length: 500 }, (_, i) =>
+      item({ pedido: `P${i}`, item: 1, nr_nota: String(1000 + i) })
+    )
+    const pagina2 = [item({ nr_nota: "9999", pedido: "PX", data_nota: "2026-04-01" })]
+    consultar.mockImplementation(async (_filtros, pagina) =>
+      pagina === 1
+        ? { ...consultaDe(pagina1), paginacao: { total: 501, pagina: 1, por_pagina: 500, total_paginas: 2 } }
+        : { ...consultaDe(pagina2), paginacao: { total: 501, pagina: 2, por_pagina: 500, total_paginas: 2 } }
+    )
+    renderPage(<FaturamentoDetalhePage />)
+
+    // A segunda página precisa entrar na contagem: antes a tela parava na 1ª e os
+    // KPIs contavam só 500 itens, o que parecia base incompleta no Neon.
+    await waitFor(() => expect(contagemNoPeriodo()).toBe("501 notas no período"))
+    expect(consultar).toHaveBeenCalledWith(expect.anything(), 2, 500)
+    expect(screen.getByRole("status", { name: "Mostrando 100 de 501 notas do período" })).toBeTruthy()
+  })
+
+it("restaura filtros padrão ao limpar", async () => {
     renderPage(<FaturamentoDetalhePage />)
     await screen.findByText("1-100")
 

@@ -34,6 +34,8 @@ import { ORIENTACAO_LABEL, agruparPorNf, filtrarGruposPorBusca } from "./compone
 import type { GrupoFaturamento, IntegracaoBi, ItemDetalhe, OrientacaoPdf } from "./components/types"
 
 const ITENS_POR_PAGINA = 500
+/** Quantas notas renderizar por bloco; o resto entra com "Carregar mais". */
+const BLOCO_NOTAS = 100
 
 function janelasPadrao() {
   const hoje = new Date()
@@ -104,7 +106,6 @@ export default function FaturamentoDetalhePage() {
     nota: "",
   }))
   const [aplicados, setAplicados] = useState<FiltrosToolbar>(() => ({ ...janelasPadrao(), representante: "", cliente: "", produto: "", nota: "" }))
-  const [pagina, setPagina] = useState(1)
   const [busca, setBusca] = useState("")
   const [acao, setAcao] = useState<"idle" | "carregando" | "atualizando" | "erro">("idle")
   const [erro, setErro] = useState("")
@@ -124,8 +125,15 @@ export default function FaturamentoDetalhePage() {
     staleTime: 5 * 60 * 1000,
   })
 
-  const integracao = integracoes?.find(
-    (i) => /faturamento-detalhe/i.test(i.baseUrl) || /faturamento/i.test(i.nome)
+  // A integração do detalhe é a que aponta para o endpoint `faturamento-detalhe`.
+  // Casar só pelo nome pegava o card "Faturamento Dia (diário)": ele também tem
+  // "faturamento" no nome, mas serve outro endpoint — e o `find` com OU devolvia
+  // o primeiro da lista, que quase sempre era esse.
+  const integracao = useMemo(
+    () =>
+      integracoes?.find((i) => /faturamento-detalhe/i.test(i.baseUrl)) ??
+      integracoes?.find((i) => /faturamento/i.test(i.nome)),
+    [integracoes]
   )
 
   const consultaFiltros = useMemo<FiltrosFaturamento>(() => {
@@ -152,9 +160,26 @@ export default function FaturamentoDetalhePage() {
     }
   }, [])
 
+  /**
+   * Traz o período inteiro, não uma página. O cache local limita `por_pagina` a
+   * 500, então uma base de 12 meses dava ~11 páginas: a tela mostrava 214 das
+   * 2.078 notas e os KPIs/gráficos contavam só a primeira página — parecia falta
+   * de dado no Neon. Como tudo já está no IndexedDB, percorrer as páginas é
+   * barato e deixa lista, totais e gráficos cobrindo o período inteiro.
+   */
   const { data: consulta, isLoading: carregandoDb, refetch: recarregarDb } = useQuery<ConsultaFaturamento>({
-    queryKey: ["faturamento-detalhe-consulta", consultaFiltros, pagina],
-    queryFn: () => consultar(consultaFiltros, pagina, ITENS_POR_PAGINA),
+    queryKey: ["faturamento-detalhe-consulta", consultaFiltros],
+    queryFn: async () => {
+      const primeira = await consultar(consultaFiltros, 1, ITENS_POR_PAGINA)
+      const total = primeira.paginacao.total_paginas
+      if (total <= 1) return primeira
+      const itens = [...primeira.itens]
+      for (let p = 2; p <= total; p++) {
+        const seguinte = await consultar(consultaFiltros, p, ITENS_POR_PAGINA)
+        itens.push(...seguinte.itens)
+      }
+      return { ...primeira, itens }
+    },
     retry: false,
   })
 
@@ -164,9 +189,9 @@ export default function FaturamentoDetalhePage() {
     retry: false,
   })
 
-  const itensPagina = useMemo<ItemDetalhe[]>(() => consulta?.itens ?? [], [consulta])
+  const itensPeriodo = useMemo<ItemDetalhe[]>(() => consulta?.itens ?? [], [consulta])
 
-  const todosGrupos = useMemo(() => agruparPorNf(itensPagina), [itensPagina])
+  const todosGrupos = useMemo(() => agruparPorNf(itensPeriodo), [itensPeriodo])
 
   const grupos = useMemo(() => {
     const porNota = aplicados.nota.trim()
@@ -175,9 +200,16 @@ export default function FaturamentoDetalhePage() {
     return filtrarGruposPorBusca(porNota, busca)
   }, [todosGrupos, busca, aplicados.nota])
 
+  // 2.078 cartões no DOM de uma vez travam o navegador; o bloco cresce sob demanda.
+  const [limiteRender, setLimiteRender] = useState(BLOCO_NOTAS)
+  useEffect(() => {
+    setLimiteRender(BLOCO_NOTAS)
+  }, [grupos])
+  const gruposVisiveis = useMemo(() => grupos.slice(0, limiteRender), [grupos, limiteRender])
+
   const resumo = consulta?.resumo
 
-  const totaisDaPagina = useMemo(
+  const totaisPeriodo = useMemo(
     () => ({
       faturamento: grupos.reduce((soma, g) => soma + g.faturamento, 0),
       itens: grupos.reduce((soma, g) => soma + g.totalItens, 0),
@@ -187,7 +219,6 @@ export default function FaturamentoDetalhePage() {
     [grupos]
   )
 
-  const paginacao = consulta?.paginacao
   const temCacheLocal = estado?.carga_completa ?? false
 
   // O cache local só é válido se cobrir a janela que o filtro está pedindo.
@@ -200,7 +231,6 @@ export default function FaturamentoDetalhePage() {
 
   function aplicarFiltros() {
     setAplicados(filtros)
-    setPagina(1)
     setSelectedNfs(new Set())
     setExpandedNfs(new Set())
   }
@@ -210,7 +240,6 @@ export default function FaturamentoDetalhePage() {
     setFiltros(padrao)
     setAplicados(padrao)
     setBusca("")
-    setPagina(1)
     setSelectedNfs(new Set())
     setExpandedNfs(new Set())
   }
@@ -245,7 +274,6 @@ export default function FaturamentoDetalhePage() {
         janela_fim: filtros.dataFim,
       })
       setJanelaDoCache({ inicio: filtros.dataInicio, fim: filtros.dataFim })
-      setPagina(1)
       setSelectedNfs(new Set())
       setExpandedNfs(new Set())
       await recarregarDb()
@@ -281,7 +309,6 @@ export default function FaturamentoDetalhePage() {
         janela_fim: filtros.dataFim,
       })
       setJanelaDoCache({ inicio: filtros.dataInicio, fim: filtros.dataFim })
-      setPagina(1)
       setSelectedNfs(new Set())
       setExpandedNfs(new Set())
       await recarregarDb()
@@ -329,7 +356,7 @@ export default function FaturamentoDetalhePage() {
   }
 
   function exportarCsv() {
-    if (!itensPagina.length) return
+    if (!itensPeriodo.length) return
     const colunas: (keyof ItemDetalhe)[] = [
       "data_nota",
       "nr_nota",
@@ -349,7 +376,7 @@ export default function FaturamentoDetalhePage() {
       "peso",
       "vr_nota",
     ]
-    const linhas = itensPagina.map((linha) =>
+    const linhas = itensPeriodo.map((linha) =>
       colunas
         .map((coluna) => {
           const valor = linha[coluna]
@@ -389,40 +416,15 @@ export default function FaturamentoDetalhePage() {
 
   const selecionadas = useMemo(() => [...selectedNfs], [selectedNfs])
 
-  /**
-   * Todas as notas do período, atravessando as páginas do IndexedDB. A tela mostra
-   * 500 itens por página, mas o PDF consolidado precisa de todos os grupos — buscar
-   * só a página atual geraria um documento incompleto sem avisar.
-   */
+  /** Grupos do período inteiro já carregados; o PDF consolidado usa esta base. */
   const gruposDoPeriodo = useMemo<GrupoFaturamento[]>(() => {
     const alvo = new Set<string>()
     for (const chave of selectedNfs) alvo.add(chave)
     return grupos.filter((grupo) => alvo.has(grupo.chave_nf))
   }, [grupos, selectedNfs])
 
-  const totalPaginas = paginacao?.total_paginas ?? 1
-
-  async function carregarTodasPaginas(): Promise<ItemDetalhe[]> {
-    const todos: ItemDetalhe[] = [...itensPagina]
-    for (let p = 2; p <= totalPaginas; p++) {
-      const consulta = await consultar(consultaFiltros, p, ITENS_POR_PAGINA)
-      todos.push(...consulta.itens)
-    }
-    return todos
-  }
-
-  async function selecionarTodas() {
-    setErro("")
-    setAcao("carregando")
-    try {
-      const itens = await carregarTodasPaginas()
-      const chaves = agruparPorNf(itens).map((grupo) => grupo.chave_nf)
-      setSelectedNfs(new Set(chaves))
-    } catch (err) {
-      setErro(err instanceof Error ? err.message : "Erro ao selecionar todas as notas")
-    } finally {
-      setAcao("idle")
-    }
+  function selecionarTodas() {
+    setSelectedNfs(new Set(grupos.map((grupo) => grupo.chave_nf)))
   }
 
   function selecionarVisiveis() {
@@ -449,9 +451,8 @@ export default function FaturamentoDetalhePage() {
     setGerandoPdf(true)
     setErro("")
     try {
-      // Notas selecionadas podem estar em paginas que a tela ainda nao carregou.
-      const base = gruposDoPeriodo.length === selecionadas.length ? gruposDoPeriodo : agruparPorNf(await carregarTodasPaginas())
-      await gerarPdfConsolidado(base, selecionadas, orientacaoPdf)
+      // `grupos` já cobre o período inteiro, então nenhuma nota se perde no PDF.
+      await gerarPdfConsolidado(grupos, selecionadas, orientacaoPdf)
     } catch (err) {
       setErro(err instanceof Error ? err.message : "Erro ao gerar PDF")
     } finally {
@@ -528,7 +529,7 @@ export default function FaturamentoDetalhePage() {
             type="button"
             variant="outline"
             onClick={exportarCsv}
-            disabled={!itensPagina.length}
+            disabled={!itensPeriodo.length}
             className="gap-2"
           >
             <Download className="w-4 h-4" />
@@ -569,11 +570,11 @@ export default function FaturamentoDetalhePage() {
 
       <FaturamentoCharts
         grupos={grupos}
-        faturamentoTotal={totaisDaPagina.faturamento}
-        totalItens={totaisDaPagina.itens}
+        faturamentoTotal={totaisPeriodo.faturamento}
+        totalItens={totaisPeriodo.itens}
         totalNotas={grupos.length}
-        totalMetros={totaisDaPagina.metros}
-        totalPeso={totaisDaPagina.peso}
+        totalMetros={totaisPeriodo.metros}
+        totalPeso={totaisPeriodo.peso}
       />
 
       {grupos.length > 0 && (
@@ -600,13 +601,9 @@ export default function FaturamentoDetalhePage() {
               variant="outline"
               size="sm"
               onClick={selecionarTodas}
-              disabled={acao !== "idle"}
+              disabled={!grupos.length}
               className="gap-2"
-              title={
-                totalPaginas <= 1
-                  ? "Todas as notas do período estão nesta página"
-                  : `Seleciona as notas de todas as ${totalPaginas} páginas do período`
-              }
+              title={`Seleciona as ${grupos.length} notas do período filtrado`}
             >
               <CheckCheck className="w-4 h-4" />
               Selecionar todas do período
@@ -672,7 +669,7 @@ export default function FaturamentoDetalhePage() {
       )}
 
       <div className="space-y-3">
-        {grupos.map((grupo) => (
+        {gruposVisiveis.map((grupo) => (
           <FaturamentoCard
             key={grupo.chave_nf}
             grupo={grupo}
@@ -683,41 +680,31 @@ export default function FaturamentoDetalhePage() {
             orientacao={orientacaoPdf}
           />
         ))}
+        {grupos.length > gruposVisiveis.length && (
+          <div className="flex flex-col items-center gap-2 py-4">
+            <p
+              role="status"
+              aria-label={`Mostrando ${gruposVisiveis.length} de ${grupos.length} notas do período`}
+              className="text-xs text-slate-500 dark:text-slate-400"
+            >
+              Mostrando {gruposVisiveis.length} de{" "}
+              <strong>{grupos.length.toLocaleString("pt-BR")}</strong> notas do período
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setLimiteRender((n) => n + BLOCO_NOTAS)}
+            >
+              Carregar mais notas
+            </Button>
+          </div>
+        )}
         {grupos.length === 0 && !carregandoDb && (
           <p className="rounded-xl border border-slate-200 bg-white p-10 text-center text-sm text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
             Nenhuma nota encontrada. Carregue a base ou ajuste os filtros.
           </p>
         )}
       </div>
-
-      {paginacao && paginacao.total_paginas > 1 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-3 text-xs dark:border-slate-800 dark:bg-slate-900">
-          <span className="text-slate-500 dark:text-slate-400">
-            Página {paginacao.pagina} de {paginacao.total_paginas} —{" "}
-            {paginacao.total.toLocaleString("pt-BR")} itens
-          </span>
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={pagina <= 1}
-              onClick={() => setPagina((p) => Math.max(1, p - 1))}
-            >
-              Anterior
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={pagina >= paginacao.total_paginas}
-              onClick={() => setPagina((p) => Math.min(paginacao.total_paginas, p + 1))}
-            >
-              Próxima
-            </Button>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

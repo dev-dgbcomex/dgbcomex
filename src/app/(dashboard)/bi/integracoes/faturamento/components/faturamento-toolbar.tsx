@@ -110,7 +110,11 @@ export function FaturamentoToolbar({
         </Button>
       </div>
 
-      <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
+      <p
+        role="status"
+        aria-label={`${totalNotas} ${totalNotas === 1 ? "nota no período" : "notas no período"}`}
+        className="mt-3 text-xs text-slate-500 dark:text-slate-400"
+      >
         <strong className="text-slate-700 dark:text-slate-200">{totalNotas}</strong>{" "}
         {totalNotas === 1 ? "nota nesta página" : "notas nesta página"}
       </p>
