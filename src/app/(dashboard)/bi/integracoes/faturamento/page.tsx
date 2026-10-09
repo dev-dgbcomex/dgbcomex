@@ -285,7 +285,7 @@ export default function FaturamentoDetalhePage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <Button asChild variant="ghost" size="sm" className="gap-2">
+          <Button variant="ghost" size="sm" className="gap-2" asChild>
             <Link href="/bi/integracoes">
               <ArrowLeft className="w-4 h-4" />
               Voltar
