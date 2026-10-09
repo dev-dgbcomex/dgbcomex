@@ -3,7 +3,16 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { useQuery } from "@tanstack/react-query"
-import { ArrowLeft, Database, Download, FileText, RefreshCw } from "lucide-react"
+import {
+  ArrowLeft,
+  ArrowLeftRight,
+  Check,
+  CheckCheck,
+  Database,
+  Download,
+  FileText,
+  RefreshCw,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   consultar,
@@ -22,7 +31,7 @@ import { FaturamentoCharts } from "./components/faturamento-charts"
 import { FaturamentoToolbar, type FiltrosToolbar } from "./components/faturamento-toolbar"
 import { gerarPdfConsolidado } from "./components/faturamento-pdf"
 import { ORIENTACAO_LABEL, agruparPorNf, filtrarGruposPorBusca } from "./components/utils"
-import type { IntegracaoBi, ItemDetalhe, OrientacaoPdf } from "./components/types"
+import type { GrupoFaturamento, IntegracaoBi, ItemDetalhe, OrientacaoPdf } from "./components/types"
 
 const ITENS_POR_PAGINA = 500
 
@@ -380,8 +389,59 @@ export default function FaturamentoDetalhePage() {
 
   const selecionadas = useMemo(() => [...selectedNfs], [selectedNfs])
 
+  /**
+   * Todas as notas do período, atravessando as páginas do IndexedDB. A tela mostra
+   * 500 itens por página, mas o PDF consolidado precisa de todos os grupos — buscar
+   * só a página atual geraria um documento incompleto sem avisar.
+   */
+  const gruposDoPeriodo = useMemo<GrupoFaturamento[]>(() => {
+    const alvo = new Set<string>()
+    for (const chave of selectedNfs) alvo.add(chave)
+    return grupos.filter((grupo) => alvo.has(grupo.chave_nf))
+  }, [grupos, selectedNfs])
+
+  const totalPaginas = paginacao?.total_paginas ?? 1
+
+  async function carregarTodasPaginas(): Promise<ItemDetalhe[]> {
+    const todos: ItemDetalhe[] = [...itensPagina]
+    for (let p = 2; p <= totalPaginas; p++) {
+      const consulta = await consultar(consultaFiltros, p, ITENS_POR_PAGINA)
+      todos.push(...consulta.itens)
+    }
+    return todos
+  }
+
+  async function selecionarTodas() {
+    setErro("")
+    setAcao("carregando")
+    try {
+      const itens = await carregarTodasPaginas()
+      const chaves = agruparPorNf(itens).map((grupo) => grupo.chave_nf)
+      setSelectedNfs(new Set(chaves))
+    } catch (err) {
+      setErro(err instanceof Error ? err.message : "Erro ao selecionar todas as notas")
+    } finally {
+      setAcao("idle")
+    }
+  }
+
+  function selecionarVisiveis() {
+    setSelectedNfs(new Set(grupos.map((grupo) => grupo.chave_nf)))
+  }
+
   function limparSelecao() {
     setSelectedNfs(new Set())
+  }
+
+  function inverterSelecao() {
+    setSelectedNfs((atual) => {
+      const proximo = new Set(atual)
+      for (const grupo of grupos) {
+        if (proximo.has(grupo.chave_nf)) proximo.delete(grupo.chave_nf)
+        else proximo.add(grupo.chave_nf)
+      }
+      return proximo
+    })
   }
 
   async function baixarPdfSelecionadas() {
@@ -389,7 +449,9 @@ export default function FaturamentoDetalhePage() {
     setGerandoPdf(true)
     setErro("")
     try {
-      await gerarPdfConsolidado(grupos, selecionadas, orientacaoPdf)
+      // Notas selecionadas podem estar em paginas que a tela ainda nao carregou.
+      const base = gruposDoPeriodo.length === selecionadas.length ? gruposDoPeriodo : agruparPorNf(await carregarTodasPaginas())
+      await gerarPdfConsolidado(base, selecionadas, orientacaoPdf)
     } catch (err) {
       setErro(err instanceof Error ? err.message : "Erro ao gerar PDF")
     } finally {
@@ -514,31 +576,98 @@ export default function FaturamentoDetalhePage() {
         totalPeso={totaisDaPagina.peso}
       />
 
-      {selecionadas.length > 0 && (
-        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-teal-200 bg-teal-50 px-4 py-3 text-sm dark:border-teal-900 dark:bg-teal-950">
-          <span className="text-teal-900 dark:text-teal-100">
+      {grupos.length > 0 && (
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm dark:border-slate-800 dark:bg-slate-900">
+          <span
+            role="status"
+            className="text-slate-600 dark:text-slate-300"
+            aria-label={`${selecionadas.length} ${selecionadas.length === 1 ? "nota selecionada" : "notas selecionadas"}`}
+          >
             <strong>{selecionadas.length}</strong>{" "}
             {selecionadas.length === 1 ? "nota selecionada" : "notas selecionadas"}
+            {selecionadas.length > 0 && (
+              <span className="text-slate-400">
+                {" "}
+                · PDF com {gruposDoPeriodo.length}{" "}
+                {gruposDoPeriodo.length === 1 ? "nota" : "notas"}
+              </span>
+            )}
           </span>
-          <select
-            aria-label="Orientação do PDF"
-            className="h-8 rounded-lg border border-input bg-transparent px-2 text-sm"
-            value={orientacaoPdf}
-            onChange={(e) => setOrientacaoPdf(e.target.value as OrientacaoPdf)}
-          >
-            {Object.entries(ORIENTACAO_LABEL).map(([valor, rotulo]) => (
-              <option key={valor} value={valor}>
-                PDF {rotulo}
-              </option>
-            ))}
-          </select>
-          <Button type="button" onClick={baixarPdfSelecionadas} disabled={gerandoPdf} className="gap-2">
-            <FileText className="w-4 h-4" />
-            {gerandoPdf ? "Gerando..." : "Gerar PDF das selecionadas"}
-          </Button>
-          <Button type="button" variant="ghost" onClick={limparSelecao}>
-            Limpar seleção
-          </Button>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={selecionarTodas}
+              disabled={acao !== "idle"}
+              className="gap-2"
+              title={
+                totalPaginas <= 1
+                  ? "Todas as notas do período estão nesta página"
+                  : `Seleciona as notas de todas as ${totalPaginas} páginas do período`
+              }
+            >
+              <CheckCheck className="w-4 h-4" />
+              Selecionar todas do período
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={selecionarVisiveis}
+              className="gap-2"
+              title="Seleciona as notas desta página"
+            >
+              <Check className="w-4 h-4" />
+              Selecionar desta página
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={inverterSelecao}
+              className="gap-2"
+            >
+              <ArrowLeftRight className="w-4 h-4" />
+              Inverter
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={limparSelecao}
+              disabled={!selecionadas.length}
+            >
+              Limpar seleção
+            </Button>
+          </div>
+
+          <div className="ml-auto flex flex-wrap items-center gap-2">
+            <select
+              aria-label="Orientação do PDF"
+              className="h-8 rounded-lg border border-input bg-transparent px-2 text-sm"
+              value={orientacaoPdf}
+              onChange={(e) => setOrientacaoPdf(e.target.value as OrientacaoPdf)}
+            >
+              {Object.entries(ORIENTACAO_LABEL).map(([valor, rotulo]) => (
+                <option key={valor} value={valor}>
+                  PDF {rotulo}
+                </option>
+              ))}
+            </select>
+            <Button
+              type="button"
+              onClick={baixarPdfSelecionadas}
+              disabled={gerandoPdf || !selecionadas.length}
+              className="gap-2"
+            >
+              <FileText className="w-4 h-4" />
+              {gerandoPdf
+                ? "Gerando..."
+                : `PDF único (${selecionadas.length})`}
+            </Button>
+          </div>
         </div>
       )}
 

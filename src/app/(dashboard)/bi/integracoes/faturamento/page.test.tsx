@@ -52,6 +52,11 @@ function item(over: Partial<Record<string, unknown>>) {
   }
 }
 
+/** A barra de seleção rotula a contagem; o texto em si fica quebrado em varios nós. */
+function contagemSelecionada(): string {
+  return screen.getByRole("status").getAttribute("aria-label") ?? ""
+}
+
 function consultaDe(itens: ReturnType<typeof item>[]): ConsultaFaturamento {
   return {
     resumo: {
@@ -137,10 +142,10 @@ describe("página de detalhe do faturamento", () => {
     renderPage(<FaturamentoDetalhePage />)
 
     fireEvent.click(await screen.findByLabelText("Selecionar nota 1-200"))
-    expect(screen.getByText(/nota selecionada/)).toBeTruthy()
+    expect(contagemSelecionada()).toBe("1 nota selecionada")
 
     fireEvent.change(screen.getByLabelText("Orientação do PDF"), { target: { value: "landscape" } })
-    fireEvent.click(screen.getByRole("button", { name: /Gerar PDF das selecionadas/ }))
+    fireEvent.click(screen.getByRole("button", { name: /PDF único/ }))
 
     await waitFor(() =>
       expect(gerarPdfConsolidado).toHaveBeenCalledWith(
@@ -151,13 +156,62 @@ describe("página de detalhe do faturamento", () => {
     )
   })
 
+  it("seleciona todas as notas do período em um único PDF", async () => {
+    renderPage(<FaturamentoDetalhePage />)
+
+    fireEvent.click(await screen.findByRole("button", { name: /Selecionar todas do período/ }))
+    await waitFor(() => expect(contagemSelecionada()).toBe("2 notas selecionadas"))
+
+    fireEvent.click(screen.getByRole("button", { name: /PDF único \(2\)/ }))
+
+    await waitFor(() => expect(gerarPdfConsolidado).toHaveBeenCalled())
+    const [grupos, chaves] = gerarPdfConsolidado.mock.calls[0]
+    expect(chaves).toEqual(["1|100", "1|200"])
+    expect(grupos).toHaveLength(2)
+  })
+
+  it("atravessa as páginas do período ao selecionar todas", async () => {
+    const pagina2 = [item({ nr_nota: "300", pedido: "P3", data_nota: "2026-03-12", nome_cliente: "Cliente Tres" })]
+    consultar.mockImplementation(async (_filtros, pagina) =>
+      pagina === 1
+        ? { ...consultaDe(ITENS), paginacao: { total: 4, pagina: 1, por_pagina: 500, total_paginas: 2 } }
+        : { ...consultaDe(pagina2), paginacao: { total: 4, pagina: 2, por_pagina: 500, total_paginas: 2 } }
+    )
+    renderPage(<FaturamentoDetalhePage />)
+
+    await screen.findByText("1-100")
+    fireEvent.click(screen.getByRole("button", { name: /Selecionar todas do período/ }))
+
+    await waitFor(() => expect(contagemSelecionada()).toBe("3 notas selecionadas"))
+
+    fireEvent.click(screen.getByRole("button", { name: /PDF único \(3\)/ }))
+    await waitFor(() => expect(gerarPdfConsolidado).toHaveBeenCalled())
+    const [, chaves] = gerarPdfConsolidado.mock.calls[0]
+    expect(chaves).toEqual(["1|100", "1|200", "1|300"])
+    expect(consultar).toHaveBeenCalledWith(expect.anything(), 2, 500)
+  })
+
+  it("seleciona só as notas visíveis e inverte a seleção", async () => {
+    renderPage(<FaturamentoDetalhePage />)
+
+    fireEvent.click(await screen.findByRole("button", { name: /Selecionar desta página/ }))
+    await waitFor(() => expect(contagemSelecionada()).toBe("2 notas selecionadas"))
+
+    fireEvent.click(screen.getByRole("button", { name: "Inverter" }))
+    await waitFor(() => expect(contagemSelecionada()).toBe("0 notas selecionadas"))
+
+    fireEvent.click(screen.getByRole("button", { name: /Selecionar desta página/ }))
+    fireEvent.click(screen.getByRole("button", { name: "Inverter" }))
+    expect(screen.getByLabelText("Selecionar nota 1-100")).toHaveProperty("checked", false)
+  })
+
   it("limpa a seleção ao pedir", async () => {
     renderPage(<FaturamentoDetalhePage />)
 
     fireEvent.click(await screen.findByLabelText("Selecionar nota 1-100"))
     fireEvent.click(screen.getByRole("button", { name: "Limpar seleção" }))
 
-    expect(screen.queryByText(/nota selecionada/)).toBeNull()
+    await waitFor(() => expect(contagemSelecionada()).toBe("0 notas selecionadas"))
   })
 
   it("avisa quando o cache local está vazio e bloqueia a atualização", async () => {
