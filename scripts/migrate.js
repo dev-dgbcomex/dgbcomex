@@ -1590,6 +1590,10 @@ async function migrate() {
     await sql`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS bi_ordem_cards JSONB DEFAULT '[]'::jsonb`
     console.log("✓ Coluna bi_ordem_cards adicionada em usuarios (ordem dos cards do BI)")
 
+    // ===== bi_ordem_graficos: ordem dos gráficos do detalhe de faturamento por usuário =====
+    await sql`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS bi_ordem_graficos JSONB DEFAULT '[]'::jsonb`
+    console.log("✓ Coluna bi_ordem_graficos adicionada em usuarios (ordem dos gráficos do faturamento)")
+
     console.log("\n✅ Migration concluída com sucesso!")
     
   } catch (error) {

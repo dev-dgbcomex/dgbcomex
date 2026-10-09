@@ -1,11 +1,12 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { fireEvent, screen, waitFor, within } from "@testing-library/react"
-import { renderPage } from "@/test/harness"
+import { createFetchMock, renderPage } from "@/test/harness"
 import { FaturamentoCharts } from "./faturamento-charts"
 import type { GrupoFaturamento } from "./types"
 
-const CHAVE_ORDEM = "faturamento_graficos_ordem"
+const CHAVE_CACHE = "faturamento_graficos_ordem"
+const ROTA = "/api/integracao/ordem-graficos"
 
 function grupo(over: Partial<GrupoFaturamento> = {}): GrupoFaturamento {
   return {
@@ -61,9 +62,20 @@ function titulosOrdem(): string[] {
     .map((h) => h.textContent ?? "")
 }
 
+/** API da ordem: por padrão responde lista vazia (usuário sem preferência salva). */
+function mockOrdem(ids: string[] = [], status = 200) {
+  const fetchMock = createFetchMock(({ url }) => {
+    if (url === ROTA) return { status, json: { ids } }
+    return { json: null }
+  })
+  vi.stubGlobal("fetch", fetchMock.fn)
+  return fetchMock
+}
+
 beforeEach(() => {
   vi.clearAllMocks()
   localStorage.clear()
+  mockOrdem()
 })
 
 describe("gráficos do faturamento", () => {
@@ -129,8 +141,9 @@ describe("gráficos do faturamento", () => {
     expect(depois[2]).toBe("Participação por produto")
   })
 
-  it("persiste a ordem escolhida no navegador", () => {
-    const { unmount } = renderPage(
+  it("persiste a ordem escolhida no servidor, não só no navegador", async () => {
+    const fetchMock = mockOrdem()
+    renderPage(
       <FaturamentoCharts
         grupos={GRUPOS}
         faturamentoTotal={400}
@@ -142,9 +155,18 @@ describe("gráficos do faturamento", () => {
     )
 
     fireEvent.click(screen.getByRole("button", { name: "Mover Participação por produto para cima" }))
-    const salvo = JSON.parse(localStorage.getItem(CHAVE_ORDEM) ?? "[]")
-    expect(salvo).toEqual(["mes", "clientes", "participacao", "produtos"])
-    unmount()
+
+    await waitFor(() => {
+      const put = fetchMock.calls.find((c) => c.method === "PUT")
+      expect(put).toBeTruthy()
+      expect(put?.url).toBe(ROTA)
+      expect(put?.body).toEqual({ ids: ["mes", "clientes", "participacao", "produtos"] })
+    })
+  })
+
+  it("usa a ordem salva no servidor quando existe", async () => {
+    mockOrdem(["produtos", "mes"])
+    localStorage.setItem(CHAVE_CACHE, JSON.stringify(["participacao", "clientes"]))
 
     renderPage(
       <FaturamentoCharts
@@ -157,11 +179,38 @@ describe("gráficos do faturamento", () => {
       />
     )
 
-    expect(titulosOrdem()[2]).toBe("Participação por produto")
+    // O servidor manda: o cache local diferente é ignorado.
+    await waitFor(() => expect(titulosOrdem()[0]).toBe("Faturamento por produto (top 8)"))
+    expect(titulosOrdem()).toEqual([
+      "Faturamento por produto (top 8)",
+      "Faturamento e metragem por mês",
+      "Faturamento por cliente (top 8)",
+      "Participação por produto",
+    ])
   })
 
-  it("descarta preferência corrompida e mantém a ordem padrão", async () => {
-    localStorage.setItem(CHAVE_ORDEM, "isto não é json")
+  it("cai no cache local quando a API falha, sem quebrar a tela", async () => {
+    mockOrdem([], 500)
+    localStorage.setItem(CHAVE_CACHE, JSON.stringify(["participacao", "produtos"]))
+
+    renderPage(
+      <FaturamentoCharts
+        grupos={GRUPOS}
+        faturamentoTotal={400}
+        totalItens={2}
+        totalNotas={2}
+        totalMetros={20}
+        totalPeso={4}
+      />
+    )
+
+    await waitFor(() => expect(titulosOrdem()[0]).toBe("Participação por produto"))
+  })
+
+  it("descarta cache local corrompido e mantém a ordem padrão", async () => {
+    mockOrdem([], 500)
+    localStorage.setItem(CHAVE_CACHE, "isto não é json")
+
     renderPage(
       <FaturamentoCharts
         grupos={GRUPOS}
@@ -174,11 +223,11 @@ describe("gráficos do faturamento", () => {
     )
 
     await waitFor(() => expect(titulosOrdem()[0]).toBe("Faturamento e metragem por mês"))
-    expect(localStorage.getItem(CHAVE_ORDEM)).toBeNull()
+    expect(localStorage.getItem(CHAVE_CACHE)).toBeNull()
   })
 
   it("ignora ids desconhecidos numa preferência antiga", async () => {
-    localStorage.setItem(CHAVE_ORDEM, JSON.stringify(["produtos", "grafico-removido"]))
+    mockOrdem(["produtos", "grafico-removido"])
     renderPage(
       <FaturamentoCharts
         grupos={GRUPOS}

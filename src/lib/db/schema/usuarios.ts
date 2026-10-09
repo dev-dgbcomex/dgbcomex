@@ -14,6 +14,7 @@ export const usuarios = pgTable("usuarios", {
   celWhatsapp: varchar("cel_whatsapp", { length: 20 }),
   updatedAt: timestamp("updated_at").defaultNow(),
   biOrdemCards: jsonb("bi_ordem_cards").$type<number[]>().default([]),
+  biOrdemGraficos: jsonb("bi_ordem_graficos").$type<string[]>().default([]),
 })
 
 export const sessions = pgTable("sessions", {

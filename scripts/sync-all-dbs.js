@@ -975,6 +975,9 @@ CREATE INDEX IF NOT EXISTS idx_ticket_mensagens_resposta_a_id ON ticket_mensagen
 
 -- BI: ordem dos cards por usuário (lista de ids de integração da tela bi)
 ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS bi_ordem_cards JSONB DEFAULT '[]'::jsonb;
+
+-- BI: ordem dos gráficos do detalhe de faturamento (lista de ids: mes/clientes/produtos/participacao)
+ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS bi_ordem_graficos JSONB DEFAULT '[]'::jsonb;
 `
 
 async function migrateDb(name, url) {

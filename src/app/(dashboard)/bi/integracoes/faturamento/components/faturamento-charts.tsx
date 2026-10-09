@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   Area,
   AreaChart,
@@ -36,8 +37,12 @@ import type { GrupoFaturamento } from "./types"
 
 const CORES = ["#0f766e", "#1d4ed8", "#b45309", "#7c3aed", "#be123c", "#0369a1", "#4d7c0f"]
 
-/** Preferência de layout do usuário; mesma convenção de `sidebar-collapsed` e `bi_last_sheet`. */
-const CHAVE_ORDEM = "faturamento_graficos_ordem"
+/**
+ * A ordem é do usuário, não do navegador: mora em `usuarios.bi_ordem_graficos` e
+ * segue a pessoa entre máquinas. O `localStorage` só cobre o primeiro acesso /
+ * API fora do ar, e é descartado assim que o servidor responde.
+ */
+const CHAVE_CACHE = "faturamento_graficos_ordem"
 
 type IdGrafico = "mes" | "clientes" | "produtos" | "participacao"
 
@@ -194,19 +199,60 @@ export function FaturamentoCharts({
   totalPeso,
 }: Props) {
   const [ordem, setOrdem] = useState<IdGrafico[]>(ORDEM_PADRAO)
+  const queryClient = useQueryClient()
 
+  const { data: ordemServida } = useQuery<{ ids: IdGrafico[] }>({
+    queryKey: ["faturamento-ordem-graficos"],
+    queryFn: async () => {
+      const res = await fetch("/api/integracao/ordem-graficos")
+      if (!res.ok) throw new Error("Erro ao ler a ordem dos gráficos")
+      const json = await res.json()
+      return { ids: Array.isArray(json?.ids) ? json.ids : [] }
+    },
+    retry: false,
+  })
+
+  const salvarOrdem = useMutation({
+    mutationFn: async (ids: IdGrafico[]) => {
+      const res = await fetch("/api/integracao/ordem-graficos", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || "Erro ao salvar a ordem")
+      }
+      return res.json()
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["faturamento-ordem-graficos"] }),
+  })
+
+  // A ordem salva no servidor manda. Sem ela (primeiro acesso ou API fora), cai no
+  // cache local; cache corrompido é apagado em vez de derrubar a tela.
   useEffect(() => {
-    try {
-      setOrdem(normalizarOrdem(JSON.parse(localStorage.getItem(CHAVE_ORDEM) ?? "null")))
-    } catch {
-      // Preferência corrompida não pode derrubar a tela: fica na ordem padrão.
-      localStorage.removeItem(CHAVE_ORDEM)
+    if (ordemServida?.ids?.length) {
+      setOrdem(normalizarOrdem(ordemServida.ids))
+      return
     }
-  }, [])
+    try {
+      const bruto = localStorage.getItem(CHAVE_CACHE)
+      if (!bruto) return
+      setOrdem(normalizarOrdem(JSON.parse(bruto)))
+    } catch {
+      localStorage.removeItem(CHAVE_CACHE)
+    }
+  }, [ordemServida])
 
   function reordenar(nova: IdGrafico[]) {
     setOrdem(nova)
-    localStorage.setItem(CHAVE_ORDEM, JSON.stringify(nova))
+    localStorage.setItem(CHAVE_CACHE, JSON.stringify(nova))
+    salvarOrdem.mutate(nova, {
+      onError: () => {
+        // A ordem fica no cache local; o servidor volta a mandar no próximo load.
+        queryClient.invalidateQueries({ queryKey: ["faturamento-ordem-graficos"] })
+      },
+    })
   }
 
   const sensors = useSensors(
