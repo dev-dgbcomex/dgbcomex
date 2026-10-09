@@ -54,6 +54,15 @@ function grupo(over: Partial<GrupoFaturamento> = {}): GrupoFaturamento {
 const GRUPOS = [
   grupo({ chave_nf: "1|1", nr_nota: "1", nome_cliente: "Cliente A", data_nota: "2026-01-10", faturamento: 100, totalVrTotal: 100 }),
   grupo({ chave_nf: "1|2", nr_nota: "2", nome_cliente: "Cliente B", data_nota: "2026-02-10", faturamento: 300, totalVrTotal: 300 }),
+  grupo({
+    chave_nf: "1|3",
+    nr_nota: "3",
+    nome_cliente: "Cliente C",
+    data_nota: "2026-03-10",
+    faturamento: 300,
+    totalVrTotal: 300,
+    representante: "Bruno",
+  }),
 ]
 
 function titulosOrdem(): string[] {
@@ -95,30 +104,45 @@ describe("gráficos do faturamento", () => {
     expect(screen.getByText("Ticket médio")).toBeTruthy()
     expect(titulosOrdem()).toEqual([
       "Faturamento e metragem por mês",
-      "Faturamento por cliente (top 8)",
-      "Faturamento por produto (top 8)",
-      "Participação por produto",
+      "Faturamento e metragem por cliente (top 8)",
+      "Faturamento e metragem por produto (top 8)",
+      "Participação por representante",
     ])
   })
 
-  it("dá legenda à pizza de participação com cor, produto e percentual", () => {
+  it("dá legenda à pizza com cor, representante e percentual", () => {
     renderPage(
       <FaturamentoCharts
         grupos={GRUPOS}
-        faturamentoTotal={400}
-        totalItens={2}
-        totalNotas={2}
-        totalMetros={20}
-        totalPeso={4}
+        faturamentoTotal={700}
+        totalItens={3}
+        totalNotas={3}
+        totalMetros={30}
+        totalPeso={6}
       />
     )
 
-    const legenda = screen.getByRole("list", { name: /participação por produto/i })
-    // A legenda fica no <ul> com os itens de produto e o % de cada um.
-    const itens = within(legenda).getAllByRole("listitem")
-    expect(itens.length).toBeGreaterThan(0)
-    expect(within(legenda).getByText("PRD-A")).toBeTruthy()
-    expect(within(legenda).getByText("100.0%")).toBeTruthy()
+    const legenda = screen.getByRole("list", { name: /participação por representante/i })
+    // A legenda lista os representantes com a fatia de cada um em %.
+    expect(within(legenda).getByText("Ana")).toBeTruthy()
+    expect(within(legenda).getByText("Bruno")).toBeTruthy()
+    expect(within(legenda).getByText("42.9%")).toBeTruthy()
+  })
+
+  it("não lista produto na legenda — a pizza é por representante", () => {
+    renderPage(
+      <FaturamentoCharts
+        grupos={GRUPOS}
+        faturamentoTotal={700}
+        totalItens={3}
+        totalNotas={3}
+        totalMetros={30}
+        totalPeso={6}
+      />
+    )
+
+    const legenda = screen.getByRole("list", { name: /participação por representante/i })
+    expect(within(legenda).queryByText("PRD-A")).toBeNull()
   })
 
   it("reordena os gráficos pelas setas do teclado", () => {
@@ -134,11 +158,11 @@ describe("gráficos do faturamento", () => {
     )
 
     const antes = titulosOrdem()
-    fireEvent.click(screen.getByRole("button", { name: "Mover Participação por produto para cima" }))
+    fireEvent.click(screen.getByRole("button", { name: "Mover Participação por representante para cima" }))
 
     const depois = titulosOrdem()
     expect(depois).not.toEqual(antes)
-    expect(depois[2]).toBe("Participação por produto")
+    expect(depois[2]).toBe("Participação por representante")
   })
 
   it("persiste a ordem escolhida no servidor, não só no navegador", async () => {
@@ -154,7 +178,7 @@ describe("gráficos do faturamento", () => {
       />
     )
 
-    fireEvent.click(screen.getByRole("button", { name: "Mover Participação por produto para cima" }))
+    fireEvent.click(screen.getByRole("button", { name: "Mover Participação por representante para cima" }))
 
     await waitFor(() => {
       const put = fetchMock.calls.find((c) => c.method === "PUT")
@@ -180,12 +204,12 @@ describe("gráficos do faturamento", () => {
     )
 
     // O servidor manda: o cache local diferente é ignorado.
-    await waitFor(() => expect(titulosOrdem()[0]).toBe("Faturamento por produto (top 8)"))
+    await waitFor(() => expect(titulosOrdem()[0]).toBe("Faturamento e metragem por produto (top 8)"))
     expect(titulosOrdem()).toEqual([
-      "Faturamento por produto (top 8)",
+      "Faturamento e metragem por produto (top 8)",
       "Faturamento e metragem por mês",
-      "Faturamento por cliente (top 8)",
-      "Participação por produto",
+      "Faturamento e metragem por cliente (top 8)",
+      "Participação por representante",
     ])
   })
 
@@ -204,7 +228,7 @@ describe("gráficos do faturamento", () => {
       />
     )
 
-    await waitFor(() => expect(titulosOrdem()[0]).toBe("Participação por produto"))
+    await waitFor(() => expect(titulosOrdem()[0]).toBe("Participação por representante"))
   })
 
   it("descarta cache local corrompido e mantém a ordem padrão", async () => {
@@ -239,7 +263,7 @@ describe("gráficos do faturamento", () => {
       />
     )
 
-    await waitFor(() => expect(titulosOrdem()[0]).toBe("Faturamento por produto (top 8)"))
+    await waitFor(() => expect(titulosOrdem()[0]).toBe("Faturamento e metragem por produto (top 8)"))
     // Os que faltavam entram no fim, sem buraco na grade.
     expect(titulosOrdem()).toHaveLength(4)
   })
@@ -274,9 +298,9 @@ describe("gráficos do faturamento", () => {
 
     const alvos = [
       "Faturamento e metragem por mês",
-      "Faturamento por cliente (top 8)",
-      "Faturamento por produto (top 8)",
-      "Participação por produto",
+      "Faturamento e metragem por cliente (top 8)",
+      "Faturamento e metragem por produto (top 8)",
+      "Participação por representante",
     ]
     for (const titulo of alvos) {
       expect(screen.getByLabelText(`Arrastar ${titulo} para reordenar`)).toBeTruthy()
@@ -297,7 +321,7 @@ describe("gráficos do faturamento", () => {
 
     expect(screen.getByRole("button", { name: "Mover Faturamento e metragem por mês para cima" })).toHaveProperty("disabled", true)
     expect(
-      screen.getByRole("button", { name: "Mover Participação por produto para baixo" })
+      screen.getByRole("button", { name: "Mover Participação por representante para baixo" })
     ).toHaveProperty("disabled", true)
   })
 })

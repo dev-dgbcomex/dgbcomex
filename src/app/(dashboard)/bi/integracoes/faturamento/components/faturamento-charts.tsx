@@ -50,9 +50,9 @@ const ORDEM_PADRAO: IdGrafico[] = ["mes", "clientes", "produtos", "participacao"
 
 const TITULOS: Record<IdGrafico, string> = {
   mes: "Faturamento e metragem por mês",
-  clientes: "Faturamento por cliente (top 8)",
-  produtos: "Faturamento por produto (top 8)",
-  participacao: "Participação por produto",
+  clientes: "Faturamento e metragem por cliente (top 8)",
+  produtos: "Faturamento e metragem por produto (top 8)",
+  participacao: "Participação por representante",
 }
 
 /** Ignora ids desconhecidos (versão antiga salva) e completa os que faltarem. */
@@ -161,26 +161,30 @@ function GraficoOrdenado({
 }
 
 /** Legenda em HTML — é o padrão do projeto (ver `comercial/crm/charts.tsx`). */
-function LegendaProdutos({ dados }: { dados: { produto: string; faturamento: number; fill: string }[] }) {
+function LegendaRepresentantes({
+  dados,
+}: {
+  dados: { representante: string; faturamento: number; fill: string }[]
+}) {
   const total = dados.reduce((soma, d) => soma + d.faturamento, 0)
   return (
     <ul
-      aria-label="Legenda da participação por produto"
+      aria-label="Legenda da participação por representante"
       className="mt-2 flex flex-wrap justify-center gap-1.5"
     >
       {dados.map((d) => {
         const parte = total > 0 ? (d.faturamento / total) * 100 : 0
         return (
           <li
-            key={d.produto}
+            key={d.representante}
             className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300"
           >
             <span
               className="h-2 w-2 shrink-0 rounded-full"
               style={{ backgroundColor: d.fill }}
             />
-            <span className="max-w-[120px] truncate" title={d.produto}>
-              {d.produto}
+            <span className="max-w-[120px] truncate" title={d.representante}>
+              {d.representante}
             </span>
             <span className="text-slate-400">{parte.toFixed(1)}%</span>
           </li>
@@ -291,34 +295,48 @@ export function FaturamentoCharts({
   }, [grupos])
 
   const topClientes = useMemo(() => {
-    const mapa = new Map<string, number>()
+    const mapa = new Map<string, { nome: string; faturamento: number; metros: number }>()
     for (const grupo of grupos) {
       const chave = grupo.nome_cliente || grupo.cliente || "Sem cliente"
-      mapa.set(chave, (mapa.get(chave) ?? 0) + grupo.faturamento)
+      const atual = mapa.get(chave) ?? { nome: chave, faturamento: 0, metros: 0 }
+      atual.faturamento += grupo.faturamento
+      atual.metros += grupo.totalMetros
+      mapa.set(chave, atual)
     }
-    return [...mapa.entries()]
-      .map(([nome, faturamento]) => ({ nome, faturamento }))
-      .sort((a, b) => b.faturamento - a.faturamento)
-      .slice(0, 8)
+    return [...mapa.values()].sort((a, b) => b.faturamento - a.faturamento).slice(0, 8)
   }, [grupos])
 
   const topProdutos = useMemo(() => {
-    const mapa = new Map<string, number>()
+    const mapa = new Map<string, { produto: string; faturamento: number; metros: number }>()
     for (const grupo of grupos) {
       for (const item of grupo.itens) {
         const valor = (item.vr_total || 0) + (item.acres_desc || 0)
-        mapa.set(item.cod_produto, (mapa.get(item.cod_produto) ?? 0) + valor)
+        const chave = item.cod_produto || "—"
+        const atual = mapa.get(chave) ?? { produto: chave, faturamento: 0, metros: 0 }
+        atual.faturamento += valor
+        atual.metros += item.metros || 0
+        mapa.set(chave, atual)
       }
     }
+    return [...mapa.values()].sort((a, b) => b.faturamento - a.faturamento).slice(0, 8)
+  }, [grupos])
+
+  const topRepresentantes = useMemo(() => {
+    const mapa = new Map<string, number>()
+    for (const grupo of grupos) {
+      const chave = grupo.representante || "Sem representante"
+      mapa.set(chave, (mapa.get(chave) ?? 0) + grupo.faturamento)
+    }
     return [...mapa.entries()]
-      .map(([produto, faturamento]) => ({ produto: produto || "—", faturamento }))
+      .map(([representante, faturamento]) => ({ representante, faturamento }))
       .sort((a, b) => b.faturamento - a.faturamento)
       .slice(0, 8)
   }, [grupos])
 
   const representacao = useMemo(
-    () => topProdutos.map((item, i) => ({ ...item, fill: CORES[i % CORES.length] })),
-    [topProdutos]
+    () =>
+      topRepresentantes.map((item, i) => ({ ...item, fill: CORES[i % CORES.length] })),
+    [topRepresentantes]
   )
 
   const graficos: Record<IdGrafico, React.ReactNode> = {
@@ -382,15 +400,29 @@ export function FaturamentoCharts({
               <stop offset="0%" stopColor="#1d4ed8" stopOpacity={0.35} />
               <stop offset="100%" stopColor="#1d4ed8" />
             </linearGradient>
+            <linearGradient id="gradClienteMetros" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="#f97316" stopOpacity={0.35} />
+              <stop offset="100%" stopColor="#f97316" />
+            </linearGradient>
           </defs>
           <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
           <XAxis
+            xAxisId="valor"
             type="number"
             tick={{ fontSize: 11 }}
             stroke="#94a3b8"
             tickFormatter={(v) => formatarValor(Number(v))}
           />
+          <XAxis
+            xAxisId="metros"
+            type="number"
+            orientation="top"
+            tick={{ fontSize: 10 }}
+            stroke="#94a3b8"
+            tickFormatter={(v) => `${Math.round(Number(v))} m`}
+          />
           <YAxis
+            yAxisId="cliente"
             type="category"
             dataKey="nome"
             width={120}
@@ -398,12 +430,31 @@ export function FaturamentoCharts({
             stroke="#94a3b8"
             tickFormatter={(v: string) => (v.length > 16 ? `${v.slice(0, 15)}…` : v)}
           />
-          <Tooltip content={<ChartTooltip formatter={(v) => formatarValor(v)} />} />
+          <Tooltip
+            content={
+              <ChartTooltip
+                formatter={(v, nome) => (nome === "Metros" ? formatarMetragem(v) : formatarValor(v))}
+              />
+            }
+          />
           <Bar
+            yAxisId="cliente"
+            xAxisId="metros"
+            dataKey="metros"
+            name="Metros"
+            fill="url(#gradClienteMetros)"
+            radius={[0, 6, 6, 0]}
+            barSize={10}
+            animationDuration={1000}
+          />
+          <Bar
+            yAxisId="cliente"
+            xAxisId="valor"
             dataKey="faturamento"
             name="Faturamento"
             fill="url(#gradCliente)"
             radius={[0, 6, 6, 0]}
+            barSize={10}
             animationDuration={1000}
           />
         </BarChart>
@@ -417,21 +468,59 @@ export function FaturamentoCharts({
               <stop offset="0%" stopColor="#0f766e" />
               <stop offset="100%" stopColor="#0f766e" stopOpacity={0.4} />
             </linearGradient>
+            <linearGradient id="gradProdutoMetros" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#b45309" />
+              <stop offset="100%" stopColor="#b45309" stopOpacity={0.4} />
+            </linearGradient>
           </defs>
           <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-          <XAxis dataKey="produto" tick={{ fontSize: 10 }} stroke="#94a3b8" interval={0} angle={-20} textAnchor="end" height={60} />
+          <XAxis
+            dataKey="produto"
+            tick={{ fontSize: 10 }}
+            stroke="#94a3b8"
+            interval={0}
+            angle={-20}
+            textAnchor="end"
+            height={60}
+          />
           <YAxis
+            yAxisId="valor"
             tick={{ fontSize: 11 }}
             stroke="#94a3b8"
             tickFormatter={(v) => formatarValor(Number(v))}
           />
-          <Tooltip content={<ChartTooltip formatter={(v) => formatarValor(v)} />} />
+          <YAxis
+            yAxisId="metros"
+            orientation="right"
+            tick={{ fontSize: 10 }}
+            stroke="#94a3b8"
+            tickFormatter={(v) => `${Math.round(Number(v))} m`}
+          />
+          <Tooltip
+            content={
+              <ChartTooltip
+                formatter={(v, nome) => (nome === "Metros" ? formatarMetragem(v) : formatarValor(v))}
+              />
+            }
+          />
           <Bar
+            yAxisId="valor"
             dataKey="faturamento"
             name="Faturamento"
             fill="url(#gradProduto)"
             radius={[6, 6, 0, 0]}
-            maxBarSize={48}
+            maxBarSize={40}
+            animationDuration={1000}
+          />
+          <Line
+            yAxisId="metros"
+            type="monotone"
+            dataKey="metros"
+            name="Metros"
+            stroke="#b45309"
+            strokeWidth={2}
+            dot={{ r: 3, fill: "#b45309" }}
+            activeDot={{ r: 5 }}
             animationDuration={1000}
           />
         </BarChart>
@@ -444,7 +533,7 @@ export function FaturamentoCharts({
             <Pie
               data={representacao}
               dataKey="faturamento"
-              nameKey="produto"
+              nameKey="representante"
               innerRadius={55}
               outerRadius={90}
               paddingAngle={2}
@@ -455,13 +544,13 @@ export function FaturamentoCharts({
               strokeWidth={2}
             >
               {representacao.map((entrada) => (
-                <Cell key={entrada.produto} fill={entrada.fill} />
+                <Cell key={entrada.representante} fill={entrada.fill} />
               ))}
             </Pie>
             <Tooltip content={<ChartTooltip formatter={(v) => formatarValor(v)} />} />
           </PieChart>
         </ResponsiveContainer>
-        <LegendaProdutos dados={representacao} />
+        <LegendaRepresentantes dados={representacao} />
       </>
     ),
   }
