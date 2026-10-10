@@ -297,15 +297,88 @@ it("tem botão de informação explicando o uso da tela", async () => {
     await waitFor(() => expect(contagemSelecionada()).toBe("0 notas selecionadas"))
   })
 
-  it("avisa quando o cache local está vazio e bloqueia a atualização", async () => {
+  it("popula sozinho a partir do Neon quando o cache local está vazio", async () => {
+    // Cache vazio: a tela dispara "Usar base do Neon" sozinha, sem clique.
     estadoSalvo.mockResolvedValue(null)
     consultar.mockResolvedValue(consultaDe([]))
+    fetchMock = createFetchMock(({ url, method }) => {
+      if (url.startsWith("/api/integracao/listar")) return { json: [INTEGRACAO] }
+      if (method === "POST") return { json: { erro: "não deveria chamar o ERP" } }
+      if (url.includes("por_pagina=500")) {
+        return {
+          json: {
+            itens: ITENS,
+            paginacao: { total: ITENS.length, pagina: 1, por_pagina: 500, total_paginas: 1 },
+          },
+        }
+      }
+      return { json: null }
+    })
+    vi.stubGlobal("fetch", fetchMock.fn)
     renderPage(<FaturamentoDetalhePage />)
 
-    await screen.findByText(/Nenhuma nota encontrada/)
+    await waitFor(() => expect(substituirBase).toHaveBeenCalled())
+    expect(substituirBase.mock.calls[0][0]).toHaveLength(ITENS.length)
+    // Não toca no ERP: só lê o espelho.
+    expect(fetchMock.calls.some((c) => c.method === "POST")).toBe(false)
+  })
+
+  it("não repete a população automática nem chama o ERP", async () => {
+    estadoSalvo.mockResolvedValue(null)
+    consultar.mockResolvedValue(consultaDe([]))
+    fetchMock = createFetchMock(({ url, method }) => {
+      if (url.startsWith("/api/integracao/listar")) return { json: [INTEGRACAO] }
+      if (method === "POST") return { json: { erro: "não deveria chamar o ERP" } }
+      if (url.includes("por_pagina=500")) {
+        return {
+          json: {
+            itens: ITENS,
+            paginacao: { total: ITENS.length, pagina: 1, por_pagina: 500, total_paginas: 1 },
+          },
+        }
+      }
+      return { json: null }
+    })
+    vi.stubGlobal("fetch", fetchMock.fn)
+    renderPage(<FaturamentoDetalhePage />)
+
+    await waitFor(() => expect(substituirBase).toHaveBeenCalledTimes(1))
+    // Uma tentativa só por montagem: re-render não repete a leitura.
+    await screen.findByRole("status", { name: /notas no período/ })
+    expect(substituirBase).toHaveBeenCalledTimes(1)
+    expect(mergeDelta).not.toHaveBeenCalled()
+  })
+
+  it("não faz nada automático quando já existe cache local", async () => {
+    // estadoSalvo padrão devolve carga_completa: nada deve ser baixado sozinho.
+    fetchMock = createFetchMock(({ url }) => {
+      if (url.startsWith("/api/integracao/listar")) return { json: [INTEGRACAO] }
+      return { json: null }
+    })
+    vi.stubGlobal("fetch", fetchMock.fn)
+    renderPage(<FaturamentoDetalhePage />)
+
+    await screen.findByText("1-100")
+    expect(substituirBase).not.toHaveBeenCalled()
+    expect(fetchMock.calls.some((c) => c.url.includes("por_pagina=500"))).toBe(false)
+  })
+
+  it("avisa quando o cache está vazio e o Neon também", async () => {
+    estadoSalvo.mockResolvedValue(null)
+    consultar.mockResolvedValue(consultaDe([]))
+    fetchMock = createFetchMock(({ url }) => {
+      if (url.startsWith("/api/integracao/listar")) return { json: [INTEGRACAO] }
+      return { json: { itens: [] } }
+    })
+    vi.stubGlobal("fetch", fetchMock.fn)
+    renderPage(<FaturamentoDetalhePage />)
+
+    await waitFor(() =>
+      expect(screen.getByRole("alert").textContent).toContain("A base do Neon está vazia")
+    )
+    // O botão continua disponível para o usuário carregar a base de verdade.
     expect(screen.getByRole("button", { name: "Atualizar" })).toHaveProperty("disabled", true)
     expect(screen.getByRole("button", { name: /Exportar CSV/ })).toHaveProperty("disabled", true)
-    expect(screen.getByRole("button", { name: /Usar base do Neon/ })).toHaveProperty("disabled", false)
   })
 
   it("avisa quando a integração de faturamento não está cadastrada", async () => {
@@ -378,7 +451,7 @@ it("tem botão de informação explicando o uso da tela", async () => {
   })
 
   it("popula o cache direto dos itens devolvidos pela carga, sem reler o Neon", async () => {
-    estadoSalvo.mockResolvedValue(null)
+    // Com cache já populado a tela não dispara nada sozinha, então o clique é do teste.
     consultar.mockResolvedValue(consultaDe([]))
     fetchMock = createFetchMock(({ url, method }) => {
       if (url.startsWith("/api/integracao/listar")) return { json: [INTEGRACAO] }

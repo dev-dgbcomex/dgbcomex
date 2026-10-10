@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
@@ -313,7 +313,7 @@ export default function FaturamentoDetalhePage() {
    * do espelho, sem tocar no ERP e sem reescrever o Neon. É o caminho de quem entra
    * pela segunda vez ou em um navegador novo.
    */
-  async function usarBaseExistente() {
+  const usarBaseExistente = useCallback(async () => {
     setErro("")
     if (!integracao) {
       setErro("Integração de faturamento não encontrada. Cadastre-a em Admin → Integrações.")
@@ -341,7 +341,29 @@ export default function FaturamentoDetalhePage() {
       setAcao("erro")
       setErro(err instanceof Error ? err.message : "Erro ao usar a base existente")
     }
-  }
+  }, [integracao, estado?.ultima_data, filtros.dataInicio, filtros.dataFim, recarregarDb])
+
+  /**
+   * Cache vazio no navegador? Popula sozinho a partir do Neon.
+   *
+   * É o mesmo caminho do botão "Usar base do Neon": uma leitura do espelho, sem
+   * tocar no ERP e sem reescrever o Neon. Sem isso, todo mundo que abre a tela em
+   * um navegador novo precisa descobrir e clicar no botão. Deliberadamente **não**
+   * dispara "Atualizar" nem "Carregar base" — os dois mexem em dado de verdade e
+   * continuam sob controle do usuário.
+   *
+   * A trava por ref garante uma tentativa só por montagem: se falhar, a tela mostra
+   * o erro e o botão continua disponível para o usuário repetir.
+   */
+  const jaTentouPopular = useRef(false)
+  useEffect(() => {
+    if (jaTentouPopular.current) return
+    if (!integracao) return
+    if (estado === undefined) return // ainda consultando o estado do cache
+    if (estado?.carga_completa) return // já tem base local
+    jaTentouPopular.current = true
+    void usarBaseExistente()
+  }, [integracao, estado, usarBaseExistente])
 
   async function atualizarDelta() {
     setErro("")
@@ -566,6 +588,13 @@ export default function FaturamentoDetalhePage() {
       {erro && (
         <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
           {erro}
+        </p>
+      )}
+
+      {!temCacheLocal && acao === "carregando" && integracao && (
+        <p role="status" className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-800 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-200">
+          Cache local vazio neste navegador — populando com a base do Neon. Não é preciso
+          clicar em nada.
         </p>
       )}
 
