@@ -351,7 +351,11 @@ describe("gráficos do faturamento", () => {
       const card = screen.getByRole("heading", { level: 3, name: titulo }).closest("div.rounded-xl")
       expect(card?.className).toContain("h-full")
       // O corpo do gráfico precisa poder crescer, senão a pizza com legenda desalinha.
-      expect(card?.querySelector(".min-h-0.flex-1")).toBeTruthy()
+      const corpo = card?.querySelector(".min-h-0.flex-1")
+      expect(corpo).toBeTruthy()
+      // E precisa de altura mínima: `height="100%"` num pai sem altura intrínseca
+      // colapsa para zero e o gráfico fica pequeno.
+      expect(corpo?.className).toContain("min-h-[340px]")
     }
   })
 

@@ -45,6 +45,13 @@ import type { GrupoFaturamento } from "./types"
 const CORES = ["#0f766e", "#1d4ed8", "#b45309", "#7c3aed", "#be123c", "#0369a1", "#4d7c0f"]
 
 /**
+ * Altura mínima da área do gráfico. O `ResponsiveContainer` usa `height="100%"`, e
+ * um pai sem altura intrínseca colapsaria para zero; o mínimo é o que dá corpo ao
+ * card. O `auto-rows-fr` continua igualando os quatro pela altura do maior.
+ */
+const ALTURA_MIN_GRAFICO = "min-h-[340px]"
+
+/**
  * A ordem é do usuário, não do navegador: mora em `usuarios.bi_ordem_graficos` e
  * segue a pessoa entre máquinas. O `localStorage` só cobre o primeiro acesso /
  * API fora do ar, e é descartado assim que o servidor responde.
@@ -337,7 +344,7 @@ export function FaturamentoCharts({
 
   const graficos: Record<IdGrafico, React.ReactNode> = {
     mes: (
-      <ChartCardBody>
+      <ChartCardBody className={ALTURA_MIN_GRAFICO}>
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={porMes} margin={{ bottom: 8 }}>
           <defs>
@@ -391,7 +398,7 @@ export function FaturamentoCharts({
       </ChartCardBody>
     ),
     clientes: (
-      <ChartCardBody>
+      <ChartCardBody className={ALTURA_MIN_GRAFICO}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={topClientes} margin={{ bottom: 8 }}>
           <defs>
@@ -457,7 +464,7 @@ export function FaturamentoCharts({
       </ChartCardBody>
     ),
     produtos: (
-      <ChartCardBody>
+      <ChartCardBody className={ALTURA_MIN_GRAFICO}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={topProdutos} margin={{ bottom: 8 }}>
           <defs>
@@ -523,7 +530,7 @@ export function FaturamentoCharts({
     ),
     participacao: (
       <>
-        <ChartCardBody>
+        <ChartCardBody className={ALTURA_MIN_GRAFICO}>
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
