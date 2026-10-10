@@ -65,6 +65,11 @@ export function FaturamentoTabelaProdutos({ grupos, limite = 50 }: Props) {
                   <td className="px-3 py-2">
                     <span className="font-medium text-slate-900 dark:text-slate-100">
                       {linha.produto}
+                      {linha.unidade && (
+                        <span className="ml-1.5 text-[10px] font-normal text-slate-400">
+                          {linha.unidade}
+                        </span>
+                      )}
                     </span>
                     {linha.descricao && (
                       <span

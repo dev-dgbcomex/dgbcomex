@@ -57,6 +57,8 @@ function paraItem(item: Record<string, unknown>): Omit<ItemFaturamento, "chave">
     cliente: String(item.cliente ?? ""),
     nome_cliente: String(item.nome_cliente ?? ""),
     cod_produto: String(item.cod_produto ?? ""),
+    descricao_produto: String(item.descricao_produto ?? ""),
+    unidade_produto: String(item.unidade_produto ?? ""),
     metros: Number(item.metros ?? 0),
     vr_unitario: Number(item.vr_unitario ?? 0),
     vr_total: Number(item.vr_total ?? 0),

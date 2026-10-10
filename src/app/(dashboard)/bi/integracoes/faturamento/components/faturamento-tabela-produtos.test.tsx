@@ -102,7 +102,49 @@ describe("tabela de produtos", () => {
     expect(linhas[0].descricao).toBe("TECIDO ALGODÃO CRU")
   })
 
-  it("renderiza a tabela com barra proporcional ao faturamento", () => {
+  it("mostra a descrição e a unidade vindas do catálogo do ERP", () => {
+    const linhas = tabelaPorProduto([
+      grupo([
+        item({ cod_produto: "000014", descricao_produto: "VELUDO CONFORT", unidade_produto: "MT" }),
+        item({ item: 2, cod_produto: "000014", descricao_produto: "VELUDO CONFORT", unidade_produto: "MT" }),
+      ]),
+    ])
+    expect(linhas[0]).toMatchObject({
+      produto: "000014",
+      descricao: "VELUDO CONFORT",
+      unidade: "MT",
+    })
+  })
+
+it("produto fora do catálogo continua aparecendo, só sem descrição", () => {
+    const linhas = tabelaPorProduto([
+      grupo([item({ cod_produto: "999999", descricao_produto: "", unidade_produto: "" })]),
+    ])
+    expect(linhas).toHaveLength(1)
+    expect(linhas[0]).toMatchObject({ produto: "999999", descricao: "", unidade: "" })
+    expect(linhas[0].faturamento).toBe(100)
+  })
+
+it("renderiza a descrição e a unidade na linha do produto", () => {
+    render(
+      <FaturamentoTabelaProdutos
+        grupos={[
+          grupo([
+            item({
+              cod_produto: "000014",
+              descricao_produto: "VELUDO CONFORT",
+              unidade_produto: "MT",
+            }),
+          ]),
+        ]}
+      />
+    )
+
+    expect(screen.getByText("VELUDO CONFORT")).toBeTruthy()
+    expect(screen.getByText("MT")).toBeTruthy()
+  })
+
+it("renderiza a tabela com barra proporcional ao faturamento", () => {
     const { container } = render(
       <FaturamentoTabelaProdutos
         grupos={[

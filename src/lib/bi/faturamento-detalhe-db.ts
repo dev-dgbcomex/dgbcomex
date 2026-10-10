@@ -26,6 +26,10 @@ export interface ItemFaturamento {
   cliente: string
   nome_cliente: string
   cod_produto: string
+  /** Nome do produto, vindo do catálogo `Produtos` do ERP. Vazio se não estiver lá. */
+  descricao_produto: string
+  /** Unidade comercial do produto (MT, KG, ...). Vazio se não estiver lá. */
+  unidade_produto: string
   metros: number
   vr_unitario: number
   vr_total: number

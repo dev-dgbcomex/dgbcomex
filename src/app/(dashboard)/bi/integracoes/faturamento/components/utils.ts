@@ -159,8 +159,10 @@ export function seriesPorMes(grupos: GrupoFaturamento[]): SerieMes[] {
 
 export interface LinhaProduto {
   produto: string
-  /** Descrição, quando o item a trouxer. Vazio enquanto o mart não tiver a coluna. */
+  /** Descrição vinda do catálogo do ERP; vazia quando o produto não está nele. */
   descricao: string
+  /** Unidade comercial do produto (MT, KG, ...), quando o ERP informs. */
+  unidade: string
   itens: number
   metros: number
   peso: number
@@ -191,6 +193,7 @@ export function tabelaPorProduto(
       const atual = mapa.get(produto) ?? {
         produto,
         descricao: "",
+        unidade: "",
         itens: 0,
         metros: 0,
         peso: 0,
@@ -204,11 +207,10 @@ export function tabelaPorProduto(
       atual.peso += item.peso || 0
       atual.faturamento += valor
       atual.somaUnitario += item.vr_unitario || 0
-      // A primeira descrição encontrada vence; o mart ainda não traz a coluna.
-      if (!atual.descricao) {
-        const possivel = (item as ItemDetalhe & { descricao_produto?: string }).descricao_produto
-        if (possivel) atual.descricao = possivel
-      }
+      // Descricao e unidade vêm do catálogo `Produtos` do ERP. A primeira encontrada
+      // vence; produto fora do catálogo fica sem elas, e a tabela mostra o código.
+      if (!atual.descricao && item.descricao_produto) atual.descricao = item.descricao_produto
+      if (!atual.unidade && item.unidade_produto) atual.unidade = item.unidade_produto
       mapa.set(produto, atual)
     }
   }
