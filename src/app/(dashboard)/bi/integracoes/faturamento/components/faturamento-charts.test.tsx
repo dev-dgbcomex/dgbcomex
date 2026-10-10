@@ -355,7 +355,7 @@ describe("gráficos do faturamento", () => {
       expect(corpo).toBeTruthy()
       // E precisa de altura mínima: `height="100%"` num pai sem altura intrínseca
       // colapsa para zero e o gráfico fica pequeno.
-      expect(corpo?.className).toContain("min-h-[340px]")
+      expect(corpo?.className).toContain("min-h-[260px]")
     }
   })
 

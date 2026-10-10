@@ -49,7 +49,7 @@ const CORES = ["#0f766e", "#1d4ed8", "#b45309", "#7c3aed", "#be123c", "#0369a1",
  * um pai sem altura intrínseca colapsaria para zero; o mínimo é o que dá corpo ao
  * card. O `auto-rows-fr` continua igualando os quatro pela altura do maior.
  */
-const ALTURA_MIN_GRAFICO = "min-h-[340px]"
+const ALTURA_MIN_GRAFICO = "min-h-[260px]"
 
 /**
  * A ordem é do usuário, não do navegador: mora em `usuarios.bi_ordem_graficos` e
