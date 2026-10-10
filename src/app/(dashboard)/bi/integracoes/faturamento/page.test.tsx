@@ -135,13 +135,16 @@ describe("página de detalhe do faturamento", () => {
   it("expande a nota e revela os itens", async () => {
     renderPage(<FaturamentoDetalhePage />)
 
-    // PRD-A também aparece na legenda de participação por produto; aqui é a
-    // tabela da nota expandida que interessa.
-    expect(screen.queryByRole("table")).toBeNull()
-    fireEvent.click(await screen.findByText("1-100"))
+    // PRD-A também aparece na legenda de participação e na tabela de produtos; aqui
+    // é a tabela da nota expandida que interessa.
+    await screen.findByText("1-100")
+    await waitFor(() => expect(screen.getAllByRole("table")).toHaveLength(1))
+    fireEvent.click(screen.getByText("1-100"))
 
-    await waitFor(() => expect(screen.getByRole("table")).toBeTruthy())
-    const tabela = within(screen.getByRole("table"))
+    await waitFor(() => expect(screen.getAllByRole("table")).toHaveLength(2))
+    const tabela = within(
+      screen.getByText("Total da nota").closest("table") as HTMLTableElement
+    )
     expect(tabela.getByText("PRD-A")).toBeTruthy()
     expect(tabela.getByText("PRD-B")).toBeTruthy()
     expect(tabela.getByText("Total da nota")).toBeTruthy()

@@ -29,6 +29,7 @@ import {
 import { FaturamentoCard } from "./components/faturamento-card"
 import { FaturamentoCharts } from "./components/faturamento-charts"
 import { FaturamentoToolbar, type FiltrosToolbar } from "./components/faturamento-toolbar"
+import { FaturamentoTabelaProdutos } from "./components/faturamento-tabela-produtos"
 import { gerarPdfConsolidado } from "./components/faturamento-pdf"
 import { ORIENTACAO_LABEL, agruparPorNf, filtrarGruposPorBusca } from "./components/utils"
 import type { GrupoFaturamento, IntegracaoBi, ItemDetalhe, OrientacaoPdf } from "./components/types"
@@ -576,6 +577,8 @@ export default function FaturamentoDetalhePage() {
         totalMetros={totaisPeriodo.metros}
         totalPeso={totaisPeriodo.peso}
       />
+
+      <FaturamentoTabelaProdutos grupos={grupos} />
 
       {grupos.length > 0 && (
         <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm dark:border-slate-800 dark:bg-slate-900">

@@ -157,4 +157,70 @@ export function seriesPorMes(grupos: GrupoFaturamento[]): SerieMes[] {
   return [...mapa.values()].sort((a, b) => a.chave.localeCompare(b.chave))
 }
 
+export interface LinhaProduto {
+  produto: string
+  /** Descrição, quando o item a trouxer. Vazio enquanto o mart não tiver a coluna. */
+  descricao: string
+  itens: number
+  metros: number
+  peso: number
+  faturamento: number
+  /** Média aritmética do `vr_unitario` dos itens do produto. */
+  unitarioMedio: number
+  /** `faturamento / metros`. Zero quando o produto não tem metragem (venda por peso). */
+  medioPorMetro: number
+}
+
+/**
+ * Uma linha por produto, com os totais do período e a barra proporcional.
+ *
+ * O faturamento usa a mesma fórmula do card de faturamento — `Σ(vr_total +
+ * acres_desc)` — para o número da tabela bater com o do gráfico. `medioPorMetro`
+ * fica em 0 quando o produto não tem metragem registrada (por exemplo, quando é
+ * vendido por peso), e a tabela exibe "—" nesse caso em vez de dividir por zero.
+ */
+export function tabelaPorProduto(
+  grupos: GrupoFaturamento[],
+  limite = 50
+): LinhaProduto[] {
+  const mapa = new Map<string, LinhaProduto & { somaUnitario: number }>()
+  for (const grupo of grupos) {
+    for (const item of grupo.itens) {
+      const produto = item.cod_produto || "—"
+      const valor = (item.vr_total || 0) + (item.acres_desc || 0)
+      const atual = mapa.get(produto) ?? {
+        produto,
+        descricao: "",
+        itens: 0,
+        metros: 0,
+        peso: 0,
+        faturamento: 0,
+        somaUnitario: 0,
+        unitarioMedio: 0,
+        medioPorMetro: 0,
+      }
+      atual.itens += 1
+      atual.metros += item.metros || 0
+      atual.peso += item.peso || 0
+      atual.faturamento += valor
+      atual.somaUnitario += item.vr_unitario || 0
+      // A primeira descrição encontrada vence; o mart ainda não traz a coluna.
+      if (!atual.descricao) {
+        const possivel = (item as ItemDetalhe & { descricao_produto?: string }).descricao_produto
+        if (possivel) atual.descricao = possivel
+      }
+      mapa.set(produto, atual)
+    }
+  }
+
+  return [...mapa.values()]
+    .map(({ somaUnitario, ...linha }) => ({
+      ...linha,
+      unitarioMedio: linha.itens > 0 ? somaUnitario / linha.itens : 0,
+      medioPorMetro: linha.metros > 0 ? linha.faturamento / linha.metros : 0,
+    }))
+    .sort((a, b) => b.faturamento - a.faturamento)
+    .slice(0, limite)
+}
+
 export const ORIENTACAO_LABEL = { portrait: "Retrato", landscape: "Paisagem" } as const
