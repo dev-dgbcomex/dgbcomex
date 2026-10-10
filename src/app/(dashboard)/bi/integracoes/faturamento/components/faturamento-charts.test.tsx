@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 import { fireEvent, screen, waitFor, within } from "@testing-library/react"
 import { createFetchMock, renderPage } from "@/test/harness"
 import { FaturamentoCharts } from "./faturamento-charts"
+import { topPorFaturamento, topPorProduto } from "./utils"
 import type { GrupoFaturamento } from "./types"
 
 const CHAVE_CACHE = "faturamento_graficos_ordem"
@@ -64,6 +65,11 @@ const GRUPOS = [
     representante: "Bruno",
   }),
 ]
+
+const TITULO_MES = "Faturamento e metragem por mês"
+const TITULO_CLIENTES = "Faturamento e metragem por cliente (top 8)"
+const TITULO_PRODUTOS = "Faturamento e metragem por produto (top 8)"
+const TITULO_PARTICIPACAO = "Participação por representante"
 
 function titulosOrdem(): string[] {
   return screen
@@ -319,9 +325,68 @@ describe("gráficos do faturamento", () => {
       />
     )
 
-    expect(screen.getByRole("button", { name: "Mover Faturamento e metragem por mês para cima" })).toHaveProperty("disabled", true)
+    expect(screen.getByRole("button", { name: `Mover ${TITULO_MES} para cima` })).toHaveProperty("disabled", true)
     expect(
-      screen.getByRole("button", { name: "Mover Participação por representante para baixo" })
+      screen.getByRole("button", { name: `Mover ${TITULO_PARTICIPACAO} para baixo` })
     ).toHaveProperty("disabled", true)
+  })
+
+  it("mantém os quatro cards com a mesma altura", () => {
+    renderPage(
+      <FaturamentoCharts
+        grupos={GRUPOS}
+        faturamentoTotal={700}
+        totalItens={3}
+        totalNotas={3}
+        totalMetros={30}
+        totalPeso={6}
+      />
+    )
+
+    // `auto-rows-fr` + `h-full` fazem o card esticar até a altura do vizinho mais alto.
+    const grade = screen.getByRole("heading", { level: 3, name: TITULO_MES }).closest("div.grid")
+    expect(grade?.className).toContain("auto-rows-fr")
+
+    for (const titulo of [TITULO_MES, TITULO_CLIENTES, TITULO_PRODUTOS, TITULO_PARTICIPACAO]) {
+      const card = screen.getByRole("heading", { level: 3, name: titulo }).closest("div.rounded-xl")
+      expect(card?.className).toContain("h-full")
+      // O corpo do gráfico precisa poder crescer, senão a pizza com legenda desalinha.
+      expect(card?.querySelector(".min-h-0.flex-1")).toBeTruthy()
+    }
+  })
+
+  it("soma faturamento e metragem nos gráficos de cliente e produto", () => {
+    // Extraído para `utils` justamente para ser testável: no jsdom o recharts não
+    // desenha as barras (sem dimensões), então o DOM não serve para checar os dados.
+    const porCliente = topPorFaturamento(
+      (grupo) => ({ chave: grupo.nome_cliente, rotulo: grupo.nome_cliente }),
+      GRUPOS
+    )
+    expect(porCliente.map((s) => s.rotulo)).toEqual(["Cliente B", "Cliente C", "Cliente A"])
+    expect(porCliente[0]).toMatchObject({ faturamento: 300, metros: 10 })
+
+    const porProduto = topPorProduto(GRUPOS)
+    // Todos os grupos do teste usam o mesmo produto, então as séries somam. O valor
+    // por produto sai do item (vr_total + acres_desc), não do total da nota.
+    expect(porProduto).toHaveLength(1)
+    expect(porProduto[0]).toMatchObject({ produto: "PRD-A", faturamento: 300, metros: 30 })
+  })
+
+  it("limita em 8 e ordena por faturamento", () => {
+    const muitos = Array.from({ length: 12 }, (_, i) =>
+      grupo({
+        chave_nf: `1|${i}`,
+        nr_nota: String(i),
+        nome_cliente: `C${i}`,
+        faturamento: (i + 1) * 10,
+      })
+    )
+    const serie = topPorFaturamento(
+      (grupo) => ({ chave: grupo.nome_cliente, rotulo: grupo.nome_cliente }),
+      muitos
+    )
+    expect(serie).toHaveLength(8)
+    expect(serie[0].faturamento).toBe(120)
+    expect(serie[7].faturamento).toBe(50)
   })
 })

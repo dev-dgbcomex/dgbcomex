@@ -81,4 +81,45 @@ export function filtrarGruposPorBusca(grupos: GrupoFaturamento[], busca: string)
   })
 }
 
+export interface SerieComMetragem {
+  faturamento: number
+  metros: number
+}
+
+/** Top N por faturamento, já com a metragem somada (para o segundo eixo do gráfico). */
+export function topPorFaturamento<T>(
+  entrada: (grupo: GrupoFaturamento) => { chave: string; rotulo: string } | null,
+  grupos: GrupoFaturamento[],
+  limite = 8
+): (SerieComMetragem & { rotulo: string; chave: string })[] {
+  const mapa = new Map<string, SerieComMetragem & { rotulo: string; chave: string }>()
+  for (const grupo of grupos) {
+    const chave = entrada(grupo)
+    if (!chave) continue
+    const atual = mapa.get(chave.chave) ?? { chave: chave.chave, rotulo: chave.rotulo, faturamento: 0, metros: 0 }
+    atual.faturamento += grupo.faturamento
+    atual.metros += grupo.totalMetros
+    mapa.set(chave.chave, atual)
+  }
+  return [...mapa.values()].sort((a, b) => b.faturamento - a.faturamento).slice(0, limite)
+}
+
+/** Top N por metragem acumulada dos itens de cada nota (gráfico por produto). */
+export function topPorProduto(
+  grupos: GrupoFaturamento[],
+  limite = 8
+): (SerieComMetragem & { produto: string })[] {
+  const mapa = new Map<string, SerieComMetragem & { produto: string }>()
+  for (const grupo of grupos) {
+    for (const item of grupo.itens) {
+      const produto = item.cod_produto || "—"
+      const atual = mapa.get(produto) ?? { produto, faturamento: 0, metros: 0 }
+      atual.faturamento += (item.vr_total || 0) + (item.acres_desc || 0)
+      atual.metros += item.metros || 0
+      mapa.set(produto, atual)
+    }
+  }
+  return [...mapa.values()].sort((a, b) => b.faturamento - a.faturamento).slice(0, limite)
+}
+
 export const ORIENTACAO_LABEL = { portrait: "Retrato", landscape: "Paisagem" } as const

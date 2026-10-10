@@ -42,9 +42,8 @@ export function ChartCard({
   return (
     <div
       ref={ref}
-      className={`rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 ${
+className={`flex flex-col rounded-xl border border-slate-200 dark:border-slate-800 bg-white p-4 dark:bg-slate-900 ${
         visible ? "animate-chart-in chart-hover-effect" : "opacity-0"
-      }
       } ${className}`}
     >
       {(title || actions) && (
@@ -58,4 +57,18 @@ export function ChartCard({
       {children}
     </div>
   )
+}
+
+/**
+ * Slot padrão para gráficos que devem ocupar a altura restante do cartão. Sem ele o
+ * `ResponsiveContainer` fica com a altura fixa e o card não acompanha o vizinho.
+ */
+export function ChartCardBody({
+  children,
+  className = "",
+}: {
+  children: ReactNode
+  className?: string
+}) {
+  return <div className={`min-h-0 flex-1 ${className}`}>{children}</div>
 }

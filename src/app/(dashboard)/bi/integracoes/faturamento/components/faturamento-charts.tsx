@@ -30,8 +30,15 @@ import { SortableContext, arrayMove, rectSortingStrategy, useSortable } from "@d
 import { CSS } from "@dnd-kit/utilities"
 import { ChevronDown, ChevronUp, GripVertical } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { ChartCard } from "@/components/ui/chart-card"
+import { ChartCard, ChartCardBody } from "@/components/ui/chart-card"
 import { ChartTooltip } from "@/components/ui/chart-tooltip"
+import {
+  ORIENTACAO_LABEL,
+  agruparPorNf,
+  filtrarGruposPorBusca,
+  topPorFaturamento,
+  topPorProduto,
+} from "./utils"
 import { formatarMetragem, formatarPeso, formatarValor } from "./utils"
 import type { GrupoFaturamento } from "./types"
 
@@ -117,7 +124,9 @@ function GraficoOrdenado({
     >
       <ChartCard
         title={titulo}
-        className={isDragging ? "ring-2 ring-teal-500" : ""}
+        // Altura uniforme: o card estica até a do vizinho mais alto e o gráfico
+        // ocupa o que sobra, então a pizza com legenda não desalinha a grade.
+        className={`flex h-full flex-col ${isDragging ? "ring-2 ring-teal-500" : ""}`}
         actions={
           <>
             <button
@@ -294,44 +303,31 @@ export function FaturamentoCharts({
     return [...mapa.values()].sort((a, b) => a.mes.localeCompare(b.mes))
   }, [grupos])
 
-  const topClientes = useMemo(() => {
-    const mapa = new Map<string, { nome: string; faturamento: number; metros: number }>()
-    for (const grupo of grupos) {
-      const chave = grupo.nome_cliente || grupo.cliente || "Sem cliente"
-      const atual = mapa.get(chave) ?? { nome: chave, faturamento: 0, metros: 0 }
-      atual.faturamento += grupo.faturamento
-      atual.metros += grupo.totalMetros
-      mapa.set(chave, atual)
-    }
-    return [...mapa.values()].sort((a, b) => b.faturamento - a.faturamento).slice(0, 8)
-  }, [grupos])
+  const topClientes = useMemo(
+    () =>
+      topPorFaturamento(
+        (grupo) => {
+          const nome = grupo.nome_cliente || grupo.cliente || "Sem cliente"
+          return { chave: nome, rotulo: nome }
+        },
+        grupos
+      ).map((serie) => ({ nome: serie.rotulo, faturamento: serie.faturamento, metros: serie.metros })),
+    [grupos]
+  )
 
-  const topProdutos = useMemo(() => {
-    const mapa = new Map<string, { produto: string; faturamento: number; metros: number }>()
-    for (const grupo of grupos) {
-      for (const item of grupo.itens) {
-        const valor = (item.vr_total || 0) + (item.acres_desc || 0)
-        const chave = item.cod_produto || "—"
-        const atual = mapa.get(chave) ?? { produto: chave, faturamento: 0, metros: 0 }
-        atual.faturamento += valor
-        atual.metros += item.metros || 0
-        mapa.set(chave, atual)
-      }
-    }
-    return [...mapa.values()].sort((a, b) => b.faturamento - a.faturamento).slice(0, 8)
-  }, [grupos])
+  const topProdutos = useMemo(() => topPorProduto(grupos), [grupos])
 
-  const topRepresentantes = useMemo(() => {
-    const mapa = new Map<string, number>()
-    for (const grupo of grupos) {
-      const chave = grupo.representante || "Sem representante"
-      mapa.set(chave, (mapa.get(chave) ?? 0) + grupo.faturamento)
-    }
-    return [...mapa.entries()]
-      .map(([representante, faturamento]) => ({ representante, faturamento }))
-      .sort((a, b) => b.faturamento - a.faturamento)
-      .slice(0, 8)
-  }, [grupos])
+  const topRepresentantes = useMemo(
+    () =>
+      topPorFaturamento(
+        (grupo) => {
+          const nome = grupo.representante || "Sem representante"
+          return { chave: nome, rotulo: nome }
+        },
+        grupos
+      ).map((serie) => ({ representante: serie.rotulo, faturamento: serie.faturamento })),
+    [grupos]
+  )
 
   const representacao = useMemo(
     () =>
@@ -341,8 +337,9 @@ export function FaturamentoCharts({
 
   const graficos: Record<IdGrafico, React.ReactNode> = {
     mes: (
-      <ResponsiveContainer width="100%" height={260}>
-        <AreaChart data={porMes}>
+      <ChartCardBody>
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={porMes} margin={{ bottom: 8 }}>
           <defs>
             <linearGradient id="gradFaturamento" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="#0f766e" stopOpacity={0.45} />
@@ -389,99 +386,30 @@ export function FaturamentoCharts({
             activeDot={{ r: 5 }}
             animationDuration={1200}
           />
-        </AreaChart>
-      </ResponsiveContainer>
+</AreaChart>
+        </ResponsiveContainer>
+      </ChartCardBody>
     ),
     clientes: (
-      <ResponsiveContainer width="100%" height={260}>
-        <BarChart data={topClientes} layout="vertical" margin={{ left: 8 }}>
+      <ChartCardBody>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={topClientes} margin={{ bottom: 8 }}>
           <defs>
-            <linearGradient id="gradCliente" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="#1d4ed8" stopOpacity={0.35} />
-              <stop offset="100%" stopColor="#1d4ed8" />
-            </linearGradient>
-            <linearGradient id="gradClienteMetros" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="#f97316" stopOpacity={0.35} />
-              <stop offset="100%" stopColor="#f97316" />
-            </linearGradient>
-          </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
-          <XAxis
-            xAxisId="valor"
-            type="number"
-            tick={{ fontSize: 11 }}
-            stroke="#94a3b8"
-            tickFormatter={(v) => formatarValor(Number(v))}
-          />
-          <XAxis
-            xAxisId="metros"
-            type="number"
-            orientation="top"
-            tick={{ fontSize: 10 }}
-            stroke="#94a3b8"
-            tickFormatter={(v) => `${Math.round(Number(v))} m`}
-          />
-          <YAxis
-            yAxisId="cliente"
-            type="category"
-            dataKey="nome"
-            width={120}
-            tick={{ fontSize: 10 }}
-            stroke="#94a3b8"
-            tickFormatter={(v: string) => (v.length > 16 ? `${v.slice(0, 15)}…` : v)}
-          />
-          <Tooltip
-            content={
-              <ChartTooltip
-                formatter={(v, nome) => (nome === "Metros" ? formatarMetragem(v) : formatarValor(v))}
-              />
-            }
-          />
-          <Bar
-            yAxisId="cliente"
-            xAxisId="metros"
-            dataKey="metros"
-            name="Metros"
-            fill="url(#gradClienteMetros)"
-            radius={[0, 6, 6, 0]}
-            barSize={10}
-            animationDuration={1000}
-          />
-          <Bar
-            yAxisId="cliente"
-            xAxisId="valor"
-            dataKey="faturamento"
-            name="Faturamento"
-            fill="url(#gradCliente)"
-            radius={[0, 6, 6, 0]}
-            barSize={10}
-            animationDuration={1000}
-          />
-        </BarChart>
-      </ResponsiveContainer>
-    ),
-    produtos: (
-      <ResponsiveContainer width="100%" height={260}>
-        <BarChart data={topProdutos}>
-          <defs>
-            <linearGradient id="gradProduto" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#0f766e" />
-              <stop offset="100%" stopColor="#0f766e" stopOpacity={0.4} />
-            </linearGradient>
-            <linearGradient id="gradProdutoMetros" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#b45309" />
-              <stop offset="100%" stopColor="#b45309" stopOpacity={0.4} />
+            <linearGradient id="gradCliente" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#1d4ed8" />
+              <stop offset="100%" stopColor="#1d4ed8" stopOpacity={0.4} />
             </linearGradient>
           </defs>
           <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
           <XAxis
-            dataKey="produto"
+            dataKey="nome"
             tick={{ fontSize: 10 }}
             stroke="#94a3b8"
             interval={0}
             angle={-20}
             textAnchor="end"
-            height={60}
+            height={70}
+            tickFormatter={(v: string) => (v.length > 14 ? `${v.slice(0, 13)}…` : v)}
           />
           <YAxis
             yAxisId="valor"
@@ -497,6 +425,7 @@ export function FaturamentoCharts({
             tickFormatter={(v) => `${Math.round(Number(v))} m`}
           />
           <Tooltip
+            cursor={{ fill: "#94a3b8", fillOpacity: 0.08 }}
             content={
               <ChartTooltip
                 formatter={(v, nome) => (nome === "Metros" ? formatarMetragem(v) : formatarValor(v))}
@@ -507,9 +436,9 @@ export function FaturamentoCharts({
             yAxisId="valor"
             dataKey="faturamento"
             name="Faturamento"
-            fill="url(#gradProduto)"
+            fill="url(#gradCliente)"
             radius={[6, 6, 0, 0]}
-            maxBarSize={40}
+            maxBarSize={44}
             animationDuration={1000}
           />
           <Line
@@ -524,32 +453,100 @@ export function FaturamentoCharts({
             animationDuration={1000}
           />
         </BarChart>
-      </ResponsiveContainer>
+        </ResponsiveContainer>
+      </ChartCardBody>
+    ),
+    produtos: (
+      <ChartCardBody>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={topProdutos} margin={{ bottom: 8 }}>
+          <defs>
+            <linearGradient id="gradProduto" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#0f766e" />
+              <stop offset="100%" stopColor="#0f766e" stopOpacity={0.4} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+          <XAxis
+            dataKey="produto"
+            tick={{ fontSize: 10 }}
+            stroke="#94a3b8"
+            interval={0}
+            angle={-20}
+            textAnchor="end"
+            height={70}
+          />
+          <YAxis
+            yAxisId="valor"
+            tick={{ fontSize: 11 }}
+            stroke="#94a3b8"
+            tickFormatter={(v) => formatarValor(Number(v))}
+          />
+          <YAxis
+            yAxisId="metros"
+            orientation="right"
+            tick={{ fontSize: 10 }}
+            stroke="#94a3b8"
+            tickFormatter={(v) => `${Math.round(Number(v))} m`}
+          />
+          <Tooltip
+            cursor={{ fill: "#94a3b8", fillOpacity: 0.08 }}
+            content={
+              <ChartTooltip
+                formatter={(v, nome) => (nome === "Metros" ? formatarMetragem(v) : formatarValor(v))}
+              />
+            }
+          />
+          <Bar
+            yAxisId="valor"
+            dataKey="faturamento"
+            name="Faturamento"
+            fill="url(#gradProduto)"
+            radius={[6, 6, 0, 0]}
+            maxBarSize={44}
+            animationDuration={1000}
+          />
+          <Line
+            yAxisId="metros"
+            type="monotone"
+            dataKey="metros"
+            name="Metros"
+            stroke="#b45309"
+            strokeWidth={2}
+            dot={{ r: 3, fill: "#b45309" }}
+            activeDot={{ r: 5 }}
+            animationDuration={1000}
+          />
+        </BarChart>
+        </ResponsiveContainer>
+      </ChartCardBody>
     ),
     participacao: (
       <>
-        <ResponsiveContainer width="100%" height={220}>
-          <PieChart>
-            <Pie
-              data={representacao}
-              dataKey="faturamento"
-              nameKey="representante"
-              innerRadius={55}
-              outerRadius={90}
-              paddingAngle={2}
-              startAngle={90}
-              endAngle={-270}
-              animationDuration={1200}
-              stroke="#fff"
-              strokeWidth={2}
-            >
-              {representacao.map((entrada) => (
-                <Cell key={entrada.representante} fill={entrada.fill} />
-              ))}
-            </Pie>
-            <Tooltip content={<ChartTooltip formatter={(v) => formatarValor(v)} />} />
-          </PieChart>
-        </ResponsiveContainer>
+        <ChartCardBody>
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={representacao}
+                dataKey="faturamento"
+                nameKey="representante"
+                innerRadius="45%"
+                outerRadius="78%"
+                paddingAngle={2}
+                startAngle={90}
+                endAngle={-270}
+                animationDuration={1200}
+                stroke="#fff"
+                strokeWidth={2}
+              >
+                {representacao.map((entrada) => (
+                  <Cell key={entrada.representante} fill={entrada.fill} />
+                ))}
+              </Pie>
+              <Tooltip content={<ChartTooltip formatter={(v) => formatarValor(v)} />} />
+</PieChart>
+          </ResponsiveContainer>
+        </ChartCardBody>
         <LegendaRepresentantes dados={representacao} />
       </>
     ),
@@ -580,7 +577,7 @@ export function FaturamentoCharts({
       {grupos.length > 0 && (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={aoArrastar}>
           <SortableContext items={ordem} strategy={rectSortingStrategy}>
-            <div className="grid gap-4 lg:grid-cols-2">
+            <div className="grid auto-rows-fr gap-4 lg:grid-cols-2">
               {ordem.map((id, indice) => (
                 <GraficoOrdenado
                   key={id}
