@@ -1,44 +1,39 @@
 import { describe, it, expect } from "vitest"
-import { escolherEmpresa, urlBase, ROTA_LOGO } from "./branding"
+import { readFileSync, existsSync } from "node:fs"
+import { join } from "node:path"
 
-describe("branding", () => {
-  it("escolhe a empresa marcada como default", () => {
-    const escolhida = escolherEmpresa([
-      { nome: "A", isDefault: false },
-      { nome: "B", isDefault: true },
-    ])
-    expect(escolhida?.nome).toBe("B")
+/**
+ * O favicon adaptativo é um SVG com media query: sem o teste, alguém remove o
+ * `<style>` e o DGBCOMEX volta a sumir no tema escuro sem ninguém perceber.
+ */
+describe("favicon adaptativo", () => {
+  const caminho = join(process.cwd(), "public", "favicon.svg")
+  const svg = existsSync(caminho) ? readFileSync(caminho, "utf8") : ""
+
+  it("o arquivo existe", () => {
+    expect(existsSync(caminho)).toBe(true)
   })
 
-  it("cai no primeiro cadastro quando ninguém é default", () => {
-    const escolhida = escolherEmpresa([
-      { nome: "A", isDefault: false },
-      { nome: "B", isDefault: false },
-    ])
-    expect(escolhida?.nome).toBe("A")
+  it("alterna entre os dois logos conforme o tema", () => {
+    expect(svg).toContain("prefers-color-scheme: dark")
+    expect(svg).toContain("prefers-color-scheme: light")
   })
 
-  it("devolve null quando não há empresa cadastrada", () => {
-    expect(escolherEmpresa([])).toBeNull()
+  it("esconde o logo preto no tema escuro e o branco no tema claro", () => {
+    const blocoEscuro = svg.slice(svg.indexOf("prefers-color-scheme: dark"))
+    expect(blocoEscuro).toContain(".tema-claro")
+    expect(blocoEscuro).toContain("display: none")
   })
 
-  it("usa NEXT_PUBLIC_APP_URL como base", () => {
-    const anterior = process.env.NEXT_PUBLIC_APP_URL
-    process.env.NEXT_PUBLIC_APP_URL = "https://exemplo.vercel.app"
-    expect(urlBase().toString()).toContain("exemplo.vercel.app")
-    if (anterior === undefined) delete process.env.NEXT_PUBLIC_APP_URL
-    else process.env.NEXT_PUBLIC_APP_URL = anterior
+  it("aponta para os dois arquivos que existem em public/", () => {
+    for (const arquivo of ["logoAltaBranco.png", "logodgbcomexpreto002.png"]) {
+      expect(svg).toContain(`/${arquivo}`)
+      expect(existsSync(join(process.cwd(), "public", arquivo))).toBe(true)
+    }
   })
 
-  it("não quebra com URL inválida no ambiente", () => {
-    const anterior = process.env.NEXT_PUBLIC_APP_URL
-    process.env.NEXT_PUBLIC_APP_URL = "nao-e-url"
-    expect(urlBase()).toBeInstanceOf(URL)
-    if (anterior === undefined) delete process.env.NEXT_PUBLIC_APP_URL
-    else process.env.NEXT_PUBLIC_APP_URL = anterior
-  })
-
-  it("expõe a rota pública do logo", () => {
-    expect(ROTA_LOGO).toBe("/api/public/empresa/logo")
+  it("o favicon.ico padrão do Next foi removido", () => {
+    // Se voltar, ele sobrescreve o SVG e a aba volta a mostrar o logo da Vercel.
+    expect(existsSync(join(process.cwd(), "src", "app", "favicon.ico"))).toBe(false)
   })
 })

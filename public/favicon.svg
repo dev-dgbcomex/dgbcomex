@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1294 744" role="img" aria-label="DGBCOMEX">
+  <style>
+    /* Favicon adaptativo: o logo preto some quando a interface está em tema
+       escuro, e o branco assume. Sem isso o navegador escolhe sempre um só e
+       o DGBCOMEX some no fundo. */
+    @media (prefers-color-scheme: dark) {
+      .tema-claro { display: none; }
+    }
+    @media (prefers-color-scheme: light) {
+      .tema-escuro { display: none; }
+    }
+  </style>
+  <image class="tema-claro" href="/logodgbcomexpreto002.png" width="1294" height="744" preserveAspectRatio="xMidYMid meet" />
+  <image class="tema-escuro" href="/logoAltaBranco.png" width="1024" height="551" preserveAspectRatio="xMidYMid meet" />
+</svg>

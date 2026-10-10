@@ -2,28 +2,27 @@ import type { Metadata, Viewport } from "next"
 import "./globals.css"
 import "leaflet/dist/leaflet.css"
 import { cn } from "@/lib/utils"
-import { ROTA_LOGO, getLogoDaEmpresa, urlBase } from "@/lib/branding"
+import { urlBase } from "@/lib/branding"
 
 const TITULO = "DGBCOMEX"
-const DESCRICAO = "Sistema de gestão de desenvolvimento de produtos têxteis"
+const DESCRICAO = "Sistema de operações Comex"
 
 /**
- * Metadados com o logo da empresa.
+ * Metadados com os logos da marca em `public/`.
  *
- * `generateMetadata` em vez de `metadata` fixo porque o ícone precisa vir do
- * cadastro de Configuração > Empresa: quando o admin troca o logo, a aba do
- * navegador e o preview de link compartilhado acompanham. Se não houver logo
- * cadastrado, cai no `favicon.ico` estático do app.
+ * São arquivos locais em vez do logo cadastrado no banco porque o preview de
+ * compartilhamento depende de a imagem estar no mesmo host da aplicação — buscar
+ * o logo de fora quebrava o preview.
  *
- * `metadataBase` é obrigatório para o Next resolver imagens relativas do Open
- * Graph — sem ele o preview de link sai sem imagem.
+ * `favicon.svg` é adaptativo: troca o logo preto pelo branco conforme o tema
+ * claro/escuro do navegador. `metadataBase` é montado a partir do host real da
+ * requisição, e não de variável de ambiente — que estava apontando para outro
+ * host e fazia o crawler buscar a imagem no endereço errado.
  */
 export async function generateMetadata(): Promise<Metadata> {
-  const base = urlBase()
-  // Dupla proteção: `getLogoDaEmpresa` já trata a falha, mas se ela escapar mesmo
-  // assim o layout não pode quebrar por causa de um logo.
-  const temLogo = await getLogoDaEmpresa().then(Boolean, () => false)
-  const imagem = temLogo ? new URL(ROTA_LOGO, base).toString() : undefined
+  const base = await urlBase()
+  const icone = new URL("/favicon.svg", base).toString()
+  const imagem = new URL("/logodgbcomexpreto002.png", base).toString()
 
   return {
     metadataBase: base,
@@ -31,7 +30,9 @@ export async function generateMetadata(): Promise<Metadata> {
     description: DESCRICAO,
     applicationName: TITULO,
     icons: {
-      ...(imagem ? { icon: imagem, apple: imagem } : {}),
+      icon: [{ url: icone, type: "image/svg+xml" }],
+      apple: imagem,
+      shortcut: icone,
     },
     openGraph: {
       type: "website",
@@ -39,13 +40,13 @@ export async function generateMetadata(): Promise<Metadata> {
       title: TITULO,
       description: DESCRICAO,
       locale: "pt_BR",
-      ...(imagem ? { images: [{ url: imagem, width: 512, height: 512, alt: TITULO }] } : {}),
+      images: [{ url: imagem, width: 1294, height: 744, alt: TITULO }],
     },
     twitter: {
-      card: imagem ? "summary" : "summary_large_image",
+      card: "summary_large_image",
       title: TITULO,
       description: DESCRICAO,
-      ...(imagem ? { images: [imagem] } : {}),
+      images: [imagem],
     },
   }
 }
