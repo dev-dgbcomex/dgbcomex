@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 import { fireEvent, screen, waitFor, within } from "@testing-library/react"
 import { createFetchMock, renderPage } from "@/test/harness"
 import { FaturamentoCharts } from "./faturamento-charts"
-import { topPorFaturamento, topPorProduto } from "./utils"
+import { seriesPorMes, topPorFaturamento, topPorProduto } from "./utils"
 import type { GrupoFaturamento } from "./types"
 
 const CHAVE_CACHE = "faturamento_graficos_ordem"
@@ -109,10 +109,10 @@ describe("gráficos do faturamento", () => {
     expect(screen.getByText("Faturamento")).toBeTruthy()
     expect(screen.getByText("Ticket médio")).toBeTruthy()
     expect(titulosOrdem()).toEqual([
-      "Faturamento e metragem por mês",
-      "Faturamento e metragem por cliente (top 8)",
-      "Faturamento e metragem por produto (top 8)",
-      "Participação por representante",
+      TITULO_MES,
+      TITULO_CLIENTES,
+      TITULO_PRODUTOS,
+      TITULO_PARTICIPACAO,
     ])
   })
 
@@ -129,7 +129,6 @@ describe("gráficos do faturamento", () => {
     )
 
     const legenda = screen.getByRole("list", { name: /participação por representante/i })
-    // A legenda lista os representantes com a fatia de cada um em %.
     expect(within(legenda).getByText("Ana")).toBeTruthy()
     expect(within(legenda).getByText("Bruno")).toBeTruthy()
     expect(within(legenda).getByText("42.9%")).toBeTruthy()
@@ -164,11 +163,11 @@ describe("gráficos do faturamento", () => {
     )
 
     const antes = titulosOrdem()
-    fireEvent.click(screen.getByRole("button", { name: "Mover Participação por representante para cima" }))
+    fireEvent.click(screen.getByRole("button", { name: `Mover ${TITULO_PARTICIPACAO} para cima` }))
 
     const depois = titulosOrdem()
     expect(depois).not.toEqual(antes)
-    expect(depois[2]).toBe("Participação por representante")
+    expect(depois[2]).toBe(TITULO_PARTICIPACAO)
   })
 
   it("persiste a ordem escolhida no servidor, não só no navegador", async () => {
@@ -184,7 +183,7 @@ describe("gráficos do faturamento", () => {
       />
     )
 
-    fireEvent.click(screen.getByRole("button", { name: "Mover Participação por representante para cima" }))
+    fireEvent.click(screen.getByRole("button", { name: `Mover ${TITULO_PARTICIPACAO} para cima` }))
 
     await waitFor(() => {
       const put = fetchMock.calls.find((c) => c.method === "PUT")
@@ -210,12 +209,12 @@ describe("gráficos do faturamento", () => {
     )
 
     // O servidor manda: o cache local diferente é ignorado.
-    await waitFor(() => expect(titulosOrdem()[0]).toBe("Faturamento e metragem por produto (top 8)"))
+    await waitFor(() => expect(titulosOrdem()[0]).toBe(TITULO_PRODUTOS))
     expect(titulosOrdem()).toEqual([
-      "Faturamento e metragem por produto (top 8)",
-      "Faturamento e metragem por mês",
-      "Faturamento e metragem por cliente (top 8)",
-      "Participação por representante",
+      TITULO_PRODUTOS,
+      TITULO_MES,
+      TITULO_CLIENTES,
+      TITULO_PARTICIPACAO,
     ])
   })
 
@@ -234,7 +233,7 @@ describe("gráficos do faturamento", () => {
       />
     )
 
-    await waitFor(() => expect(titulosOrdem()[0]).toBe("Participação por representante"))
+    await waitFor(() => expect(titulosOrdem()[0]).toBe(TITULO_PARTICIPACAO))
   })
 
   it("descarta cache local corrompido e mantém a ordem padrão", async () => {
@@ -252,7 +251,7 @@ describe("gráficos do faturamento", () => {
       />
     )
 
-    await waitFor(() => expect(titulosOrdem()[0]).toBe("Faturamento e metragem por mês"))
+    await waitFor(() => expect(titulosOrdem()[0]).toBe(TITULO_MES))
     expect(localStorage.getItem(CHAVE_CACHE)).toBeNull()
   })
 
@@ -269,7 +268,7 @@ describe("gráficos do faturamento", () => {
       />
     )
 
-    await waitFor(() => expect(titulosOrdem()[0]).toBe("Faturamento e metragem por produto (top 8)"))
+    await waitFor(() => expect(titulosOrdem()[0]).toBe(TITULO_PRODUTOS))
     // Os que faltavam entram no fim, sem buraco na grade.
     expect(titulosOrdem()).toHaveLength(4)
   })
@@ -302,13 +301,7 @@ describe("gráficos do faturamento", () => {
       />
     )
 
-    const alvos = [
-      "Faturamento e metragem por mês",
-      "Faturamento e metragem por cliente (top 8)",
-      "Faturamento e metragem por produto (top 8)",
-      "Participação por representante",
-    ]
-    for (const titulo of alvos) {
+    for (const titulo of [TITULO_MES, TITULO_CLIENTES, TITULO_PRODUTOS, TITULO_PARTICIPACAO]) {
       expect(screen.getByLabelText(`Arrastar ${titulo} para reordenar`)).toBeTruthy()
     }
   })
@@ -325,10 +318,47 @@ describe("gráficos do faturamento", () => {
       />
     )
 
-    expect(screen.getByRole("button", { name: `Mover ${TITULO_MES} para cima` })).toHaveProperty("disabled", true)
+    expect(screen.getByRole("button", { name: `Mover ${TITULO_MES} para cima` })).toHaveProperty(
+      "disabled",
+      true
+    )
     expect(
       screen.getByRole("button", { name: `Mover ${TITULO_PARTICIPACAO} para baixo` })
     ).toHaveProperty("disabled", true)
+  })
+
+  it("ordena os meses por ano e mês, não pelo rótulo", () => {
+    // Regressão: ordenando por "MM/AA", "10/25" vem depois de "01/26" e os últimos
+    // meses de 2025 apareciam no meio dos de 2026.
+    const dados = [
+      grupo({ chave_nf: "1|a", data_nota: "2026-02-10" }),
+      grupo({ chave_nf: "1|b", data_nota: "2025-10-10" }),
+      grupo({ chave_nf: "1|c", data_nota: "2025-12-10" }),
+      grupo({ chave_nf: "1|d", data_nota: "2026-01-10" }),
+      grupo({ chave_nf: "1|e", data_nota: "2025-11-10" }),
+    ]
+    const serie = seriesPorMes(dados)
+
+    expect(serie.map((s) => s.mes)).toEqual(["10/25", "11/25", "12/25", "01/26", "02/26"])
+    // A chave é a que ordena, e é cronológica de verdade.
+    expect(serie.map((s) => s.chave)).toEqual([
+      "2025-10",
+      "2025-11",
+      "2025-12",
+      "2026-01",
+      "2026-02",
+    ])
+  })
+
+  it("soma faturamento e metragem por mês e ignora data inválida", () => {
+    const serie = seriesPorMes([
+      grupo({ chave_nf: "1|a", data_nota: "2026-01-10", faturamento: 100, totalMetros: 10 }),
+      grupo({ chave_nf: "1|b", data_nota: "2026-01-20", faturamento: 50, totalMetros: 5 }),
+      grupo({ chave_nf: "1|c", data_nota: "" }),
+    ])
+
+    expect(serie).toHaveLength(1)
+    expect(serie[0]).toMatchObject({ faturamento: 150, metros: 15 })
   })
 
   it("mantém os quatro cards com a mesma altura", () => {

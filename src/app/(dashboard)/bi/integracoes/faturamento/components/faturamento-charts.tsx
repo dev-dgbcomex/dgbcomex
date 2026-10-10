@@ -36,6 +36,7 @@ import {
   ORIENTACAO_LABEL,
   agruparPorNf,
   filtrarGruposPorBusca,
+  seriesPorMes,
   topPorFaturamento,
   topPorProduto,
 } from "./utils"
@@ -296,19 +297,10 @@ export function FaturamentoCharts({
     reordenar(arrayMove(ordem, de, para))
   }
 
-  const porMes = useMemo(() => {
-    const mapa = new Map<string, { mes: string; faturamento: number; metros: number }>()
-    for (const grupo of grupos) {
-      const partes = (grupo.data_nota || "").split("-")
-      if (partes.length !== 3) continue
-      const rotulo = `${partes[1]}/${partes[0].slice(2)}`
-      const atual = mapa.get(rotulo) ?? { mes: rotulo, faturamento: 0, metros: 0 }
-      atual.faturamento += grupo.faturamento
-      atual.metros += grupo.totalMetros
-      mapa.set(rotulo, atual)
-    }
-    return [...mapa.values()].sort((a, b) => a.mes.localeCompare(b.mes))
-  }, [grupos])
+  // Ordena por uma chave cronológica (`YYYY-MM`), não pelo rótulo. O rótulo é
+  // `MM/AA`, e ordenar por ele mistura os meses: "10/25" vem depois de "01/26" na
+  // comparação de texto, colocando os últimos meses de 2025 no meio dos de 2026.
+  const porMes = useMemo(() => seriesPorMes(grupos), [grupos])
 
   const topClientes = useMemo(
     () =>

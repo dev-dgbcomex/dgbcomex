@@ -122,4 +122,39 @@ export function topPorProduto(
   return [...mapa.values()].sort((a, b) => b.faturamento - a.faturamento).slice(0, limite)
 }
 
+export interface SerieMes {
+  /** Chave cronológica `YYYY-MM` — é por ela que a série é ordenada. */
+  chave: string
+  /** Rótulo exibido no eixo, `MM/AA`. */
+  mes: string
+  faturamento: number
+  metros: number
+}
+
+/**
+ * Faturamento e metragem por mês, em ordem cronológica.
+ *
+ * A ordenação usa a chave `YYYY-MM` e não o rótulo `MM/AA`: comparando o rótulo,
+ * "10/25" vem depois de "01/26" e os últimos meses de 2025 aparecem no meio dos de
+ * 2026.
+ */
+export function seriesPorMes(grupos: GrupoFaturamento[]): SerieMes[] {
+  const mapa = new Map<string, SerieMes>()
+  for (const grupo of grupos) {
+    const partes = (grupo.data_nota || "").split("-")
+    if (partes.length !== 3) continue
+    const chave = `${partes[0]}-${partes[1]}`
+    const atual = mapa.get(chave) ?? {
+      chave,
+      mes: `${partes[1]}/${partes[0].slice(2)}`,
+      faturamento: 0,
+      metros: 0,
+    }
+    atual.faturamento += grupo.faturamento
+    atual.metros += grupo.totalMetros
+    mapa.set(chave, atual)
+  }
+  return [...mapa.values()].sort((a, b) => a.chave.localeCompare(b.chave))
+}
+
 export const ORIENTACAO_LABEL = { portrait: "Retrato", landscape: "Paisagem" } as const
