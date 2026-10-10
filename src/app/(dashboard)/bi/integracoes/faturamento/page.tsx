@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
 import {
   ArrowLeft,
@@ -14,6 +15,8 @@ import {
   RefreshCw,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { InfoButton } from "@/components/ui/info-button"
+import { getInfoContent } from "@/lib/info-content"
 import {
   consultar,
   estadoSalvo,
@@ -31,7 +34,12 @@ import { FaturamentoCharts } from "./components/faturamento-charts"
 import { FaturamentoToolbar, type FiltrosToolbar } from "./components/faturamento-toolbar"
 import { FaturamentoTabelaProdutos } from "./components/faturamento-tabela-produtos"
 import { gerarPdfConsolidado } from "./components/faturamento-pdf"
-import { ORIENTACAO_LABEL, agruparPorNf, filtrarGruposPorBusca } from "./components/utils"
+import {
+  ORIENTACAO_LABEL,
+  agruparPorNf,
+  descreverPeriodo,
+  filtrarGruposPorBusca,
+} from "./components/utils"
 import type { GrupoFaturamento, IntegracaoBi, ItemDetalhe, OrientacaoPdf } from "./components/types"
 
 const ITENS_POR_PAGINA = 500
@@ -101,6 +109,8 @@ function itensDaResposta(json: Record<string, unknown>): Omit<ItemFaturamento, "
 }
 
 export default function FaturamentoDetalhePage() {
+  const pathname = usePathname()
+  const info = getInfoContent(pathname)
   const [filtros, setFiltros] = useState<FiltrosToolbar>(() => ({
     ...janelasPadrao(),
     representante: "",
@@ -137,6 +147,17 @@ export default function FaturamentoDetalhePage() {
       integracoes?.find((i) => /faturamento-detalhe/i.test(i.baseUrl)) ??
       integracoes?.find((i) => /faturamento/i.test(i.nome)),
     [integracoes]
+  )
+
+  // Período efetivo da tela: o que está nos filtros é só o que o usuário digitou,
+  // quem vale é o que foi aplicado — e é esse que aparece nos números e gráficos.
+  const periodoAplicado = useMemo(
+    () =>
+      descreverPeriodo(
+        aplicados.dataInicio || filtros.dataInicio,
+        aplicados.dataFim || filtros.dataFim
+      ),
+    [aplicados, filtros]
   )
 
   const consultaFiltros = useMemo<FiltrosFaturamento>(() => {
@@ -475,8 +496,9 @@ export default function FaturamentoDetalhePage() {
             Voltar
           </Link>
           <div>
-            <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
+            <h1 className="flex items-center text-xl font-semibold text-slate-900 dark:text-slate-100">
               Faturamento — Detalhe das notas
+              {info && <InfoButton content={info} />}
             </h1>
             <p className="text-xs text-slate-500 dark:text-slate-400">
               Cache local no IndexedDB —{" "}
@@ -555,7 +577,26 @@ export default function FaturamentoDetalhePage() {
         onLimpar={limparFiltros}
         onAplicar={aplicarFiltros}
         totalNotas={grupos.length}
+        periodo={periodoAplicado}
       />
+
+      {periodoAplicado && (
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm dark:border-slate-800 dark:bg-slate-900/50">
+          <span className="text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            Período em exibição
+          </span>
+          <span className="font-semibold text-slate-900 dark:text-slate-100">
+            {periodoAplicado.intervalo}
+          </span>
+          <span className="text-xs text-slate-500 dark:text-slate-400">
+            {periodoAplicado.duracao}
+            {aplicados.dataInicio !== filtros.dataInicio ||
+            aplicados.dataFim !== filtros.dataFim
+              ? " — período aplicado; ajuste os campos e clique em Aplicar filtros"
+              : ""}
+          </span>
+        </div>
+      )}
 
       {resumo && (
         <div className="flex flex-wrap gap-4 text-xs text-slate-500 dark:text-slate-400">

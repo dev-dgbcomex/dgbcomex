@@ -225,4 +225,55 @@ export function tabelaPorProduto(
     .slice(0, limite)
 }
 
+export interface PeriodoDescrito {
+  inicio: string
+  fim: string
+  /** Rótulo curto, ex.: `01/08/2026 a 10/10/2026`. */
+  intervalo: string
+  /** Duração por extenso, ex.: `2 meses e 10 dias`. */
+  duracao: string
+  /** Só quando dá para dizer em meses inteiros, ex.: `12 meses`. */
+  meses: number
+}
+
+/**
+ * Descreve o período filtrado para a tela deixar explícito que os números e os
+ * gráficos são daquele recorte — e não do ano todo.
+ *
+ * A duração é contada por calendário e o dia final entra na contagem: de 01/08 a
+ * 10/10 são 2 meses e 10 dias.
+ */
+export function descreverPeriodo(inicio: string, fim: string): PeriodoDescrito | null {
+  const d1 = new Date(`${inicio}T00:00:00`)
+  const d2 = new Date(`${fim}T00:00:00`)
+  if (Number.isNaN(d1.getTime()) || Number.isNaN(d2.getTime())) return null
+
+  const br = (d: Date) =>
+    `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`
+
+  const intervalo =
+    d1.getTime() === d2.getTime() ? br(d1) : `${br(d1)} a ${br(d2)}`
+
+  let meses = (d2.getFullYear() - d1.getFullYear()) * 12 + (d2.getMonth() - d1.getMonth())
+  let dias = d2.getDate() - d1.getDate()
+  if (dias < 0) {
+    meses -= 1
+    // Dias do mês anterior a d2 — `date 0` do mês dá o último dia do mês passado.
+    dias += new Date(d2.getFullYear(), d2.getMonth(), 0).getDate()
+  }
+  dias += 1
+
+  const partes: string[] = []
+  if (meses > 0) partes.push(`${meses} ${meses === 1 ? "mês" : "meses"}`)
+  if (dias > 0) partes.push(`${dias} ${dias === 1 ? "dia" : "dias"}`)
+
+  return {
+    inicio,
+    fim,
+    intervalo,
+    duracao: partes.length ? partes.join(" e ") : "—",
+    meses,
+  }
+}
+
 export const ORIENTACAO_LABEL = { portrait: "Retrato", landscape: "Paisagem" } as const

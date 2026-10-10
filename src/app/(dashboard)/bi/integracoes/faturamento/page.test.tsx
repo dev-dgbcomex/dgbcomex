@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { fireEvent, screen, waitFor, within } from "@testing-library/react"
-import { createFetchMock, renderPage } from "@/test/harness"
+import { createFetchMock, navMock, renderPage } from "@/test/harness"
 import type { ConsultaFaturamento, EstadoFaturamentoDetalhe } from "@/lib/bi/faturamento-detalhe-db"
 import FaturamentoDetalhePage from "./page"
 
@@ -114,6 +114,65 @@ beforeEach(() => {
 })
 
 describe("página de detalhe do faturamento", () => {
+  it("mostra o período em exibição com a duração por extenso", async () => {
+    navMock.setPathname("/bi/integracoes/faturamento")
+    renderPage(<FaturamentoDetalhePage />)
+
+    // Período padrão: 12 meses (o estado inicial usa hoje-12 meses até hoje).
+    const cabecalho = await screen.findByText("Período em exibição")
+    const painel = cabecalho.parentElement?.textContent ?? ""
+    expect(painel).toMatch(/\d{2}\/\d{2}\/\d{4} a \d{2}\/\d{2}\/\d{4}/)
+    expect(painel).toMatch(/\d+ meses? e \d+ dias?/)
+
+    // E o total de notas é do período, não de uma página.
+    expect(screen.getByRole("status", { name: /notas no período/ })).toBeTruthy()
+  })
+
+it("avisa quando os campos mudaram mas o filtro ainda não foi aplicado", async () => {
+    renderPage(<FaturamentoDetalhePage />)
+    await screen.findByText("Período em exibição")
+
+    fireEvent.change(screen.getByLabelText("Data inicial"), {
+      target: { value: "2026-08-01" },
+    })
+
+    await waitFor(() =>
+      expect(screen.getByText(/período aplicado; ajuste os campos e clique em Aplicar filtros/)).toBeTruthy()
+    )
+  })
+
+it("tem botão de informação explicando o uso da tela", async () => {
+    navMock.setPathname("/bi/integracoes/faturamento")
+    renderPage(<FaturamentoDetalhePage />)
+
+    fireEvent.click(await screen.findByLabelText("Informações da tela"))
+    const dialog = await screen.findByRole("dialog")
+
+    // Os três botões de dados são explicados, e em especial a Orientation.
+    for (const botao of [
+      "Usar base do Neon",
+      "Atualizar",
+      "Carregar base (1ª vez)",
+      "Aplicar filtros",
+      "Exportar CSV",
+    ]) {
+      expect(within(dialog).getAllByText(botao).length).toBeGreaterThan(0)
+    }
+
+    // AOrientation de não clicar sempre nesses botões precisa estar escrita.
+    expect(
+      within(dialog).getByText(/VOCÊ NÃO PRECISA CLICAR NOS BOTÕES DE DADOS PARA FILTRAR/i)
+    ).toBeTruthy()
+    expect(
+      within(dialog).getByText(/basta preencher os filtros e clicar em Aplicar filtros/i)
+    ).toBeTruthy()
+
+    // Passo a passo e gráficos.
+    expect(within(dialog).getAllByText(/1ª vez que você abre a tela/).length).toBeGreaterThan(0)
+    expect(within(dialog).getAllByText(/Do dia a dia/).length).toBeGreaterThan(0)
+    expect(within(dialog).getAllByText(/Os gráficos/).length).toBeGreaterThan(0)
+  })
+
   it("agrupa os itens da página por nota fiscal", async () => {
     renderPage(<FaturamentoDetalhePage />)
 

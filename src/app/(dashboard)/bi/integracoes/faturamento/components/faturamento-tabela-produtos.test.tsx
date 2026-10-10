@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from "vitest"
-import { render, screen, within } from "@testing-library/react"
+import { render, screen, within, fireEvent } from "@testing-library/react"
 import { FaturamentoTabelaProdutos } from "./faturamento-tabela-produtos"
 import { tabelaPorProduto } from "./utils"
 import type { GrupoFaturamento, ItemDetalhe } from "./types"
@@ -142,6 +142,50 @@ it("renderiza a descrição e a unidade na linha do produto", () => {
 
     expect(screen.getByText("VELUDO CONFORT")).toBeTruthy()
     expect(screen.getByText("MT")).toBeTruthy()
+  })
+
+it("tem botão de informação explicando os campos e os cálculos", async () => {
+    render(
+      <FaturamentoTabelaProdutos
+        grupos={[grupo([item({ cod_produto: "000014", descricao_produto: "VELUDO CONFORT" })])]}
+      />
+    )
+
+    // Botão de informação no cabeçalho da tabela.
+    fireEvent.click(screen.getByLabelText("Informações da tela"))
+
+    const dialog = await screen.findByRole("dialog")
+    // Cada coluna da tabela é explicada.
+    for (const campo of [
+      "Produto",
+      "Itens",
+      "Metragem",
+      "Peso",
+      "Vlr. unitário médio",
+      "Vlr. médio (R$/m)",
+      "Faturamento",
+    ]) {
+      expect(within(dialog).getAllByText(campo).length).toBeGreaterThan(0)
+    }
+
+    // Os dois cálculos pedidos explicitamente estão escritos por extenso.
+    expect(
+      within(dialog).getByText(/soma dos valores unitários dividida pela quantidade de itens/i)
+    ).toBeTruthy()
+    expect(within(dialog).getByText(/faturamento total do produto dividido pela metragem/i)).toBeTruthy()
+  })
+
+it("explica que a fórmula do faturamento é a mesma do card", async () => {
+    render(
+      <FaturamentoTabelaProdutos
+        grupos={[grupo([item({ cod_produto: "000014", descricao_produto: "VELUDO CONFORT" })])]}
+      />
+    )
+
+    fireEvent.click(screen.getByLabelText("Informações da tela"))
+    const dialog = await screen.findByRole("dialog")
+    // Aparece nas regras de negócio e na descrição do campo Faturamento.
+    expect(within(dialog).getAllByText(/Vr_Total \+ Acres_Desc/).length).toBeGreaterThan(0)
   })
 
 it("renderiza a tabela com barra proporcional ao faturamento", () => {

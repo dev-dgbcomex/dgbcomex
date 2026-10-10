@@ -1,6 +1,8 @@
 "use client"
 
+import { InfoButton } from "@/components/ui/info-button"
 import { formatarMetragem, formatarPeso, formatarValor, tabelaPorProduto } from "./utils"
+import { infoTabelaProdutos } from "./info-tabela-produtos"
 import type { GrupoFaturamento } from "./types"
 
 interface Props {
@@ -21,8 +23,9 @@ export function FaturamentoTabelaProdutos({ grupos, limite = 50 }: Props) {
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
       <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-slate-200 px-4 py-3 dark:border-slate-800">
-        <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+        <h2 className="flex items-center text-sm font-semibold text-slate-700 dark:text-slate-300">
           Produtos faturados
+          <InfoButton content={infoTabelaProdutos} />
         </h2>
         <p className="text-xs text-slate-500 dark:text-slate-400">
           {linhas.length === 1 ? "1 produto" : `${linhas.length} produtos`} no período · barra

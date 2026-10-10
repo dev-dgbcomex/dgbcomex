@@ -22,6 +22,8 @@ interface Props {
   onLimpar: () => void
   onAplicar: () => void
   totalNotas: number
+  /** Período efetivamente aplicado (pode diferir do que está nos campos). */
+  periodo: { intervalo: string; duracao: string } | null
 }
 
 export function FaturamentoToolbar({
@@ -32,6 +34,7 @@ export function FaturamentoToolbar({
   onLimpar,
   onAplicar,
   totalNotas,
+  periodo,
 }: Props) {
   return (
     <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
@@ -115,8 +118,16 @@ export function FaturamentoToolbar({
         aria-label={`${totalNotas} ${totalNotas === 1 ? "nota no período" : "notas no período"}`}
         className="mt-3 text-xs text-slate-500 dark:text-slate-400"
       >
-        <strong className="text-slate-700 dark:text-slate-200">{totalNotas}</strong>{" "}
-        {totalNotas === 1 ? "nota nesta página" : "notas nesta página"}
+        <strong className="text-slate-700 dark:text-slate-200">
+          {totalNotas.toLocaleString("pt-BR")}
+        </strong>{" "}
+        {totalNotas === 1 ? "nota no período" : "notas no período"}
+        {periodo && (
+          <span className="text-slate-400">
+            {" "}
+            · {periodo.intervalo} ({periodo.duracao})
+          </span>
+        )}
       </p>
     </div>
   )
