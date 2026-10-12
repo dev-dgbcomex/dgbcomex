@@ -15,14 +15,20 @@ const DESCRICAO = "Sistema de operações Comex"
  * o logo de fora quebrava o preview.
  *
  * `favicon.svg` é adaptativo: troca o logo preto pelo branco conforme o tema
- * claro/escuro do navegador. `metadataBase` é montado a partir do host real da
- * requisição, e não de variável de ambiente — que estava apontando para outro
- * host e fazia o crawler buscar a imagem no endereço errado.
+ * claro/escuro do navegador. As duas imagens estão **embutidas** no próprio SVG —
+ * o Chrome bloqueia referência a recurso externo em favicon SVG, e com `href="/x.png"`
+ * a aba fica vazia. Um PNG serve de fallback para quem não renderiza SVG.
+ *
+ * `metadataBase` é montado a partir do host real da requisição, e não de variável
+ * de ambiente — que estava apontando para outro host e fazia o crawler buscar a
+ * imagem no endereço errado.
  */
 export async function generateMetadata(): Promise<Metadata> {
   const base = await urlBase()
-  const icone = new URL("/favicon.svg", base).toString()
-  const imagem = new URL("/logodgbcomexpreto002.png", base).toString()
+  const absoluta = (caminho: string) => new URL(caminho, base).toString()
+  const svg = absoluta("/favicon.svg")
+  const png = absoluta("/favicon-claro.png")
+  const imagem = absoluta("/logodgbcomexpreto002.png")
 
   return {
     metadataBase: base,
@@ -30,9 +36,13 @@ export async function generateMetadata(): Promise<Metadata> {
     description: DESCRICAO,
     applicationName: TITULO,
     icons: {
-      icon: [{ url: icone, type: "image/svg+xml" }],
-      apple: imagem,
-      shortcut: icone,
+      // SVG primeiro (é o adaptativo); o PNG cobre quem não renderiza SVG de favicon.
+      icon: [
+        { url: svg, type: "image/svg+xml" },
+        { url: png, type: "image/png", sizes: "128x74" },
+      ],
+      apple: absoluta("/apple-icon.png"),
+      shortcut: svg,
     },
     openGraph: {
       type: "website",

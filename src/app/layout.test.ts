@@ -49,6 +49,9 @@ describe("metadata da raiz", () => {
     const icones = m.icons?.icon as { url: string; type: string }[]
     expect(icones[0].url).toContain("/favicon.svg")
     expect(icones[0].type).toBe("image/svg+xml")
+    // PNG de fallback para quem não renderiza SVG.
+    expect(icones[1].url).toContain("/favicon-claro.png")
+    expect(m.icons?.apple).toContain("/apple-icon.png")
 
     const og = m.openGraph?.images as { url: string }[]
     expect(og[0].url).toContain("/logodgbcomexpreto002.png")
