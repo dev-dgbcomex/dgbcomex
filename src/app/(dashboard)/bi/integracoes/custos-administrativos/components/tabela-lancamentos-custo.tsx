@@ -1,34 +1,23 @@
-import { FORMATAR, type LancamentoCusto } from "./types"
+import {
+  FORMATAR,
+  filtrarLancamentos,
+  type LancamentoCusto,
+} from "@/lib/bi/custo-detalhe"
 
 interface Props {
   itens: LancamentoCusto[]
   busca: string
-}
-
-/** Normaliza para comparar sem acento nem caixa: "Variáveis" == "variaveis". */
-export const semAcento = (v: string) =>
-  v
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-
-export function filtrarLancamentos(itens: LancamentoCusto[], busca: string): LancamentoCusto[] {
-  const termo = semAcento(busca.trim())
-  if (!termo) return itens
-  return itens.filter((i) =>
-    semAcento(
-      [i.documento, i.fornecedor, i.razao_social, i.despesa, i.despesa_2, i.departamento_nome, i.referente]
-        .join(" ")
-    ).includes(termo)
-  )
+  /** Filtro de mês (`YYYY-MM`); usado pela tela anual. Vazio = todos. */
+  mes?: string
+  rotuloTotal?: string
 }
 
 /**
  * Lista linha a linha o que compõe o custo. É a tabela "burra" do faturamento: sem
  * agrupamento, sem drill-down, só os lançamentos com o valor que a API devolveu.
  */
-export function TabelaLancamentosCusto({ itens, busca }: Props) {
-  const visiveis = filtrarLancamentos(itens, busca)
+export function TabelaLancamentosCusto({ itens, busca, mes, rotuloTotal }: Props) {
+  const visiveis = filtrarLancamentos(itens, busca, mes)
 
   return (
     <section
@@ -39,6 +28,7 @@ export function TabelaLancamentosCusto({ itens, busca }: Props) {
         <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Lançamentos</h2>
         <p className="text-xs text-slate-500 dark:text-slate-400">
           {FORMATAR.numero(visiveis.length)} de {FORMATAR.numero(itens.length)} lançamentos
+          {rotuloTotal && ` — ${rotuloTotal}`}
         </p>
       </div>
       <div className="max-h-[32rem] overflow-auto">

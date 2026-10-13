@@ -15,6 +15,7 @@ import { BI_KPI_METADADOS, formatarKpi } from "@/lib/bi-kpi-metadados"
 const ROTA_DETALHE: Record<string, string> = {
   "Faturamento do Dia": "/bi/integracoes/faturamento",
   "Custos Administrativos Mensal": "/bi/integracoes/custos-administrativos",
+  "Custos Administrativos Anual": "/bi/integracoes/custos-administrativos-anual",
 }
 
 function valorNoCaminho(obj: Record<string, unknown> | null | undefined, caminho: string[]) {

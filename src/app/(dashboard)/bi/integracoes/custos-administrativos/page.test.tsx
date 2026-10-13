@@ -5,8 +5,13 @@ import { createFetchMock, navMock, renderPage } from "@/test/harness"
 import CustosAdministrativosDetalhePage from "./page"
 import { exportarCsv, variacao } from "./components/utils"
 import { TabelaGruposCusto } from "./components/tabela-grupos-custo"
-import { TabelaLancamentosCusto, filtrarLancamentos } from "./components/tabela-lancamentos-custo"
-import type { DetalheCustosAdministrativos, LancamentoCusto, PeriodoCusto } from "./components/types"
+import { TabelaLancamentosCusto } from "./components/tabela-lancamentos-custo"
+import { filtrarLancamentos } from "@/lib/bi/custo-detalhe"
+import type {
+  DetalheCustosAdministrativos,
+  LancamentoCusto,
+  PeriodoCusto,
+} from "@/lib/bi/custo-detalhe"
 
 const INTEGRACAO = {
   id: 9,
@@ -313,19 +318,19 @@ describe("variação", () => {
   it("sobe quando o mês atual é maior", () => {
     const v = variacao(300, 150)
     expect(v.diferenca).toBe(150)
-    expect(v.percentual).toBeCloseTo(1)
+    expect(v.porcentagem).toBeCloseTo(1)
     expect(v.subiu).toBe(true)
   })
 
   it("desce quando o mês atual é menor", () => {
     const v = variacao(100, 200)
     expect(v.diferenca).toBe(-100)
-    expect(v.percentual).toBeCloseTo(-0.5)
+    expect(v.porcentagem).toBeCloseTo(-0.5)
     expect(v.subiu).toBe(false)
   })
 
   it("não divide por zero quando o mês anterior está zerado", () => {
-    expect(variacao(120, 0).percentual).toBeNull()
+    expect(variacao(120, 0).porcentagem).toBeNull()
   })
 })
 

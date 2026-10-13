@@ -1,4 +1,4 @@
-import { FORMATAR, type GrupoPorChave } from "./types"
+import { FORMATAR, type GrupoPorChave } from "@/lib/bi/custo-detalhe"
 
 interface Props {
   grupos: GrupoPorChave[]
@@ -85,7 +85,7 @@ export function TabelaGruposCusto({
                     {FORMATAR.numero(grupo.lancamentos)}
                   </td>
                   <td className="px-3 py-2 text-right text-xs whitespace-nowrap text-slate-500 dark:text-slate-400">
-                    {FORMATAR.percentual(participacao)}
+                    {FORMATAR.porcentagem(participacao)}
                   </td>
                   <td className="px-3 py-2 text-right text-xs font-medium whitespace-nowrap text-slate-900 dark:text-slate-100">
                     {FORMATAR.valor(grupo.valor)}

@@ -1,4 +1,4 @@
-import { FORMATAR, type PeriodoCusto } from "./types"
+import { FORMATAR, type PeriodoCusto } from "@/lib/bi/custo-detalhe"
 
 /** `2026-10-09` -> `09/10/2026`, usado no nome do arquivo e nos rótulos. */
 export const rotuloData = (iso: string) => FORMATAR.data(iso)
@@ -46,6 +46,6 @@ export function exportarCsv(periodo: PeriodoCusto, mes: string) {
 /** Variação do mês corrente contra o anterior, em reais e em pontos percentuais. */
 export function variacao(atual: number, anterior: number) {
   const diferenca = atual - anterior
-  const percentual = anterior > 0 ? diferenca / anterior : null
-  return { diferenca, percentual, subiu: diferenca > 0 }
+  const porcentagem = anterior > 0 ? diferenca / anterior : null
+  return { diferenca, porcentagem, subiu: diferenca > 0 }
 }

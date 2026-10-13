@@ -1,6 +1,50 @@
 import type { InfoContent } from "./types"
 
 export const biContent: Record<string, InfoContent> = {
+  "/bi/integracoes/custos-administrativos-anual": {
+    title: "Custo administrativo — 12 meses fechados",
+    description:
+      "Tela de detalhe do card 'Média – Custo administrativo 12 meses': mostra os 12 meses fechados mês a mês (custo, faturamento e a % entre os dois) e os lançamentos de contas pagas que formam o total, dos departamentos 1.1.1.1 e 1.1.1.2.",
+    rules: [
+      "A janela é sempre de 12 meses fechados: do dia 1º do mês 12 meses atrás até o último dia do mês anterior. O mês selecionado no filtro só ancora a janela — o mês corrente nunca entra, porque ainda não fechou.",
+      "A tela lê direto da API do ERP a cada abertura, sem cache local.",
+      "O total e a média batem exatamente com o card: R$ 9.906.460,70 e R$ 825.538,39 na consulta de outubro/2026.",
+      "ATENÇÃO ao ler a média: um mês sozinho pode pesar quase 30% do total de 12 meses. Use a tabela 'Os 12 meses, do maior para o menor' antes de concluir que a despesa mensal sempre foi essa.",
+      "Meses em vermelho no gráfico e na tabela passaram de 50% do faturamento do próprio mês — naquele mês a administração consumiu mais que metade do que a empresa vendeu.",
+      "Clicar numa linha da tabela de meses filtra a lista de lançamentos e o CSV por aquele mês. O filtro 'Filtrar por mês' faz o mesmo.",
+      "O CSV respeita o filtro de mês e a busca: ele baixa exatamente as linhas que estão na lista.",
+    ],
+    fields: [
+      {
+        name: "Mês de referência",
+        desc: "Ancora a janela de 12 meses. Trocar o dia não muda nada; o que importa é o mês.",
+      },
+      {
+        name: "Filtrar por mês",
+        desc: "Mostra só os lançamentos de um mês. Equivale a clicar na linha do mês na tabela de meses.",
+      },
+      {
+        name: "Buscar nos lançamentos",
+        desc: "Filtra por fornecedor, documento, despesa, departamento ou referente. É instantâneo e não vai ao ERP.",
+      },
+      {
+        name: "Aplicar",
+        desc: "Busca os 12 meses no ERP. A busca livre e a limpeza não passam por aqui.",
+      },
+      {
+        name: "Limpar",
+        desc: "Volta para a referência atual e limpa a busca e o filtro de mês.",
+      },
+      {
+        name: "Exportar CSV",
+        desc: "Baixa os lançamentos do recorte atual, com o valor em número para somar direto no Excel.",
+      },
+      {
+        name: "Recarregar do ERP",
+        desc: "Repete a consulta sem trocar a referência. Útil depois de fechar contas pagas.",
+      },
+    ],
+  },
   "/bi/integracoes/custos-administrativos": {
     title: "Custos Administrativos — Detalhe dos lançamentos",
     description:

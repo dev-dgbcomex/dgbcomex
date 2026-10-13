@@ -20,7 +20,7 @@ import { getInfoContent } from "@/lib/info-content"
 import { TabelaGruposCusto } from "./components/tabela-grupos-custo"
 import { TabelaLancamentosCusto } from "./components/tabela-lancamentos-custo"
 import { exportarCsv, rotuloData, variacao } from "./components/utils"
-import { FORMATAR, type DetalheCustosAdministrativos } from "./components/types"
+import { FORMATAR, type DetalheCustosAdministrativos } from "@/lib/bi/custo-detalhe"
 
 interface IntegracaoBi {
   id: number
@@ -213,9 +213,9 @@ export default function CustosAdministrativosDetalhePage() {
                     </span>
                   </ValorCartao>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
-                    {varMes.percentual === null
+                    {varMes.porcentagem === null
                       ? "—"
-                      : `${varMes.subiu ? "+" : "-"}${FORMATAR.percentual(varMes.percentual)}`}{" "}
+                      : `${varMes.subiu ? "+" : "-"}${FORMATAR.porcentagem(varMes.porcentagem)}`}{" "}
                     {varMes.subiu ? "a mais" : "a menos"}
                   </p>
                 </>
