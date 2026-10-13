@@ -2,7 +2,8 @@ import { FORMATAR, type GrupoPorChave } from "@/lib/bi/custo-detalhe"
 
 interface Props {
   grupos: GrupoPorChave[]
-  chave: "departamento_nome" | "despesa" | "razao_social"
+  /** Nome da chave que identifica o grupo em cada linha (`departamento_nome`, `despesa`, `banco`...). */
+  chave: string
   titulo: string
   descricao: string
   rotuloColuna: string
@@ -23,7 +24,7 @@ export function TabelaGruposCusto({
   total,
 }: Props) {
   const maior = Math.max(...grupos.map((g) => g.valor), 1)
-  const nomeDe = (grupo: GrupoPorChave) => grupo[chave] || "—"
+  const nomeDe = (grupo: GrupoPorChave) => String(grupo[chave] ?? "") || "—"
 
   if (grupos.length === 0) {
     return (

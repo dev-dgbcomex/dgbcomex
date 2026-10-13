@@ -1,6 +1,55 @@
 import type { InfoContent } from "./types"
 
 export const biContent: Record<string, InfoContent> = {
+  "/bi/integracoes/contas-pagas": {
+    title: "Contas Pagas — as baixas que formam o valor",
+    description:
+      "Detalhe do card 'Contas Pagas': cada baixa de conta a pagar do mês de referência (documento, fornecedor, banco, cheque e valor) e as quatro janelas do card — mês atual, mês anterior, ano atual e ano anterior.",
+    rules: [
+      "O valor considera a DATA DA BAIXA, não a data de vencimento: uma conta vencida em abril e paga em maio entra em maio.",
+      "O card soma a view vwContasPagas, que tem só duas colunas (Data_Baixa e valorPago) — por isso ele mostra apenas o total. A lista vem da tabela Pag_Baixas, que está por trás dessa view. As duas foram conferidas no ERP e batem com diferença R$ 0,00 em cada mês.",
+      "O mês corrente entra zerado enquanto não houver baixa: não é erro de carga. Clique numa barra do gráfico para pular para um mês fechado.",
+      "As barras dos 24 meses são botões: clicar troca o mês da tela inteira.",
+      "O CSV respeita a busca ativa e traz o valor como número, para somar direto no Excel.",
+      "Uma baixa é uma parcela. Quando a mesma fatura tem várias parcelas pagas no mês, elas aparecem como linhas separadas.",
+    ],
+    fields: [
+      {
+        name: "Mês de referência",
+        desc: "Define o mês listado e as quatro janelas do comparativo. Só o mês importa; o dia não.",
+      },
+      {
+        name: "Buscar nos pagamentos",
+        desc: "Filtra por fornecedor, documento, série, parcela, banco ou cheque. É instantâneo e não vai ao ERP.",
+      },
+      {
+        name: "Aplicar",
+        desc: "Busca o mês escolhido no ERP. A busca livre não passa por aqui.",
+      },
+      {
+        name: "Limpar",
+        desc: "Volta para o mês atual e limpa a busca.",
+      },
+      {
+        name: "Exportar CSV",
+        desc: "Baixa as baixas do recorte atual, com o valor em número.",
+      },
+      {
+        name: "Recarregar do ERP",
+        desc: "Repete a consulta do mesmo mês. Útil depois de fechar um pagamento.",
+      },
+    ],
+    examples: [
+      {
+        title: "Por que o mês está zerado",
+        desc: "Em outubro/2026 o card e esta tela mostram R$ 0,00: nenhuma conta teve baixa com data dentro de outubro até agora. Setembro/2026, logo acima no gráfico, tem 118 baixas somando R$ 1.724.382,10.",
+      },
+      {
+        title: "Conferindo um pagamento",
+        desc: "Ao escolher setembro/2026, o topo mostra que as 118 baixas saíram todas pelo BANCO SANTANDER, e o maior fornecedor do mês é ATUAL ASSESSORIA E DESPACHOS ADUANEIRO, com R$ 621.064,93 em 5 baixas.",
+      },
+    ],
+  },
   "/bi/integracoes/custos-administrativos-anual": {
     title: "Custo administrativo — 12 meses fechados",
     description:

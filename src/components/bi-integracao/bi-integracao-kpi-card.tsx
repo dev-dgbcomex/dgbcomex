@@ -16,6 +16,7 @@ const ROTA_DETALHE: Record<string, string> = {
   "Faturamento do Dia": "/bi/integracoes/faturamento",
   "Custos Administrativos Mensal": "/bi/integracoes/custos-administrativos",
   "Custos Administrativos Anual": "/bi/integracoes/custos-administrativos-anual",
+  "Contas Pagas": "/bi/integracoes/contas-pagas",
 }
 
 function valorNoCaminho(obj: Record<string, unknown> | null | undefined, caminho: string[]) {

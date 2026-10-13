@@ -27,7 +27,12 @@ export interface GrupoCusto {
   valor: number
 }
 
-export type GrupoPorChave = GrupoCusto & Record<string, string>
+/**
+ * A chave que nomeia o grupo varia por tela (`departamento_nome`, `despesa`,
+ * `razao_social`, `banco`...), então a chave é aberta. O valor aceita número
+ * porque `lancamentos`/`valor` também saem por ela.
+ */
+export type GrupoPorChave = GrupoCusto & { [chave: string]: string | number }
 
 export interface PeriodoCusto {
   rotulo: string
