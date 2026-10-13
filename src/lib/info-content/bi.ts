@@ -8,8 +8,9 @@ export const biContent: Record<string, InfoContent> = {
     rules: [
       "O valor considera a DATA DA BAIXA, não a data de vencimento: uma conta vencida em abril e paga em maio entra em maio.",
       "O card soma a view vwContasPagas, que tem só duas colunas (Data_Baixa e valorPago) — por isso ele mostra apenas o total. A lista vem da tabela Pag_Baixas, que está por trás dessa view. As duas foram conferidas no ERP e batem com diferença R$ 0,00 em cada mês.",
-      "O mês corrente entra zerado enquanto não houver baixa: não é erro de carga. Clique numa barra do gráfico para pular para um mês fechado.",
-      "As barras dos 24 meses são botões: clicar troca o mês da tela inteira.",
+      "O mês corrente entra zerado enquanto não houver baixa: não é erro de carga. Nesse caso a tela recua sozinha para o último mês fechado com baixa e avisa qual é — o card segue mostrando R$ 0,00 porque é ele que lê o dia corrente.",
+      "O recuo só vale para a referência automática. Clicar num mês vazio no gráfico mostra aquele mês vazio, porque a escolha é do usuário.",
+      "As barras dos 24 meses são botões: clique em um mês para ver os detalhes dele.",
       "O CSV respeita a busca ativa e traz o valor como número, para somar direto no Excel.",
       "Uma baixa é uma parcela. Quando a mesma fatura tem várias parcelas pagas no mês, elas aparecem como linhas separadas.",
     ],
@@ -42,7 +43,7 @@ export const biContent: Record<string, InfoContent> = {
     examples: [
       {
         title: "Por que o mês está zerado",
-        desc: "Em outubro/2026 o card e esta tela mostram R$ 0,00: nenhuma conta teve baixa com data dentro de outubro até agora. Setembro/2026, logo acima no gráfico, tem 118 baixas somando R$ 1.724.382,10.",
+        desc: "Em outubro/2026 o card mostra R$ 0,00: nenhuma conta teve baixa com data dentro de outubro até agora. Por isso a tela abre em setembro/2026 — o último mês com baixa, R$ 1.724.382,10 em 118 baixas — e diz isso num aviso azul no topo.",
       },
       {
         title: "Conferindo um pagamento",

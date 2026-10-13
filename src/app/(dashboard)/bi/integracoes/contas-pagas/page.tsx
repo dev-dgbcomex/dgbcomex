@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { usePathname } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
 import { FileText, RefreshCw, Search, X } from "lucide-react"
@@ -26,6 +26,9 @@ interface IntegracaoBi {
 
 /** Hoje. O mês corrente entra zerado enquanto não houver baixa — como no card. */
 const hoje = () => new Date().toISOString().slice(0, 10)
+
+/** "setembro" -> "Setembro", "set/2026" -> "Set/2026". */
+const maiuscula = (rotulo: string) => rotulo.charAt(0).toUpperCase() + rotulo.slice(1)
 
 function Cartao({
   titulo,
@@ -63,6 +66,9 @@ export default function ContasPagasDetalhePage() {
   const [data, setData] = useState(hoje)
   const [aplicada, setAplicada] = useState(hoje)
   const [busca, setBusca] = useState("")
+  /** Só quem clica escolhe o mês; a referência automática pode recuar sozinha. */
+  const [escolhido, setEscolhido] = useState(false)
+  const [aviso, setAviso] = useState<string | null>(null)
 
   const { data: integracoes } = useQuery<IntegracaoBi[]>({
     queryKey: ["bi-integracao-listar"],
@@ -102,8 +108,31 @@ export default function ContasPagasDetalhePage() {
     [detalhe, busca]
   )
 
+  /**
+   * O mês de referência nasce vazio quase sempre: em 13/10 ainda não houve baixa de
+   * outubro, então a tela cairia numa lista sem nada. Quando isso acontece e ninguém
+   * escolheu o mês, ela recua para o último mês fechado com baixa e diz qual é.
+   * Quem clica num mês vazio no gráfico continua vendo o mês vazio — a escolha manda.
+   */
+  useEffect(() => {
+    if (!detalhe || escolhido || detalhe.mes.lancamentos > 0) return
+    const anterior = [...detalhe.meses]
+      .reverse()
+      .find((m) => m.lancamentos > 0 && m.mes < detalhe.referencia.mes)
+    if (!anterior) return
+    setData(`${anterior.mes}-01`)
+    setAplicada(`${anterior.mes}-01`)
+    setAviso(
+      `${maiuscula(detalhe.referencia.rotulo)} ainda não tem nenhuma baixa. ` +
+        `Mostrando ${maiuscula(anterior.rotulo)}, o último mês com pagamento ` +
+        `(${FORMATAR.numero(anterior.lancamentos)} baixas).`
+    )
+  }, [detalhe, escolhido])
+
   /** Trocar o mês pela barra do gráfico ou pelo seletor: mesmo caminho de dados. */
   const irParaMes = (mes: string) => {
+    setEscolhido(true)
+    setAviso(null)
     setData(`${mes}-01`)
     setAplicada(`${mes}-01`)
   }
@@ -148,13 +177,22 @@ export default function ContasPagasDetalhePage() {
             </div>
           </div>
           <div className="flex items-end gap-2">
-            <Button onClick={() => setAplicada(data)} disabled={isFetching}>
+            <Button
+              onClick={() => {
+                setEscolhido(true)
+                setAviso(null)
+                setAplicada(data)
+              }}
+              disabled={isFetching}
+            >
               <RefreshCw className={isFetching ? "animate-spin" : ""} />
               Aplicar
             </Button>
             <Button
               variant="outline"
               onClick={() => {
+                setEscolhido(false)
+                setAviso(null)
                 setData(hoje())
                 setAplicada(hoje())
                 setBusca("")
@@ -183,6 +221,18 @@ export default function ContasPagasDetalhePage() {
 
       {detalhe && (
         <>
+          {aviso && (
+            <p
+              aria-live="polite"
+              className="rounded-xl border border-sky-200 bg-sky-50 p-3 text-sm text-sky-900 dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-200"
+            >
+              {aviso}{" "}
+              <span className="text-sky-700 dark:text-sky-300">
+                Clique em um mês no gráfico para ver os detalhes.
+              </span>
+            </p>
+          )}
+
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <Cartao titulo="Mês atual" descricao={detalhe.mes.periodo}>
               <ValorCartao rotulo="total do mês atual">

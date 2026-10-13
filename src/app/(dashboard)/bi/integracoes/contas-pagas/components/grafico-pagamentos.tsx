@@ -28,7 +28,10 @@ export function GraficoPagamentosMensais({ meses, mesSelecionado, onSelecionar }
           Pagamentos mês a mês
         </h2>
         <p className="text-xs text-slate-500 dark:text-slate-400">
-          Últimos 24 meses. Clique numa barra para trocar o mês da tela.
+          Últimos 24 meses.{" "}
+          <span className="font-medium text-slate-700 dark:text-slate-200">
+            Clique em um mês para ver os detalhes.
+          </span>
         </p>
       </div>
 

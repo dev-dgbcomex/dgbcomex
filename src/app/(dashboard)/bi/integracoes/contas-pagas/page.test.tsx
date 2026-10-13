@@ -53,11 +53,11 @@ function mes(over: Partial<MesContasPagas> = {}): MesContasPagas {
   return { mes: "2026-09", rotulo: "set/2026", total: 1724382.1, lancamentos: 118, ...over }
 }
 
-/** 24 meses terminando em set/2026, com outubro zerado. */
+/** 24 meses terminando em out/2026, com outubro zerado. */
 function serie(): MesContasPagas[] {
   const meses: MesContasPagas[] = []
   for (let i = 23; i >= 0; i--) {
-    const d = new Date(2026, 8, 1)
+    const d = new Date(2026, 9, 1)
     d.setMonth(d.getMonth() - i)
     const chave = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
     const rotulo = `${["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"][d.getMonth()]}/${d.getFullYear()}`
@@ -104,7 +104,33 @@ function detalhe(over: Partial<DetalheContasPagas> = {}): DetalheContasPagas {
   }
 }
 
-function mockRotas(resposta: DetalheContasPagas, status = 200) {
+/** October sem nenhuma baixa: o mês corrente na primeira visita. */
+function semBaixas(): DetalheContasPagas {
+  return detalhe({
+    referencia: referencia({ mes: "2026-10", rotulo: "outubro" }),
+    mes: {
+      ...janela({
+        rotulo: "outubro",
+        total: 0,
+        lancamentos: 0,
+        periodo: "01/10/2026 a 31/10/2026",
+      }),
+      itens: [],
+      por_fornecedor: [],
+      por_banco: [],
+      por_empresa: [],
+    },
+  })
+}
+
+/**
+ * `resposta` pode depender do mês pedido: a tela recua sozinha para setembro quando
+ * outubro vem vazio, e o mock precisa devolver setembro com dados para a tela parar.
+ */
+function mockRotas(
+  resposta: DetalheContasPagas | ((data: string) => DetalheContasPagas),
+  status = 200
+) {
   return createFetchMock(({ url }) => {
     if (url.startsWith("/api/integracao/listar")) {
       return {
@@ -113,7 +139,8 @@ function mockRotas(resposta: DetalheContasPagas, status = 200) {
       }
     }
     if (url.includes("/detalhe/contas-pagas-detalhe")) {
-      return { status, json: resposta }
+      const mes = new URL(url, "http://api.local").searchParams.get("data") ?? ""
+      return { status, json: typeof resposta === "function" ? resposta(mes) : resposta }
     }
     return { status: 404, json: { error: `Rota não mockada: ${url}` } }
   })
@@ -170,26 +197,63 @@ describe("ContasPagasDetalhePage", () => {
     expect(within(lista).getByText("1 de 1 baixas")).toBeInTheDocument()
   })
 
-  it("avisa quando o mes nao tem baixa e nao mostra lista vazia", async () => {
-    const { fn } = mockRotas(
-      detalhe({
-        referencia: referencia({ mes: "2026-10", rotulo: "outubro" }),
-        mes: {
-          ...janela({ total: 0, lancamentos: 0, periodo: "01/10/2026 a 31/10/2026" }),
-          itens: [],
-          por_fornecedor: [],
-          por_banco: [],
-          por_empresa: [],
-        },
-      })
-    )
+  it("recua para o ultimo mes fechado quando o mes de referencia esta vazio", async () => {
+    const { fn, calls } = mockRotas((data) => (data === "2026-09-01" ? detalhe() : semBaixas()))
     vi.stubGlobal("fetch", fn)
 
     renderPage(<ContasPagasDetalhePage />)
 
+    // A referência nasce em outubro (zerado): a tela pede setembro sozinha.
+    expect(await screen.findByRole("region", { name: "Pagamentos" })).toBeInTheDocument()
+    const consultas = calls.filter((c) => c.url.includes("contas-pagas-detalhe"))
+    expect(consultas.pop()?.url).toContain("data=2026-09-01")
+    expect(screen.getByRole("status", { name: "total do mês atual" })).toHaveTextContent(
+      "R$ 1.724.382,10"
+    )
+    // O seletor de mês também volta, senão o topo mente sobre o mês listado.
+    expect(screen.getByLabelText("Mês de referência")).toHaveValue("2026-09-01")
+  })
+
+  it("avisa que o mes vazio foi trocado pelo anterior", async () => {
+    const { fn } = mockRotas((data) => (data === "2026-09-01" ? detalhe() : semBaixas()))
+    vi.stubGlobal("fetch", fn)
+
+    renderPage(<ContasPagasDetalhePage />)
+
+    expect(await screen.findByText(/Outubro ainda não tem nenhuma baixa/)).toBeInTheDocument()
+    expect(screen.getByText(/Mostrando Set\/2026, o último mês com pagamento/)).toBeInTheDocument()
+    expect(screen.getByText("Clique em um mês no gráfico para ver os detalhes.")).toBeInTheDocument()
+  })
+
+  it("nao recua quando o usuario escolhe um mes vazio", async () => {
+    const { fn } = mockRotas(semBaixas())
+    vi.stubGlobal("fetch", fn)
+
+    renderPage(<ContasPagasDetalhePage />)
+    await screen.findByText(/Outubro ainda não tem nenhuma baixa/)
+
+    // Clicar na barra zerada de outubro: agora o mês vazio é escolha, não automático.
+    fireEvent.click(screen.getByRole("button", { name: /^out\/2026:/ }))
+
     expect(await screen.findByText(/Sem baixas em outubro/)).toBeInTheDocument()
     expect(screen.getByText(/não é erro de carga/i)).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.queryByText(/ainda não tem nenhuma baixa/)).not.toBeInTheDocument()
+    })
     expect(screen.queryByRole("region", { name: "Pagamentos" })).not.toBeInTheDocument()
+  })
+
+  it("limpar volta para o mes atual", async () => {
+    const { fn } = mockRotas((data) => (data === "2026-09-01" ? detalhe() : semBaixas()))
+    vi.stubGlobal("fetch", fn)
+
+    renderPage(<ContasPagasDetalhePage />)
+    await screen.findByRole("region", { name: "Pagamentos" })
+
+    fireEvent.click(screen.getByRole("button", { name: /Limpar/ }))
+
+    // October volta a ser a referência; como segue vazio, ela recua de novo.
+    expect(await screen.findByText(/Outubro ainda não tem nenhuma baixa/)).toBeInTheDocument()
   })
 
   it("mostra os agrupamentos do mes", async () => {
@@ -298,6 +362,18 @@ describe("GraficoPagamentosMensais", () => {
     )
 
     expect(screen.getByRole("button", { name: /R\$\s*1\.724\.382,10 em 118 pagamentos/ })).toBeInTheDocument()
+  })
+
+  it("convida a clicar em um mes para ver os detalhes", () => {
+    renderPage(
+      <GraficoPagamentosMensais meses={serie()} mesSelecionado="2026-09" onSelecionar={() => {}} />
+    )
+
+    const grafico = screen.getByRole("region", { name: "Pagamentos por mês" })
+    expect(within(grafico).getByText("Clique em um mês para ver os detalhes.")).toBeInTheDocument()
+    // A serie completa precisa vir preenchida: sem dado o convite não teria o que abrir.
+    expect(within(grafico).getByText("nov/2024")).toBeInTheDocument()
+    expect(within(grafico).getByText("out/2026")).toBeInTheDocument()
   })
 })
 
