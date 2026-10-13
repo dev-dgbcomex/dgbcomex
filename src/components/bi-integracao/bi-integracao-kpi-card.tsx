@@ -8,6 +8,15 @@ import { BiIntegracaoResumo } from "./bi-integracao-dashboard"
 import { BiIntegracaoKpiModal } from "./bi-integracao-kpi-modal"
 import { BI_KPI_METADADOS, formatarKpi } from "@/lib/bi-kpi-metadados"
 
+/**
+ * Cards que têm tela de detalhe. A chave é o `nome` da integração (como está no
+ * banco), não o título do catálogo — assim o botão não depende do texto exibido.
+ */
+const ROTA_DETALHE: Record<string, string> = {
+  "Faturamento do Dia": "/bi/integracoes/faturamento",
+  "Custos Administrativos Mensal": "/bi/integracoes/custos-administrativos",
+}
+
 function valorNoCaminho(obj: Record<string, unknown> | null | undefined, caminho: string[]) {
   let atual: unknown = obj
   for (const parte of caminho) {
@@ -112,13 +121,13 @@ export function BiIntegracaoKpiCard({
           </p>
         </div>
         <div className="flex items-start gap-1 shrink-0">
-          {meta?.titulo === "Faturamento" && (
+          {ROTA_DETALHE[integracao.nome] && (
             <Link
-              href="/bi/integracoes/faturamento"
+              href={ROTA_DETALHE[integracao.nome]}
               onClick={(e) => e.stopPropagation()}
               className="inline-flex items-center justify-center w-6 h-6 rounded-full border border-emerald-400 text-emerald-500 hover:bg-emerald-50 dark:border-emerald-500 dark:text-emerald-400 dark:hover:bg-emerald-950/50 transition-colors"
-              aria-label="Ver detalhes do faturamento"
-              title="Ver detalhes do faturamento"
+              aria-label={`Ver detalhes de ${meta?.titulo ?? integracao.nome}`}
+              title={`Ver detalhes de ${meta?.titulo ?? integracao.nome}`}
             >
               <ExternalLink size={13} />
             </Link>

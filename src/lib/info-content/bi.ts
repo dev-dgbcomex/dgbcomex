@@ -1,6 +1,45 @@
 import type { InfoContent } from "./types"
 
 export const biContent: Record<string, InfoContent> = {
+  "/bi/integracoes/custos-administrativos": {
+    title: "Custos Administrativos — Detalhe dos lançamentos",
+    description:
+      "Tela de detalhe do custo administrativo: mostra os lançamentos de contas pagas que formam o valor do card 'Custos Administrativos Mensal', do mês selecionado e do mês anterior, quebrados por departamento, tipo de despesa e fornecedor, com a lista linha a linha e exportação em CSV.",
+    rules: [
+      "A tela lê direto da API do ERP a cada abertura — não usa cache local. Por isso, o que aparece aqui é o que o ERP tem agora.",
+      "O mês selecionado conta de 1º até o dia escolhido, igual ao card. No fim do mês, o card costuma vir zerado: ainda não houve baixa de contas pagas no mês.",
+      "Só entram os departamentos administrativos 1.1.1.1 e 1.1.1.2 — os mesmos que o card consolida.",
+      "A lista de lançamentos soma o valor absoluto das linhas, que é o que faz o total bater com o número do card. Entradas e saídas (estornos e rateios) aparecem sempre como custo positivo.",
+      "As tabelas de departamento, despesa e fornecedor estão ordenadas do maior para o menor, e a % do total mostra a participação de cada um no mês.",
+      "O mês anterior fica recolhido no fim da tela, com os mesmos agrupamentos e a lista completa, para você conferir a base da variação.",
+    ],
+    fields: [
+      {
+        name: "Mês de referência",
+        desc: "Qualquer dia dentro do mês desejado. Só o mês interessa: a API monta a janela de 1º até o dia informado.",
+      },
+      {
+        name: "Buscar nos lançamentos",
+        desc: "Filtra a lista de lançamentos por fornecedor, documento, despesa, departamento ou referente. É instantâneo e não precisa de Aplicar.",
+      },
+      {
+        name: "Aplicar",
+        desc: "Busca os dados do mês escolhido no ERP. A busca livre e a limpeza não passam por aqui.",
+      },
+      {
+        name: "Limpar",
+        desc: "Volta para o mês atual e limpa a busca.",
+      },
+      {
+        name: "Exportar CSV",
+        desc: "Baixa os lançamentos do mês selecionado, um por linha, com o valor em número para somar direto no Excel.",
+      },
+      {
+        name: "Recarregar do ERP",
+        desc: "Repete a consulta sem trocar o mês. Útil depois de fechar contas pagas no ERP.",
+      },
+    ],
+  },
   "/bi/integracoes/faturamento": {
     title: "Faturamento — Detalhe das notas",
     description:
