@@ -29,6 +29,11 @@ import {
   type FiltrosFaturamento,
   type ItemFaturamento,
 } from "@/lib/bi/faturamento-detalhe-db"
+import {
+  decidirPlano,
+  type DecisaoBase,
+  type MarcadorBase,
+} from "@/lib/bi/faturamento-base"
 import { FaturamentoCard } from "./components/faturamento-card"
 import { FaturamentoCharts } from "./components/faturamento-charts"
 import { FaturamentoToolbar, type FiltrosToolbar } from "./components/faturamento-toolbar"
@@ -108,6 +113,29 @@ function itensDaResposta(json: Record<string, unknown>): Omit<ItemFaturamento, "
   return itens.map(paraItem)
 }
 
+/**
+ * Marcador da base no Neon (`/faturamento-detalhe/estado`). Leitura barata: é o que
+ * a tela usa para decidir entre baixar o espelho, pedir o delta ou recarregar.
+ *
+ * Falha de rede, 403 ou timeout viram `null` — "não sei", e não "está vazio". Com
+ * `null` a regra é conservadora (não dispara leitura do ERP), e a tela só escala para
+ * a carga quando o espelho vier vazio de verdade.
+ */
+async function lerEstadoNeon(integracaoId: number): Promise<MarcadorBase | null> {
+  try {
+    const res = await fetch(`/api/integracao/${integracaoId}/detalhe/faturamento-detalhe/estado`)
+    if (!res.ok) return null
+    const json = await res.json()
+    return {
+      carga_completa: Boolean(json.carga_completa),
+      contagem: Number(json.contagem ?? 0),
+      ultima_data: json.ultima_data ?? null,
+    }
+  } catch {
+    return null
+  }
+}
+
 export default function FaturamentoDetalhePage() {
   const pathname = usePathname()
   const info = getInfoContent(pathname)
@@ -121,6 +149,7 @@ export default function FaturamentoDetalhePage() {
   const [aplicados, setAplicados] = useState<FiltrosToolbar>(() => ({ ...janelasPadrao(), representante: "", cliente: "", produto: "", nota: "" }))
   const [busca, setBusca] = useState("")
   const [acao, setAcao] = useState<"idle" | "carregando" | "atualizando" | "erro">("idle")
+  const [plano, setPlano] = useState<DecisaoBase | null>(null)
   const [erro, setErro] = useState("")
   const [selectedNfs, setSelectedNfs] = useState<Set<string>>(() => new Set())
   const [expandedNfs, setExpandedNfs] = useState<Set<string>>(() => new Set())
@@ -253,6 +282,13 @@ export default function FaturamentoDetalhePage() {
   )
   const precisaPopularCache = !temCacheLocal || cacheDesatualizado
 
+  /**
+   * Só a operação em andamento trava os botões. Erro não trava: o aviso fica na tela
+   * e os botões continuam vivos para a pessoa repetir — era o "`acao !== idle`" que
+   * deixava a tela morta depois de uma falha.
+   */
+  const executando = acao === "carregando" || acao === "atualizando"
+
   function aplicarFiltros() {
     setAplicados(filtros)
     setSelectedNfs(new Set())
@@ -268,103 +304,161 @@ export default function FaturamentoDetalhePage() {
     setExpandedNfs(new Set())
   }
 
+  /** Grava o marcador local e reconsulta a base: comum aos três caminhos. */
+  const publicar = useCallback(async (novo: EstadoFaturamentoDetalhe) => {
+    await salvarEstado(novo)
+    setJanelaDoCache({ inicio: novo.janela_inicio, fim: novo.janela_fim })
+    setSelectedNfs(new Set())
+    setExpandedNfs(new Set())
+    await recarregarDb()
+  }, [recarregarDb])
+
   /**
-   * Carga inicial: lê 12 meses do ERP e **reescreve o Neon**. É a operação cara, e
-   * só precisa ser feita uma vez por instalação — quem já rodou não precisa repetir.
+   * Carga completa: lê 12 meses do ERP e **reescreve o Neon**. É a operação cara.
    * O `carga` devolve os itens no corpo, então o IndexedDB é populado sem reler o Neon.
    */
-  async function carregarBase() {
-    setErro("")
-    if (!integracao) {
-      setErro("Integração de faturamento não encontrada. Cadastre-a em Admin → Integrações.")
-      return
-    }
+  const rodarCarga = useCallback(async (motivo?: string) => {
     setAcao("carregando")
+    if (motivo) setPlano({ plano: "carga", motivo })
     try {
-      const res = await fetch(`/api/integracao/${integracao.id}/detalhe/faturamento-detalhe/carga`, {
-        method: "POST",
-      })
+      const res = await fetch(
+        `/api/integracao/${integracao!.id}/detalhe/faturamento-detalhe/carga`,
+        { method: "POST" }
+      )
       const json = await res.json()
       if (!res.ok) throw new Error(json?.detail || json?.error || "Erro ao carregar a base")
       const lista = itensDaResposta(json)
       if (!lista.length) throw new Error("A API não devolveu itens na carga.")
       await limpar()
       await substituirBase(lista)
-      await salvarEstado({
+      await publicar({
         carga_completa: true,
         contagem: Number(json.contagem || lista.length),
         ultima_data: json.ultima_data ?? null,
         janela_inicio: filtros.dataInicio,
         janela_fim: filtros.dataFim,
       })
-      setJanelaDoCache({ inicio: filtros.dataInicio, fim: filtros.dataFim })
-      setSelectedNfs(new Set())
-      setExpandedNfs(new Set())
-      await recarregarDb()
       setAcao("idle")
     } catch (err) {
       setAcao("erro")
       setErro(err instanceof Error ? err.message : "Erro ao carregar a base")
     }
-  }
+  }, [integracao, filtros.dataInicio, filtros.dataFim, publicar])
+
+  /** Só o delta: notas novas desde `ultima_data`, com merge no IndexedDB. */
+  const rodarSync = useCallback(async (motivo?: string) => {
+    setAcao("atualizando")
+    if (motivo) setPlano({ plano: "sync", motivo })
+    try {
+      const res = await fetch(
+        `/api/integracao/${integracao!.id}/detalhe/faturamento-detalhe/sync`,
+        { method: "POST" }
+      )
+      const json = await res.json()
+      if (!res.ok) throw new Error(json?.detail || json?.error || "Erro ao atualizar")
+      // O sync devolve so o delta; o IndexedDB faz merge em vez de substituir.
+      const novos = itensDaResposta(json)
+      if (novos.length) await mergeDelta(novos, filtros.dataInicio, filtros.dataFim)
+      await publicar({
+        carga_completa: true,
+        contagem: Number(json.contagem || novos.length),
+        ultima_data: json.ultima_data ?? null,
+        janela_inicio: filtros.dataInicio,
+        janela_fim: filtros.dataFim,
+      })
+      setAcao("idle")
+    } catch (err) {
+      setAcao("erro")
+      setErro(err instanceof Error ? err.message : "Erro ao atualizar")
+    }
+  }, [integracao, filtros.dataInicio, filtros.dataFim, publicar])
 
   /**
-   * Base já existente no Neon: popula o IndexedDB deste navegador com uma leitura
-   * do espelho, sem tocar no ERP e sem reescrever o Neon. É o caminho de quem entra
-   * pela segunda vez ou em um navegador novo.
+   * Espelho do Neon: popula o IndexedDB deste navegador sem tocar no ERP e sem
+   * reescrever o Neon. Se vier vazio, **escala para a carga** em vez de largar um
+   * aviso morto: era o que travava a tela em produção, com os botões sem utilidade.
    */
-  const usarBaseExistente = useCallback(async () => {
-    setErro("")
-    if (!integracao) {
-      setErro("Integração de faturamento não encontrada. Cadastre-a em Admin → Integrações.")
-      return
-    }
+  const rodarDump = useCallback(async (motivo?: string) => {
     setAcao("carregando")
+    if (motivo) setPlano({ plano: "usar-neon", motivo })
     try {
-      const lista = await baixarBaseDoNeon(integracao.id)
-      if (!lista.length) throw new Error("A base do Neon está vazia. Use Carregar base.")
+      const lista = await baixarBaseDoNeon(integracao!.id)
+      if (!lista.length) {
+        await rodarCarga(
+          "A base do Neon veio vazia — carregando 12 meses do ERP. Pode levar alguns minutos."
+        )
+        return
+      }
       await limpar()
       await substituirBase(lista)
-      await salvarEstado({
+      await publicar({
         carga_completa: true,
         contagem: lista.length,
         ultima_data: estado?.ultima_data ?? null,
         janela_inicio: filtros.dataInicio,
         janela_fim: filtros.dataFim,
       })
-      setJanelaDoCache({ inicio: filtros.dataInicio, fim: filtros.dataFim })
-      setSelectedNfs(new Set())
-      setExpandedNfs(new Set())
-      await recarregarDb()
       setAcao("idle")
     } catch (err) {
       setAcao("erro")
       setErro(err instanceof Error ? err.message : "Erro ao usar a base existente")
     }
-  }, [integracao, estado?.ultima_data, filtros.dataInicio, filtros.dataFim, recarregarDb])
+  }, [integracao, estado?.ultima_data, filtros.dataInicio, filtros.dataFim, publicar, rodarCarga])
+
+  /** Recarga pedida na mão — o botão continua sendo o escape hatch. */
+  async function carregarBase() {
+    setErro("")
+    if (!integracao) {
+      setErro("Integração de faturamento não encontrada. Cadastre-a em Admin → Integrações.")
+      return
+    }
+    await rodarCarga()
+  }
+
+  /** Botão "Usar base do Neon": o espelho, com a mesma escalada para a carga. */
+  const usarBaseExistente = useCallback(async () => {
+    setErro("")
+    if (!integracao) {
+      setErro("Integração de faturamento não encontrada. Cadastre-a em Admin → Integrações.")
+      return
+    }
+    await rodarDump()
+  }, [integracao, rodarDump])
 
   /**
-   * Cache vazio no navegador? Popula sozinho a partir do Neon.
+   * Coloca a base em dia sozinho, sem depender de clique.
    *
-   * É o mesmo caminho do botão "Usar base do Neon": uma leitura do espelho, sem
-   * tocar no ERP e sem reescrever o Neon. Sem isso, todo mundo que abre a tela em
-   * um navegador novo precisa descobrir e clicar no botão. Deliberadamente **não**
-   * dispara "Atualizar" nem "Carregar base" — os dois mexem em dado de verdade e
-   * continuam sob controle do usuário.
+   * Pergunta o marcador do Neon, decide com `decidirPlano` e executa: espelho quando
+   * o Neon tem dado, delta quando está alguns dias atrás, carga quando está vazio ou
+   * parado demais. Em produção a tela abria no aviso "a base do Neon está vazia" e
+   * parava ali, com os botões travados, esperando alguém entender o que clicar.
    *
-   * A trava por ref garante uma tentativa só por montagem: se falhar, a tela mostra
-   * o erro e o botão continua disponível para o usuário repetir.
+   * Uma tentativa por montagem (trava por ref): se falhar, o erro aparece e o usuário
+   * pode repetir pelos botões.
    */
   const jaTentouPopular = useRef(false)
+  const garantirBase = useCallback(async () => {
+    const local = await estadoSalvo()
+    const neon = await lerEstadoNeon(integracao!.id)
+    const { plano, motivo } = decidirPlano({ estadoNeon: neon, cacheLocal: local })
+    setPlano({ plano, motivo })
+    if (plano === "carga") return rodarCarga(motivo)
+    if (plano === "sync") return rodarSync(motivo)
+    if (plano === "usar-neon") return rodarDump(motivo)
+    // "pronto": nada a pedir. A tela já tem o que mostrar.
+    setAcao("idle")
+  }, [integracao, rodarCarga, rodarSync, rodarDump])
+
+
   useEffect(() => {
     if (jaTentouPopular.current) return
     if (!integracao) return
     if (estado === undefined) return // ainda consultando o estado do cache
-    if (estado?.carga_completa) return // já tem base local
     jaTentouPopular.current = true
-    void usarBaseExistente()
-  }, [integracao, estado, usarBaseExistente])
+    void garantirBase()
+  }, [integracao, estado, garantirBase])
 
+  /** Botão "Atualizar": deleta o delta. Exige base local porque o sync tem watermark. */
   async function atualizarDelta() {
     setErro("")
     if (!integracao) {
@@ -376,29 +470,7 @@ export default function FaturamentoDetalhePage() {
       setErro("Popule o cache antes de atualizar (botão Usar base do Neon ou Carregar base).")
       return
     }
-    setAcao("atualizando")
-    try {
-      const res = await fetch(`/api/integracao/${integracao.id}/detalhe/faturamento-detalhe/sync`, {
-        method: "POST",
-      })
-      const json = await res.json()
-      if (!res.ok) throw new Error(json?.detail || json?.error || "Erro ao atualizar")
-      // O sync devolve so o delta; o IndexedDB faz merge em vez de substituido.
-      const novos = itensDaResposta(json)
-      if (novos.length) await mergeDelta(novos, filtros.dataInicio, filtros.dataFim)
-      await salvarEstado({
-        carga_completa: true,
-        contagem: Number(json.contagem || novos.length),
-        ultima_data: json.ultima_data ?? st.ultima_data,
-        janela_inicio: filtros.dataInicio,
-        janela_fim: filtros.dataFim,
-      })
-      await recarregarDb()
-      setAcao("idle")
-    } catch (err) {
-      setAcao("erro")
-      setErro(err instanceof Error ? err.message : "Erro ao atualizar")
-    }
+    await rodarSync()
   }
 
   function exportarCsv() {
@@ -540,7 +612,7 @@ export default function FaturamentoDetalhePage() {
             type="button"
             variant="outline"
             onClick={usarBaseExistente}
-            disabled={acao !== "idle" || !precisaPopularCache}
+            disabled={executando || !precisaPopularCache}
             className="gap-2"
             title={
               precisaPopularCache
@@ -554,7 +626,7 @@ export default function FaturamentoDetalhePage() {
           <Button
             type="button"
             onClick={atualizarDelta}
-            disabled={acao !== "idle" || !temCacheLocal}
+            disabled={executando || !temCacheLocal}
             className="gap-2"
             title="Traz só as notas novas desde a última carga (lê o delta no ERP e faz merge no cache)"
           >
@@ -565,12 +637,12 @@ export default function FaturamentoDetalhePage() {
             type="button"
             variant="outline"
             onClick={carregarBase}
-            disabled={acao !== "idle"}
+            disabled={executando}
             className="gap-2"
-            title="Lê 12 meses no ERP e reescreve a base do Neon — só na primeira vez"
+            title="Lê 12 meses no ERP e reescreve a base do Neon. A tela já faz isso sozinha quando a base está vazia ou parada"
           >
-            <Database className="w-4 h-4" />
-            {acao === "carregando" ? "Carregando..." : "Carregar base (1ª vez)"}
+            <Database className={`w-4 h-4 ${acao === "carregando" ? "animate-spin" : ""}`} />
+            {acao === "carregando" ? "Carregando..." : "Recarregar base (12 meses)"}
           </Button>
           <Button
             type="button"
@@ -586,15 +658,27 @@ export default function FaturamentoDetalhePage() {
       </div>
 
       {erro && (
-        <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
-          {erro}
-        </p>
+        <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
+          <p>{erro}</p>
+          {acao === "erro" && integracao && (
+            <p className="mt-1 text-xs">
+              Os botões acima continuam disponíveis para tentar de novo. Nada foi apagado.
+            </p>
+          )}
+        </div>
       )}
 
-      {!temCacheLocal && acao === "carregando" && integracao && (
-        <p role="status" className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-800 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-200">
-          Cache local vazio neste navegador — populando com a base do Neon. Não é preciso
-          clicar em nada.
+      {/*
+       * O que a teladecided fazer com a base. Fica na tela mesmo depois de pronto:
+       * é a resposta para "por que a tela recarregou sozinha?" — e some quando a
+       * pessoa mexe nos filtros, que não tem relação com a base.
+       */}
+      {plano && integracao && (
+        <p
+          role="status"
+          className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-800 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-200"
+        >
+          {executando ? plano.motivo : <>{plano.motivo} Não é preciso clicar em nada.</>}
         </p>
       )}
 

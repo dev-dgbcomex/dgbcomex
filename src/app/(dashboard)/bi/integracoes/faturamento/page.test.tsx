@@ -152,16 +152,16 @@ it("tem botão de informação explicando o uso da tela", async () => {
     for (const botao of [
       "Usar base do Neon",
       "Atualizar",
-      "Carregar base (1ª vez)",
+      "Recarregar base (12 meses)",
       "Aplicar filtros",
       "Exportar CSV",
     ]) {
       expect(within(dialog).getAllByText(botao).length).toBeGreaterThan(0)
     }
 
-    // AOrientation de não clicar sempre nesses botões precisa estar escrita.
+    // A orientação de não clicar sempre nesses botões precisa estar escrita.
     expect(
-      within(dialog).getByText(/VOCÊ NÃO PRECISA CLICAR NOS BOTÕES DE DADOS PARA FILTRAR/i)
+      within(dialog).getByText(/VOCÊ NÃO PRECISA CLICAR EM NADA PARA A TELA TER DADO/i)
     ).toBeTruthy()
     expect(
       within(dialog).getByText(/basta preencher os filtros e clicar em Aplicar filtros/i)
@@ -363,22 +363,134 @@ it("tem botão de informação explicando o uso da tela", async () => {
     expect(fetchMock.calls.some((c) => c.url.includes("por_pagina=500"))).toBe(false)
   })
 
-  it("avisa quando o cache está vazio e o Neon também", async () => {
+  it("carrega do ERP sozinho quando a base do Neon está vazia", async () => {
+    // Antes: parava num aviso "a base do Neon está vazia" com os botões travados,
+    // esperando alguém descobrir o que clicar. Agora a tela sobe a carga sozinha.
     estadoSalvo.mockResolvedValue(null)
     consultar.mockResolvedValue(consultaDe([]))
     fetchMock = createFetchMock(({ url }) => {
       if (url.startsWith("/api/integracao/listar")) return { json: [INTEGRACAO] }
-      return { json: { itens: [] } }
+      if (url.endsWith("/estado")) {
+        return { json: { carga_completa: false, contagem: 0, ultima_data: null } }
+      }
+      if (url.includes("por_pagina=500")) return { json: { itens: [], paginacao: { total_paginas: 1 } } }
+      if (url.endsWith("/carga")) {
+        return { json: { processados: 3, contagem: 3, ultima_data: "2026-02-11", itens: ITENS } }
+      }
+      return { json: { erro: "não deveria chamar mais nada" } }
     })
     vi.stubGlobal("fetch", fetchMock.fn)
     renderPage(<FaturamentoDetalhePage />)
 
-    await waitFor(() =>
-      expect(screen.getByRole("alert").textContent).toContain("A base do Neon está vazia")
-    )
-    // O botão continua disponível para o usuário carregar a base de verdade.
-    expect(screen.getByRole("button", { name: "Atualizar" })).toHaveProperty("disabled", true)
-    expect(screen.getByRole("button", { name: /Exportar CSV/ })).toHaveProperty("disabled", true)
+    // O motivo da decisão aparece na tela, e a carga roda sozinha.
+    expect(await screen.findByText(/A base do Neon está vazia/)).toBeTruthy()
+    await waitFor(() => expect(substituirBase).toHaveBeenCalled())
+    expect(fetchMock.calls.some((c) => c.url.endsWith("/carga"))).toBe(true)
+    expect(screen.queryByRole("alert")).toBeNull()
+  })
+
+  it("sobe para a carga quando o espelho do Neon vem vazio", async () => {
+    // Sem estado da API (null = "não sei"): tenta o espelho, e o vazio escala para a carga.
+    estadoSalvo.mockResolvedValue(null)
+    consultar.mockResolvedValue(consultaDe([]))
+    fetchMock = createFetchMock(({ url }) => {
+      if (url.startsWith("/api/integracao/listar")) return { json: [INTEGRACAO] }
+      if (url.endsWith("/estado")) return { status: 503, json: { detail: "indisponível" } }
+      if (url.includes("por_pagina=500")) return { json: { itens: [], paginacao: { total_paginas: 1 } } }
+      if (url.endsWith("/carga")) {
+        return { json: { processados: 3, contagem: 3, ultima_data: "2026-02-11", itens: ITENS } }
+      }
+      return { json: { erro: "não deveria chamar mais nada" } }
+    })
+    vi.stubGlobal("fetch", fetchMock.fn)
+    renderPage(<FaturamentoDetalhePage />)
+
+    await waitFor(() => expect(substituirBase).toHaveBeenCalled())
+    expect(fetchMock.calls.some((c) => c.url.includes("por_pagina=500"))).toBe(true)
+    expect(fetchMock.calls.some((c) => c.url.endsWith("/carga"))).toBe(true)
+  })
+
+  it("busca só o delta quando a base do Neon está alguns dias atrás", async () => {
+    const hoje = new Date()
+    const atras = new Date(hoje.getTime() - 2 * 86_400_000).toISOString().slice(0, 10)
+    fetchMock = createFetchMock(({ url }) => {
+      if (url.startsWith("/api/integracao/listar")) return { json: [INTEGRACAO] }
+      if (url.endsWith("/estado")) {
+        return { json: { carga_completa: true, contagem: 3, ultima_data: atras } }
+      }
+      if (url.endsWith("/sync")) {
+        return { json: { processados: 1, contagem: 4, ultima_data: hoje.toISOString().slice(0, 10), itens: [ITENS[0]] } }
+      }
+      return { json: { erro: "não deveria chamar mais nada" } }
+    })
+    vi.stubGlobal("fetch", fetchMock.fn)
+    renderPage(<FaturamentoDetalhePage />)
+
+    expect(await screen.findByText(/buscando só o que é novo no ERP/)).toBeTruthy()
+    await waitFor(() => expect(mergeDelta).toHaveBeenCalled())
+    // Delta não recarrega a base inteira nem lê o dump.
+    expect(substituirBase).not.toHaveBeenCalled()
+    expect(fetchMock.calls.some((c) => c.url.endsWith("/carga"))).toBe(false)
+    expect(fetchMock.calls.some((c) => c.url.includes("por_pagina=500"))).toBe(false)
+  })
+
+  it("recarrega do ERP quando a base está parada há muito tempo", async () => {
+    const parado = new Date(new Date().getTime() - 60 * 86_400_000).toISOString().slice(0, 10)
+    fetchMock = createFetchMock(({ url }) => {
+      if (url.startsWith("/api/integracao/listar")) return { json: [INTEGRACAO] }
+      if (url.endsWith("/estado")) {
+        return { json: { carga_completa: true, contagem: 3, ultima_data: parado } }
+      }
+      if (url.endsWith("/carga")) {
+        return { json: { processados: 3, contagem: 3, ultima_data: "2026-10-12", itens: ITENS } }
+      }
+      return { json: { erro: "não deveria chamar mais nada" } }
+    })
+    vi.stubGlobal("fetch", fetchMock.fn)
+    renderPage(<FaturamentoDetalhePage />)
+
+    expect(await screen.findByText(/recarregando 12 meses do ERP/)).toBeTruthy()
+    await waitFor(() => expect(substituirBase).toHaveBeenCalled())
+    expect(fetchMock.calls.some((c) => c.url.endsWith("/carga"))).toBe(true)
+  })
+
+  it("nao pede nada quando a base do Neon e o cache local estao em dia", async () => {
+    // Estado em dia: nem dump, nem sync, nem carga — e o aviso explica isso.
+    fetchMock = createFetchMock(({ url }) => {
+      if (url.startsWith("/api/integracao/listar")) return { json: [INTEGRACAO] }
+      if (url.endsWith("/estado")) {
+        return { json: { carga_completa: true, contagem: 3, ultima_data: new Date().toISOString().slice(0, 10) } }
+      }
+      return { json: { erro: "não deveria chamar mais nada" } }
+    })
+    vi.stubGlobal("fetch", fetchMock.fn)
+    renderPage(<FaturamentoDetalhePage />)
+
+    expect(await screen.findByText(/A base está em dia, com notas até/)).toBeTruthy()
+    expect(substituirBase).not.toHaveBeenCalled()
+    expect(mergeDelta).not.toHaveBeenCalled()
+    expect(fetchMock.calls.some((c) => c.method === "POST")).toBe(false)
+    expect(fetchMock.calls.some((c) => c.url.includes("por_pagina=500"))).toBe(false)
+  })
+
+  it("mantem os botoes liberados depois de uma falha", async () => {
+    // O `acao !== "idle"` travava tudo depois do erro: a tela ficava morta.
+    estadoSalvo.mockResolvedValue(null)
+    consultar.mockResolvedValue(consultaDe([]))
+    fetchMock = createFetchMock(({ url }) => {
+      if (url.startsWith("/api/integracao/listar")) return { json: [INTEGRACAO] }
+      if (url.endsWith("/estado")) {
+        return { json: { carga_completa: false, contagem: 0, ultima_data: null } }
+      }
+      if (url.includes("por_pagina=500")) return { json: { itens: [], paginacao: { total_paginas: 1 } } }
+      return { status: 500, json: { detail: "Falha ao falar com o ERP" } }
+    })
+    vi.stubGlobal("fetch", fetchMock.fn)
+    renderPage(<FaturamentoDetalhePage />)
+
+    await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("Falha ao falar com o ERP"))
+    expect(screen.getByRole("button", { name: /Recarregar base/ })).toHaveProperty("disabled", false)
+    expect(screen.getByRole("button", { name: /Usar base do Neon/ })).toHaveProperty("disabled", false)
   })
 
   it("avisa quando a integração de faturamento não está cadastrada", async () => {
@@ -387,7 +499,7 @@ it("tem botão de informação explicando o uso da tela", async () => {
     renderPage(<FaturamentoDetalhePage />)
 
     await waitFor(() => expect(screen.getByText(/integração não encontrada/)).toBeTruthy())
-    fireEvent.click(screen.getByRole("button", { name: /Carregar base/ }))
+    fireEvent.click(screen.getByRole("button", { name: /Recarregar base/ }))
 
     await waitFor(() =>
       expect(screen.getByRole("alert").textContent).toContain("Cadastre-a em Admin")
@@ -464,7 +576,7 @@ it("tem botão de informação explicando o uso da tela", async () => {
     renderPage(<FaturamentoDetalhePage />)
 
     await waitFor(() => expect(screen.getByText(/Faturamento Detalhe/)).toBeTruthy())
-    fireEvent.click(screen.getByRole("button", { name: /Carregar base/ }))
+    fireEvent.click(screen.getByRole("button", { name: /Recarregar base/ }))
 
     await waitFor(() => expect(salvarEstado).toHaveBeenCalled())
     expect(substituirBase.mock.calls[0][0]).toHaveLength(ITENS.length)
