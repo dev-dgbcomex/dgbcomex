@@ -22,6 +22,8 @@ function item(parcial: Partial<Omit<ItemFaturamento, "chave">> & { chave?: strin
     cliente: "C001",
     nome_cliente: "Cliente Alfa",
     cod_produto: "P001",
+    descricao_produto: "VELUDO CONFORT",
+    unidade_produto: "MT",
     metros: 100,
     vr_unitario: 10,
     vr_total: 1000,

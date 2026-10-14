@@ -15,6 +15,8 @@ function item(over: Partial<ItemDetalhe> = {}): ItemDetalhe {
     cliente: "C1",
     nome_cliente: "Cliente A",
     cod_produto: "2.K2620.001",
+    descricao_produto: "VELUDO CONFORT",
+    unidade_produto: "MT",
     metros: 10,
     vr_unitario: 10,
     vr_total: 100,

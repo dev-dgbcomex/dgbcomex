@@ -150,6 +150,8 @@ export default function FaturamentoDetalhePage() {
   const [busca, setBusca] = useState("")
   const [acao, setAcao] = useState<"idle" | "carregando" | "atualizando" | "erro">("idle")
   const [plano, setPlano] = useState<DecisaoBase | null>(null)
+  /** Motivo do servidor recusar repetir a carga/sync (outra sessão mexeu na base). */
+  const [pulado, setPulado] = useState<string | null>(null)
   const [erro, setErro] = useState("")
   const [selectedNfs, setSelectedNfs] = useState<Set<string>>(() => new Set())
   const [expandedNfs, setExpandedNfs] = useState<Set<string>>(() => new Set())
@@ -304,7 +306,17 @@ export default function FaturamentoDetalhePage() {
     setExpandedNfs(new Set())
   }
 
-  /** Grava o marcador local e reconsulta a base: comum aos três caminhos. */
+  /**
+   * O que cada caminho fez com a base. `pulado` é o servidor recusando repetir o
+   * trabalho (outra sessão mexeu na base agora há pouco) — aí quem chama busca no
+   * espelho; `erro` não vira mais nada, porque insistir atrás de um erro só esconde a
+   * causa. Em ambos a tela já tem um destino para ir, então não há laço.
+   */
+  type ResultadoBase = "feito" | "pulado" | "erro"
+
+  /**
+   * Grava o marcador local e reconsulta a base: comum aos três caminhos.
+   */
   const publicar = useCallback(async (novo: EstadoFaturamentoDetalhe) => {
     await salvarEstado(novo)
     setJanelaDoCache({ inicio: novo.janela_inicio, fim: novo.janela_fim })
@@ -316,103 +328,147 @@ export default function FaturamentoDetalhePage() {
   /**
    * Carga completa: lê 12 meses do ERP e **reescreve o Neon**. É a operação cara.
    * O `carga` devolve os itens no corpo, então o IndexedDB é populado sem reler o Neon.
+   *
+   * Devolve `false` quando a API respondeu `pulado`: outra sessão mexeu na base nos
+   * últimos 30 minutos e reler o ERP não traria nada novo. Quem chama decide se busca
+   * os itens no espelho — assim o grafo de chamadas não faz ciclo.
    */
-  const rodarCarga = useCallback(async (motivo?: string) => {
-    setAcao("carregando")
-    if (motivo) setPlano({ plano: "carga", motivo })
-    try {
-      const res = await fetch(
-        `/api/integracao/${integracao!.id}/detalhe/faturamento-detalhe/carga`,
-        { method: "POST" }
-      )
-      const json = await res.json()
-      if (!res.ok) throw new Error(json?.detail || json?.error || "Erro ao carregar a base")
-      const lista = itensDaResposta(json)
-      if (!lista.length) throw new Error("A API não devolveu itens na carga.")
-      await limpar()
-      await substituirBase(lista)
-      await publicar({
-        carga_completa: true,
-        contagem: Number(json.contagem || lista.length),
-        ultima_data: json.ultima_data ?? null,
-        janela_inicio: filtros.dataInicio,
-        janela_fim: filtros.dataFim,
-      })
-      setAcao("idle")
-    } catch (err) {
-      setAcao("erro")
-      setErro(err instanceof Error ? err.message : "Erro ao carregar a base")
-    }
-  }, [integracao, filtros.dataInicio, filtros.dataFim, publicar])
+  const rodarCarga = useCallback(
+    async (opcoes: { motivo?: string; forcar?: boolean } = {}): Promise<ResultadoBase> => {
+      setAcao("carregando")
+      if (opcoes.motivo) setPlano({ plano: "carga", motivo: opcoes.motivo })
+      try {
+        const forcar = opcoes.forcar ? "?forcar=true" : ""
+        const res = await fetch(
+          `/api/integracao/${integracao!.id}/detalhe/faturamento-detalhe/carga${forcar}`,
+          { method: "POST" }
+        )
+        const json = await res.json()
+        if (!res.ok) throw new Error(json?.detail || json?.error || "Erro ao carregar a base")
+        if (json?.pulado) {
+          setPulado(String(json.motivo ?? "outra sessão acabou de atualizar a base."))
+          return "pulado"
+        }
+        const lista = itensDaResposta(json)
+        if (!lista.length) throw new Error("A API não devolveu itens na carga.")
+        await limpar()
+        await substituirBase(lista)
+        await publicar({
+          carga_completa: true,
+          contagem: Number(json.contagem || lista.length),
+          ultima_data: json.ultima_data ?? null,
+          janela_inicio: filtros.dataInicio,
+          janela_fim: filtros.dataFim,
+        })
+        setAcao("idle")
+        return "feito"
+      } catch (err) {
+        setAcao("erro")
+        setErro(err instanceof Error ? err.message : "Erro ao carregar a base")
+        return "erro"
+      }
+    },
+    [integracao, filtros.dataInicio, filtros.dataFim, publicar]
+  )
 
   /** Só o delta: notas novas desde `ultima_data`, com merge no IndexedDB. */
-  const rodarSync = useCallback(async (motivo?: string) => {
-    setAcao("atualizando")
-    if (motivo) setPlano({ plano: "sync", motivo })
-    try {
-      const res = await fetch(
-        `/api/integracao/${integracao!.id}/detalhe/faturamento-detalhe/sync`,
-        { method: "POST" }
-      )
-      const json = await res.json()
-      if (!res.ok) throw new Error(json?.detail || json?.error || "Erro ao atualizar")
-      // O sync devolve so o delta; o IndexedDB faz merge em vez de substituir.
-      const novos = itensDaResposta(json)
-      if (novos.length) await mergeDelta(novos, filtros.dataInicio, filtros.dataFim)
-      await publicar({
-        carga_completa: true,
-        contagem: Number(json.contagem || novos.length),
-        ultima_data: json.ultima_data ?? null,
-        janela_inicio: filtros.dataInicio,
-        janela_fim: filtros.dataFim,
-      })
-      setAcao("idle")
-    } catch (err) {
-      setAcao("erro")
-      setErro(err instanceof Error ? err.message : "Erro ao atualizar")
-    }
-  }, [integracao, filtros.dataInicio, filtros.dataFim, publicar])
+  const rodarSync = useCallback(
+    async (opcoes: { motivo?: string; forcar?: boolean } = {}): Promise<ResultadoBase> => {
+      setAcao("atualizando")
+      if (opcoes.motivo) setPlano({ plano: "sync", motivo: opcoes.motivo })
+      try {
+        const forcar = opcoes.forcar ? "?forcar=true" : ""
+        const res = await fetch(
+          `/api/integracao/${integracao!.id}/detalhe/faturamento-detalhe/sync${forcar}`,
+          { method: "POST" }
+        )
+        const json = await res.json()
+        if (!res.ok) throw new Error(json?.detail || json?.error || "Erro ao atualizar")
+        if (json?.pulado) {
+          setPulado(String(json.motivo ?? "outra sessão acabou de atualizar a base."))
+          return "pulado"
+        }
+        // O sync devolve so o delta; o IndexedDB faz merge em vez de substituir.
+        const novos = itensDaResposta(json)
+        if (novos.length) await mergeDelta(novos, filtros.dataInicio, filtros.dataFim)
+        await publicar({
+          carga_completa: true,
+          contagem: Number(json.contagem || novos.length),
+          ultima_data: json.ultima_data ?? null,
+          janela_inicio: filtros.dataInicio,
+          janela_fim: filtros.dataFim,
+        })
+        setAcao("idle")
+        return "feito"
+      } catch (err) {
+        setAcao("erro")
+        setErro(err instanceof Error ? err.message : "Erro ao atualizar")
+        return "erro"
+      }
+    },
+    [integracao, filtros.dataInicio, filtros.dataFim, publicar]
+  )
 
   /**
    * Espelho do Neon: popula o IndexedDB deste navegador sem tocar no ERP e sem
    * reescrever o Neon. Se vier vazio, **escala para a carga** em vez de largar um
    * aviso morto: era o que travava a tela em produção, com os botões sem utilidade.
+   *
+   * `escalar` é desligado quando quem chamou já veio de uma carga recusada pelo
+   * servidor: aí um espelho vazio é contradição e precisa virar erro, não laço.
    */
-  const rodarDump = useCallback(async (motivo?: string) => {
-    setAcao("carregando")
-    if (motivo) setPlano({ plano: "usar-neon", motivo })
-    try {
-      const lista = await baixarBaseDoNeon(integracao!.id)
-      if (!lista.length) {
-        await rodarCarga(
-          "A base do Neon veio vazia — carregando 12 meses do ERP. Pode levar alguns minutos."
-        )
-        return
+  const rodarDump = useCallback(
+    async (opcoes: { motivo?: string; escalar?: boolean } = {}): Promise<ResultadoBase> => {
+      setAcao("carregando")
+      if (opcoes.motivo) setPlano({ plano: "usar-neon", motivo: opcoes.motivo })
+      try {
+        const lista = await baixarBaseDoNeon(integracao!.id)
+        if (!lista.length) {
+          if (opcoes.escalar === false) {
+            setAcao("erro")
+            setErro(
+              "Outra sessão acabou de atualizar a base, mas o espelho do Neon veio vazio. Clique em Recarregar base para refazer."
+            )
+            return "erro"
+          }
+          await rodarCarga({
+            motivo:
+              "A base do Neon veio vazia — carregando 12 meses do ERP. Pode levar alguns minutos.",
+          })
+          return "erro"
+        }
+        await limpar()
+        await substituirBase(lista)
+        await publicar({
+          carga_completa: true,
+          contagem: lista.length,
+          ultima_data: estado?.ultima_data ?? null,
+          janela_inicio: filtros.dataInicio,
+          janela_fim: filtros.dataFim,
+        })
+        setAcao("idle")
+        return "feito"
+      } catch (err) {
+        setAcao("erro")
+        setErro(err instanceof Error ? err.message : "Erro ao usar a base existente")
+        return "erro"
       }
-      await limpar()
-      await substituirBase(lista)
-      await publicar({
-        carga_completa: true,
-        contagem: lista.length,
-        ultima_data: estado?.ultima_data ?? null,
-        janela_inicio: filtros.dataInicio,
-        janela_fim: filtros.dataFim,
-      })
-      setAcao("idle")
-    } catch (err) {
-      setAcao("erro")
-      setErro(err instanceof Error ? err.message : "Erro ao usar a base existente")
-    }
-  }, [integracao, estado?.ultima_data, filtros.dataInicio, filtros.dataFim, publicar, rodarCarga])
+    },
+    [integracao, estado?.ultima_data, filtros.dataInicio, filtros.dataFim, publicar, rodarCarga]
+  )
 
-  /** Recarga pedida na mão — o botão continua sendo o escape hatch. */
+  /**
+   * Recarga pedida na mão — o botão continua sendo o escape hatch e manda `forcar`,
+   * porque quem pede é a pessoa, não a decisão automática.
+   */
   async function carregarBase() {
     setErro("")
     if (!integracao) {
       setErro("Integração de faturamento não encontrada. Cadastre-a em Admin → Integrações.")
       return
     }
-    await rodarCarga()
+    setPulado(null)
+    await rodarCarga({ forcar: true })
   }
 
   /** Botão "Usar base do Neon": o espelho, com a mesma escalada para a carga. */
@@ -422,6 +478,7 @@ export default function FaturamentoDetalhePage() {
       setErro("Integração de faturamento não encontrada. Cadastre-a em Admin → Integrações.")
       return
     }
+    setPulado(null)
     await rodarDump()
   }, [integracao, rodarDump])
 
@@ -433,6 +490,9 @@ export default function FaturamentoDetalhePage() {
    * parado demais. Em produção a tela abria no aviso "a base do Neon está vazia" e
    * parava ali, com os botões travados, esperando alguém entender o que clicar.
    *
+   * Quando o servidor responde `pulado` (outra sessão acabou de mexer na base), o
+   * plano automático vai para o espelho em vez de insistir: os itens já estão lá.
+   *
    * Uma tentativa por montagem (trava por ref): se falhar, o erro aparece e o usuário
    * pode repetir pelos botões.
    */
@@ -442,13 +502,20 @@ export default function FaturamentoDetalhePage() {
     const neon = await lerEstadoNeon(integracao!.id)
     const { plano, motivo } = decidirPlano({ estadoNeon: neon, cacheLocal: local })
     setPlano({ plano, motivo })
-    if (plano === "carga") return rodarCarga(motivo)
-    if (plano === "sync") return rodarSync(motivo)
-    if (plano === "usar-neon") return rodarDump(motivo)
+    if (plano === "carga") {
+      // `pulado` = outra sessão acabou de mexer na base: os itens já estão no Neon,
+      // então em vez de insistir a tela lê o espelho. `erro` não insiste.
+      const r = await rodarCarga({ motivo })
+      return r === "pulado" ? rodarDump({ escalar: false }) : undefined
+    }
+    if (plano === "sync") {
+      const r = await rodarSync({ motivo })
+      return r === "pulado" ? rodarDump({ escalar: false }) : undefined
+    }
+    if (plano === "usar-neon") return rodarDump({ motivo })
     // "pronto": nada a pedir. A tela já tem o que mostrar.
     setAcao("idle")
   }, [integracao, rodarCarga, rodarSync, rodarDump])
-
 
   useEffect(() => {
     if (jaTentouPopular.current) return
@@ -458,7 +525,7 @@ export default function FaturamentoDetalhePage() {
     void garantirBase()
   }, [integracao, estado, garantirBase])
 
-  /** Botão "Atualizar": deleta o delta. Exige base local porque o sync tem watermark. */
+  /** Botão "Atualizar": o delta. Exige base local porque o sync tem watermark. */
   async function atualizarDelta() {
     setErro("")
     if (!integracao) {
@@ -467,10 +534,13 @@ export default function FaturamentoDetalhePage() {
     }
     const st = await estadoSalvo()
     if (!st?.carga_completa) {
-      setErro("Popule o cache antes de atualizar (botão Usar base do Neon ou Carregar base).")
+      setErro("Popule o cache antes de atualizar (botão Usar base do Neon ou Recarregar base).")
       return
     }
-    await rodarSync()
+    setPulado(null)
+    // Botão manual: `forcar` ignora o corte de recência do servidor. Quem quer as notas
+    // de agora clica aqui, e o clique tem que valer mesmo que outro tenha feito há pouco.
+    await rodarSync({ forcar: true })
   }
 
   function exportarCsv() {
@@ -669,7 +739,7 @@ export default function FaturamentoDetalhePage() {
       )}
 
       {/*
-       * O que a teladecided fazer com a base. Fica na tela mesmo depois de pronto:
+       * O que a tela decidiu fazer com a base. Fica na tela mesmo depois de pronto:
        * é a resposta para "por que a tela recarregou sozinha?" — e some quando a
        * pessoa mexe nos filtros, que não tem relação com a base.
        */}
@@ -679,6 +749,17 @@ export default function FaturamentoDetalhePage() {
           className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-800 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-200"
         >
           {executando ? plano.motivo : <>{plano.motivo} Não é preciso clicar em nada.</>}
+        </p>
+      )}
+
+      {/*
+       * O servidor recusou repetir o trabalho. Não é erro: é o corte de recência, e a
+       * base no Neon já está atualizada — a tela vai buscar os itens no espelho.
+       */}
+      {pulado && (
+        <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200">
+          Não repeti a carga: {pulado}. Os itens já estão no Neon e a tela está
+          mostrando a mesma base — nada se perdeu.
         </p>
       )}
 

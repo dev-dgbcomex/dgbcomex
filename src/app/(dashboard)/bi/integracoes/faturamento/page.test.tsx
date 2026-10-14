@@ -473,6 +473,91 @@ it("tem botão de informação explicando o uso da tela", async () => {
     expect(fetchMock.calls.some((c) => c.url.includes("por_pagina=500"))).toBe(false)
   })
 
+  it("nao repete a carga que outra sessao acabou de fazer", async () => {
+    // O servidor responde `pulado` (corte de recencia de 30 min): a tela avisa e busca
+    // os itens no espelho, em vez de reler 12 meses do ERP.
+    estadoSalvo.mockResolvedValue(null)
+    consultar.mockResolvedValue(consultaDe([]))
+    fetchMock = createFetchMock(({ url, method }) => {
+      if (url.startsWith("/api/integracao/listar")) return { json: [INTEGRACAO] }
+      if (url.endsWith("/estado")) {
+        return { json: { carga_completa: false, contagem: 0, ultima_data: null } }
+      }
+      if (method === "POST" && url.includes("/carga")) {
+        return {
+          json: {
+            pulado: true,
+            motivo: "a base foi atualizada 3 min atras por outra sessao; use os itens que ja estao no Neon",
+            contagem: 3,
+            ultima_data: "2026-10-14",
+            itens: [],
+          },
+        }
+      }
+      if (url.includes("por_pagina=500")) {
+        return {
+          json: {
+            itens: ITENS,
+            paginacao: { total: ITENS.length, pagina: 1, por_pagina: 500, total_paginas: 1 },
+          },
+        }
+      }
+      return { json: { erro: "não deveria chamar mais nada" } }
+    })
+    vi.stubGlobal("fetch", fetchMock.fn)
+    renderPage(<FaturamentoDetalhePage />)
+
+    expect(await screen.findByText(/Não repeti a carga: a base foi atualizada 3 min atras/)).toBeTruthy()
+    await waitFor(() => expect(substituirBase).toHaveBeenCalled())
+    // Uma chamada só de carga: a segunda teria sido reler o ERP à toa.
+    expect(fetchMock.calls.filter((c) => c.method === "POST")).toHaveLength(1)
+    expect(screen.queryByRole("alert")).toBeNull()
+  })
+
+  it("trata pulado com espelho vazio como erro, sem laco", async () => {
+    estadoSalvo.mockResolvedValue(null)
+    consultar.mockResolvedValue(consultaDe([]))
+    fetchMock = createFetchMock(({ url, method }) => {
+      if (url.startsWith("/api/integracao/listar")) return { json: [INTEGRACAO] }
+      if (url.endsWith("/estado")) {
+        return { json: { carga_completa: false, contagem: 0, ultima_data: null } }
+      }
+      if (method === "POST" && url.includes("/carga")) {
+        return { json: { pulado: true, motivo: "outra sessao", contagem: 3, itens: [] } }
+      }
+      if (url.includes("por_pagina=500")) return { json: { itens: [], paginacao: { total_paginas: 1 } } }
+      return { json: { erro: "não deveria chamar mais nada" } }
+    })
+    vi.stubGlobal("fetch", fetchMock.fn)
+    renderPage(<FaturamentoDetalhePage />)
+
+    // Contradição: ninguém atualizou e o espelho está vazio. Vira aviso, não segunda carga.
+    await waitFor(() =>
+      expect(screen.getByRole("alert").textContent).toContain("o espelho do Neon veio vazio")
+    )
+    expect(fetchMock.calls.filter((c) => c.method === "POST")).toHaveLength(1)
+  })
+
+  it("o botao manual manda forcar para ignorar o corte de recencia", async () => {
+    consultar.mockResolvedValue(consultaDe([]))
+    fetchMock = createFetchMock(({ url, method }) => {
+      if (url.startsWith("/api/integracao/listar")) return { json: [INTEGRACAO] }
+      if (method === "POST" && url.includes("/carga")) {
+        return { json: { pulado: false, processados: 3, contagem: 3, ultima_data: "2026-10-14", itens: ITENS } }
+      }
+      return { json: { erro: "não deveria chamar mais nada" } }
+    })
+    vi.stubGlobal("fetch", fetchMock.fn)
+    renderPage(<FaturamentoDetalhePage />)
+
+    await waitFor(() => expect(screen.getByText(/Faturamento Detalhe/)).toBeTruthy())
+    fireEvent.click(screen.getByRole("button", { name: /Recarregar base/ }))
+
+    await waitFor(() =>
+      expect(fetchMock.calls.some((c) => c.url.includes("/carga?forcar=true"))).toBe(true)
+    )
+  })
+
   it("mantem os botoes liberados depois de uma falha", async () => {
     // O `acao !== "idle"` travava tudo depois do erro: a tela ficava morta.
     estadoSalvo.mockResolvedValue(null)
@@ -586,8 +671,9 @@ it("tem botão de informação explicando o uso da tela", async () => {
   it("faz merge do delta no cache em vez de substituir a base", async () => {
     fetchMock = createFetchMock(({ url, method }) => {
       if (url.startsWith("/api/integracao/listar")) return { json: [INTEGRACAO] }
-      if (url.endsWith("/sync")) {
-        return { json: { processados: 1, contagem: 4, ultima_data: "2026-03-01", itens: [ITENS[0]] } }
+      if (method === "POST" && url.includes("/sync")) {
+        // O botão manual manda `?forcar=true`: o caminho casa na parte da URL, não no fim.
+        return { json: { pulado: false, processados: 1, contagem: 4, ultima_data: "2026-03-01", itens: [ITENS[0]] } }
       }
       return { json: { erro: "não deveria ler o Neon" } }
     })

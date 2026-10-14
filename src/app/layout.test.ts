@@ -14,6 +14,18 @@ async function metadata() {
   return generateMetadata()
 }
 
+/**
+ * `Metadata.icons` é `IconURL | Icon[] | Icons`, então o compilador não sabe que `apple`
+ * existe. O layout monta o objeto com as duas chaves; o teste olha justamente elas.
+ */
+type Icones = {
+  apple?: unknown
+  icon?: { url: string; type: string }[]
+}
+
+const iconesDe = (m: Awaited<ReturnType<typeof metadata>>): Icones =>
+  (m.icons ?? {}) as Icones
+
 describe("metadata da raiz", () => {
   it("usa DGBCOMEX como título e a nova descrição", async () => {
     headersMock.mockResolvedValue(
@@ -38,7 +50,7 @@ describe("metadata da raiz", () => {
     )
     const m = await metadata()
     expect(m.metadataBase?.toString()).toContain("dgbcomex.vercel.app")
-    expect(String(m.icons?.apple)).toContain("dgbcomex.vercel.app")
+    expect(String(iconesDe(m).apple)).toContain("dgbcomex.vercel.app")
   })
 
   it("usa o favicon adaptativo e o logo para o compartilhamento", async () => {
@@ -46,16 +58,16 @@ describe("metadata da raiz", () => {
       new Map([["host", "localhost"], ["x-forwarded-proto", "http"]]) as never
     )
     const m = await metadata()
-    const icones = m.icons?.icon as { url: string; type: string }[]
+    const icones = iconesDe(m).icon as { url: string; type: string }[]
     expect(icones[0].url).toContain("/favicon.svg")
     expect(icones[0].type).toBe("image/svg+xml")
     // PNG de fallback para quem não renderiza SVG.
     expect(icones[1].url).toContain("/favicon-claro.png")
-    expect(m.icons?.apple).toContain("/apple-icon.png")
+    expect(iconesDe(m).apple).toContain("/apple-icon.png")
 
     const og = m.openGraph?.images as { url: string }[]
     expect(og[0].url).toContain("/logodgbcomexpreto002.png")
-    expect(m.twitter?.card).toBe("summary_large_image")
+    expect((m.twitter as { card?: string } | null)?.card).toBe("summary_large_image")
   })
 
   it("cai no ambiente quando não há host na requisição", async () => {
