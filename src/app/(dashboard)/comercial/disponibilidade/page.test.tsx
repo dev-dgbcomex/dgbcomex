@@ -116,6 +116,36 @@ function rotas(dados: Disponibilidade = resposta()) {
     if (url.startsWith("/api/integracao/listar")) {
       return { json: [INTEGRACAO_OUTRA, INTEGRACAO] }
     }
+    // Antes do detalhe: o `includes` da linha seguinte tambem casaria com
+    // `.../detalhe/estoque-disponibilidade/pedidos` e o modal receberia a
+    // disponibilidade em vez dos pedidos.
+    if (url.includes("/detalhe/estoque-disponibilidade/pedidos")) {
+      return {
+        json: {
+          total: 1,
+          saldo: 1_300,
+          valor: 9_230,
+          pedidos: [
+            {
+              pedido: "00006822",
+              cliente: "00.175.217/0001-61",
+              cliente_nome: "SLEEP INDUSTRIA DE MOVEIS LTDA",
+              vendedor: "055",
+              vendedor_nome: "PROFECTUS GESTAO COMERCIAL LTDA",
+              produto: "000014",
+              cor: "00011",
+              data_pedido: "2026-10-07",
+              data_entrega: "2026-11-16",
+              qtde_pedido: 1_300,
+              qtde_romaneada: 0,
+              saldo: 1_300,
+              valor: 9_230,
+              status: "Analise Comercial",
+            },
+          ],
+        },
+      }
+    }
     if (url.includes("/detalhe/estoque-disponibilidade")) return { json: dados }
     return { status: 404, json: { error: `Rota não mockada: ${url}` } }
   })
@@ -264,13 +294,30 @@ describe("DisponibilidadeComercialPage", () => {
     expect(within(tabela).queryByText(/^Falta$/)).toBeNull()
   })
 
-  it("abre a linha e mostra quem prometeu", async () => {
+  it("abre os pedidos clicando no número da coluna Pedidos", async () => {
+    renderPage(<DisponibilidadeComercialPage />)
+    await screen.findByRole("region", { name: "Disponibilidade por produto e cor" })
+
+    // O número é o botão: era um <span>, e clicar não fazia nada.
+    fireEvent.click(screen.getAllByRole("button", { name: /Ver os \d+ pedidos de/ })[0])
+
+    const dialog = await screen.findByRole("dialog")
+    expect(await within(dialog).findByText("00006822")).toBeInTheDocument()
+    expect(fetchMock.calls.some((c) => c.url.includes("/estoque-disponibilidade/pedidos"))).toBe(
+      true
+    )
+  })
+
+it("abre a linha e mostra quem prometeu", async () => {
     renderPage(<DisponibilidadeComercialPage />)
 
     const tabela = await screen.findByRole("region", { name: "Disponibilidade por produto e cor" })
-    // A linha da cor BEIGE; o botão fica na primeira célula (o produto), como na tabela.
+    // A linha da cor BEIGE. O botao de expandir fica na primeira celula (o produto) —
+    // o da coluna Pedidos tambem cita o produto no aria-label, entao a busca e pela
+    // celula, nao pelo nome.
     const linhaBeige = within(tabela).getByText("11 - BEIGE").closest("tr")!
-    fireEvent.click(within(linhaBeige).getByRole("button"))
+    const celulaProduto = linhaBeige.querySelector("td")!
+    fireEvent.click(within(celulaProduto).getByRole("button"))
 
     expect(await screen.findByText(/PROFECTUS/)).toBeInTheDocument()
     expect(screen.getByText(/GDUE/)).toBeInTheDocument()

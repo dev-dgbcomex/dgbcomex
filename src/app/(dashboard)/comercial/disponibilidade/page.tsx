@@ -137,19 +137,25 @@ function LinhaDisponibilidade({
           <span className="block text-[10px] text-slate-400">{FORMATAR.valor(linha.prometido_valor)}</span>
         </td>
 {/*
-          Só o número na tabela. Passar o mouse mostra o agregado por representante
-          (title nativo, sem JavaScript); clicar abre o modal com os pedidos linha a
-          linha, código por código. O aria-label garante o mesmo conteúdo no leitor
-          de tela.
+          O número É o botão: clicar aqui abre o modal com os pedidos linha a linha.
+          Antes era um <span> e o modal só abria pelo botão dentro da linha expandida —
+          quem clica no número (que é o gesto natural) não acontecia nada.
+          Passar o mouse segue mostrando o agregado por representante (`title` nativo,
+          sem JavaScript), e o `aria-label` leva o mesmo texto ao leitor de tela.
         */}
         <td className="px-3 py-2 text-right text-xs whitespace-nowrap">
-          <span
+          <button
+            type="button"
+            onClick={aoAbrirPedidos}
+            disabled={linha.pedidos_venda === 0}
             title={detalhePedidos(linha).join("\n")}
-            aria-label={`${linha.pedidos_venda} pedidos: ${detalhePedidos(linha).join("; ")}`}
-            className="cursor-help text-slate-400"
+            aria-label={`Ver os ${linha.pedidos_venda} pedidos de ${
+              linha.produto_desc || linha.produto
+            } ${linha.cor_desc || linha.cor}: ${detalhePedidos(linha).join("; ")}`}
+            className="cursor-pointer rounded px-1 font-medium text-slate-900 underline decoration-dotted underline-offset-2 hover:bg-slate-100 disabled:cursor-default disabled:text-slate-300 disabled:no-underline dark:text-slate-100 dark:hover:bg-slate-800"
           >
             {FORMATAR.inteiro(linha.pedidos_venda)}
-          </span>
+          </button>
         </td>
         <td className="px-3 py-2 text-right text-xs font-medium whitespace-nowrap text-slate-900 dark:text-slate-100">
           {FORMATAR.metros(linha.livre_metros)}
@@ -182,11 +188,9 @@ function LinhaDisponibilidade({
                 ))}
               </div>
             )}
-            <div className="mt-3 flex flex-wrap gap-2">
-              <Button size="sm" variant="outline" onClick={aoAbrirPedidos} className="gap-2">
-                Ver os {FORMATAR.inteiro(linha.pedidos_venda)} pedidos
-              </Button>
-            </div>
+            <p className="mt-2 text-[11px] text-slate-400">
+              Clique no número da coluna Pedidos para ver os pedidos um a um.
+            </p>
           </td>
         </tr>
       )}
