@@ -194,6 +194,39 @@ describe("DisponibilidadeComercialPage", () => {
     )
   })
 
+  it("mostra só o número de pedidos, com o detalhe no hover", async () => {
+    renderPage(<DisponibilidadeComercialPage />)
+    const tabela = await screen.findByRole("region", { name: "Disponibilidade por produto e cor" })
+
+    const beige = within(tabela).getByText("11 - BEIGE").closest("tr")!
+    // A tabela mostra o número; o detalhe (quem, metros, valor, pedidos) fica no title.
+    expect(within(beige).getByText("10")).toBeInTheDocument()
+    const celula = within(beige).getByText("10")
+    // O `toLocaleString` põe espaço não separável depois do R$; o teste compara em
+    // espaço normal para nao depender do detalhe do ICU.
+    const detalhe = (celula.getAttribute("title") ?? "").replace(/ /g, " ")
+    expect(detalhe).toContain("PROFECTUS")
+    expect(detalhe).toContain("10.101 m")
+    expect(detalhe).toContain("R$ 71.396,00")
+    expect(detalhe).toContain("6 pedidos")
+    // O leitor de tela recebe o mesmo conteúdo, em uma linha.
+    expect(celula.getAttribute("aria-label")).toContain("10 pedidos")
+    expect(celula.getAttribute("aria-label")).toContain("PROFECTUS")
+  })
+
+  it("ordena por número de pedidos", async () => {
+    renderPage(<DisponibilidadeComercialPage />)
+    const tabela = await screen.findByRole("region", { name: "Disponibilidade por produto e cor" })
+
+    fireEvent.click(within(tabela).getByRole("button", { name: /Pedidos/ }))
+    await waitFor(() =>
+      expect(within(tabela).getByRole("columnheader", { name: /Pedidos/ })).toHaveAttribute(
+        "aria-sort",
+        "descending"
+      )
+    )
+  })
+
   it("mostra os três números e os dois líquidos por produto e cor", async () => {
     renderPage(<DisponibilidadeComercialPage />)
 

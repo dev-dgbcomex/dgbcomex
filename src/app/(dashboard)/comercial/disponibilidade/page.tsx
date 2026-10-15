@@ -11,6 +11,7 @@ import { InfoButton } from "@/components/ui/info-button"
 import { getInfoContent } from "@/lib/info-content"
 import {
   FORMATAR,
+  detalhePedidos,
   exportarCsvDisponibilidade,
   filtrarLinhas,
   ordenarLinhas,
@@ -122,12 +123,29 @@ function LinhaDisponibilidade({
           {linha.primeira_chegada && (
             <span className="block text-[10px] text-slate-400">
               chega {FORMATAR.data(linha.primeira_chegada)}
+              {linha.pedidos_compra > 1 ? ` · ${linha.pedidos_compra} compras` : ""}
             </span>
           )}
         </td>
         <td className="px-3 py-2 text-right text-xs whitespace-nowrap text-slate-900 dark:text-slate-100">
           {FORMATAR.metros(linha.prometido_metros)}
           <span className="block text-[10px] text-slate-400">{FORMATAR.valor(linha.prometido_valor)}</span>
+        </td>
+        {/*
+          Só o número na tabela; o detalhe (quem prometeu, metros, valor, quantos
+          pedidos) aparece passando o mouse. O `title` é o que o navegador mostra, e o
+          `aria-label` é o que o leitor de tela lê — os dois com o mesmo texto. O
+          botão da primeira célula continua abrindo a linha, que é o caminho do
+          teclado e do celular.
+        */}
+        <td className="px-3 py-2 text-right text-xs whitespace-nowrap">
+          <span
+            title={detalhePedidos(linha).join("\n")}
+            aria-label={`${linha.pedidos_venda} pedidos: ${detalhePedidos(linha).join("; ")}`}
+            className="cursor-help text-slate-900 dark:text-slate-100"
+          >
+            {FORMATAR.inteiro(linha.pedidos_venda)}
+          </span>
         </td>
         <td className="px-3 py-2 text-right text-xs font-medium whitespace-nowrap text-slate-900 dark:text-slate-100">
           {FORMATAR.metros(linha.livre_metros)}
@@ -142,7 +160,7 @@ function LinhaDisponibilidade({
       </tr>
       {aberto && (
         <tr className="border-b border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/40">
-          <td colSpan={7} className="px-3 py-3">
+          <td colSpan={8} className="px-3 py-3">
             {linha.por_representante.length === 0 ? (
               <p className="text-xs text-slate-500">
                 Nenhum pedido em aberto para esta cor.
@@ -174,6 +192,7 @@ const COLUNAS: { chave: ChaveOrdenacao; titulo: string; numero?: boolean }[] = [
   { chave: "estoque", titulo: "Estoque", numero: true },
   { chave: "caminho", titulo: "A caminho", numero: true },
   { chave: "prometido", titulo: "Prometido", numero: true },
+  { chave: "pedidos", titulo: "Pedidos", numero: true },
   { chave: "livre", titulo: "Livre", numero: true },
   { chave: "cobertura", titulo: "Depois da compra", numero: true },
 ]

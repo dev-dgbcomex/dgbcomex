@@ -82,6 +82,7 @@ export type ChaveOrdenacao =
   | "cor"
   | "estoque"
   | "caminho"
+  | "pedidos"
   | "prometido"
   | "livre"
   | "cobertura"
@@ -92,6 +93,7 @@ const COLUNAS_NUMERICAS: Record<string, (linha: DisponibilidadeLinha) => number>
   falta: (linha) => linha.falta_metros,
   estoque: (linha) => linha.estoque_metros,
   caminho: (linha) => linha.caminho_metros,
+  pedidos: (linha) => linha.pedidos_venda,
   prometido: (linha) => linha.prometido_metros,
   livre: (linha) => linha.livre_metros,
   cobertura: (linha) => linha.cobertura_metros,
@@ -134,6 +136,23 @@ export function filtrarLinhas(
     semAcento(
       [linha.produto, linha.produto_desc, linha.cor, linha.cor_desc].join(" ")
     ).includes(termo)
+  )
+}
+
+/**
+ * Os pedidos que formam o prometido, um por linha: quem prometeu, quantos metros, em
+ * quanto e em quantos pedidos.
+ *
+ * Serve em dois lugares com o mesmo texto: o `title` da célula de Pedidos (o detalhe
+ * que aparece passando o mouse) e a linha que abre ao clicar. Um detalhe só em hover
+ * some no celular e não chega pelo teclado — por isso a linha continua abrindo.
+ */
+export function detalhePedidos(linha: DisponibilidadeLinha): string[] {
+  return linha.por_representante.map(
+    (rep) =>
+      `${rep.vendedor_nome || rep.vendedor} · ${FORMATAR.metros(rep.saldo)} · ${FORMATAR.valor(
+        rep.valor
+      )} · ${rep.pedidos} ${rep.pedidos === 1 ? "pedido" : "pedidos"}`
   )
 }
 
