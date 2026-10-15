@@ -3,16 +3,18 @@
 import { useMemo, useState } from "react"
 import { usePathname } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
-import { ChevronDown, ChevronRight, FileText, RefreshCw, Search, TriangleAlert, X } from "lucide-react"
+import { ChevronDown, ChevronRight, FileDown, FileText, RefreshCw, Search, TriangleAlert, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { InfoButton } from "@/components/ui/info-button"
+import { toast } from "sonner"
 import { getInfoContent } from "@/lib/info-content"
 import {
   FORMATAR,
   detalhePedidos,
   exportarCsvDisponibilidade,
+  exportarPdfDisponibilidade,
   filtrarLinhas,
   ordenarLinhas,
   type ChaveOrdenacao,
@@ -20,6 +22,7 @@ import {
   type DisponibilidadeLinha,
   type DirecaoOrdenacao,
 } from "@/lib/bi/disponibilidade"
+import { DialogPedidos } from "./components/dialog-pedidos"
 
 interface IntegracaoBi {
   id: number
@@ -84,10 +87,12 @@ function LinhaDisponibilidade({
   linha,
   aberto,
   aoAlternar,
+  aoAbrirPedidos,
 }: {
   linha: DisponibilidadeLinha
   aberto: boolean
   aoAlternar: () => void
+  aoAbrirPedidos: () => void
 }) {
   return (
     <>
@@ -131,18 +136,17 @@ function LinhaDisponibilidade({
           {FORMATAR.metros(linha.prometido_metros)}
           <span className="block text-[10px] text-slate-400">{FORMATAR.valor(linha.prometido_valor)}</span>
         </td>
-        {/*
-          Só o número na tabela; o detalhe (quem prometeu, metros, valor, quantos
-          pedidos) aparece passando o mouse. O `title` é o que o navegador mostra, e o
-          `aria-label` é o que o leitor de tela lê — os dois com o mesmo texto. O
-          botão da primeira célula continua abrindo a linha, que é o caminho do
-          teclado e do celular.
+{/*
+          Só o número na tabela. Passar o mouse mostra o agregado por representante
+          (title nativo, sem JavaScript); clicar abre o modal com os pedidos linha a
+          linha, código por código. O aria-label garante o mesmo conteúdo no leitor
+          de tela.
         */}
         <td className="px-3 py-2 text-right text-xs whitespace-nowrap">
           <span
             title={detalhePedidos(linha).join("\n")}
             aria-label={`${linha.pedidos_venda} pedidos: ${detalhePedidos(linha).join("; ")}`}
-            className="cursor-help text-slate-900 dark:text-slate-100"
+            className="cursor-help text-slate-400"
           >
             {FORMATAR.inteiro(linha.pedidos_venda)}
           </span>
@@ -178,6 +182,11 @@ function LinhaDisponibilidade({
                 ))}
               </div>
             )}
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button size="sm" variant="outline" onClick={aoAbrirPedidos} className="gap-2">
+                Ver os {FORMATAR.inteiro(linha.pedidos_venda)} pedidos
+              </Button>
+            </div>
           </td>
         </tr>
       )}
@@ -204,6 +213,8 @@ export default function DisponibilidadeComercialPage() {
   const [aplicados, setAplicados] = useState<Filtros>(FILTROS_VAZIOS)
   const [busca, setBusca] = useState("")
   const [aberta, setAberta] = useState<string | null>(null)
+  /** Cor cujos pedidos estao no modal. */
+  const [pedidosDaLinha, setPedidosDaLinha] = useState<DisponibilidadeLinha | null>(null)
   // A fila que o comercial abre a tela para ver e a de falta: e assim que comeca.
   const [ordem, setOrdem] = useState<{ chave: ChaveOrdenacao; direcao: DirecaoOrdenacao }>({
     chave: "falta",
@@ -266,6 +277,19 @@ export default function DisponibilidadeComercialPage() {
         ? { chave, direcao: atual.direcao === "asc" ? "desc" : "asc" }
         : { chave, direcao: chave === "produto" || chave === "cor" ? "asc" : "desc" }
     )
+
+  async function gerarPdfRelatorio() {
+    if (!resumo) return
+    try {
+      await exportarPdfDisponibilidade(
+        linhas,
+        `Disponibilidade ${new Date().toLocaleDateString("pt-BR")}`,
+        resumo
+      )
+    } catch {
+      toast.error("Não foi gerar o PDF")
+    }
+  }
 
   return (
     <div className="flex flex-col gap-6 p-4 lg:p-6">
@@ -405,7 +429,15 @@ export default function DisponibilidadeComercialPage() {
             }
             className="gap-2"
           >
-            <FileText /> Exportar CSV
+            <FileDown /> Exportar CSV
+          </Button>
+          <Button
+            variant="outline"
+            disabled={!linhas.length || !resumo}
+            onClick={gerarPdfRelatorio}
+            className="gap-2"
+          >
+            <FileText /> Relatório em PDF
           </Button>
         </div>
       </div>
@@ -477,6 +509,7 @@ export default function DisponibilidadeComercialPage() {
                       linha={linha}
                       aberto={aberta === chave}
                       aoAlternar={() => setAberta(aberta === chave ? null : chave)}
+                      aoAbrirPedidos={() => setPedidosDaLinha(linha)}
                     />
                   )
                 })}
@@ -503,6 +536,14 @@ export default function DisponibilidadeComercialPage() {
             {busca ? "Nenhum produto ou cor encontrado." : "Nenhum produto ou cor no recorte."}
           </p>
         </div>
+      )}
+
+      {integracao && (
+        <DialogPedidos
+          integracaoId={integracao.id}
+          linha={pedidosDaLinha}
+          aoFechar={() => setPedidosDaLinha(null)}
+        />
       )}
     </div>
   )

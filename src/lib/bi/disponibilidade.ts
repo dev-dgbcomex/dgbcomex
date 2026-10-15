@@ -139,14 +139,33 @@ export function filtrarLinhas(
   )
 }
 
-/**
- * Os pedidos que formam o prometido, um por linha: quem prometeu, quantos metros, em
- * quanto e em quantos pedidos.
- *
- * Serve em dois lugares com o mesmo texto: o `title` da célula de Pedidos (o detalhe
- * que aparece passando o mouse) e a linha que abre ao clicar. Um detalhe só em hover
- * some no celular e não chega pelo teclado — por isso a linha continua abrindo.
- */
+/** Um pedido de venda em aberto, como vem de `/estoque-disponibilidade/pedidos`. */
+export interface PedidoDisponibilidade {
+  empresa: string
+  pedido: string
+  cliente: string
+  cliente_nome: string
+  vendedor: string
+  vendedor_nome: string
+  produto: string
+  cor: string
+  data_pedido: string | null
+  data_entrega: string | null
+  qtde_pedido: number
+  qtde_romaneada: number
+  saldo: number
+  valor: number
+  status: string
+}
+
+export interface DetalhePedidos {
+  total: number
+  saldo: number
+  valor: number
+  pedidos: PedidoDisponibilidade[]
+}
+
+/** Os pedidos que formam o prometido de uma produto/cor, um por linha: quem prometeu, quantos metros, em quanto e em quantos pedidos. */
 export function detalhePedidos(linha: DisponibilidadeLinha): string[] {
   return linha.por_representante.map(
     (rep) =>
@@ -154,6 +173,100 @@ export function detalhePedidos(linha: DisponibilidadeLinha): string[] {
         rep.valor
       )} · ${rep.pedidos} ${rep.pedidos === 1 ? "pedido" : "pedidos"}`
   )
+}
+
+const COLUNAS_PEDIDOS = [
+  "pedido",
+  "cliente_nome",
+  "vendedor_nome",
+  "data_pedido",
+  "data_entrega",
+  "saldo",
+  "valor",
+  "status",
+] as const
+
+/**
+ * Baixa uma lista de linhas como CSV; numeros saem como numero, para somar no Excel.
+ *
+ * O BOM no começo não é enfeite: sem ele o Excel abre o arquivo como latin-1 e
+ * "BELGA"/"PROFECTUS" chegam com acento errado.
+ */
+function baixar(nome: string, cabecalho: string, linhas: string[]) {
+  const conteudo = `﻿${[cabecalho, ...linhas].join("\r\n")}`
+  const blob = new Blob([conteudo], { type: "text/csv;charset=utf-8;" })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement("a")
+  link.href = url
+  link.download = `${nome}.csv`
+  link.click()
+  URL.revokeObjectURL(url)
+}
+
+/** Numa celula de CSV so entra `string` ou numero — array e objeto viram texto. */
+const celula = (valor: unknown) => {
+  if (valor === null || valor === undefined) return ""
+  if (typeof valor === "number") return String(valor).replace(".", ",")
+  return `"${String(valor).replace(/"/g, '""')}"`
+}
+
+/** CSV dos pedidos de uma cor — o mesmo recorte que o modal mostra. */
+export function exportarCsvPedidos(pedidos: PedidoDisponibilidade[], nome: string) {
+  baixar(
+    nome,
+    COLUNAS_PEDIDOS.join(";"),
+    pedidos.map((pedido) => COLUNAS_PEDIDOS.map((c) => celula(pedido[c])).join(";"))
+  )
+}
+
+/**
+ * PDF do recorte de uma cor: os pedidos linha a linha, com o total em cima.
+ *
+ * `jspdf` entra por `import()` dinamico (o mesmo caminho do PDF do faturamento): a
+ * biblioteca pesa e so e precisa quando alguem de fato exporta.
+ */
+export async function exportarPdfPedidos(
+  pedidos: PedidoDisponibilidade[],
+  titulo: string
+): Promise<boolean> {
+  if (!pedidos.length) return false
+  const { default: jsPDF } = await import("jspdf")
+  await import("jspdf-autotable")
+
+  const doc = new jsPDF({ orientation: "landscape" })
+  doc.setFontSize(13)
+  doc.text(titulo, 14, 16)
+  doc.setFontSize(9)
+  doc.setTextColor(90)
+  doc.text(
+    `${pedidos.length} pedidos · ${FORMATAR.metros(
+      pedidos.reduce((soma, pedido) => soma + pedido.saldo, 0)
+    )} em aberto · ${FORMATAR.valor(pedidos.reduce((soma, pedido) => soma + pedido.valor, 0))}`,
+    14,
+    22
+  )
+
+  // `autoTable` entra na prototipo do jsPDF em tempo de execucao; o tipo so aparece
+  // com um cast. E o mesmo caminho de `lib/export-utils.ts`.
+  ;(doc as unknown as { autoTable: (opcoes: unknown) => void }).autoTable({
+    startY: 28,
+    head: [["Pedido", "Cliente", "Representante", "Data", "Entrega", "Saldo (m)", "Valor", "Situação"]],
+    body: pedidos.map((pedido) => [
+      pedido.pedido,
+      pedido.cliente_nome || pedido.cliente,
+      pedido.vendedor_nome || pedido.vendedor,
+      FORMATAR.data(pedido.data_pedido),
+      FORMATAR.data(pedido.data_entrega),
+      FORMATAR.metros(pedido.saldo).replace(" m", ""),
+      FORMATAR.valor(pedido.valor),
+      pedido.status,
+    ]),
+    styles: { fontSize: 8, cellPadding: 1.5 },
+    headStyles: { fillColor: [241, 245, 249] },
+  })
+
+  doc.save(`${titulo.replace(/[^\w-]+/g, "_")}.pdf`)
+  return true
 }
 
 /** CSV do recorte atual; metros como numero, para somar direto no Excel. */
@@ -168,30 +281,83 @@ export function exportarCsvDisponibilidade(linhas: DisponibilidadeLinha[], nome:
     "prometido_metros",
     "livre_metros",
     "falta_metros",
+    "cobertura_metros",
     "primeira_chegada",
     "pedidos_venda",
     "pedidos_compra",
     "valor_prometido",
   ] as const
 
-  const linhasCsv = linhas.map((linha) =>
-    colunas
-      .map((coluna) => {
-        const valor = linha[coluna as keyof DisponibilidadeLinha]
-        if (valor === null || valor === undefined) return ""
-        if (typeof valor === "number") return String(valor).replace(".", ",")
-        return `"${String(valor).replace(/"/g, '""')}"`
-      })
-      .join(";")
+  baixar(
+    nome,
+    colunas.join(";"),
+    linhas.map((linha) =>
+      colunas.map((coluna) => celula(linha[coluna as keyof DisponibilidadeLinha])).join(";")
+    )
+  )
+}
+
+/**
+ * PDF do relatório: uma linha por produto/cor, com o resumo no cabeçalho.
+ *
+ * Mesmo corte do CSV — o número do arquivo e o número da tela não podem divergir.
+ */
+export async function exportarPdfDisponibilidade(
+  linhas: DisponibilidadeLinha[],
+  titulo: string,
+  resumo: DisponibilidadeResumo
+): Promise<boolean> {
+  if (!linhas.length) return false
+  const { default: jsPDF } = await import("jspdf")
+  await import("jspdf-autotable")
+
+  const doc = new jsPDF({ orientation: "landscape" })
+  doc.setFontSize(13)
+  doc.text(titulo, 14, 16)
+  doc.setFontSize(9)
+  doc.setTextColor(90)
+  doc.text(
+    `${resumo.produtos_cor} produto/cor · ${resumo.com_falta} com falta · estoque ${FORMATAR.metros(
+      resumo.total_estoque
+    )} · a caminho ${FORMATAR.metros(resumo.total_caminho)} · prometido ${FORMATAR.metros(
+      resumo.total_prometido
+    )} · falta ${FORMATAR.metros(resumo.total_falta)}`,
+    14,
+    22
   )
 
-  const blob = new Blob([[colunas.join(";"), ...linhasCsv].join("\r\n")], {
-    type: "text/csv;charset=utf-8;",
+  const numero = (v: number) => Math.round(v || 0).toLocaleString("pt-BR")
+  // Mesmo cast do outro lugar: o plugin so existe em tempo de execucao.
+  ;(doc as unknown as { autoTable: (opcoes: unknown) => void }).autoTable({
+    startY: 28,
+    head: [[
+      "Produto",
+      "Cor",
+      "Estoque (m)",
+      "A caminho (m)",
+      "Chega",
+      "Prometido (m)",
+      "Valor prometido",
+      "Pedidos",
+      "Livre (m)",
+      "Depois da compra (m)",
+    ]],
+    body: linhas.map((linha) => [
+      linha.produto_desc || linha.produto,
+      linha.cor_desc || linha.cor,
+      numero(linha.estoque_metros),
+      numero(linha.caminho_metros),
+      FORMATAR.data(linha.primeira_chegada),
+      numero(linha.prometido_metros),
+      FORMATAR.valor(linha.prometido_valor),
+      String(linha.pedidos_venda),
+      numero(linha.livre_metros),
+      numero(linha.cobertura_metros),
+    ]),
+    styles: { fontSize: 8, cellPadding: 1.5 },
+    headStyles: { fillColor: [241, 245, 249] },
   })
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement("a")
-  link.href = url
-  link.download = `${nome}.csv`
-  link.click()
-  URL.revokeObjectURL(url)
+
+  doc.save(`${titulo.replace(/[^\w-]+/g, "_")}.pdf`)
+  return true
 }
