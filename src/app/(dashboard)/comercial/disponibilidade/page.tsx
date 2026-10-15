@@ -13,8 +13,11 @@ import {
   FORMATAR,
   exportarCsvDisponibilidade,
   filtrarLinhas,
+  ordenarLinhas,
+  type ChaveOrdenacao,
   type Disponibilidade,
   type DisponibilidadeLinha,
+  type DirecaoOrdenacao,
 } from "@/lib/bi/disponibilidade"
 
 interface IntegracaoBi {
@@ -164,6 +167,17 @@ function LinhaDisponibilidade({
   )
 }
 
+/** Os cabeçalhos que ordenam. `produto`/`cor` são texto; o resto, número. */
+const COLUNAS: { chave: ChaveOrdenacao; titulo: string; numero?: boolean }[] = [
+  { chave: "produto", titulo: "Produto" },
+  { chave: "cor", titulo: "Cor" },
+  { chave: "estoque", titulo: "Estoque", numero: true },
+  { chave: "caminho", titulo: "A caminho", numero: true },
+  { chave: "prometido", titulo: "Prometido", numero: true },
+  { chave: "livre", titulo: "Livre", numero: true },
+  { chave: "cobertura", titulo: "Depois da compra", numero: true },
+]
+
 export default function DisponibilidadeComercialPage() {
   const pathname = usePathname()
   const info = getInfoContent(pathname)
@@ -171,6 +185,11 @@ export default function DisponibilidadeComercialPage() {
   const [aplicados, setAplicados] = useState<Filtros>(FILTROS_VAZIOS)
   const [busca, setBusca] = useState("")
   const [aberta, setAberta] = useState<string | null>(null)
+  // A fila que o comercial abre a tela para ver e a de falta: e assim que comeca.
+  const [ordem, setOrdem] = useState<{ chave: ChaveOrdenacao; direcao: DirecaoOrdenacao }>({
+    chave: "falta",
+    direcao: "desc",
+  })
 
   const { data: integracoes } = useQuery<IntegracaoBi[]>({
     queryKey: ["integracao-listar", "comercial"],
@@ -213,12 +232,21 @@ export default function DisponibilidadeComercialPage() {
     },
   })
 
+  const filtradas = useMemo(() => (data ? filtrarLinhas(data.linhas, busca) : []), [data, busca])
   const linhas = useMemo(
-    () => (data ? filtrarLinhas(data.linhas, busca) : []),
-    [data, busca]
+    () => ordenarLinhas(filtradas, ordem.chave, ordem.direcao),
+    [filtradas, ordem]
   )
 
   const resumo = data?.resumo
+
+  /** Clicar no cabeçalho ordena; clicar de novo inverte a direção. */
+  const ordenarPor = (chave: ChaveOrdenacao) =>
+    setOrdem((atual) =>
+      atual.chave === chave
+        ? { chave, direcao: atual.direcao === "asc" ? "desc" : "asc" }
+        : { chave, direcao: chave === "produto" || chave === "cor" ? "asc" : "desc" }
+    )
 
   return (
     <div className="flex flex-col gap-6 p-4 lg:p-6">
@@ -392,16 +420,33 @@ export default function DisponibilidadeComercialPage() {
             <table className="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-800">
               <thead className="bg-slate-50 dark:bg-slate-900/50">
                 <tr>
-                  {["Produto", "Cor", "Estoque", "A caminho", "Prometido", "Livre", "Depois da compra"].map(
-                    (titulo) => (
+                  {COLUNAS.map(({ chave, titulo, numero }) => {
+                    const ativa = ordem.chave === chave
+                    return (
                       <th
-                        key={titulo}
-                        className="px-3 py-2 text-left text-xs font-medium tracking-wider text-slate-500 uppercase"
+                        key={chave}
+                        aria-sort={
+                          ativa ? (ordem.direcao === "asc" ? "ascending" : "descending") : "none"
+                        }
+                        className={`px-3 py-2 text-xs font-medium tracking-wider uppercase ${
+                          numero ? "text-right" : "text-left"
+                        }`}
                       >
-                        {titulo}
+                        <button
+                          type="button"
+                          onClick={() => ordenarPor(chave)}
+                          className={`flex w-full cursor-pointer items-center gap-1 ${
+                            numero ? "justify-end" : ""
+                          } ${ativa ? "text-slate-900 dark:text-slate-100" : "text-slate-500"}`}
+                        >
+                          {titulo}
+                          <span aria-hidden="true" className="text-[10px]">
+                            {ativa ? (ordem.direcao === "asc" ? "▲" : "▼") : "↕"}
+                          </span>
+                        </button>
                       </th>
                     )
-                  )}
+                  })}
                 </tr>
               </thead>
               <tbody>

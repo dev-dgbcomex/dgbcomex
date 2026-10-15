@@ -66,12 +66,63 @@ export const FORMATAR = {
 export const chaveLinha = (linha: { produto: string; cor: string; cor_desc?: string }) =>
   `${linha.produto} ${linha.cor}`.trim()
 
-/** Sem acento e sem caixa: "veludo confort" acha "VELUDO CONFORT". */
+/** Normaliza para comparar sem acento e sem caixa: "veludo confort" acha "VELUDO CONFORT". */
 const semAcento = (v: string) =>
   v
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
+
+const compararTexto = (a: string, b: string) =>
+  semAcento(a).localeCompare(semAcento(b), "pt-BR")
+
+export type ChaveOrdenacao =
+  | "falta"
+  | "produto"
+  | "cor"
+  | "estoque"
+  | "caminho"
+  | "prometido"
+  | "livre"
+  | "cobertura"
+
+export type DirecaoOrdenacao = "asc" | "desc"
+
+const COLUNAS_NUMERICAS: Record<string, (linha: DisponibilidadeLinha) => number> = {
+  falta: (linha) => linha.falta_metros,
+  estoque: (linha) => linha.estoque_metros,
+  caminho: (linha) => linha.caminho_metros,
+  prometido: (linha) => linha.prometido_metros,
+  livre: (linha) => linha.livre_metros,
+  cobertura: (linha) => linha.cobertura_metros,
+}
+
+/**
+ * Ordena as linhas por produto, cor ou por qualquer métrica.
+ *
+ * Texto (produto, cor) vai com `localeCompare` em pt-BR e sem acento: "CINZA" antes de
+ * "CHOCOLA" e "MARINHO" na posição que o brasileiro lê, não o byte do banco.
+ * Métrica ordena por número — e o negativo vem antes do positivo em "asc", que é o
+ * que interessa quando a coluna é "Depois da compra".
+ */
+export function ordenarLinhas(
+  linhas: DisponibilidadeLinha[],
+  chave: ChaveOrdenacao,
+  direcao: DirecaoOrdenacao = "desc"
+): DisponibilidadeLinha[] {
+  const numero = COLUNAS_NUMERICAS[chave]
+  const copia = [...linhas]
+  copia.sort((a, b) => {
+    const resultado = numero
+      ? numero(a) - numero(b)
+      : compararTexto(
+          chave === "produto" ? `${a.produto_desc || a.produto}` : a.cor_desc || a.cor,
+          chave === "produto" ? `${b.produto_desc || b.produto}` : b.cor_desc || b.cor
+        )
+    return direcao === "asc" ? resultado : -resultado
+  })
+  return copia
+}
 
 export function filtrarLinhas(
   linhas: DisponibilidadeLinha[],

@@ -6,6 +6,7 @@ import DisponibilidadeComercialPage from "./page"
 import {
   exportarCsvDisponibilidade,
   filtrarLinhas,
+  ordenarLinhas,
   type Disponibilidade,
   type DisponibilidadeLinha,
 } from "@/lib/bi/disponibilidade"
@@ -127,6 +128,72 @@ beforeEach(() => {
 })
 
 describe("DisponibilidadeComercialPage", () => {
+  it("tem botão de informação explicando a tela campo por campo", async () => {
+    renderPage(<DisponibilidadeComercialPage />)
+
+    fireEvent.click(await screen.findByLabelText("Informações da tela"))
+    const dialog = await screen.findByRole("dialog")
+
+    // O que a tela é, os dois líquidos e cada filtro precisam estar escritos.
+    expect(within(dialog).getAllByText(/dá para prometer/i).length).toBeGreaterThan(0)
+    for (const campo of [
+      "Produto",
+      "Cor",
+      "Representante",
+      "Só o que falta",
+      "Só o que está chegando",
+      "Exportar CSV",
+    ]) {
+      expect(within(dialog).getAllByText(campo).length).toBeGreaterThan(0)
+    }
+    // E as regras que o usuario não descobre sozinho: de onde vem a previsão e o negativo.
+    expect(within(dialog).getAllByText(/módulo de importação/i).length).toBeGreaterThan(0)
+    expect(within(dialog).getAllByText(/não é erro de cálculo/i).length).toBeGreaterThan(0)
+  })
+
+  it("ordena por produto e inverte no segundo clique", async () => {
+    renderPage(<DisponibilidadeComercialPage />)
+    const tabela = await screen.findByRole("region", { name: "Disponibilidade por produto e cor" })
+
+    const produtos = () =>
+      within(tabela)
+        .getAllByRole("button")
+        .map((b) => b.textContent?.trim())
+        .filter((t) => t?.startsWith("VELUDO") || t?.startsWith("BELGA"))
+
+    // Padrão: maior falta primeiro (a fila de quem precisa de conversa)
+    expect(produtos()[0]).toMatch(/^VELUDO/)
+
+    fireEvent.click(within(tabela).getByRole("button", { name: /Produto/ }))
+    await waitFor(() => expect(produtos()[0]).toMatch(/^BELGA/))
+    expect(within(tabela).getByRole("columnheader", { name: /Produto/ })).toHaveAttribute(
+      "aria-sort",
+      "ascending"
+    )
+
+    fireEvent.click(within(tabela).getByRole("button", { name: /Produto/ }))
+    await waitFor(() => expect(produtos()[0]).toMatch(/^VELUDO/))
+    expect(within(tabela).getByRole("columnheader", { name: /Produto/ })).toHaveAttribute(
+      "aria-sort",
+      "descending"
+    )
+  })
+
+  it("ordena por métrica do maior para o menor", async () => {
+    renderPage(<DisponibilidadeComercialPage />)
+    const tabela = await screen.findByRole("region", { name: "Disponibilidade por produto e cor" })
+
+    fireEvent.click(within(tabela).getByRole("button", { name: /Depois da compra/ }))
+
+    // Na montagem a coluna já é "Depois da compra"; ao clicar ordena decrescente
+    await waitFor(() =>
+      expect(within(tabela).getByRole("columnheader", { name: /Depois da compra/ })).toHaveAttribute(
+        "aria-sort",
+        "descending"
+      )
+    )
+  })
+
   it("mostra os três números e os dois líquidos por produto e cor", async () => {
     renderPage(<DisponibilidadeComercialPage />)
 
@@ -262,6 +329,41 @@ describe("filtrarLinhas", () => {
     expect(filtrarLinhas(linhas, "00002")).toHaveLength(1)
     expect(filtrarLinhas(linhas, "")).toHaveLength(2)
     expect(filtrarLinhas(linhas, "inexistente")).toHaveLength(0)
+  })
+})
+
+describe("ordenarLinhas", () => {
+  const base = [
+    linha({ produto_desc: "VELUDO CONFORT", cor_desc: "5 - BLACK", falta_metros: 100, estoque_metros: 50 }),
+    linha({ produto_desc: "BELGA", cor_desc: "56 - NATURAL", falta_metros: 900, estoque_metros: 10 }),
+    linha({ produto_desc: "ÁGUA MARINA", cor_desc: "1 - AZUL", falta_metros: 50, estoque_metros: 90 }),
+  ]
+
+  it("ordena texto em pt-BR, sem acento", () => {
+    // "ÁGUA" antes de "BELGA" mesmo com acento: é a ordem que o brasileiro lê.
+    const nomes = ordenarLinhas(base, "produto", "asc").map((l) => l.produto_desc)
+    expect(nomes).toEqual(["ÁGUA MARINA", "BELGA", "VELUDO CONFORT"])
+    expect(ordenarLinhas(base, "produto", "desc")[0].produto_desc).toBe("VELUDO CONFORT")
+  })
+
+  it("ordena métrica pelo número", () => {
+    expect(ordenarLinhas(base, "falta", "desc")[0].falta_metros).toBe(900)
+    expect(ordenarLinhas(base, "falta", "asc")[0].falta_metros).toBe(50)
+    expect(ordenarLinhas(base, "estoque", "desc")[0].estoque_metros).toBe(90)
+  })
+
+  it("usa o código quando não há descrição", () => {
+    const semNome = [linha({ produto_desc: "", produto: "000020" }), linha({ produto_desc: "", produto: "000014" })]
+    expect(ordenarLinhas(semNome, "produto", "asc").map((l) => l.produto)).toEqual([
+      "000014",
+      "000020",
+    ])
+  })
+
+  it("não mexe no array recebido", () => {
+    const original = [...base]
+    ordenarLinhas(base, "falta", "asc")
+    expect(base).toEqual(original)
   })
 })
 
