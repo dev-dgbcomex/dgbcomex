@@ -66,20 +66,41 @@ function resposta(over: Partial<Disponibilidade> = {}): Disponibilidade {
         cor: "00011",
         cor_desc: "11 - BEIGE",
         estoque_metros: 91,
-        estoque_pecas: 2,
+        estoque_pecas: 1,
         estoque_rolos: 1,
         caminho_metros: 10_640,
         pedidos_compra: 1,
         primeira_chegada: "2026-11-09",
         ultima_chegada: "2026-11-09",
         prometido_metros: 20_099,
-        prometido_valor: 71_396,
+        prometido_valor: 147_365.46,
+        pedidos_venda: 10,
         livre_metros: -20_008,
         cobertura_metros: -9_368,
         falta_metros: 20_008,
         por_representante: [
           { vendedor: "058", vendedor_nome: "PROFECTUS", pedidos: 6, saldo: 10_101, valor: 71_396 },
           { vendedor: "009", vendedor_nome: "GDUE", pedidos: 4, saldo: 3_998, valor: 29_069 },
+        ],
+      }),
+      linha({
+        cor: "00056",
+        cor_desc: "56 - NATURAL",
+        produto_desc: "BELGA",
+        estoque_metros: 5_923,
+        estoque_pecas: 93,
+        estoque_rolos: 93,
+        caminho_metros: 30_207,
+        pedidos_compra: 2,
+        primeira_chegada: "2026-11-23",
+        ultima_chegada: "2026-11-23",
+        prometido_metros: 16_600,
+        prometido_valor: 130_950.2,
+        livre_metros: -10_677,
+        cobertura_metros: 19_530,
+        falta_metros: 10_677,
+        por_representante: [
+          { vendedor: "055", vendedor_nome: "ANA", pedidos: 3, saldo: 16_600, valor: 130_950 },
         ],
       }),
     ],
@@ -106,17 +127,41 @@ beforeEach(() => {
 })
 
 describe("DisponibilidadeComercialPage", () => {
-  it("mostra os três números e o líquido por produto e cor", async () => {
+  it("mostra os três números e os dois líquidos por produto e cor", async () => {
     renderPage(<DisponibilidadeComercialPage />)
 
     const tabela = await screen.findByRole("region", { name: "Disponibilidade por produto e cor" })
     const beige = within(tabela).getByText("11 - BEIGE").closest("tr")!
-    // 91 m em estoque contra 20.099 m prometidos
+    // 91 m em estoque contra 20.099 m prometidos, com 10.640 m chegando
     expect(beige.textContent).toContain("91 m")
     expect(beige.textContent).toContain("20.099 m")
     expect(beige.textContent).toContain("chega 09/11/2026")
-    // a falta aparece em vermelho, com o rótulo acessível do valor
-    expect(within(beige).getByRole("status", { name: /falta de 20.008 m/ })).toBeInTheDocument()
+    // Livre negativo: a carteira pediu mais do que existe
+    expect(beige.textContent).toContain("-20.008 m")
+    // Depois da compra continua negativo: nenhuma compra cobre o que falta
+    expect(beige.textContent).toContain("-9.368 m")
+  })
+
+  it("mostra a coluna que a compra resolve", async () => {
+    // 5.923 de estoque, 16.600 prometidos (falta 10.677) e 30.207 chegando:
+    // depois da compra sobra 19.530 m.
+    renderPage(<DisponibilidadeComercialPage />)
+
+    const tabela = await screen.findByRole("region", { name: "Disponibilidade por produto e cor" })
+    const natural = within(tabela).getByText("56 - NATURAL").closest("tr")!
+    expect(natural.textContent).toContain("-10.677 m")
+    expect(natural.textContent).toContain("19.530 m")
+  })
+
+  it("não repete a falta em duas colunas", async () => {
+    // Antes a tela mostrava "Livre -20.008" e "Falta −20.008": o mesmo número duas
+    // vezes, o que parecia defeito. Agora a segunda coluna e a cobertura.
+    renderPage(<DisponibilidadeComercialPage />)
+
+    const tabela = await screen.findByRole("region", { name: "Disponibilidade por produto e cor" })
+    // o cabeçalho e a legenda citam os dois rótulos
+    expect(within(tabela).getAllByText(/Depois da compra/).length).toBeGreaterThan(0)
+    expect(within(tabela).queryByText(/^Falta$/)).toBeNull()
   })
 
   it("abre a linha e mostra quem prometeu", async () => {

@@ -75,7 +75,7 @@ function Celula({ children, titulo }: { children: React.ReactNode; titulo?: stri
   )
 }
 
-/** Uma linha: os tres numeros e o liquido. Clicar abre quem prometeu. */
+/** Uma linha: os tres numeros e os dois liquidos. Clicar abre quem prometeu. */
 function LinhaDisponibilidade({
   linha,
   aberto,
@@ -85,7 +85,6 @@ function LinhaDisponibilidade({
   aberto: boolean
   aoAlternar: () => void
 }) {
-  const falta = linha.falta_metros > 0
   return (
     <>
       <tr className="border-b border-slate-200 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-900/40">
@@ -132,16 +131,10 @@ function LinhaDisponibilidade({
         </td>
         <td
           className={`px-3 py-2 text-right text-xs font-semibold whitespace-nowrap ${
-            falta ? "text-red-600 dark:text-red-400" : "text-slate-300 dark:text-slate-600"
+            linha.cobertura_metros < 0 ? "text-red-600 dark:text-red-400" : "text-emerald-700 dark:text-emerald-400"
           }`}
         >
-          {falta ? (
-            <Celula titulo={`falta de ${FORMATAR.metros(linha.falta_metros)}`}>
-              −{FORMATAR.metros(linha.falta_metros)}
-            </Celula>
-          ) : (
-            "—"
-          )}
+          {FORMATAR.metros(linha.cobertura_metros)}
         </td>
       </tr>
       {aberto && (
@@ -244,7 +237,11 @@ export default function DisponibilidadeComercialPage() {
 
       {resumo && (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <Cartao titulo="Cores com falta" descricao="prometido acima do estoque">
+          <Cartao
+            titulo="Cores com falta"
+            descricao="prometido acima do estoque"
+            alerta={resumo.com_falta > 0}
+          >
             <Celula titulo="cores com falta">{FORMATAR.inteiro(resumo.com_falta)}</Celula>
             <span className="text-xs text-slate-500">
               de {FORMATAR.inteiro(resumo.produtos_cor)} produto/cor
@@ -256,11 +253,7 @@ export default function DisponibilidadeComercialPage() {
           <Cartao titulo="A caminho" descricao="compras com entrega futura">
             {FORMATAR.metros(resumo.total_caminho)}
           </Cartao>
-          <Cartao
-            titulo="Falta"
-            descricao="o que a carteira promete e não tem"
-            alerta={resumo.com_falta > 0}
-          >
+          <Cartao titulo="Falta hoje" descricao="prometido acima do estoque, antes da compra">
             <Celula titulo="falta total">{FORMATAR.metros(resumo.total_falta)}</Celula>
           </Cartao>
         </div>
@@ -399,7 +392,7 @@ export default function DisponibilidadeComercialPage() {
             <table className="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-800">
               <thead className="bg-slate-50 dark:bg-slate-900/50">
                 <tr>
-                  {["Produto", "Cor", "Estoque", "A caminho", "Prometido", "Livre", "Falta"].map(
+                  {["Produto", "Cor", "Estoque", "A caminho", "Prometido", "Livre", "Depois da compra"].map(
                     (titulo) => (
                       <th
                         key={titulo}
@@ -427,8 +420,14 @@ export default function DisponibilidadeComercialPage() {
             </table>
           </div>
           <p className="border-t border-slate-200 px-4 py-2 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
-            Livre é o que sobra depois do que já foi prometido. A falta é o que a carteira
-            promete e o estoque não cobre.
+            <strong className="font-medium text-slate-600 dark:text-slate-300">Livre</strong> é o
+            que sobra do estoque depois do que já foi prometido: negativo quando a carteira
+            pediu mais do que existe.{" "}
+            <strong className="font-medium text-slate-600 dark:text-slate-300">
+              Depois da compra
+            </strong>{" "}
+            soma o que está chegando — se continua negativo, é porque não há compra em trânsito
+            cobrindo o que falta.
           </p>
         </section>
       )}

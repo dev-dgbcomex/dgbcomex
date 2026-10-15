@@ -8,9 +8,11 @@ export const crmContent: Record<string, InfoContent> = {
       "Por produto e cor: quanto tem em estoque, quanto está chegando e quanto já foi prometido em pedidos em aberto. A coluna 'Livre' é a resposta — o que sobra depois das promessas — e a 'Falta' é o que já foi prometido e o estoque não cobre.",
     rules: [
       "A unidade é metro nas três fontes. O estoque vem das peças em aberto (o mesmo dado do ERP); a carteira, do saldo dos pedidos em aberto (Qtde do pedido menos o que já foi romaneado); a compra em trânsito, dos pedidos de importação com data de entrega futura.",
-      "Livre = estoque − prometido. Cobertura soma o que está chegando. Negativo em qualquer uma das duas quer dizer que a carteira já pediu mais do que existe ou vai existir.",
+      "Livre = estoque − prometido: negativo quando a carteira já pediu mais do que existe. Não é erro de cálculo, é a resposta — a empresa precisa saber que não pode prometer o que não tem.",
+      "Depois da compra = estoque + o que está chegando − prometido. Se continua negativo, é porque não há compra em trânsito cobrindo o que falta; se ficar positivo, a cor fecha na data da chegada.",
       "A compra em trânsito vem do módulo de importação (pedido de compra com data de embarque e entrega). O aviso de recebimento do ERP não entra aqui: ele é o recebimento já efetivado, com data no passado.",
       "'A caminho' só conta o que ainda não foi recebido no destino. Uma entrega parcial aparece pela metade.",
+      "O nome do produto e da cor vem do cadastro do ERP, então aparece mesmo quando a cor ainda não tem peça em estoque — nesse caso a coluna Estoque mostra zero.",
       "Clicar na linha abre quem prometeu, por representante, com metros, valor em reais e número de pedidos. É a lista para cobrar antes de fazer nova promessa.",
       "Os filtros de produto, cor e representante vão para a API ao clicar em Aplicar. A busca é instantânea e não vai ao ERP.",
     ],
@@ -43,11 +45,15 @@ export const crmContent: Record<string, InfoContent> = {
     examples: [
       {
         title: "O caso que mostra para que a tela existe",
-        desc: "VELUDO CONFORT 11 BEIGE: 91 m em estoque contra 20.099 m prometidos em 10 pedidos de 3 representantes. Faltam 20.008 m — e chegam 10.640 m em 09/11. Mesmo depois da compra, a cor continua negativa.",
+        desc: "VELUDO CONFORT 11 BEIGE: 91 m em estoque contra 20.099 m prometidos em 10 pedidos de 3 representantes. Faltam 20.008 m e chegam 10.640 m em 09/11 — como a compra não cobre tudo, 'Depois da compra' continua em −9.368 m.",
       },
       {
         title: "Quando a compra resolve",
-        desc: "VELUDO CONFORT 17 MARSALA: 1.420 m em estoque, 3.263 m prometidos, e 1.843 m chegando em 16/11. A falta é exatamente o que a compra cobre — dá para prometer com a data da chegada no pé.",
+        desc: "BELGA 56 NATURAL: 5.923 m em estoque, 16.600 m prometidos e 30.207 m chegando em 23/11. O Livre é −10.677 m, mas depois da compra sobra 19.530 m: dá para prometer com a data da chegada no pé.",
+      },
+      {
+        title: "Cor que não tem peça",
+        desc: "VELUDO SILVER 37 GRANITO está com 828 m prometidos, zero em estoque e nada chegando: 'Depois da compra' continua negativo. É a fila do que precisa de compra nova.",
       },
     ],
   },
