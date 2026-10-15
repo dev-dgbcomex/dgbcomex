@@ -14,6 +14,7 @@ if (!SENHA) {
 }
 
 const NOME = "Disponibilidade Comercial"
+const CAMINHO = "/estoque-disponibilidade"
 
 /**
  * O host tem que ser o **publico**, igual as integracoes de BI ja cadastradas.
@@ -36,16 +37,35 @@ async function descobrirHost(pool) {
   )
 }
 
-function aplicar(pool, baseUrl) {
+/** Sempre origem + caminho: a tela identifica a integracao pelo caminho da URL. */
+const baseCompleta = (host) => `${host}${CAMINHO}`
+
+/**
+ * O `auth_config.login_url` importa tanto quanto o `base_url`: e ele que o proxy usa
+ * para pegar o token (`autenticarIntegracao`). Deixar em `127.0.0.1` faz o login
+ * falhar na Vercel com 502 mesmo com o `base_url` certo — os dois andam juntos.
+ */
+const authConfigCompleto = (host) => ({
+  login_url: `${host}/auth/login`,
+  email: EMAIL,
+  senha: SENHA,
+  email_field: "email",
+  senha_field: "senha",
+  token_field: "token",
+})
+
+function aplicar(pool, baseUrl, host) {
+  const auth = JSON.stringify(authConfigCompleto(host))
   return pool
     .query(`SELECT id FROM integracoes WHERE nome = $1`, [NOME])
     .then(({ rowCount, rows }) => {
       if (rowCount > 0) {
         return pool
-          .query("update integracoes set base_url = $1 where id = $2 returning id, base_url", [
-            baseUrl,
-            rows[0].id,
-          ])
+          .query(
+            `update integracoes set base_url = $1, auth_config = $2::jsonb, telas = $3::jsonb
+             where id = $4 returning id, base_url`,
+            [baseUrl, auth, JSON.stringify(["comercial"]), rows[0].id]
+          )
           .then(({ rows: atual }) => {
             console.log(`  ~ atualizada ${NOME} id=${atual[0].id} -> ${atual[0].base_url}`)
             return atual[0].id
@@ -55,22 +75,10 @@ function aplicar(pool, baseUrl) {
         .query(
           `INSERT INTO integracoes (nome, base_url, tipo_auth, auth_config, telas, mapping, ativo, created_at, updated_at)
            VALUES ($1, $2, 'login', $3::jsonb, $4::jsonb, '{}'::jsonb, true, now(), now()) RETURNING id`,
-          [
-            NOME,
-            `${baseUrl}/estoque-disponibilidade`,
-            JSON.stringify({
-              login_url: `${baseUrl}/auth/login`,
-              email: EMAIL,
-              senha: SENHA,
-              email_field: "email",
-              senha_field: "senha",
-              token_field: "token",
-            }),
-            JSON.stringify(["comercial"]),
-          ]
+          [NOME, baseUrl, auth, JSON.stringify(["comercial"])]
         )
         .then(({ rows: ins }) => {
-          console.log(`  + ${NOME} id=${ins[0].id} -> ${baseUrl}/estoque-disponibilidade`)
+          console.log(`  + ${NOME} id=${ins[0].id} -> ${baseUrl}`)
           return ins[0].id
         })
     })
@@ -82,7 +90,8 @@ async function main() {
     const pool = new Pool({ connectionString: url })
     try {
       console.log(`--- banco ${url.split("@")[1]?.split("?")[0] || "?"} ---`)
-      await aplicar(pool, await descobrirHost(pool))
+      const host = await descobrirHost(pool)
+      await aplicar(pool, baseCompleta(host), host)
     } catch (e) {
       console.error(`  ERRO: ${e.message}`)
     } finally {
