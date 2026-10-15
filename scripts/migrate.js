@@ -1,5 +1,6 @@
 const postgres = require("postgres")
 const dotenv = require("dotenv")
+const { criarTabelas } = require("./criar-tabelas-faltantes")
 
 dotenv.config({ path: ".env.local" })
 
@@ -1593,6 +1594,11 @@ async function migrate() {
     // ===== bi_ordem_graficos: ordem dos gráficos do detalhe de faturamento por usuário =====
     await sql`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS bi_ordem_graficos JSONB DEFAULT '[]'::jsonb`
     console.log("✓ Coluna bi_ordem_graficos adicionada em usuarios (ordem dos gráficos do faturamento)")
+    // Tabelas que faltavam no banco: mesmo SQL do criar-tabelas-faltantes.js, que e
+    // quem tem a lista commentada. A comparacao das 123 tabelas do schema com o
+    // information_schema mostrou 8 ausentes: o banco so tinha o que o migrate.js criou.
+    await criarTabelas(process.env.DATABASE_URL)
+
 
     console.log("\n✅ Migration concluída com sucesso!")
     

@@ -32,6 +32,17 @@ O projeto utiliza **4 bancos de dados PostgreSQL**:
 3. **Replicate para os 3 secundários**: `npm run db:migrate:all`
 4. **Neon também**: rode `node scripts/sync-all-dbs.js` (cria colunas/tabelas faltantes com IF NOT EXISTS)
 
+### ⚠️ O `sync-all-dbs.js` NÃO roda no banco principal
+
+`scripts/sync-all-dbs.js` aplica a migration em `pdm_pro_textil`, `pdm_ibirapuera` e `neon` — **nunca no `DATABASE_URL`**, que é o banco que a aplicação usa. Já aconteceu: um `ALTER TABLE crm_pessoas ADD COLUMN tipo_pessoa` existia no sync e no schema, mas não no principal. Resultado: `column "tipo_pessoa" does not exist` e **qualquer consulta à tabela morria com 500** — derrubou a busca de CNPJ e, na prática, o CRM de pessoas inteiro.
+
+Quando o SQL estiver no `sync-all-dbs.js`, aplique também no principal:
+
+```bash
+node scripts/sync-principal.js          # roda o MESMO SQL do sync-all-dbs.js no DATABASE_URL
+node scripts/criar-tabelas-faltantes.js # tabelas inteiras que faltam (também chamado pelo db:migrate)
+```
+
 ### Para alterações manuais de schema (SQL direto):
 
 Se precisar rodar SQL manualmente (ALTER TABLE, CREATE TABLE, etc.), execute em TODOS:

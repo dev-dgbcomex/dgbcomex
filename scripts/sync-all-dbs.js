@@ -167,6 +167,96 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
 END $$;
 
+-- Tabelas que o schema declara e o banco nao tinha. Mesmo SQL do
+-- `criar-tabelas-faltantes.js`, que aplicou no banco principal.
+DO $$ BEGIN
+  CREATE TABLE IF NOT EXISTS email_agendados (
+    id serial PRIMARY KEY, nome varchar(255) NOT NULL DEFAULT '', para varchar(50) NOT NULL,
+    assunto varchar(500) NOT NULL DEFAULT '', preheader varchar(255) DEFAULT '',
+    html text NOT NULL DEFAULT '', listas json, modo_envio varchar(20) DEFAULT 'bcc',
+    remetente varchar(20) DEFAULT 'sistema', agendado_para timestamp,
+    status varchar(20) NOT NULL DEFAULT 'rascunho', enviado_em timestamp, erro text,
+    criado_por integer REFERENCES usuarios(id), created_at timestamp DEFAULT now(),
+    updated_at timestamp DEFAULT now()
+  );
+EXCEPTION WHEN undefined_table THEN NULL; WHEN duplicate_table THEN NULL;
+END $$;
+CREATE INDEX IF NOT EXISTS idx_email_agendados_status ON email_agendados (status);
+
+DO $$ BEGIN
+  CREATE TABLE IF NOT EXISTS crm_email_config (
+    id serial PRIMARY KEY, host varchar(255) NOT NULL DEFAULT 'smtp.gmail.com',
+    port integer NOT NULL DEFAULT 587, "user" varchar(255) NOT NULL, pass varchar(255) NOT NULL,
+    from_name varchar(255) DEFAULT 'PDM PRO TEXTIL - CRM', reply_to varchar(255),
+    ativo boolean DEFAULT true, created_at timestamp DEFAULT now(), updated_at timestamp DEFAULT now()
+  );
+EXCEPTION WHEN undefined_table THEN NULL; WHEN duplicate_table THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  CREATE TABLE IF NOT EXISTS crm_notificacoes (
+    id serial PRIMARY KEY, titulo varchar(255) NOT NULL, mensagem text,
+    tipo varchar(50) NOT NULL DEFAULT 'lead_nuevo', lida boolean NOT NULL DEFAULT false,
+    link varchar(500), metadados jsonb DEFAULT '{}'::jsonb, created_at timestamp DEFAULT now()
+  );
+EXCEPTION WHEN undefined_table THEN NULL; WHEN duplicate_table THEN NULL;
+END $$;
+CREATE INDEX IF NOT EXISTS idx_crm_notificacoes_lida ON crm_notificacoes (lida);
+
+DO $$ BEGIN
+  CREATE TABLE IF NOT EXISTS crm_visitas_localizacoes (
+    id serial PRIMARY KEY, visita_id integer NOT NULL REFERENCES crm_visitas(id) ON DELETE CASCADE,
+    latitude double precision NOT NULL, longitude double precision NOT NULL,
+    endereco varchar(500), observacao text, foto_url varchar(500),
+    tipo varchar(20) NOT NULL DEFAULT 'LOCAL', criado_por integer REFERENCES usuarios(id),
+    created_at timestamp DEFAULT now()
+  );
+EXCEPTION WHEN undefined_table THEN NULL; WHEN duplicate_table THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  CREATE TABLE IF NOT EXISTS crm_pesquisas_satisfacao (
+    id serial PRIMARY KEY, visita_id integer NOT NULL REFERENCES crm_visitas(id) ON DELETE CASCADE,
+    email varchar(255) NOT NULL, nome varchar(255), token varchar(64) NOT NULL UNIQUE,
+    enviado_em timestamp, aberto_em timestamp, respondido_em timestamp,
+    status varchar(20) NOT NULL DEFAULT 'PENDENTE', criado_por integer REFERENCES usuarios(id),
+    created_at timestamp DEFAULT now()
+  );
+EXCEPTION WHEN undefined_table THEN NULL; WHEN duplicate_table THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  CREATE TABLE IF NOT EXISTS crm_pesquisas_respostas (
+    id serial PRIMARY KEY,
+    pesquisa_id integer NOT NULL REFERENCES crm_pesquisas_satisfacao(id) ON DELETE CASCADE,
+    pergunta varchar(200) NOT NULL, tipo varchar(20) NOT NULL DEFAULT 'ALTERNATIVA',
+    resposta text, created_at timestamp DEFAULT now()
+  );
+EXCEPTION WHEN undefined_table THEN NULL; WHEN duplicate_table THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  CREATE TABLE IF NOT EXISTS logs (
+    id serial PRIMARY KEY, tipo varchar(50) NOT NULL, acao varchar(100) NOT NULL,
+    descricao text, entidade varchar(100), entidade_id integer, dados jsonb, erro text,
+    usuario_id integer REFERENCES usuarios(id), usuario_nome varchar(255),
+    created_at timestamp DEFAULT now()
+  );
+EXCEPTION WHEN undefined_table THEN NULL; WHEN duplicate_table THEN NULL;
+END $$;
+CREATE INDEX IF NOT EXISTS idx_logs_created_at ON logs (created_at);
+
+DO $$ BEGIN
+  CREATE TABLE IF NOT EXISTS accounts (
+    id serial PRIMARY KEY, user_id integer NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    type varchar(50) NOT NULL, provider varchar(50) NOT NULL,
+    provider_account_id varchar(100) NOT NULL, refresh_token text, access_token text,
+    expires_at integer, token_type varchar(50), scope text, id_token text, session_state text,
+    created_at timestamp DEFAULT now()
+  );
+EXCEPTION WHEN undefined_table THEN NULL; WHEN duplicate_table THEN NULL;
+END $$;
+
 -- neon does not have crm_empresas (migrated to crm_pessoas); skip for neon
 DO $$ BEGIN
   ALTER TABLE crm_empresas ADD COLUMN IF NOT EXISTS endereco varchar(300);
