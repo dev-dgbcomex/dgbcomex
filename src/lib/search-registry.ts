@@ -163,6 +163,24 @@ export const searchRegistry: SearchItem[] = [
     description: "Cadastrar novo cliente",
     module: "Comercial",
   },
+  {
+    id: "comercial-disponibilidade",
+    label: "Disponibilidade",
+    keywords: [
+      "disponibilidade",
+      "estoque",
+      "saldo",
+      "falta",
+      "prometido",
+      "cor",
+      "produto",
+      "pedido",
+      "romaneio",
+    ],
+    href: "/comercial/disponibilidade",
+    description: "Disponibilidade de estoque por produto e cor, com os pedidos em aberto",
+    module: "Comercial",
+  },
 
   // Cadastros
   {
