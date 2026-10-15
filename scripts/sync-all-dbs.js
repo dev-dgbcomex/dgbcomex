@@ -106,6 +106,67 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL; WHEN undefined_table THEN NULL;
 END $$;
 
+-- requisicoes_corte: quem pediu, para quem e quando (o codigo ja lia; o banco nao tinha).
+-- Mesma classe de bug do crm_pessoas: o schema declara, o banco ficou para tras.
+DO $$ BEGIN
+  ALTER TABLE requisicoes_corte ADD COLUMN IF NOT EXISTS data_solicitacao date;
+EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
+END $$;
+DO $$ BEGIN
+  ALTER TABLE requisicoes_corte ADD COLUMN IF NOT EXISTS data_entrega date;
+EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
+END $$;
+DO $$ BEGIN
+  ALTER TABLE requisicoes_corte ADD COLUMN IF NOT EXISTS cliente_id integer;
+EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
+END $$;
+DO $$ BEGIN
+  ALTER TABLE requisicoes_corte ADD COLUMN IF NOT EXISTS cliente_nome varchar(200);
+EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
+END $$;
+DO $$ BEGIN
+  ALTER TABLE requisicoes_corte ADD COLUMN IF NOT EXISTS fornecedor_id integer;
+EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
+END $$;
+DO $$ BEGIN
+  ALTER TABLE requisicoes_corte ADD COLUMN IF NOT EXISTS fornecedor_nome varchar(200);
+EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
+END $$;
+DO $$ BEGIN
+  ALTER TABLE requisicoes_corte ADD COLUMN IF NOT EXISTS representante_id integer;
+EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
+END $$;
+DO $$ BEGIN
+  ALTER TABLE requisicoes_corte ADD COLUMN IF NOT EXISTS representante_nome varchar(200);
+EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
+END $$;
+
+-- requisicoes_corte_itens: os mesmos quatro pares, agora no item
+DO $$ BEGIN
+  ALTER TABLE requisicoes_corte_itens ADD COLUMN IF NOT EXISTS cliente_id integer;
+EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
+END $$;
+DO $$ BEGIN
+  ALTER TABLE requisicoes_corte_itens ADD COLUMN IF NOT EXISTS cliente_nome varchar(200);
+EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
+END $$;
+DO $$ BEGIN
+  ALTER TABLE requisicoes_corte_itens ADD COLUMN IF NOT EXISTS fornecedor_id integer;
+EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
+END $$;
+DO $$ BEGIN
+  ALTER TABLE requisicoes_corte_itens ADD COLUMN IF NOT EXISTS fornecedor_nome varchar(200);
+EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
+END $$;
+DO $$ BEGIN
+  ALTER TABLE requisicoes_corte_itens ADD COLUMN IF NOT EXISTS representante_id integer;
+EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
+END $$;
+DO $$ BEGIN
+  ALTER TABLE requisicoes_corte_itens ADD COLUMN IF NOT EXISTS representante_nome varchar(200);
+EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
+END $$;
+
 -- neon does not have crm_empresas (migrated to crm_pessoas); skip for neon
 DO $$ BEGIN
   ALTER TABLE crm_empresas ADD COLUMN IF NOT EXISTS endereco varchar(300);

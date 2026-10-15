@@ -13,7 +13,11 @@ async function main() {
   })
   const { token } = await login.json()
   const url = new URL(`${base}/estoque-disponibilidade`)
-  for (const [chave, valor] of Object.entries(process.argv.slice(2))) url.searchParams.set(chave, valor)
+  // Argumentos no formato `chave=valor`: `node ... so_com_falta=true produto=000014`
+  for (const argumento of process.argv.slice(2)) {
+    const [chave, ...resto] = argumento.split("=")
+    url.searchParams.set(chave, resto.join("="))
+  }
   const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
   console.log("status:", res.status)
   const corpo = await res.json()
