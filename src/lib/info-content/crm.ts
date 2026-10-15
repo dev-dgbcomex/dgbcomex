@@ -1,6 +1,56 @@
 import type { InfoContent } from "./types"
 
 export const crmContent: Record<string, InfoContent> = {
+  // ==================== DISPONIBILIDADE ====================
+  "/comercial/disponibilidade": {
+    title: "Disponibilidade — dá para prometer?",
+    description:
+      "Por produto e cor: quanto tem em estoque, quanto está chegando e quanto já foi prometido em pedidos em aberto. A coluna 'Livre' é a resposta — o que sobra depois das promessas — e a 'Falta' é o que já foi prometido e o estoque não cobre.",
+    rules: [
+      "A unidade é metro nas três fontes. O estoque vem das peças em aberto (o mesmo dado do ERP); a carteira, do saldo dos pedidos em aberto (Qtde do pedido menos o que já foi romaneado); a compra em trânsito, dos pedidos de importação com data de entrega futura.",
+      "Livre = estoque − prometido. Cobertura soma o que está chegando. Negativo em qualquer uma das duas quer dizer que a carteira já pediu mais do que existe ou vai existir.",
+      "A compra em trânsito vem do módulo de importação (pedido de compra com data de embarque e entrega). O aviso de recebimento do ERP não entra aqui: ele é o recebimento já efetivado, com data no passado.",
+      "'A caminho' só conta o que ainda não foi recebido no destino. Uma entrega parcial aparece pela metade.",
+      "Clicar na linha abre quem prometeu, por representante, com metros, valor em reais e número de pedidos. É a lista para cobrar antes de fazer nova promessa.",
+      "Os filtros de produto, cor e representante vão para a API ao clicar em Aplicar. A busca é instantânea e não vai ao ERP.",
+    ],
+    fields: [
+      {
+        name: "Produto",
+        desc: "Código (000014) ou parte da descrição. Aceita as duas coisas.",
+      },
+      {
+        name: "Cor",
+        desc: "Código da cor (00005). A carteira e o estoque casam nessa chave.",
+      },
+      {
+        name: "Representante",
+        desc: "Código do vendedor. Filtra só a carteira: mostra o que aquele representante prometeu e ainda não tem.",
+      },
+      {
+        name: "Só o que falta",
+        desc: "Esconde as cores que o estoque cobre. É a fila de quem precisa de conversa.",
+      },
+      {
+        name: "Só o que está chegando",
+        desc: "Só as cores com compra em trânsito, com a data da próxima chegada.",
+      },
+      {
+        name: "Exportar CSV",
+        desc: "Baixa o recorte atual em metros, com a falta e a data de chegada.",
+      },
+    ],
+    examples: [
+      {
+        title: "O caso que mostra para que a tela existe",
+        desc: "VELUDO CONFORT 11 BEIGE: 91 m em estoque contra 20.099 m prometidos em 10 pedidos de 3 representantes. Faltam 20.008 m — e chegam 10.640 m em 09/11. Mesmo depois da compra, a cor continua negativa.",
+      },
+      {
+        title: "Quando a compra resolve",
+        desc: "VELUDO CONFORT 17 MARSALA: 1.420 m em estoque, 3.263 m prometidos, e 1.843 m chegando em 16/11. A falta é exatamente o que a compra cobre — dá para prometer com a data da chegada no pé.",
+      },
+    ],
+  },
   // ==================== DASHBOARD ====================
   "/comercial/crm": {
     title: "Dashboard CRM",

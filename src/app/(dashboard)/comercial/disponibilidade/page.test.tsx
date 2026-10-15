@@ -1,0 +1,261 @@
+// @vitest-environment jsdom
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
+import { fireEvent, screen, waitFor, within } from "@testing-library/react"
+import { createFetchMock, navMock, renderPage } from "@/test/harness"
+import DisponibilidadeComercialPage from "./page"
+import {
+  exportarCsvDisponibilidade,
+  filtrarLinhas,
+  type Disponibilidade,
+  type DisponibilidadeLinha,
+} from "@/lib/bi/disponibilidade"
+
+const INTEGRACAO = {
+  id: 11,
+  nome: "Disponibilidade Comercial",
+  baseUrl: "http://127.0.0.1:58245/estoque-disponibilidade",
+}
+
+/** Outra integração da tela comercial: nao pode ser escolhida. */
+const INTEGRACAO_OUTRA = {
+  id: 12,
+  nome: "Outra",
+  baseUrl: "http://127.0.0.1:58245/contas-pagas-detalhe",
+}
+
+function linha(over: Partial<DisponibilidadeLinha> = {}): DisponibilidadeLinha {
+  return {
+    produto: "000014",
+    produto_desc: "VELUDO CONFORT",
+    cor: "00005",
+    cor_desc: "5 - BLACK",
+    estoque_metros: 54_340,
+    estoque_pecas: 120,
+    estoque_rolos: 30,
+    caminho_metros: 0,
+    pedidos_compra: 0,
+    primeira_chegada: null,
+    ultima_chegada: null,
+    prometido_metros: 10_500,
+    prometido_valor: 70_350,
+    pedidos_venda: 4,
+    livre_metros: 43_840,
+    cobertura_metros: 43_840,
+    falta_metros: 0,
+    por_representante: [
+      { vendedor: "055", vendedor_nome: "ANA", pedidos: 3, saldo: 10_000, valor: 66_000 },
+    ],
+    ...over,
+  }
+}
+
+function resposta(over: Partial<Disponibilidade> = {}): Disponibilidade {
+  return {
+    resumo: {
+      produtos_cor: 2,
+      com_falta: 1,
+      total_estoque: 54_431,
+      total_caminho: 10_640,
+      total_prometido: 20_099,
+      total_falta: 20_008,
+      valor_prometido: 71_396,
+    },
+    linhas: [
+      linha(),
+      linha({
+        cor: "00011",
+        cor_desc: "11 - BEIGE",
+        estoque_metros: 91,
+        estoque_pecas: 2,
+        estoque_rolos: 1,
+        caminho_metros: 10_640,
+        pedidos_compra: 1,
+        primeira_chegada: "2026-11-09",
+        ultima_chegada: "2026-11-09",
+        prometido_metros: 20_099,
+        prometido_valor: 71_396,
+        livre_metros: -20_008,
+        cobertura_metros: -9_368,
+        falta_metros: 20_008,
+        por_representante: [
+          { vendedor: "058", vendedor_nome: "PROFECTUS", pedidos: 6, saldo: 10_101, valor: 71_396 },
+          { vendedor: "009", vendedor_nome: "GDUE", pedidos: 4, saldo: 3_998, valor: 29_069 },
+        ],
+      }),
+    ],
+    ...over,
+  }
+}
+
+let fetchMock: ReturnType<typeof createFetchMock>
+
+function rotas(dados: Disponibilidade = resposta()) {
+  return createFetchMock(({ url }) => {
+    if (url.startsWith("/api/integracao/listar")) {
+      return { json: [INTEGRACAO_OUTRA, INTEGRACAO] }
+    }
+    if (url.includes("/detalhe/estoque-disponibilidade")) return { json: dados }
+    return { status: 404, json: { error: `Rota não mockada: ${url}` } }
+  })
+}
+
+beforeEach(() => {
+  navMock.setPathname("/comercial/disponibilidade")
+  fetchMock = rotas()
+  vi.stubGlobal("fetch", fetchMock.fn)
+})
+
+describe("DisponibilidadeComercialPage", () => {
+  it("mostra os três números e o líquido por produto e cor", async () => {
+    renderPage(<DisponibilidadeComercialPage />)
+
+    const tabela = await screen.findByRole("region", { name: "Disponibilidade por produto e cor" })
+    const beige = within(tabela).getByText("11 - BEIGE").closest("tr")!
+    // 91 m em estoque contra 20.099 m prometidos
+    expect(beige.textContent).toContain("91 m")
+    expect(beige.textContent).toContain("20.099 m")
+    expect(beige.textContent).toContain("chega 09/11/2026")
+    // a falta aparece em vermelho, com o rótulo acessível do valor
+    expect(within(beige).getByRole("status", { name: /falta de 20.008 m/ })).toBeInTheDocument()
+  })
+
+  it("abre a linha e mostra quem prometeu", async () => {
+    renderPage(<DisponibilidadeComercialPage />)
+
+    const tabela = await screen.findByRole("region", { name: "Disponibilidade por produto e cor" })
+    // A linha da cor BEIGE; o botão fica na primeira célula (o produto), como na tabela.
+    const linhaBeige = within(tabela).getByText("11 - BEIGE").closest("tr")!
+    fireEvent.click(within(linhaBeige).getByRole("button"))
+
+    expect(await screen.findByText(/PROFECTUS/)).toBeInTheDocument()
+    expect(screen.getByText(/GDUE/)).toBeInTheDocument()
+    expect(screen.getByText(/6 pedidos/)).toBeInTheDocument()
+  })
+
+  it("escolhe a integração de disponibilidade, não as outras da tela", async () => {
+    renderPage(<DisponibilidadeComercialPage />)
+
+    await screen.findByRole("region", { name: "Disponibilidade por produto e cor" })
+    const consulta = fetchMock.calls.find((c) => c.url.includes("estoque-disponibilidade"))
+    expect(consulta?.url).toContain("/api/integracao/11/detalhe/estoque-disponibilidade")
+  })
+
+  it("filtra sem acento e sem caixa", async () => {
+    renderPage(<DisponibilidadeComercialPage />)
+    await screen.findByRole("region", { name: "Disponibilidade por produto e cor" })
+
+    fireEvent.change(screen.getByLabelText("Buscar"), { target: { value: "beige" } })
+
+    await waitFor(() => expect(screen.queryByText("5 - BLACK")).toBeNull())
+    expect(screen.getByText("11 - BEIGE")).toBeInTheDocument()
+  })
+
+  it("manda os filtros para a API só ao clicar em Aplicar", async () => {
+    renderPage(<DisponibilidadeComercialPage />)
+    await screen.findByRole("region", { name: "Disponibilidade por produto e cor" })
+    const antes = fetchMock.calls.filter((c) => c.url.includes("estoque-disponibilidade")).length
+
+    fireEvent.change(screen.getByLabelText("Produto"), { target: { value: "000014" } })
+    fireEvent.click(screen.getByLabelText("Só o que falta"))
+    expect(fetchMock.calls.filter((c) => c.url.includes("estoque-disponibilidade")).length).toBe(antes)
+
+    fireEvent.click(screen.getByRole("button", { name: "Aplicar" }))
+
+    await waitFor(() => {
+      const consulta = fetchMock.calls
+        .filter((c) => c.url.includes("estoque-disponibilidade"))
+        .pop()
+      expect(consulta?.url).toContain("produto=000014")
+      expect(consulta?.url).toContain("so_com_falta=true")
+    })
+  })
+
+  it("manda o representante no filtro", async () => {
+    renderPage(<DisponibilidadeComercialPage />)
+    await screen.findByRole("region", { name: "Disponibilidade por produto e cor" })
+
+    fireEvent.change(screen.getByLabelText("Representante"), { target: { value: "058" } })
+    fireEvent.click(screen.getByRole("button", { name: "Aplicar" }))
+
+    await waitFor(() => {
+      const consulta = fetchMock.calls
+        .filter((c) => c.url.includes("estoque-disponibilidade"))
+        .pop()
+      expect(consulta?.url).toContain("representante=058")
+    })
+  })
+
+  it("avisa quando a integração não está cadastrada", async () => {
+    fetchMock = createFetchMock(({ url }) =>
+      url.startsWith("/api/integracao/listar") ? { json: [INTEGRACAO_OUTRA] } : { json: null }
+    )
+    vi.stubGlobal("fetch", fetchMock.fn)
+
+    renderPage(<DisponibilidadeComercialPage />)
+
+    expect(await screen.findByText(/Integração de disponibilidade não encontrada/)).toBeInTheDocument()
+  })
+
+  it("mostra o erro da API quando a consulta falha", async () => {
+    fetchMock = createFetchMock(({ url }) => {
+      if (url.startsWith("/api/integracao/listar")) return { json: [INTEGRACAO] }
+      return { status: 500, json: { detail: "Falha ao falar com o ERP" } }
+    })
+    vi.stubGlobal("fetch", fetchMock.fn)
+
+    renderPage(<DisponibilidadeComercialPage />)
+
+    expect(await screen.findByText("Falha ao falar com o ERP")).toBeInTheDocument()
+  })
+})
+
+describe("filtrarLinhas", () => {
+  it("acha por produto, descrição ou cor", () => {
+    const linhas = [linha(), linha({ produto: "000020", produto_desc: "VELUDO SILVER", cor: "00002" })]
+    expect(filtrarLinhas(linhas, "veludo")).toHaveLength(2)
+    expect(filtrarLinhas(linhas, "silver")).toHaveLength(1)
+    expect(filtrarLinhas(linhas, "00002")).toHaveLength(1)
+    expect(filtrarLinhas(linhas, "")).toHaveLength(2)
+    expect(filtrarLinhas(linhas, "inexistente")).toHaveLength(0)
+  })
+})
+
+describe("exportarCsvDisponibilidade", () => {
+  const criar = vi.fn()
+  const revogar = vi.fn()
+
+  beforeEach(() => {
+    criar.mockClear()
+    revogar.mockClear()
+    vi.stubGlobal("URL", { ...URL, createObjectURL: criar, revokeObjectURL: revogar })
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it("baixa o csv com o nome do dia", () => {
+    criar.mockReturnValue("blob:fake")
+    const clique = vi.fn()
+    const original = document.createElement.bind(document)
+    let nome = ""
+    vi.spyOn(document, "createElement").mockImplementation((tag: string) => {
+      const el = original(tag)
+      if (tag === "a") {
+        el.click = clique
+        Object.defineProperty(el, "download", {
+          set: (valor: string) => {
+            nome = valor
+          },
+        })
+      }
+      return el
+    })
+
+    exportarCsvDisponibilidade([linha()], "disponibilidade_2026-10-14")
+
+    expect(clique).toHaveBeenCalled()
+    expect(nome).toBe("disponibilidade_2026-10-14.csv")
+    expect(revogar).toHaveBeenCalledWith("blob:fake")
+  })
+})
