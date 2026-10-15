@@ -164,8 +164,26 @@ describe("DisponibilidadeComercialPage", () => {
     fireEvent.click(await screen.findByLabelText("Informações da tela"))
     const dialog = await screen.findByRole("dialog")
 
-    // O que a tela é, os dois líquidos e cada filtro precisam estar escritos.
+    // O que a tela é, as 8 colunas da tabela, os dois líquidos e cada filtro.
     expect(within(dialog).getAllByText(/dá para prometer/i).length).toBeGreaterThan(0)
+    expect(within(dialog).getByText("Colunas da tabela")).toBeInTheDocument()
+    for (const coluna of [
+      "Produto",
+      "Cor",
+      "Estoque",
+      "A caminho",
+      "Prometido",
+      "Pedidos",
+      "Livre",
+      "Depois da compra",
+    ]) {
+      expect(within(dialog).getAllByText(coluna).length).toBeGreaterThan(0)
+    }
+    // Cada coluna explicada com a conta, nao so com o nome.
+    expect(within(dialog).getByText(/5\.923 − 16\.600 = −10\.677 m/)).toBeInTheDocument()
+    expect(
+      within(dialog).getByText(/5\.923 \+ 30\.207 − 16\.600 = 19\.530 m/)
+    ).toBeInTheDocument()
     for (const campo of [
       "Produto",
       "Cor",

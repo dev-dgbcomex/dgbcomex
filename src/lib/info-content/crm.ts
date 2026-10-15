@@ -13,8 +13,43 @@ export const crmContent: Record<string, InfoContent> = {
       "A compra em trânsito vem do módulo de importação (pedido de compra com data de embarque e entrega). O aviso de recebimento do ERP não entra aqui: ele é o recebimento já efetivado, com data no passado.",
       "'A caminho' só conta o que ainda não foi recebido no destino. Uma entrega parcial aparece pela metade.",
       "O nome do produto e da cor vem do cadastro do ERP, então aparece mesmo quando a cor ainda não tem peça em estoque — nesse caso a coluna Estoque mostra zero.",
-      "Clicar na linha abre quem prometeu, por representante, com metros, valor em reais e número de pedidos. É a lista para cobrar antes de fazer nova promessa.",
+      "Clicar no número da coluna Pedidos abre os pedidos um a um: código do pedido, cliente, representante, data, saldo em metros e valor — com exportação em CSV e PDF. É a lista para cobrar antes de fazer nova promessa. Clicar na linha abre o mesmo resumo por representante.",
       "Os filtros de produto, cor e representante vão para a API ao clicar em Aplicar. A busca é instantânea e não vai ao ERP.",
+      "Todas as colunas ordenam a tabela: o ▲/↕ no título mostra qual é a ordenação ativa. Nas colunas numéricas o número grande é o da coluna e a linha de baixo é o detalhe — data da chegada, valor em reais, peças e rolos.",
+    ],
+    columns: [
+      {
+        name: "Produto",
+        desc: "Nome e código do produto (ex.: BELGA, 000014). Vem do cadastro do ERP, então aparece mesmo quando a cor não tem peça em estoque.",
+      },
+      {
+        name: "Cor",
+        desc: "Código e nome da cor (ex.: 56 - NATURAL). Estoque, carteira e compra em trânsito casam por produto + cor.",
+      },
+      {
+        name: "Estoque",
+        desc: "Peças em aberto no ERP convertidas em metro: 5.923 m de 93 peças · 93 rolos (cada rolo com 63,7 m). É o que existe no estoque agora, sem contar o que já foi reservado.",
+      },
+      {
+        name: "A caminho",
+        desc: "Soma das compras em trânsito com entrega futura: 30.207 m, com a data da primeira chegada (23/11/2026) logo abaixo. Entrega parcial aparece pela metade.",
+      },
+      {
+        name: "Prometido",
+        desc: "Saldo dos pedidos de venda em aberto (quantidade do pedido menos o já romaneado): 16.600 m, R$ 130.950,20. É o que a carteira comercial já consumiu.",
+      },
+      {
+        name: "Pedidos",
+        desc: "Quantos pedidos de venda em aberto sustentam esse prometido: 7. O número é clicável e abre a lista com código, cliente e representante; passar o mouse mostra o agregado por representante.",
+      },
+      {
+        name: "Livre",
+        desc: "Estoque − prometido: 5.923 − 16.600 = −10.677 m. Negativo em vermelho significa que já prometeram além do que existe — é a fila de conversa, não erro de cálculo.",
+      },
+      {
+        name: "Depois da compra",
+        desc: "Estoque + o que está chegando − prometido: 5.923 + 30.207 − 16.600 = 19.530 m. Positivo em verde significa que a cor fecha na data da chegada; negativo, que falta compra nova.",
+      },
     ],
     fields: [
       {

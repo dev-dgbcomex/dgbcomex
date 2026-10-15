@@ -70,6 +70,26 @@ export function InfoButton({ content }: InfoButtonProps) {
                 </div>
               )}
 
+              {content.columns && content.columns.length > 0 && (
+                <div>
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">
+                    Colunas da tabela
+                  </h3>
+                  <div className="space-y-2">
+                    {content.columns.map((coluna: any, i: any) => (
+                      <div key={i} className="flex items-start gap-2">
+                        <span className="text-xs font-medium text-blue-600 dark:text-blue-400 shrink-0 min-w-[100px]">
+                          {coluna.name}
+                        </span>
+                        <span className="text-sm text-slate-600 dark:text-slate-400">
+                          {coluna.desc}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {content.fields && content.fields.length > 0 && (
                 <div>
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">

@@ -9,6 +9,7 @@ const content: InfoContent = {
   title: "Oportunidades",
   description: "Lista de oportunidades.",
   rules: ["Regra 1"],
+  columns: [{ name: "Estoque", desc: "Peças em aberto" }],
   fields: [{ name: "Título", desc: "Nome" }],
   examples: [
     {
@@ -41,6 +42,25 @@ describe("InfoButton", () => {
     expect(screen.getByText("Regra 1")).toBeInTheDocument()
     expect(screen.getByText("Campos")).toBeInTheDocument()
     expect(screen.getByText("Título")).toBeInTheDocument()
+  })
+
+  it("mostra as colunas da tabela antes dos campos", () => {
+    render(<InfoButton content={content} />)
+    fireEvent.click(screen.getByRole("button", { name: "Informações da tela" }))
+
+    expect(screen.getByText("Colunas da tabela")).toBeInTheDocument()
+    expect(screen.getByText("Estoque")).toBeInTheDocument()
+    expect(screen.getByText("Peças em aberto")).toBeInTheDocument()
+
+    const secoes = screen.getAllByText(/^(Colunas da tabela|Campos)$/).map((n) => n.textContent)
+    expect(secoes).toEqual(["Colunas da tabela", "Campos"])
+  })
+
+  it("nao renderiza a seção de colunas quando ausente", () => {
+    render(<InfoButton content={{ title: "X", description: "d", rules: [] }} />)
+    fireEvent.click(screen.getByRole("button", { name: "Informações da tela" }))
+
+    expect(screen.queryByText("Colunas da tabela")).not.toBeInTheDocument()
   })
 
   it("nao renderiza a seção de exemplos quando ausente", () => {
