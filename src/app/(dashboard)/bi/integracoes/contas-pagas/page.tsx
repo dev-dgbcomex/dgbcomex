@@ -15,6 +15,7 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { InfoButton } from "@/components/ui/info-button"
+import { KpiCard } from "@/components/ui/kpi-card"
 import { getInfoContent } from "@/lib/info-content"
 import {
   FILTROS_VAZIOS,
@@ -58,36 +59,6 @@ function parametrosDaApi(
   if (aplicados.dataInicio) query.set("data_inicio", aplicados.dataInicio)
   if (aplicados.dataFim) query.set("data_fim", aplicados.dataFim)
   return query.toString()
-}
-
-function Cartao({
-  titulo,
-  descricao,
-  children,
-}: {
-  titulo: string
-  descricao?: string
-  children: React.ReactNode
-}) {
-  return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-      <p className="text-[10px] font-medium tracking-wider text-slate-500 uppercase">{titulo}</p>
-      {descricao && <p className="mt-0.5 text-[10px] text-slate-400">{descricao}</p>}
-      <div className="mt-1">{children}</div>
-    </div>
-  )
-}
-
-function ValorCartao({ rotulo, children }: { rotulo: string; children: React.ReactNode }) {
-  return (
-    <p
-      role="status"
-      aria-label={rotulo}
-      className="text-2xl font-semibold text-slate-900 dark:text-slate-100"
-    >
-      {children}
-    </p>
-  )
 }
 
 export default function ContasPagasDetalhePage() {
@@ -337,37 +308,41 @@ export default function ContasPagasDetalhePage() {
 
       {detalhe && (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <Cartao titulo="Mês atual" descricao={detalhe.mes.periodo}>
-              <ValorCartao rotulo="total do mês atual">{FORMATAR.valor(detalhe.mes.total)}</ValorCartao>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                {FORMATAR.numero(detalhe.mes.lancamentos)} baixas
-              </p>
-            </Cartao>
-            <Cartao titulo="Mês anterior" descricao={detalhe.mes_anterior.periodo}>
-              <ValorCartao rotulo="total do mês anterior">
-                {FORMATAR.valor(detalhe.mes_anterior.total)}
-              </ValorCartao>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                {FORMATAR.numero(detalhe.mes_anterior.lancamentos)} baixas
-              </p>
-            </Cartao>
-            <Cartao titulo="Ano atual" descricao={detalhe.ano_atual.periodo}>
-              <ValorCartao rotulo="total do ano atual">
-                {FORMATAR.valor(detalhe.ano_atual.total)}
-              </ValorCartao>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                {FORMATAR.numero(detalhe.ano_atual.lancamentos)} baixas
-              </p>
-            </Cartao>
-            <Cartao titulo="Ano anterior" descricao={detalhe.ano_anterior.periodo}>
-              <ValorCartao rotulo="total do ano anterior">
-                {FORMATAR.valor(detalhe.ano_anterior.total)}
-              </ValorCartao>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                {FORMATAR.numero(detalhe.ano_anterior.lancamentos)} baixas
-              </p>
-            </Cartao>
+          {/*
+            Os quatro cards do topo são o `KpiCard` do faturamento — mesmo
+            componente, não cópia: os dois ajustam juntos. Só a grade é 4 em vez de
+            5 porque são quatro janelas (mês atual, mês anterior, ano atual, ano
+            anterior).
+          */}
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <KpiCard
+              rotulo="Mês atual"
+              periodo={detalhe.mes.periodo}
+              valor={FORMATAR.valor(detalhe.mes.total)}
+              detalhe={`${FORMATAR.numero(detalhe.mes.lancamentos)} baixas`}
+              statusLabel="total do mês atual"
+            />
+            <KpiCard
+              rotulo="Mês anterior"
+              periodo={detalhe.mes_anterior.periodo}
+              valor={FORMATAR.valor(detalhe.mes_anterior.total)}
+              detalhe={`${FORMATAR.numero(detalhe.mes_anterior.lancamentos)} baixas`}
+              statusLabel="total do mês anterior"
+            />
+            <KpiCard
+              rotulo="Ano atual"
+              periodo={detalhe.ano_atual.periodo}
+              valor={FORMATAR.valor(detalhe.ano_atual.total)}
+              detalhe={`${FORMATAR.numero(detalhe.ano_atual.lancamentos)} baixas`}
+              statusLabel="total do ano atual"
+            />
+            <KpiCard
+              rotulo="Ano anterior"
+              periodo={detalhe.ano_anterior.periodo}
+              valor={FORMATAR.valor(detalhe.ano_anterior.total)}
+              detalhe={`${FORMATAR.numero(detalhe.ano_anterior.lancamentos)} baixas`}
+              statusLabel="total do ano anterior"
+            />
           </div>
 
           {/*

@@ -31,6 +31,7 @@ import { CSS } from "@dnd-kit/utilities"
 import { ChevronDown, ChevronUp, GripVertical } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ChartCard, ChartCardBody } from "@/components/ui/chart-card"
+import { KpiCard as Kpi } from "@/components/ui/kpi-card"
 import { ChartTooltip } from "@/components/ui/chart-tooltip"
 import {
   ORIENTACAO_LABEL,
@@ -88,23 +89,6 @@ interface Props {
   totalPeso: number
 }
 
-interface KpiProps {
-  rotulo: string
-  valor: string
-  detalhe?: string
-}
-
-function Kpi({ rotulo, valor, detalhe }: KpiProps) {
-  return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow dark:border-slate-800 dark:bg-slate-900">
-      <p className="text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">
-        {rotulo}
-      </p>
-      <p className="mt-1 text-xl font-semibold text-slate-900 dark:text-slate-100">{valor}</p>
-      {detalhe && <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{detalhe}</p>}
-    </div>
-  )
-}
 
 /** Cartão de gráfico com handle de arraste e alternativa por teclado (setas). */
 function GraficoOrdenado({

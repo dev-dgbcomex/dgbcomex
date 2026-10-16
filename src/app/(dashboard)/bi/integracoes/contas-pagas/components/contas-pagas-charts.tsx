@@ -15,6 +15,12 @@ interface Props {
 }
 
 const TOP = 8
+
+/**
+ * Altura mínima da área do gráfico. O `ResponsiveContainer` usa `height="100%"`, e um
+ * pai sem altura intrínseca colapsaria para zero. Mesma ideia do faturamento: o
+ * `auto-rows-fr` iguala a altura dos cards pela do mais alto.
+ */
 const ALTURA = "min-h-[240px]"
 
 /**
@@ -91,7 +97,7 @@ export function ContasPagasCharts({
   const semClasse = total > 0 && porDepartamento.length <= 1
 
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
+    <div className="grid auto-rows-fr gap-4 lg:grid-cols-2">
       <ChartCard title="Pagamentos mês a mês" className={ALTURA}>
         <ChartCardBody>
           <p className="mb-2 text-xs text-slate-500 dark:text-slate-400">
