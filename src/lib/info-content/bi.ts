@@ -4,40 +4,82 @@ export const biContent: Record<string, InfoContent> = {
   "/bi/integracoes/contas-pagas": {
     title: "Contas Pagas — as baixas que formam o valor",
     description:
-      "Detalhe do card 'Contas Pagas': cada baixa de conta a pagar do mês de referência (documento, fornecedor, banco, cheque e valor) e as quatro janelas do card — mês atual, mês anterior, ano atual e ano anterior.",
+      "Detalhe do card 'Contas Pagas': cada baixa de conta a pagar (documento, fornecedor, banco, empresa, departamento e valor), as quatro janelas do card — mês atual, mês anterior, ano atual e ano anterior — e os grupos do recorte: mês a mês, fornecedor, banco, empresa e departamento.",
     rules: [
       "O valor considera a DATA DA BAIXA, não a data de vencimento: uma conta vencida em abril e paga em maio entra em maio.",
       "O card soma a view vwContasPagas, que tem só duas colunas (Data_Baixa e valorPago) — por isso ele mostra apenas o total. A lista vem da tabela Pag_Baixas, que está por trás dessa view. As duas foram conferidas no ERP e batem com diferença R$ 0,00 em cada mês.",
       "O mês corrente entra zerado enquanto não houver baixa: não é erro de carga. Nesse caso a tela recua sozinha para o último mês fechado com baixa e avisa qual é — o card segue mostrando R$ 0,00 porque é ele que lê o dia corrente.",
       "O recuo só vale para a referência automática. Clicar num mês vazio no gráfico mostra aquele mês vazio, porque a escolha é do usuário.",
-      "As barras dos 24 meses são botões: clique em um mês para ver os detalhes dele.",
-      "O CSV respeita a busca ativa e traz o valor como número, para somar direto no Excel.",
-      "Uma baixa é uma parcela. Quando a mesma fatura tem várias parcelas pagas no mês, elas aparecem como linhas separadas.",
+      "As barras dos 24 meses são botões: clique em um mês para ver os detalhes dele. Elas ficam acima da lista justamente porque é do mês vazio que se sai por elas.",
+      "A lista é um card por fornecedor, e o card abre as baixas dele — como a nota abre os itens no faturamento. O checkbox do canto seleciona o fornecedor para o PDF consolidado; o botão PDF do card gera só aquele.",
+      "O departamento e a despesa vêm do centro de custo (a mesma origem do detalhe de custos administrativos). Uma baixa sem classificação aparece como '—' no grupo.",
+      "Quando a baixa foi rateada entre mais de uma linha de centro de custo, o card marca 'rateado'. O total do grupo continua sendo o valor pago da baixa, para bater com o card.",
+      "Os filtros de fornecedor, banco, empresa e departamento rodam na tela: são ~130 linhas, não vale ir ao ERP a cada tecla. Só as datas vão para a API, porque elas mudam o volume mesmo.",
+      "O CSV respeita o filtro ativo, sai com BOM UTF-8 (sem ele o Excel abre em latin-1) e traz o valor como número, para somar direto.",
+      "Uma baixa é uma parcela. Quando a mesma fatura tem várias parcelas pagas no mês, elas aparecem como linhas separadas dentro do card do fornecedor.",
+    ],
+    columns: [
+      {
+        name: "Baixa",
+        desc: "A data em que o pagamento foi efetivado — a data que conta, não o vencimento.",
+      },
+      {
+        name: "Documento",
+        desc: "Documento, série e parcela do título: 000007424/U 01. É uma linha por parcela.",
+      },
+      {
+        name: "Banco",
+        desc: "Banco de saída do pagamento e, abaixo, o documento do débito (D000002234). Atenção: é o banco de onde saiu o dinheiro, não o banco do fornecedor.",
+      },
+      {
+        name: "Departamento",
+        desc: "Centro de custo da baixa. 'rateado no centro de custo' avisa que o valor foi dividido entre mais de um departamento.",
+      },
+      {
+        name: "Valor",
+        desc: "Valor pago. Os grupos somam exatamente estes valores, para o total da tela bater com o card de Contas Pagas.",
+      },
     ],
     fields: [
       {
-        name: "Mês de referência",
-        desc: "Define o mês listado e as quatro janelas do comparativo. Só o mês importa; o dia não.",
+        name: "Data inicial / Data final",
+        desc: "Recorte que vai para a API (data final inclusiva). Sem eles, a lista é o mês inteiro.",
       },
       {
-        name: "Buscar nos pagamentos",
-        desc: "Filtra por fornecedor, documento, série, parcela, banco ou cheque. É instantâneo e não vai ao ERP.",
+        name: "Fornecedor",
+        desc: "Nome ou código, sem acento e sem diferenciar maiúsculas de minúsculas.",
       },
       {
-        name: "Aplicar",
-        desc: "Busca o mês escolhido no ERP. A busca livre não passa por aqui.",
+        name: "Banco",
+        desc: "Nome do banco ou o código (033, BLU...).",
+      },
+      {
+        name: "Empresa",
+        desc: "Código da empresa que pagou (13, 14...).",
+      },
+      {
+        name: "Departamento",
+        desc: "Centro de custo da baixa (TRANSPORTE, IMPORTACAO, ADM SBO...).",
+      },
+      {
+        name: "Busca",
+        desc: "Um 'talvez' em todos os campos — fornecedor, documento, banco, código do banco, documento do pagamento, departamento e despesa. É instantânea e não vai ao ERP.",
+      },
+      {
+        name: "Aplicar filtros",
+        desc: "Manda o recorte de datas para a API. Os outros campos só passam a valer depois do clique.",
       },
       {
         name: "Limpar",
-        desc: "Volta para o mês atual e limpa a busca.",
+        desc: "Zera os filtros e a busca; a tela continua no mês escolhido.",
       },
       {
         name: "Exportar CSV",
-        desc: "Baixa as baixas do recorte atual, com o valor em número.",
+        desc: "Baixa as baixas do recorte atual, com departamento, despesa e valor em número.",
       },
       {
         name: "Recarregar do ERP",
-        desc: "Repete a consulta do mesmo mês. Útil depois de fechar um pagamento.",
+        desc: "Repete a consulta do mesmo recorte. Útil depois de fechar um pagamento.",
       },
     ],
     examples: [
@@ -48,6 +90,14 @@ export const biContent: Record<string, InfoContent> = {
       {
         title: "Conferindo um pagamento",
         desc: "Ao escolher setembro/2026, o topo mostra que as 118 baixas saíram todas pelo BANCO SANTANDER, e o maior fornecedor do mês é ATUAL ASSESSORIA E DESPACHOS ADUANEIRO, com R$ 621.064,93 em 5 baixas.",
+      },
+      {
+        title: "Baixa de folha com departamento",
+        desc: "FOLHA DE PAGAMENTO 00002, documento 016092026, baixa de 16/09: R$ 2.740,01 classificados como despesa FIXOS e departamento ADM SBO (1.1.1.1). Abrindo o card do fornecedor FOLHA DE PAGAMENTO, a linha mostra o mesmo valor com o mesmo departamento — é a mesma classificação que a tela de custo administrativo mostra.",
+      },
+      {
+        title: "Recorte de datas",
+        desc: "Com data inicial 15/08 e data final 10/09, a faixa aparece na barra de filtros como '(recorte aplicado)' e a lista passa a ter só as baixas desse intervalo. Os quatro cards do topo continuam sendo do mês âncora, que é o que o card do BI mede.",
       },
     ],
   },
