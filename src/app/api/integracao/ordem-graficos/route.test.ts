@@ -23,6 +23,14 @@ function put(body: unknown) {
   )
 }
 
+function get(painel?: string) {
+  return GET(
+    new NextRequest(
+      `http://localhost/api/integracao/ordem-graficos${painel ? `?painel=${painel}` : ""}`
+    )
+  )
+}
+
 describe("/api/integracao/ordem-graficos", () => {
   beforeEach(() => {
     resetDb(db)
@@ -32,7 +40,7 @@ describe("/api/integracao/ordem-graficos", () => {
   describe("GET", () => {
     it("retorna 401 quando não autenticado", async () => {
       vi.mocked(requireAuth).mockResolvedValue(naoAutorizado as never)
-      const res = await GET()
+      const res = await get()
       expect(res.status).toBe(401)
     })
 
@@ -43,7 +51,7 @@ describe("/api/integracao/ordem-graficos", () => {
           { biOrdemGraficos: ["produtos", "mes", "grafico-removido", "mes", 42, null] },
         ])
       )
-      const res = await GET()
+      const res = await get()
       expect(res.status).toBe(200)
       expect(await res.json()).toEqual({ ids: ["produtos", "mes"] })
     })
@@ -51,9 +59,40 @@ describe("/api/integracao/ordem-graficos", () => {
     it("retorna lista vazia quando o usuário ainda não salvou ordem", async () => {
       vi.mocked(requireAuth).mockResolvedValue(sessao as never)
       db.select = vi.fn(() => createQueryBuilder([{ biOrdemGraficos: null }]))
-      const res = await GET()
+      const res = await get()
       expect(res.status).toBe(200)
       expect(await res.json()).toEqual({ ids: [] })
+    })
+
+    it("lê a ordem do painel de contas pagas", async () => {
+      vi.mocked(requireAuth).mockResolvedValue(sessao as never)
+      db.select = vi.fn(() =>
+        createQueryBuilder([
+          {
+            biOrdemGraficos: {
+              faturamento: ["mes", "clientes"],
+              "contas-pagas": ["banco", "departamento", "banco", "inventado"],
+            },
+          },
+        ])
+      )
+      const res = await get("contas-pagas")
+      expect(await res.json()).toEqual({ ids: ["banco", "departamento"] })
+    })
+
+    it("o array antigo do faturamento não vira ordem de contas pagas", async () => {
+      vi.mocked(requireAuth).mockResolvedValue(sessao as never)
+      db.select = vi.fn(() =>
+        createQueryBuilder([{ biOrdemGraficos: ["mes", "clientes", "produtos"] }])
+      )
+      expect(await (await get("contas-pagas")).json()).toEqual({ ids: [] })
+    })
+
+    it("um painel desconhecido cai no faturamento, sem salvar lixo", async () => {
+      vi.mocked(requireAuth).mockResolvedValue(sessao as never)
+      db.select = vi.fn(() => createQueryBuilder([{ biOrdemGraficos: ["mes", "clientes"] }]))
+      const res = await get("planilha-velha")
+      expect(await res.json()).toEqual({ ids: ["mes", "clientes"] })
     })
   })
 
@@ -81,14 +120,52 @@ describe("/api/integracao/ordem-graficos", () => {
       vi.mocked(requireAuth).mockResolvedValue(sessao as never)
       const upd = createQueryBuilder(undefined)
       db.update = vi.fn(() => upd)
+      db.select = vi.fn(() => createQueryBuilder([{ biOrdemGraficos: [] }]))
 
       const res = await put({ ids: ["participacao", "mes", "participacao", "nao-existe"] })
       expect(res.status).toBe(200)
-      expect(await res.json()).toEqual({ success: true, ids: ["participacao", "mes"] })
+      expect(await res.json()).toEqual({
+        success: true,
+        painel: "faturamento",
+        ids: ["participacao", "mes"],
+      })
 
       expect(db.update).toHaveBeenCalledTimes(1)
-      expect(upd.set).toHaveBeenCalledWith({ biOrdemGraficos: ["participacao", "mes"] })
+      expect(upd.set).toHaveBeenCalledWith({
+        biOrdemGraficos: { faturamento: ["participacao", "mes"] },
+      })
       expect(upd.where).toHaveBeenCalled()
+    })
+
+    it("salva o painel de contas pagas sem apagar a ordem do faturamento", async () => {
+      vi.mocked(requireAuth).mockResolvedValue(sessao as never)
+      const upd = createQueryBuilder(undefined)
+      db.update = vi.fn(() => upd)
+      db.select = vi.fn(() =>
+        createQueryBuilder([
+          { biOrdemGraficos: ["mes", "clientes", "produtos", "participacao"] },
+        ])
+      )
+
+      const res = await put({ painel: "contas-pagas", ids: ["departamento", "mes"] })
+      expect(res.status).toBe(200)
+      expect(await res.json()).toEqual({
+        success: true,
+        painel: "contas-pagas",
+        ids: ["departamento", "mes"],
+      })
+      expect(upd.set).toHaveBeenCalledWith({
+        biOrdemGraficos: {
+          faturamento: ["mes", "clientes", "produtos", "participacao"],
+          "contas-pagas": ["departamento", "mes"],
+        },
+      })
+    })
+
+    it("recusa id que é de outro painel", async () => {
+      vi.mocked(requireAuth).mockResolvedValue(sessao as never)
+      const res = await put({ painel: "contas-pagas", ids: ["clientes"] })
+      expect(res.status).toBe(400)
     })
   })
 })

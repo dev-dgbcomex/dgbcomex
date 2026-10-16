@@ -5,7 +5,7 @@ import { createFetchMock, navMock, renderPage } from "@/test/harness"
 import ContasPagasDetalhePage from "./page"
 import { ContasPagasCard } from "./components/contas-pagas-card"
 import { ContasPagasCharts } from "./components/contas-pagas-charts"
-import { ContasPagasToolbar } from "./components/contas-pagas-toolbar"
+import { ContasPagasToolbar, type OpcoesDoRecorte } from "./components/contas-pagas-toolbar"
 import { exportarCsvContasPagas } from "./components/contas-pagas-csv"
 import {
   FILTROS_VAZIOS,
@@ -272,15 +272,20 @@ describe("ContasPagasDetalhePage", () => {
     renderPage(<ContasPagasDetalhePage />)
 
     await screen.findByRole("region", { name: "Fornecedores" })
-    expect(screen.getByText("Pagamentos mês a mês")).toBeInTheDocument()
-    expect(screen.getByText("Por fornecedor (top 8)")).toBeInTheDocument()
-    expect(screen.getByText("Por banco — de onde saiu o dinheiro")).toBeInTheDocument()
-    expect(screen.getByText("Por empresa — qual empresa pagou")).toBeInTheDocument()
-    expect(screen.getByText("Por departamento — para onde foi")).toBeInTheDocument()
+    for (const titulo of [
+      "Pagamentos mês a mês",
+      "Pagamentos por fornecedor (top 8)",
+      "Pagamentos por banco — de onde saiu o dinheiro (top 8)",
+      "Pagamentos por empresa (top 8)",
+      "Participação por departamento",
+    ]) {
+      expect(screen.getByText(titulo)).toBeInTheDocument()
+    }
 
-    // O gráfico de banco mostra os três, e não só o Santander.
-    expect(screen.getAllByText("BANCO BLU").length).toBeGreaterThan(0)
-    expect(screen.getByText("IMPORTACAO")).toBeInTheDocument()
+    // O dropdown de banco nasce com os três bancos do relatório, e não só o Santander.
+    fireEvent.click(screen.getByLabelText("Abrir opções de Banco"))
+    const bancos = screen.getByRole("listbox", { name: "Banco" })
+    expect(within(bancos).getByText(/BANCO BLU/)).toBeInTheDocument()
   })
 
   it("recua para o ultimo mes fechado quando o mes de referencia esta vazio", async () => {
@@ -315,12 +320,16 @@ describe("ContasPagasDetalhePage", () => {
     renderPage(<ContasPagasDetalhePage />)
     await screen.findByText(/Outubro ainda não tem nenhuma baixa/)
 
-    // Clicar na barra zerada de outubro: agora o mês vazio é escolha, não automático.
-    // `findByRole` porque a troca de mês recarrega e o gráfico só volta com a resposta.
-    fireEvent.click(await screen.findByRole("button", { name: /^out\/2026:/ }))
+    // Escolher outubro no seletor: agora o mês vazio é escolha, não automático.
+    fireEvent.change(await screen.findByLabelText("Mês de referência"), {
+      target: { value: "2026-10" },
+    })
 
     expect(await screen.findByText(/Sem baixas em outubro/)).toBeInTheDocument()
     expect(screen.getByText(/não é erro de carga/i)).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.queryByText(/ainda não tem nenhuma baixa/)).not.toBeInTheDocument()
+    })
   })
 
   it("filtra pela busca sem ir ao ERP", async () => {
@@ -331,7 +340,7 @@ describe("ContasPagasDetalhePage", () => {
     const lista = await screen.findByRole("region", { name: "Fornecedores" })
     const antes = calls.filter((c) => c.url.includes("contas-pagas-detalhe")).length
 
-    fireEvent.change(screen.getByLabelText("Buscar nas baixas carregadas"), {
+    fireEvent.change(screen.getByLabelText("Buscar nas baixas"), {
       target: { value: "000105368" },
     })
 
@@ -342,24 +351,27 @@ describe("ContasPagasDetalhePage", () => {
     expect(calls.filter((c) => c.url.includes("contas-pagas-detalhe")).length).toBe(antes)
   })
 
-  it("filtra por banco, empresa e departamento pelos campos da toolbar", async () => {
+  it("filtra por banco, empresa e departamento pelos dropdowns da toolbar", async () => {
     const { fn } = mockRotas(detalheVariado())
     vi.stubGlobal("fetch", fn)
 
     renderPage(<ContasPagasDetalhePage />)
     const lista = await screen.findByRole("region", { name: "Fornecedores" })
 
-    fireEvent.change(screen.getByLabelText("Banco"), { target: { value: "BLU" } })
+    // Escolher BLU no dropdown e aplicar: só o BLU pertence à MF LOG.
+    fireEvent.click(screen.getByLabelText("Abrir opções de Banco"))
+    fireEvent.click(screen.getByRole("option", { name: /BANCO BLU/ }))
     fireEvent.click(screen.getByRole("button", { name: /Aplicar filtros/ }))
 
-    // Só o BLU pertence à MF LOG, então o card do mostruário some.
     await waitFor(() => {
       expect(within(lista).queryByText("MOSTRUARIO FAST LTDA")).not.toBeInTheDocument()
     })
     expect(within(lista).getByText("MF LOG TRANSPORTES LTDA")).toBeInTheDocument()
 
-    fireEvent.change(screen.getByLabelText("Departamento"), { target: { value: "transporte" } })
-    fireEvent.change(screen.getByLabelText("Banco"), { target: { value: "" } })
+    // Trocar para TRANSPORTE: volta para o mostruário, que é o único dessa cor.
+    fireEvent.click(screen.getByLabelText("Limpar filtro Banco"))
+    fireEvent.click(screen.getByLabelText("Abrir opções de Departamento"))
+    fireEvent.click(screen.getByRole("option", { name: /TRANSPORTE/ }))
     fireEvent.click(screen.getByRole("button", { name: /Aplicar filtros/ }))
 
     await waitFor(() => {
@@ -409,7 +421,7 @@ describe("ContasPagasDetalhePage", () => {
     })
   })
 
-  it("clicar na barra troca o mes da tela", async () => {
+  it("trocar o mes no seletor recarrega a tela", async () => {
     const { fn, calls } = mockRotas(detalhe())
     vi.stubGlobal("fetch", fn)
 
@@ -417,7 +429,9 @@ describe("ContasPagasDetalhePage", () => {
     await screen.findByRole("region", { name: "Fornecedores" })
     const antes = calls.length
 
-    fireEvent.click(screen.getByRole("button", { name: /^ago\/2026:/ }))
+    fireEvent.change(screen.getByLabelText("Mês de referência"), {
+      target: { value: "2026-08" },
+    })
 
     await waitFor(() => {
       expect(calls.length).toBeGreaterThan(antes)
@@ -444,32 +458,82 @@ describe("ContasPagasDetalhePage", () => {
 describe("ContasPagasCharts", () => {
   const base = {
     meses: serie(),
-    mesSelecionado: "2026-09",
-    onSelecionarMes: () => {},
     porFornecedor: [grupo("", { razao_social: "MOSTRUARIO FAST", valor: 500 })],
     porBanco: [grupo("", { banco: "BANCO SANTANDER", valor: 500 })],
     porEmpresa: [grupo("", { empresa: "13", valor: 500 })],
     porDepartamento: [grupo("", { departamento: "TRANSPORTE", valor: 500 })],
     total: 500,
+    totalBaixas: 4,
   }
 
-  it("desenha 24 barras com o mes selecionado marcado", () => {
+  beforeEach(() => {
+    localStorage.clear()
+  })
+
+  it("desenha os cinco cards, na ordem padrão", () => {
     renderPage(<ContasPagasCharts {...base} />)
 
-    const botoes = screen.getAllByRole("button", { name: /em \d+ pagamentos$/ })
-    expect(botoes).toHaveLength(24)
-    expect(botoes.filter((b) => b.getAttribute("aria-pressed") === "true")).toHaveLength(1)
+    for (const titulo of [
+      "Pagamentos mês a mês",
+      "Pagamentos por fornecedor (top 8)",
+      "Pagamentos por banco — de onde saiu o dinheiro (top 8)",
+      "Pagamentos por empresa (top 8)",
+      "Participação por departamento",
+    ]) {
+      expect(screen.getByText(titulo)).toBeInTheDocument()
+    }
+    // Cada card pode ser arrastado e movido pelo teclado.
+    expect(screen.getByLabelText("Arrastar Pagamentos mês a mês para reordenar")).toBeInTheDocument()
+    expect(screen.getByLabelText("Mover Participação por departamento para cima")).toBeInTheDocument()
   })
 
-  it("devolve o mes clicado", () => {
-    const onSelecionarMes = vi.fn()
-    renderPage(<ContasPagasCharts {...base} onSelecionarMes={onSelecionarMes} />)
+  it("reposiciona por teclado e guarda a ordem do usuário", async () => {
+    renderPage(<ContasPagasCharts {...base} />)
 
-    fireEvent.click(screen.getByRole("button", { name: /^jul\/2026:/ }))
-    expect(onSelecionarMes).toHaveBeenCalledWith("2026-07")
+    // Extremos travados: o primeiro não sobe e o último não desce.
+    expect(screen.getByLabelText("Mover Pagamentos mês a mês para cima")).toBeDisabled()
+    expect(
+      screen.getByLabelText("Mover Participação por departamento para baixo")
+    ).toBeDisabled()
+
+    fireEvent.click(screen.getByLabelText("Mover Participação por departamento para cima"))
+
+    await waitFor(() => {
+      expect(localStorage.getItem("contas_pagas_graficos_ordem")).toContain("departamento")
+    })
+    // Subindo, ele deixou de ser o último e agora pode voltar para baixo.
+    expect(
+      screen.getByLabelText("Mover Participação por departamento para baixo")
+    ).toBeEnabled()
   })
 
-  it("avisa quando as baixas nao tem departamento classificado", () => {
+  it("o i de cada card abre o modal com todos os dados, sem o corte do top 8", async () => {
+    const muitos = Array.from({ length: 12 }, (_, i) =>
+      grupo("", { razao_social: `FORNECEDOR ${i}`, valor: 100 * (12 - i) })
+    )
+    renderPage(<ContasPagasCharts {...base} porFornecedor={muitos} />)
+
+    fireEvent.click(screen.getByLabelText("Dados de Pagamentos por fornecedor (top 8)"))
+    const dialog = await screen.findByRole("dialog")
+
+    // O gráfico mostra 8; o modal mostra os 12 do recorte.
+    expect(within(dialog).getByText("FORNECEDOR 11")).toBeInTheDocument()
+    expect(within(dialog).getByText("FORNECEDOR 0")).toBeInTheDocument()
+    expect(within(dialog).getAllByRole("row")).toHaveLength(14) // cabeçalho + 12 + total
+    expect(within(dialog).getByText("Total do recorte")).toBeInTheDocument()
+  })
+
+  it("o modal do mês a mês lista os 24 meses com baixas e valor", async () => {
+    renderPage(<ContasPagasCharts {...base} />)
+
+    fireEvent.click(screen.getByLabelText("Dados de Pagamentos mês a mês"))
+    const dialog = await screen.findByRole("dialog")
+
+    expect(within(dialog).getByText("nov/2024")).toBeInTheDocument()
+    expect(within(dialog).getByText("out/2026")).toBeInTheDocument()
+  })
+
+  it("avisa quando as baixas nao tem departamento classificado", async () => {
     renderPage(
       <ContasPagasCharts
         {...base}
@@ -477,9 +541,9 @@ describe("ContasPagasCharts", () => {
       />
     )
 
-    expect(
-      screen.getByText(/não têm departamento classificado no centro de custo/i)
-    ).toBeInTheDocument()
+    fireEvent.click(screen.getByLabelText("Dados de Participação por departamento"))
+    const dialog = await screen.findByRole("dialog")
+    expect(within(dialog).getByText(/sem classificação/)).toBeInTheDocument()
   })
 })
 
@@ -530,23 +594,97 @@ describe("ContasPagasCard", () => {
 })
 
 describe("ContasPagasToolbar", () => {
+  const opcoes: OpcoesDoRecorte = {
+    fornecedor: [
+      { rotulo: "MOSTRUARIO FAST LTDA", codigo: "AABQQ", ocorrencias: 2, valor: 1000 },
+      { rotulo: "MF LOG TRANSPORTES LTDA", codigo: "00055", ocorrencias: 1, valor: 500 },
+    ],
+    banco: [{ rotulo: "BANCO SANTANDER", codigo: "033", ocorrencias: 3, valor: 1500 }],
+    empresa: [{ rotulo: "13", ocorrencias: 3, valor: 1500 }],
+    departamento: [
+      { rotulo: "TRANSPORTE", codigo: "1.1.5.1", ocorrencias: 2, valor: 1000 },
+      { rotulo: "IMPORTACAO", codigo: "1.1.6.1", ocorrencias: 1, valor: 500 },
+    ],
+  }
+
+  const base = {
+    filtros: FILTROS_VAZIOS,
+    onChange: () => {},
+    busca: "",
+    onBuscaChange: () => {},
+    onLimpar: () => {},
+    onAplicar: () => {},
+    totalBaixas: 118,
+    totalFiltro: 12,
+    periodo: { periodo: "15/08/2026 a 10/09/2026", recorte: true },
+    opcoes,
+    meses: serie(),
+    mesSelecionado: "2026-09",
+    onSelecionarMes: () => {},
+  }
+
   it("mostra o recorte e avisa quando o filtro reduz a lista", () => {
-    renderPage(
-      <ContasPagasToolbar
-        filtros={FILTROS_VAZIOS}
-        onChange={() => {}}
-        busca=""
-        onBuscaChange={() => {}}
-        onLimpar={() => {}}
-        onAplicar={() => {}}
-        totalBaixas={118}
-        totalFiltro={12}
-        periodo={{ periodo: "15/08/2026 a 10/09/2026", recorte: true }}
-      />
-    )
+    renderPage(<ContasPagasToolbar {...base} />)
 
     expect(screen.getByRole("status", { name: /12 de 118 baixas no filtro/ })).toBeInTheDocument()
     expect(screen.getByText(/15\/08\/2026 a 10\/09\/2026 \(recorte aplicado\)/)).toBeInTheDocument()
+  })
+
+  it("o dropdown de fornecedor abre com os dados do relatório e o valor de cada um", () => {
+    renderPage(<ContasPagasToolbar {...base} />)
+
+    fireEvent.click(screen.getByLabelText("Abrir opções de Fornecedor"))
+    const lista = screen.getByRole("listbox", { name: "Fornecedor" })
+
+    expect(within(lista).getByText(/MOSTRUARIO FAST LTDA/)).toBeInTheDocument()
+    expect(within(lista).getByText("R$ 1.000,00")).toBeInTheDocument()
+    // O código do fornecedor vai junto do nome.
+    expect(within(lista).getByText("AABQQ")).toBeInTheDocument()
+  })
+
+  it("digitar no filtro autocompleta e devolve o valor escolhido", () => {
+    const onChange = vi.fn()
+    renderPage(<ContasPagasToolbar {...base} onChange={onChange} />)
+
+    const combo = screen.getByRole("combobox", { name: "Fornecedor" })
+    fireEvent.change(combo, { target: { value: "mf log" } })
+
+    const lista = screen.getByRole("listbox", { name: "Fornecedor" })
+    expect(within(lista).queryByText(/MOSTRUARIO FAST/)).not.toBeInTheDocument()
+
+    fireEvent.click(within(lista).getByRole("option", { name: /MF LOG TRANSPORTES/ }))
+    expect(onChange).toHaveBeenCalledWith({ fornecedor: "MF LOG TRANSPORTES LTDA" })
+  })
+
+  it("a opção escolhida volta para o campo, e o botão de limpar zera", () => {
+    const onChange = vi.fn()
+    renderPage(
+      <ContasPagasToolbar
+        {...base}
+        filtros={{ ...FILTROS_VAZIOS, banco: "BANCO SANTANDER" }}
+        onChange={onChange}
+      />
+    )
+
+    expect(screen.getByRole("combobox", { name: "Banco" })).toHaveValue("BANCO SANTANDER")
+
+    fireEvent.click(screen.getByLabelText("Limpar filtro Banco"))
+    expect(onChange).toHaveBeenCalledWith({ banco: "" })
+  })
+
+  it("o seletor de mês traz os 24 meses, marcando o sem baixa", () => {
+    const onSelecionarMes = vi.fn()
+    renderPage(
+      <ContasPagasToolbar {...base} onSelecionarMes={onSelecionarMes} />
+    )
+
+    const select = screen.getByLabelText("Mês de referência")
+    expect(select).toHaveValue("2026-09")
+    expect(within(select).getAllByRole("option")).toHaveLength(24)
+    expect(within(select).getByRole("option", { name: /out\/2026.*sem baixa/ })).toBeInTheDocument()
+
+    fireEvent.change(select, { target: { value: "2026-07" } })
+    expect(onSelecionarMes).toHaveBeenCalledWith("2026-07")
   })
 })
 

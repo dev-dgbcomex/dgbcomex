@@ -15,6 +15,7 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { InfoButton } from "@/components/ui/info-button"
+import type { OpcaoFiltro } from "@/components/ui/filtro-combo"
 import { KpiCard } from "@/components/ui/kpi-card"
 import { getInfoContent } from "@/lib/info-content"
 import {
@@ -24,10 +25,11 @@ import {
   filtrarPorFiltros,
   type DetalheContasPagas,
   type FiltrosContasPagas,
+  type PagamentoConta,
 } from "@/lib/bi/contas-pagas-detalhe"
 import { ContasPagasCard } from "./components/contas-pagas-card"
 import { ContasPagasCharts } from "./components/contas-pagas-charts"
-import { ContasPagasToolbar } from "./components/contas-pagas-toolbar"
+import { ContasPagasToolbar, type OpcoesDoRecorte } from "./components/contas-pagas-toolbar"
 import { exportarCsvContasPagas } from "./components/contas-pagas-csv"
 import {
   ORIENTACAO_LABEL,
@@ -152,6 +154,46 @@ export default function ContasPagasDetalhePage() {
   const porBanco = useMemo(() => gruposDe("banco"), [gruposDe])
   const porEmpresa = useMemo(() => gruposDe("empresa"), [gruposDe])
   const porDepartamento = useMemo(() => gruposDe("departamento"), [gruposDe])
+
+  /**
+   * As opções dos dropdowns vêm do relatório inteiro, não do recorte já filtrado.
+   * Filtrar por um fornecedor esvaziaria a lista de bancos — e a pessoa que quer
+   * combinar "um fornecedor" com "o banco dele" ficaria sem como escolher o banco.
+   */
+  const opcoes = useMemo<OpcoesDoRecorte>(() => {
+    const carregar = (
+      chave: "razao_social" | "banco" | "empresa" | "departamento",
+      rotuloDe: (item: PagamentoConta) => { rotulo: string; codigo?: string }
+    ): OpcaoFiltro[] => {
+      const mapa = new Map<string, OpcaoFiltro>()
+      for (const item of detalhe?.mes.itens ?? []) {
+        const { rotulo, codigo } = rotuloDe(item)
+        const atual = mapa.get(rotulo) ?? { rotulo, codigo, ocorrencias: 0, valor: 0 }
+        atual.ocorrencias += 1
+        atual.valor += item.valor
+        mapa.set(rotulo, atual)
+      }
+      return [...mapa.values()].sort(
+        (a, b) => b.valor - a.valor || a.rotulo.localeCompare(b.rotulo, "pt-BR")
+      )
+    }
+
+    return {
+      fornecedor: carregar("razao_social", (item) => ({
+        rotulo: item.razao_social || "—",
+        codigo: item.fornecedor,
+      })),
+      banco: carregar("banco", (item) => ({
+        rotulo: item.banco || "—",
+        codigo: item.numero_banco,
+      })),
+      empresa: carregar("empresa", (item) => ({ rotulo: item.empresa || "—" })),
+      departamento: carregar("departamento", (item) => ({
+        rotulo: item.departamento || "—",
+        codigo: item.departamento_codigo,
+      })),
+    }
+  }, [detalhe])
 
   /**
    * O mês de referência nasce vazio quase sempre: em 13/10 ainda não houve baixa de
@@ -297,7 +339,13 @@ export default function ContasPagasDetalhePage() {
         onAplicar={aplicarFiltros}
         totalBaixas={detalhe?.mes.itens.length ?? 0}
         totalFiltro={itens.length}
-        periodo={detalhe ? { periodo: detalhe.periodo.periodo, recorte: detalhe.periodo.recorte } : null}
+        periodo={
+          detalhe ? { periodo: detalhe.periodo.periodo, recorte: detalhe.periodo.recorte } : null
+        }
+        opcoes={opcoes}
+        meses={detalhe?.meses ?? []}
+        mesSelecionado={detalhe?.referencia.mes ?? ""}
+        onSelecionarMes={irParaMes}
       />
 
       {isLoading && (
@@ -347,19 +395,18 @@ export default function ContasPagasDetalhePage() {
 
           {/*
             Os gráficos ficam acima da lista de propósito: o mês vazio acontece no
-            primeiro acesso do mês corrente, e é justamente o gráfico que oferece a
-            saída ("clique em um mês"). Escondê-lo junto com a lista trancaria quem
-            cair no mês sem baixa.
+            primeiro acesso do mês corrente, e é daqui que se sai — pelo seletor de
+            mês no toolbar. Escondê-los junto com a lista trancaria quem cair no mês
+            sem baixa.
           */}
           <ContasPagasCharts
             meses={detalhe.meses}
-            mesSelecionado={detalhe.referencia.mes}
-            onSelecionarMes={irParaMes}
             porFornecedor={porFornecedor}
             porBanco={porBanco}
             porEmpresa={porEmpresa}
             porDepartamento={porDepartamento}
             total={total}
+            totalBaixas={itens.length}
           />
 
           {detalhe.mes.lancamentos === 0 ? (

@@ -14,7 +14,15 @@ export const usuarios = pgTable("usuarios", {
   celWhatsapp: varchar("cel_whatsapp", { length: 20 }),
   updatedAt: timestamp("updated_at").defaultNow(),
   biOrdemCards: jsonb("bi_ordem_cards").$type<number[]>().default([]),
-  biOrdemGraficos: jsonb("bi_ordem_graficos").$type<string[]>().default([]),
+  /**
+   * A ordem dos gráficos do BI, por painel. Antes era um `string[]` só do
+   * faturamento; agora é `{ faturamento: string[]; "contas-pagas"?: string[] }`.
+   * O array antigo continua valendo como faturamento, então nenhuma migração é
+   * precisa e ninguém perde a ordem que já tinha.
+   */
+  biOrdemGraficos: jsonb("bi_ordem_graficos")
+    .$type<string[] | Record<string, string[]>>()
+    .default([]),
 })
 
 export const sessions = pgTable("sessions", {

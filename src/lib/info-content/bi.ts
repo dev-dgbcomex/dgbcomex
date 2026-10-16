@@ -9,12 +9,15 @@ export const biContent: Record<string, InfoContent> = {
       "O valor considera a DATA DA BAIXA, não a data de vencimento: uma conta vencida em abril e paga em maio entra em maio.",
       "O card soma a view vwContasPagas, que tem só duas colunas (Data_Baixa e valorPago) — por isso ele mostra apenas o total. A lista vem da tabela Pag_Baixas, que está por trás dessa view. As duas foram conferidas no ERP e batem com diferença R$ 0,00 em cada mês.",
       "O mês corrente entra zerado enquanto não houver baixa: não é erro de carga. Nesse caso a tela recua sozinha para o último mês fechado com baixa e avisa qual é — o card segue mostrando R$ 0,00 porque é ele que lê o dia corrente.",
-      "O recuo só vale para a referência automática. Clicar num mês vazio no gráfico mostra aquele mês vazio, porque a escolha é do usuário.",
-      "As barras dos 24 meses são botões: clique em um mês para ver os detalhes dele. Elas ficam acima da lista justamente porque é do mês vazio que se sai por elas.",
+      "O recuo só vale para a referência automática. Escolher no seletor de Mês de referência um mês sem baixa mostra aquele mês vazio, porque a escolha é do usuário.",
+      "Os gráficos são os mesmos do faturamento: área do valor mês a mês com a contagem de baixas em linha, barras verticais nos grupos e pizza na participação por departamento.",
+      "Cada card pode ser arrastado ou movido pelas setas, e a ordem fica salva por usuário (ela segue a pessoa entre máquinas). É o mesmo mechanism do faturamento, em outro painel.",
+      "O 'i' de cada card abre um modal com TODOS os dados daquele gráfico, sem o corte do top 8 — é por ele que se vê o grupo que ficou fora das barras e se confere linha a linha.",
       "A lista é um card por fornecedor, e o card abre as baixas dele — como a nota abre os itens no faturamento. O checkbox do canto seleciona o fornecedor para o PDF consolidado; o botão PDF do card gera só aquele.",
+      "Os dropdowns de Fornecedor, Banco, Empresa e Departamento se alimentam das baixas já carregadas, não de outra consulta: só aparece o que existe naquele recorte. Dá para digitar (o autocompleta ignora acento e caixa) ou escolher na lista; as opções vêm do relatório inteiro, então combinar um fornecedor com o banco dele continua possível.",
       "O departamento e a despesa vêm do centro de custo (a mesma origem do detalhe de custos administrativos). Uma baixa sem classificação aparece como '—' no grupo.",
       "Quando a baixa foi rateada entre mais de uma linha de centro de custo, o card marca 'rateado'. O total do grupo continua sendo o valor pago da baixa, para bater com o card.",
-      "Os filtros de fornecedor, banco, empresa e departamento rodam na tela: são ~130 linhas, não vale ir ao ERP a cada tecla. Só as datas vão para a API, porque elas mudam o volume mesmo.",
+      "Filtros de fornecedor, banco, empresa e departamento rodam na tela: são ~130 linhas, não vale ir ao ERP a cada tecla. Só as datas vão para a API, porque elas mudam o volume mesmo.",
       "O CSV respeita o filtro ativo, sai com BOM UTF-8 (sem ele o Excel abre em latin-1) e traz o valor como número, para somar direto.",
       "Uma baixa é uma parcela. Quando a mesma fatura tem várias parcelas pagas no mês, elas aparecem como linhas separadas dentro do card do fornecedor.",
     ],
@@ -46,12 +49,16 @@ export const biContent: Record<string, InfoContent> = {
         desc: "Recorte que vai para a API (data final inclusiva). Sem eles, a lista é o mês inteiro.",
       },
       {
+        name: "Mês de referência",
+        desc: "Troca o mês inteiro do recorte e as quatro janelas do comparativo. Traz os 24 meses, marcando os que estão sem baixa.",
+      },
+      {
         name: "Fornecedor",
-        desc: "Nome ou código, sem acento e sem diferenciar maiúsculas de minúsculas.",
+        desc: "Dropdown com os fornecedores do relatório. Aceita digitação, e o autocompleta ignora acento e caixa.",
       },
       {
         name: "Banco",
-        desc: "Nome do banco ou o código (033, BLU...).",
+        desc: "Nome do banco ou o código (033, BLU...). Mesmo comportamento de digitação.",
       },
       {
         name: "Empresa",
@@ -59,10 +66,10 @@ export const biContent: Record<string, InfoContent> = {
       },
       {
         name: "Departamento",
-        desc: "Centro de custo da baixa (TRANSPORTE, IMPORTACAO, ADM SBO...).",
+        desc: "Centro de custo da baixa (TRANSPORTE, IMPORTACAO, ADM SBO...), com o código 1.1.x.x ao lado.",
       },
       {
-        name: "Busca",
+        name: "Buscar nas baixas",
         desc: "Um 'talvez' em todos os campos — fornecedor, documento, banco, código do banco, documento do pagamento, departamento e despesa. É instantânea e não vai ao ERP.",
       },
       {
