@@ -46,18 +46,20 @@ interface IntegracaoBi {
 /** Hoje. O mês corrente entra zerado enquanto não houver baixa — como no card. */
 const hoje = () => new Date().toISOString().slice(0, 10)
 
-/** "setembro" -> "Setembro", "set/2026" -> "Set/2026". */
-const maiuscula = (rotulo: string) => rotulo.charAt(0).toUpperCase() + rotulo.slice(1)
-
 /** Quantos cards aparecem de uma vez. O "Carregar mais" empurra o limite. */
 const BLOCO_CARDS = 40
 
-/** Só as datas vão para a API; o resto dos filtros é local (130 linhas na tela). */
+/**
+ * Só as datas e o mês vão para a API; o resto dos filtros é local (130 linhas na
+ * tela). Sem mês escolhido ("Todos"), `data` não vai: a API ancora os 4 cards fixos
+ * em hoje e devolve a lista do intervalo inteiro.
+ */
 function parametrosDaApi(
-  ancora: string,
+  mes: string,
   aplicados: Pick<FiltrosContasPagas, "dataInicio" | "dataFim">
 ): string {
-  const query = new URLSearchParams({ data: ancora })
+  const query = new URLSearchParams()
+  if (mes) query.set("data", `${mes}-01`)
   if (aplicados.dataInicio) query.set("data_inicio", aplicados.dataInicio)
   if (aplicados.dataFim) query.set("data_fim", aplicados.dataFim)
   return query.toString()
@@ -66,14 +68,16 @@ function parametrosDaApi(
 export default function ContasPagasDetalhePage() {
   const pathname = usePathname()
   const info = getInfoContent(pathname)
-  /** Âncora do mês (o que os 4 cards medem). */
-  const [ancora, setAncora] = useState(hoje)
+  /**
+   * O mês escolhido no seletor. `""` é "Todos": a lista e os grupos são o período
+   * inteiro das datas, e os 4 cards fixos continuam ancorados em hoje.
+   */
+  const [mes, setMes] = useState("")
   const [filtros, setFiltros] = useState<FiltrosContasPagas>(FILTROS_VAZIOS)
   const [aplicados, setAplicados] = useState(FILTROS_VAZIOS)
   const [busca, setBusca] = useState("")
-  /** Só quem clica escolhe o mês; a referência automática pode recuar sozinha. */
-  const [escolhido, setEscolhido] = useState(false)
-  const [aviso, setAviso] = useState<string | null>(null)
+  /** As datas só nascem depois da primeira resposta, que traz `min_data`. */
+  const [datasSemeadas, setDatasSemeadas] = useState(false)
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
   const [expandidos, setExpandidos] = useState<Set<string>>(new Set())
   const [limite, setLimite] = useState(BLOCO_CARDS)
@@ -97,7 +101,7 @@ export default function ContasPagasDetalhePage() {
     [integracoes]
   )
 
-  const parametros = parametrosDaApi(ancora, aplicados)
+  const parametros = parametrosDaApi(mes, aplicados)
 
   const { data: detalhe, isLoading, isFetching, error, refetch } =
     useQuery<DetalheContasPagas>({
@@ -196,30 +200,43 @@ export default function ContasPagasDetalhePage() {
   }, [detalhe])
 
   /**
-   * O mês de referência nasce vazio quase sempre: em 13/10 ainda não houve baixa de
-   * outubro, então a tela cairia numa lista sem nada. Quando isso acontece e ninguém
-   * escolheu o mês, ela recua para o último mês fechado com baixa e diz qual é.
-   * Quem clica num mês vazio no gráfico continua vendo o mês vazio — a escolha manda.
+   * Os meses que caem entre a data inicial e a final — o que o seletor "Mês" lista.
+   * A série da API cobre 24 meses terminando hoje; aqui só ficam os que cruzam o
+   * intervalo escolhido. Enquanto as datas estão sendo editadas (antes de "Aplicar
+   * filtros"), usa o que está `aplicados`, e o select acompanha o último carregado.
+   */
+  const mesesDoIntervalo = useMemo(() => {
+    const inicio = aplicados.dataInicio || "0000-01-01"
+    const fim = aplicados.dataFim || "9999-12-31"
+    return (detalhe?.meses ?? []).filter((m) => {
+      // O mês cruza o intervalo se o 1º dia dele não passa o fim e o último não
+      // fica antes do início — comparação por prefixo de `YYYY-MM`, sem montar data.
+      const primeiro = `${m.mes}-01`
+      const ultimo = `${m.mes}-31`
+      return primeiro <= fim && ultimo >= inicio
+    })
+  }, [detalhe, aplicados.dataInicio, aplicados.dataFim])
+
+  /**
+   * Na primeira resposta a tela nasce com "Todos" e sem datas. Aí semeia a data
+   * inicial com `min_data` (a primeira baixa que existe) e a final com hoje, e
+   * refaz a consulta já com o período — é o que abre a tela com o intervalo cheio
+   * em vez do mês corrente. Só acontece uma vez; depois os campos mandam.
    */
   useEffect(() => {
-    if (!detalhe || escolhido || detalhe.mes.lancamentos > 0) return
-    const anterior = [...detalhe.meses]
-      .reverse()
-      .find((m) => m.lancamentos > 0 && m.mes < detalhe.referencia.mes)
-    if (!anterior) return
-    setAncora(`${anterior.mes}-01`)
-    setAviso(
-      `${maiuscula(detalhe.referencia.rotulo)} ainda não tem nenhuma baixa. ` +
-        `Mostrando ${maiuscula(anterior.rotulo)}, o último mês com pagamento ` +
-        `(${FORMATAR.numero(anterior.lancamentos)} baixas).`
-    )
-  }, [detalhe, escolhido])
+    if (!detalhe || datasSemeadas) return
+    setDatasSemeadas(true)
+    const inicio = detalhe.min_data ?? detalhe.referencia.inicio
+    const fim = hoje()
+    if (inicio > fim) return
+    const proximos = { ...FILTROS_VAZIOS, dataInicio: inicio, dataFim: fim }
+    setFiltros(proximos)
+    setAplicados(proximos)
+  }, [detalhe, datasSemeadas])
 
-  /** Trocar o mês pela barra do gráfico: mesmo caminho de dados, sem mexer no recorte. */
-  const irParaMes = (mes: string) => {
-    setEscolhido(true)
-    setAviso(null)
-    setAncora(`${mes}-01`)
+  /** Escolher um mês (ou "Todos"): só troca o parâmetro `data`, sem mexer nas datas. */
+  const irParaMes = (escolha: string) => {
+    setMes(escolha)
   }
 
   const aplicarFiltros = () => {
@@ -229,8 +246,14 @@ export default function ContasPagasDetalhePage() {
   }
 
   const limparFiltros = () => {
-    setFiltros(FILTROS_VAZIOS)
-    setAplicados(FILTROS_VAZIOS)
+    // "Limpar" volta ao período cheio (data inicial = primeira baixa, final = hoje)
+    // em vez de esvaziar as datas: sem elas a tela recairia no mês corrente, que é
+    // justamente o que o "Todos" evita.
+    const inicio = detalhe?.min_data ?? detalhe?.referencia.inicio ?? ""
+    const base = { ...FILTROS_VAZIOS, dataInicio: inicio, dataFim: hoje() }
+    setFiltros(base)
+    setAplicados(base)
+    setMes("")
     setBusca("")
     setSelecionados(new Set())
     setLimite(BLOCO_CARDS)
@@ -318,18 +341,6 @@ export default function ContasPagasDetalhePage() {
         </div>
       )}
 
-      {aviso && (
-        <p
-          aria-live="polite"
-          className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-800 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-200"
-        >
-          {aviso}{" "}
-          <span className="text-sky-700 dark:text-sky-300">
-            Clique em um mês no gráfico para ver os detalhes.
-          </span>
-        </p>
-      )}
-
       <ContasPagasToolbar
         filtros={filtros}
         onChange={(patch) => setFiltros((atual) => ({ ...atual, ...patch }))}
@@ -343,8 +354,8 @@ export default function ContasPagasDetalhePage() {
           detalhe ? { periodo: detalhe.periodo.periodo, recorte: detalhe.periodo.recorte } : null
         }
         opcoes={opcoes}
-        meses={detalhe?.meses ?? []}
-        mesSelecionado={detalhe?.referencia.mes ?? ""}
+        meses={mesesDoIntervalo}
+        mesSelecionado={mes}
         onSelecionarMes={irParaMes}
       />
 
@@ -357,12 +368,12 @@ export default function ContasPagasDetalhePage() {
       {detalhe && (
         <>
           {/*
-            Os quatro cards do topo são o `KpiCard` do faturamento — mesmo
-            componente, não cópia: os dois ajustam juntos. Só a grade é 4 em vez de
-            5 porque são quatro janelas (mês atual, mês anterior, ano atual, ano
-            anterior).
+            Os quatro cards à esquerda são as janelas fixas do card do BI — mesmo
+            `KpiCard` do faturamento, não cópia. O quinto é o período que a tela está
+            mostrando: acompanha as datas em vez das janelas, e é onde o "Todos" e o
+            recorte aparecem em número.
           */}
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
             <KpiCard
               rotulo="Mês atual"
               periodo={detalhe.mes.periodo}
@@ -391,6 +402,13 @@ export default function ContasPagasDetalhePage() {
               detalhe={`${FORMATAR.numero(detalhe.ano_anterior.lancamentos)} baixas`}
               statusLabel="total do ano anterior"
             />
+            <KpiCard
+              rotulo="Período selecionado"
+              periodo={detalhe.periodo.periodo}
+              valor={FORMATAR.valor(detalhe.periodo.total)}
+              detalhe={`${FORMATAR.numero(detalhe.periodo.lancamentos)} baixas`}
+              statusLabel="total do período selecionado"
+            />
           </div>
 
           {/*
@@ -400,7 +418,7 @@ export default function ContasPagasDetalhePage() {
             sem baixa.
           */}
           <ContasPagasCharts
-            meses={detalhe.meses}
+            meses={mesesDoIntervalo}
             porFornecedor={porFornecedor}
             porBanco={porBanco}
             porEmpresa={porEmpresa}

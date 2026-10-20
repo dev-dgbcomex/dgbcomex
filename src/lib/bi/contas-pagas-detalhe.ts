@@ -69,7 +69,12 @@ export interface DetalheContasPagas {
     fim: string
     periodo: string
     recorte: boolean
+    /** Total e baixas do intervalo: é o 5º card, o "período selecionado". */
+    total: number
+    lancamentos: number
   }
+  /** A primeira baixa do conjunto consultado; preenche a data inicial da tela. */
+  min_data: string | null
   mes: JanelaContasPagas & {
     itens: PagamentoConta[]
     por_fornecedor: GrupoPorChave[]

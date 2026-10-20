@@ -115,6 +115,7 @@ function detalhe(over: Partial<DetalheContasPagas> = {}): DetalheContasPagas {
   return {
     referencia: referencia(),
     periodo: periodo(),
+    min_data: "2026-09-01",
     mes: {
       ...janela(),
       itens: [pagamento()],
@@ -216,7 +217,7 @@ beforeEach(() => {
 })
 
 describe("ContasPagasDetalhePage", () => {
-  it("mostra as quatro janelas do card", async () => {
+  it("mostra as quatro janelas fixas mais o card do período", async () => {
     const { fn } = mockRotas(detalhe())
     vi.stubGlobal("fetch", fn)
 
@@ -234,6 +235,10 @@ describe("ContasPagasDetalhePage", () => {
     expect(screen.getByRole("status", { name: "total do ano anterior" })).toHaveTextContent(
       "R$ 26.771.919,39"
     )
+    // O 5º card acompanha as datas, não as janelas: total e baixas do `periodo`.
+    expect(
+      screen.getByRole("status", { name: "total do período selecionado" })
+    ).toHaveTextContent("R$ 1.724.382,10")
   })
 
   it("escolhe a integração de contas pagas e não as parecidas", async () => {
@@ -288,48 +293,83 @@ describe("ContasPagasDetalhePage", () => {
     expect(within(bancos).getByText(/BANCO BLU/)).toBeInTheDocument()
   })
 
-  it("recua para o ultimo mes fechado quando o mes de referencia esta vazio", async () => {
+  it("nasce com 'Todos' e semeia as datas com min_data e hoje", async () => {
     const { fn, calls } = mockRotas((data) => (data === "2026-09-01" ? detalhe() : semBaixas()))
     vi.stubGlobal("fetch", fn)
 
     renderPage(<ContasPagasDetalhePage />)
 
-    expect(await screen.findByRole("region", { name: "Fornecedores" })).toBeInTheDocument()
-    const consultas = calls.filter((c) => c.url.includes("contas-pagas-detalhe"))
-    expect(consultas.pop()?.url).toContain("data=2026-09-01")
-    expect(screen.getByRole("status", { name: "total do mês atual" })).toHaveTextContent(
-      "R$ 1.724.382,10"
-    )
-  })
-
-  it("avisa que o mes vazio foi trocado pelo anterior", async () => {
-    const { fn } = mockRotas((data) => (data === "2026-09-01" ? detalhe() : semBaixas()))
-    vi.stubGlobal("fetch", fn)
-
-    renderPage(<ContasPagasDetalhePage />)
-
-    expect(await screen.findByText(/Outubro ainda não tem nenhuma baixa/)).toBeInTheDocument()
-    expect(screen.getByText(/Mostrando Set\/2026, o último mês com pagamento/)).toBeInTheDocument()
-    expect(screen.getByText("Clique em um mês no gráfico para ver os detalhes.")).toBeInTheDocument()
-  })
-
-  it("nao recua quando o usuario escolhe um mes vazio", async () => {
-    const { fn } = mockRotas(semBaixas())
-    vi.stubGlobal("fetch", fn)
-
-    renderPage(<ContasPagasDetalhePage />)
-    await screen.findByText(/Outubro ainda não tem nenhuma baixa/)
-
-    // Escolher outubro no seletor: agora o mês vazio é escolha, não automático.
-    fireEvent.change(await screen.findByLabelText("Mês de referência"), {
-      target: { value: "2026-10" },
-    })
-
-    expect(await screen.findByText(/Sem baixas em outubro/)).toBeInTheDocument()
-    expect(screen.getByText(/não é erro de carga/i)).toBeInTheDocument()
+    // A 1ª consulta vai sem `data` (Todos). Depois de saber o `min_data`, a tela
+    // refaz com data_inicio = min_data e data_fim = hoje.
     await waitFor(() => {
-      expect(screen.queryByText(/ainda não tem nenhuma baixa/)).not.toBeInTheDocument()
+      const consultas = calls.filter((c) => c.url.includes("contas-pagas-detalhe"))
+      expect(consultas.length).toBeGreaterThan(1)
+      const ultima = consultas.pop()!.url
+      expect(ultima).toContain("data_inicio=2026-09-01")
+      expect(ultima).toContain("data_fim=")
+      expect(ultima).not.toContain("data=")
     })
+    expect(screen.getByLabelText("Mês")).toHaveValue("")
+    expect(
+      await screen.findByRole("status", { name: "total do período selecionado" })
+    ).toBeInTheDocument()
+  })
+
+  it("escolher 'Todos' no seletor não manda data para a API", async () => {
+    const { fn, calls } = mockRotas(() => detalhe())
+    vi.stubGlobal("fetch", fn)
+
+    renderPage(<ContasPagasDetalhePage />)
+    await screen.findByRole("region", { name: "Fornecedores" })
+
+    // Escolhe um mês e volta para "Todos".
+    fireEvent.change(await screen.findByLabelText("Mês"), { target: { value: "2026-09" } })
+    await waitFor(() => {
+      const ultima = calls.filter((c) => c.url.includes("contas-pagas-detalhe")).pop()!.url
+      expect(ultima).toContain("data=2026-09-01")
+    })
+
+    fireEvent.change(screen.getByLabelText("Mês"), { target: { value: "" } })
+    await waitFor(() => {
+      const consultas = calls.filter((c) => c.url.includes("contas-pagas-detalhe"))
+      const ultima = consultas[consultas.length - 1].url
+      expect(ultima).not.toContain("data=")
+      expect(ultima).toContain("data_inicio=")
+    })
+  })
+
+  it("escolher um mês mostra a lista e o gráfico do mês, não do período", async () => {
+    const { fn } = mockRotas(() => detalhe())
+    vi.stubGlobal("fetch", fn)
+
+    renderPage(<ContasPagasDetalhePage />)
+    await screen.findByRole("region", { name: "Fornecedores" })
+
+    fireEvent.change(await screen.findByLabelText("Mês"), { target: { value: "2026-09" } })
+
+    // A lista passa a ser do mês escolhido.
+    expect(await screen.findByRole("region", { name: "Fornecedores" })).toBeInTheDocument()
+    expect(screen.getByText(/mostram o mês escolhido/)).toBeInTheDocument()
+  })
+
+  it("limpar filtros volta ao período cheio, não zera as datas", async () => {
+    const { fn, calls } = mockRotas(() => detalhe())
+    vi.stubGlobal("fetch", fn)
+
+    renderPage(<ContasPagasDetalhePage />)
+    await screen.findByRole("region", { name: "Fornecedores" })
+
+    fireEvent.change(await screen.findByLabelText("Mês"), { target: { value: "2026-09" } })
+    await screen.findByRole("region", { name: "Fornecedores" })
+    fireEvent.click(screen.getByRole("button", { name: "Limpar" }))
+
+    await waitFor(() => {
+      const consultas = calls.filter((c) => c.url.includes("contas-pagas-detalhe"))
+      const ultima = consultas[consultas.length - 1].url
+      expect(ultima).not.toContain("data=")
+      expect(ultima).toContain("data_inicio=2026-09-01")
+    })
+    expect(screen.getByLabelText("Mês")).toHaveValue("")
   })
 
   it("filtra pela busca sem ir ao ERP", async () => {
@@ -422,22 +462,22 @@ describe("ContasPagasDetalhePage", () => {
   })
 
   it("trocar o mes no seletor recarrega a tela", async () => {
-    const { fn, calls } = mockRotas(detalhe())
+    const { fn, calls } = mockRotas(() => detalhe())
     vi.stubGlobal("fetch", fn)
 
     renderPage(<ContasPagasDetalhePage />)
     await screen.findByRole("region", { name: "Fornecedores" })
     const antes = calls.length
 
-    fireEvent.change(screen.getByLabelText("Mês de referência"), {
-      target: { value: "2026-08" },
+    fireEvent.change(await screen.findByLabelText("Mês"), {
+      target: { value: "2026-09" },
     })
 
     await waitFor(() => {
       expect(calls.length).toBeGreaterThan(antes)
     })
     const nova = calls.filter((c) => c.url.includes("contas-pagas-detalhe")).pop()
-    expect(nova?.url).toContain("data=2026-08-01")
+    expect(nova?.url).toContain("data=2026-09-01")
   })
 
   it("mostra o erro da API quando a consulta falha", async () => {
@@ -672,15 +712,17 @@ describe("ContasPagasToolbar", () => {
     expect(onChange).toHaveBeenCalledWith({ banco: "" })
   })
 
-  it("o seletor de mês traz os 24 meses, marcando o sem baixa", () => {
+  it("o seletor de mês lista os meses do período e tem 'Todos'", () => {
     const onSelecionarMes = vi.fn()
     renderPage(
       <ContasPagasToolbar {...base} onSelecionarMes={onSelecionarMes} />
     )
 
-    const select = screen.getByLabelText("Mês de referência")
+    const select = screen.getByLabelText("Mês")
     expect(select).toHaveValue("2026-09")
-    expect(within(select).getAllByRole("option")).toHaveLength(24)
+    // "Todos" mais os 24 meses da série.
+    expect(within(select).getAllByRole("option")).toHaveLength(25)
+    expect(within(select).getByRole("option", { name: /Todos os meses/ })).toBeInTheDocument()
     expect(within(select).getByRole("option", { name: /out\/2026.*sem baixa/ })).toBeInTheDocument()
 
     fireEvent.change(select, { target: { value: "2026-07" } })
@@ -692,7 +734,7 @@ describe("ContasPagasToolbar", () => {
 
     // O popup nativo das <option> é pintado pelo navegador: sem bg/cor no select,
     // o texto herda `--foreground` (branco no dark) sobre o fundo branco do popup.
-    const select = screen.getByLabelText("Mês de referência")
+    const select = screen.getByLabelText("Mês")
     expect(select).toHaveClass("bg-white", "text-slate-900", "dark:bg-slate-800", "dark:text-slate-100")
   })
 })

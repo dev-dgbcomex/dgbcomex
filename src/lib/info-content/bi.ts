@@ -8,8 +8,8 @@ export const biContent: Record<string, InfoContent> = {
     rules: [
       "O valor considera a DATA DA BAIXA, não a data de vencimento: uma conta vencida em abril e paga em maio entra em maio.",
       "O card soma a view vwContasPagas, que tem só duas colunas (Data_Baixa e valorPago) — por isso ele mostra apenas o total. A lista vem da tabela Pag_Baixas, que está por trás dessa view. As duas foram conferidas no ERP e batem com diferença R$ 0,00 em cada mês.",
-      "O mês corrente entra zerado enquanto não houver baixa: não é erro de carga. Nesse caso a tela recua sozinha para o último mês fechado com baixa e avisa qual é — o card segue mostrando R$ 0,00 porque é ele que lê o dia corrente.",
-      "O recuo só vale para a referência automática. Escolher no seletor de Mês de referência um mês sem baixa mostra aquele mês vazio, porque a escolha é do usuário.",
+      "A tela nasce com o período cheio: a Data inicial vem preenchida com a primeira baixa que existe e a Data final com hoje. Os quatro cards do topo (Mês atual, Mês anterior, Ano atual e Ano anterior) são fixos — medem sempre as janelas do mês corrente, como o card do BI. O quinto card, 'Período selecionado', acompanha as datas.",
+      "O seletor 'Mês' fica fora dos filtros: ele não recorta o período, escolhe qual mês *dentro* dele olhar. 'Todos os meses do período' mostra o período inteiro das datas; escolher um mês faz a lista, os grupos e os gráficos de grupo seguirem aquele mês — só o gráfico de pagamentos mês a mês continua mostrando o período.",
       "Os gráficos são os mesmos do faturamento: área do valor mês a mês com a contagem de baixas em linha, barras verticais nos grupos e pizza na participação por departamento.",
       "Cada card pode ser arrastado ou movido pelas setas, e a ordem fica salva por usuário (ela segue a pessoa entre máquinas). É o mesmo mechanism do faturamento, em outro painel.",
       "O 'i' de cada card abre um modal com TODOS os dados daquele gráfico, sem o corte do top 8 — é por ele que se vê o grupo que ficou fora das barras e se confere linha a linha.",
@@ -46,11 +46,11 @@ export const biContent: Record<string, InfoContent> = {
     fields: [
       {
         name: "Data inicial / Data final",
-        desc: "Recorte que vai para a API (data final inclusiva). Sem eles, a lista é o mês inteiro.",
+        desc: "O período da consulta (data final inclusiva). Nascem preenchidas com a primeira baixa e hoje; só entram na API ao clicar em Aplicar filtros.",
       },
       {
-        name: "Mês de referência",
-        desc: "Troca o mês inteiro do recorte e as quatro janelas do comparativo. Traz os 24 meses, marcando os que estão sem baixa.",
+        name: "Mês",
+        desc: "Escolhe um mês dentro do período ou 'Todos os meses do período'. Fica fora dos filtros porque não recorta o período — só decide o que a lista e os grupos mostram. Lista os meses entre a data inicial e a final.",
       },
       {
         name: "Fornecedor",
