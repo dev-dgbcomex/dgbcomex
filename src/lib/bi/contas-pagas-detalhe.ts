@@ -192,6 +192,49 @@ export function filtrarPorFiltros(
   })
 }
 
+/**
+ * A série mês a mês dos itens do recorte: soma `valor` e conta as baixas por
+ * `data_baixa` (chave `YYYY-MM`). `meses` é o eixo da série (os meses do intervalo,
+ * com os rótulos já prontos); meses sem baixa no recorte entram zerados, e um mês
+ * que apareça nos itens mas não no eixo é acrescentado. É o que faz o gráfico
+ * "mês a mês" respeitar fornecedor/banco/empresa/departamento — sem isso ele
+ * mostraria a série inteira da API, ignorando o filtro.
+ */
+export function seriePorMes(itens: PagamentoConta[], meses: MesContasPagas[]): MesContasPagas[] {
+  const porMes = new Map<string, { total: number; lancamentos: number }>()
+  for (const item of itens) {
+    if (!item.data_baixa) continue
+    const chave = item.data_baixa.slice(0, 7)
+    const atual = porMes.get(chave) ?? { total: 0, lancamentos: 0 }
+    atual.total += item.valor
+    atual.lancamentos += 1
+    porMes.set(chave, atual)
+  }
+
+  const resultado = meses.map((mes) => {
+    const dados = porMes.get(mes.mes)
+    porMes.delete(mes.mes)
+    return dados
+      ? { ...mes, total: dados.total, lancamentos: dados.lancamentos }
+      : { ...mes, total: 0, lancamentos: 0 }
+  })
+
+  // Meses com baixa fora do eixo (recorte mais largo que a série da API) entram no fim.
+  const extras: MesContasPagas[] = [...porMes.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([chave, dados]) => {
+      const [ano, m] = chave.split("-")
+      return {
+        mes: chave,
+        rotulo: `${m}/${ano}`,
+        total: dados.total,
+        lancamentos: dados.lancamentos,
+      }
+    })
+
+  return [...resultado, ...extras]
+}
+
 /** Documento com série e parcela: `000007424/U 01`. */
 export const rotuloDocumento = (p: PagamentoConta) => {
   const base = [p.documento, p.serie].filter(Boolean).join("/")

@@ -12,6 +12,7 @@ import {
   agruparPorFornecedor,
   filtrarPorFiltros,
   rotuloDocumento,
+  seriePorMes,
   type DetalheContasPagas,
   type GrupoFornecedor,
   type GrupoPorChave,
@@ -172,10 +173,18 @@ function semBaixas(): DetalheContasPagas {
 /** Dois fornecedores e dois bancos, para os cards e os filtros terem o que separar. */
 function detalheVariado(): DetalheContasPagas {
   const itens = [
-    pagamento({ valor: 1000, banco: "BANCO SANTANDER", departamento: "TRANSPORTE" }),
+    // MOSTRUARIO em setembro; MF LOG em outubro — dá para ver o mês a mês mudar
+    // quando o filtro de fornecedor entra.
+    pagamento({
+      valor: 1000,
+      data_baixa: "2026-09-30",
+      banco: "BANCO SANTANDER",
+      departamento: "TRANSPORTE",
+    }),
     pagamento({
       documento: "000105368",
       valor: 500,
+      data_baixa: "2026-10-05",
       razao_social: "MF LOG TRANSPORTES LTDA",
       fornecedor: "00055",
       banco: "BANCO DO BRASIL",
@@ -186,6 +195,7 @@ function detalheVariado(): DetalheContasPagas {
     pagamento({
       documento: "000105369",
       valor: 250,
+      data_baixa: "2026-10-06",
       razao_social: "MF LOG TRANSPORTES LTDA",
       fornecedor: "00055",
       banco: "BANCO BLU",
@@ -413,6 +423,30 @@ describe("ContasPagasDetalhePage", () => {
     })
     expect(within(lista).getByText("MF LOG TRANSPORTES LTDA")).toBeInTheDocument()
     expect(calls.filter((c) => c.url.includes("contas-pagas-detalhe")).length).toBe(antes)
+  })
+
+  it("o gráfico mês a mês respeita o filtro, não mostra a série inteira", async () => {
+    const { fn } = mockRotas(detalheVariado())
+    vi.stubGlobal("fetch", fn)
+
+    renderPage(<ContasPagasDetalhePage />)
+    await screen.findByRole("region", { name: "Fornecedores" })
+
+    // Sem filtro: o mês a mês soma os 3 itens (1000 + 500 + 250).
+    fireEvent.click(screen.getByLabelText("Dados de Pagamentos mês a mês"))
+    let dialog = await screen.findByRole("dialog")
+    expect(within(dialog).getByText("R$ 1.750,00")).toBeInTheDocument()
+    fireEvent.click(within(dialog).getByLabelText("Fechar dados"))
+
+    // Filtra pelo banco BLU (só o MF LOG de outubro): o mês a mês cai para 250.
+    fireEvent.click(screen.getByLabelText("Abrir opções de Banco"))
+    fireEvent.click(screen.getByRole("option", { name: /BANCO BLU/ }))
+    fireEvent.click(screen.getByRole("button", { name: /Aplicar filtros/ }))
+
+    fireEvent.click(screen.getByLabelText("Dados de Pagamentos mês a mês"))
+    dialog = await screen.findByRole("dialog")
+    expect(within(dialog).getAllByText("R$ 250,00").length).toBeGreaterThan(0)
+    expect(within(dialog).queryByText("R$ 1.750,00")).not.toBeInTheDocument()
   })
 
   it("filtra por banco, empresa e departamento pelos dropdowns da toolbar", async () => {
@@ -874,5 +908,52 @@ describe("exportarCsvContasPagas", () => {
     // BOM UTF-8: sem ele o Excel abre em latin-1 e quebra o acento da razão social.
     expect(partes[0].startsWith("\uFEFF")).toBe(true)
     expect(partes[0]).toContain("TRANSPORTE")
+  })
+})
+
+describe("seriePorMes", () => {
+  const eixo = [
+    { mes: "2026-08", rotulo: "ago/2026", total: 999, lancamentos: 9 },
+    { mes: "2026-09", rotulo: "set/2026", total: 999, lancamentos: 9 },
+    { mes: "2026-10", rotulo: "out/2026", total: 999, lancamentos: 9 },
+  ]
+
+  it("soma e conta as baixas por mês, ignorando a série da API", () => {
+    const serie = seriePorMes(
+      [
+        pagamento({ data_baixa: "2026-09-10", valor: 100 }),
+        pagamento({ documento: "B", data_baixa: "2026-09-20", valor: 50 }),
+        pagamento({ documento: "C", data_baixa: "2026-10-05", valor: 30 }),
+      ],
+      eixo
+    )
+
+    expect(serie).toEqual([
+      { mes: "2026-08", rotulo: "ago/2026", total: 0, lancamentos: 0 },
+      { mes: "2026-09", rotulo: "set/2026", total: 150, lancamentos: 2 },
+      { mes: "2026-10", rotulo: "out/2026", total: 30, lancamentos: 1 },
+    ])
+  })
+
+  it("respeita o recorte filtrado: só os itens passados entram", () => {
+    // Fornecedor X só tem baixa em setembro; o mês a mês cai para ele sozinho.
+    const soDoX = seriePorMes([pagamento({ data_baixa: "2026-09-30", valor: 200 })], eixo)
+    expect(soDoX.find((m) => m.mes === "2026-09")?.total).toBe(200)
+    expect(soDoX.find((m) => m.mes === "2026-10")?.total).toBe(0)
+  })
+
+  it("acrescenta mês com baixa fora do eixo, em ordem", () => {
+    const serie = seriePorMes([pagamento({ data_baixa: "2026-07-15", valor: 70 })], eixo)
+    expect(serie.at(-1)).toEqual({
+      mes: "2026-07",
+      rotulo: "07/2026",
+      total: 70,
+      lancamentos: 1,
+    })
+  })
+
+  it("ignora item sem data de baixa", () => {
+    const serie = seriePorMes([pagamento({ data_baixa: null, valor: 500 })], eixo)
+    expect(serie.every((m) => m.total === 0)).toBe(true)
   })
 })

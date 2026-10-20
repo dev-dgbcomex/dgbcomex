@@ -23,6 +23,7 @@ import {
   FORMATAR,
   agruparPorFornecedor,
   filtrarPorFiltros,
+  seriePorMes,
   type DetalheContasPagas,
   type FiltrosContasPagas,
   type PagamentoConta,
@@ -231,6 +232,17 @@ export default function ContasPagasDetalhePage() {
   }, [detalhe, aplicados.dataInicio, aplicados.dataFim])
 
   /**
+   * A série do gráfico "mês a mês" refeita sobre os itens filtrados — assim como os
+   * `por_*` logo abaixo. Sem isso o gráfico mostraria a série inteira da API e
+   * ignoraria o filtro de fornecedor/banco/empresa/departamento. O eixo é o mês do
+   * intervalo; os itens filtrados preenchem os valores.
+   */
+  const serieDoRecorte = useMemo(
+    () => seriePorMes(itens, mesesDoIntervalo),
+    [itens, mesesDoIntervalo]
+  )
+
+  /**
    * Na primeira resposta a tela nasce com "Todos" e sem datas. Aí semeia a data
    * inicial no 1º dia do mês três meses atrás e a final com hoje, e refaz a
    * consulta já com o período — é o que abre a tela com um trimestre inteiro em
@@ -430,7 +442,7 @@ export default function ContasPagasDetalhePage() {
             sem baixa.
           */}
           <ContasPagasCharts
-            meses={mesesDoIntervalo}
+            meses={serieDoRecorte}
             porFornecedor={porFornecedor}
             porBanco={porBanco}
             porEmpresa={porEmpresa}
