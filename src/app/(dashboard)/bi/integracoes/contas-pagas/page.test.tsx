@@ -686,6 +686,15 @@ describe("ContasPagasToolbar", () => {
     fireEvent.change(select, { target: { value: "2026-07" } })
     expect(onSelecionarMes).toHaveBeenCalledWith("2026-07")
   })
+
+  it("o seletor de mês tem fundo e texto próprios, e não herda o branco do tema", () => {
+    renderPage(<ContasPagasToolbar {...base} />)
+
+    // O popup nativo das <option> é pintado pelo navegador: sem bg/cor no select,
+    // o texto herda `--foreground` (branco no dark) sobre o fundo branco do popup.
+    const select = screen.getByLabelText("Mês de referência")
+    expect(select).toHaveClass("bg-white", "text-slate-900", "dark:bg-slate-800", "dark:text-slate-100")
+  })
 })
 
 describe("agruparPorFornecedor", () => {

@@ -81,7 +81,7 @@ export function ContasPagasToolbar({
           <Label htmlFor="cp-mes">Mês de referência</Label>
           <select
             id="cp-mes"
-            className="h-9 w-full rounded-lg border border-input bg-transparent px-2 text-sm"
+            className="h-9 w-full rounded-lg border border-input bg-white px-2 text-sm text-slate-900 dark:bg-slate-800 dark:text-slate-100"
             value={mesSelecionado}
             onChange={(e) => onSelecionarMes(e.target.value)}
           >
