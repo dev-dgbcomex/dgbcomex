@@ -38,6 +38,13 @@ const INTEGRACAO_CUSTOS = {
   baseUrl: "https://api.erp.local/custos-administrativos-anual",
 }
 
+/** Espelha `inicioPadrao()` da página: 1º dia do mês três meses atrás. */
+function inicioPadrao(): string {
+  const agora = new Date()
+  const mes = new Date(agora.getFullYear(), agora.getMonth() - 3, 1)
+  return `${mes.getFullYear()}-${String(mes.getMonth() + 1).padStart(2, "0")}-01`
+}
+
 function pagamento(over: Partial<PagamentoConta> = {}): PagamentoConta {
   return {
     empresa: "13",
@@ -142,6 +149,8 @@ function semBaixas(): DetalheContasPagas {
       inicio: "2026-10-01",
       fim: "2026-10-31",
       periodo: "01/10/2026 a 31/10/2026",
+      total: 0,
+      lancamentos: 0,
     }),
     mes: {
       ...janela({
@@ -293,19 +302,19 @@ describe("ContasPagasDetalhePage", () => {
     expect(within(bancos).getByText(/BANCO BLU/)).toBeInTheDocument()
   })
 
-  it("nasce com 'Todos' e semeia as datas com min_data e hoje", async () => {
-    const { fn, calls } = mockRotas((data) => (data === "2026-09-01" ? detalhe() : semBaixas()))
+  it("nasce com 'Todos' e semeia as datas com o 1º dia de 3 meses atrás e hoje", async () => {
+    const { fn, calls } = mockRotas(() => detalhe())
     vi.stubGlobal("fetch", fn)
 
     renderPage(<ContasPagasDetalhePage />)
 
-    // A 1ª consulta vai sem `data` (Todos). Depois de saber o `min_data`, a tela
-    // refaz com data_inicio = min_data e data_fim = hoje.
+    // A 1ª consulta vai sem `data` (Todos). Depois de conhecer a resposta, a tela
+    // refaz com data_inicio = 1º dia do mês três meses atrás e data_fim = hoje.
     await waitFor(() => {
       const consultas = calls.filter((c) => c.url.includes("contas-pagas-detalhe"))
       expect(consultas.length).toBeGreaterThan(1)
       const ultima = consultas.pop()!.url
-      expect(ultima).toContain("data_inicio=2026-09-01")
+      expect(ultima).toContain(`data_inicio=${inicioPadrao()}`)
       expect(ultima).toContain("data_fim=")
       expect(ultima).not.toContain("data=")
     })
@@ -313,6 +322,21 @@ describe("ContasPagasDetalhePage", () => {
     expect(
       await screen.findByRole("status", { name: "total do período selecionado" })
     ).toBeInTheDocument()
+  })
+
+  it("período vazio: os cards ficam em zero e nenhum grupo aparece", async () => {
+    const { fn } = mockRotas(() => semBaixas())
+    vi.stubGlobal("fetch", fn)
+
+    renderPage(<ContasPagasDetalhePage />)
+
+    expect(await screen.findByRole("status", { name: "total do mês atual" })).toHaveTextContent(
+      "R$ 0,00"
+    )
+    expect(
+      screen.getByRole("status", { name: "total do período selecionado" })
+    ).toHaveTextContent("R$ 0,00")
+    expect(screen.queryByText(/MOSTRUARIO FAST/)).not.toBeInTheDocument()
   })
 
   it("escolher 'Todos' no seletor não manda data para a API", async () => {
@@ -352,7 +376,7 @@ describe("ContasPagasDetalhePage", () => {
     expect(screen.getByText(/mostram o mês escolhido/)).toBeInTheDocument()
   })
 
-  it("limpar filtros volta ao período cheio, não zera as datas", async () => {
+  it("limpar filtros volta ao período padrão, não zera as datas", async () => {
     const { fn, calls } = mockRotas(() => detalhe())
     vi.stubGlobal("fetch", fn)
 
@@ -367,7 +391,7 @@ describe("ContasPagasDetalhePage", () => {
       const consultas = calls.filter((c) => c.url.includes("contas-pagas-detalhe"))
       const ultima = consultas[consultas.length - 1].url
       expect(ultima).not.toContain("data=")
-      expect(ultima).toContain("data_inicio=2026-09-01")
+      expect(ultima).toContain(`data_inicio=${inicioPadrao()}`)
     })
     expect(screen.getByLabelText("Mês")).toHaveValue("")
   })

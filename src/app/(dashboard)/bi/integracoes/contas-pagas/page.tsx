@@ -46,6 +46,19 @@ interface IntegracaoBi {
 /** Hoje. O mês corrente entra zerado enquanto não houver baixa — como no card. */
 const hoje = () => new Date().toISOString().slice(0, 10)
 
+/**
+ * O 1º dia do mês três meses atrás. É a data inicial com que a tela nasce: dá
+ * contexto (um trimestre) sem trazer anos de baixa, e sempre no dia 1º para o
+ * recorte fechar meses inteiros. A data final é hoje.
+ */
+function inicioPadrao(): string {
+  const agora = new Date()
+  const mes = new Date(agora.getFullYear(), agora.getMonth() - 3, 1)
+  const ano = mes.getFullYear()
+  const mm = String(mes.getMonth() + 1).padStart(2, "0")
+  return `${ano}-${mm}-01`
+}
+
 /** Quantos cards aparecem de uma vez. O "Carregar mais" empurra o limite. */
 const BLOCO_CARDS = 40
 
@@ -76,7 +89,7 @@ export default function ContasPagasDetalhePage() {
   const [filtros, setFiltros] = useState<FiltrosContasPagas>(FILTROS_VAZIOS)
   const [aplicados, setAplicados] = useState(FILTROS_VAZIOS)
   const [busca, setBusca] = useState("")
-  /** As datas só nascem depois da primeira resposta, que traz `min_data`. */
+  /** As datas só nascem depois da primeira resposta, para a tela não abrir vazia. */
   const [datasSemeadas, setDatasSemeadas] = useState(false)
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
   const [expandidos, setExpandidos] = useState<Set<string>>(new Set())
@@ -219,14 +232,14 @@ export default function ContasPagasDetalhePage() {
 
   /**
    * Na primeira resposta a tela nasce com "Todos" e sem datas. Aí semeia a data
-   * inicial com `min_data` (a primeira baixa que existe) e a final com hoje, e
-   * refaz a consulta já com o período — é o que abre a tela com o intervalo cheio
-   * em vez do mês corrente. Só acontece uma vez; depois os campos mandam.
+   * inicial no 1º dia do mês três meses atrás e a final com hoje, e refaz a
+   * consulta já com o período — é o que abre a tela com um trimestre inteiro em
+   * vez do mês corrente. Só acontece uma vez; depois os campos mandam.
    */
   useEffect(() => {
     if (!detalhe || datasSemeadas) return
     setDatasSemeadas(true)
-    const inicio = detalhe.min_data ?? detalhe.referencia.inicio
+    const inicio = inicioPadrao()
     const fim = hoje()
     if (inicio > fim) return
     const proximos = { ...FILTROS_VAZIOS, dataInicio: inicio, dataFim: fim }
@@ -246,11 +259,10 @@ export default function ContasPagasDetalhePage() {
   }
 
   const limparFiltros = () => {
-    // "Limpar" volta ao período cheio (data inicial = primeira baixa, final = hoje)
+    // "Limpar" volta ao período padrão (1º dia do mês três meses atrás até hoje)
     // em vez de esvaziar as datas: sem elas a tela recairia no mês corrente, que é
     // justamente o que o "Todos" evita.
-    const inicio = detalhe?.min_data ?? detalhe?.referencia.inicio ?? ""
-    const base = { ...FILTROS_VAZIOS, dataInicio: inicio, dataFim: hoje() }
+    const base = { ...FILTROS_VAZIOS, dataInicio: inicioPadrao(), dataFim: hoje() }
     setFiltros(base)
     setAplicados(base)
     setMes("")
