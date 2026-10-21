@@ -72,7 +72,7 @@ src/
   2. **Registro manual** (`search-registry.ts`): adicione `SearchItem` `{id, label, keywords, href, description, module}` para telas dinâmicas (`href` com `[id]`), aliases de busca (ex. `?view=kanban`) e atalhos. `keywords` em pt-BR com sinônimos.
 - Se o módulo for novo, mapeie-o em `MODULO_LABELS` em `telas-disponiveis.ts`.
 - Detalhe/ficha (`[id]`) e formulário (`nova`, `novo`, `editar`) seguem o padrão do `search-registry.ts` existente.
-- Texto de ajuda por tela: adicione entrada em `src/lib/info-content.ts` e renderize `<InfoButton content={info} />` junto ao título (ver §8).
+- **Toda tela precisa do modal de informação** ("i") — adicione a entrada no `info-content/<dominio>.ts` e renderize `<InfoButton content={info} />` junto ao título. É obrigatório, não opcional (ver §8).
 
 ## 5. Padrão de Tela de Lista (Client Component)
 
@@ -134,6 +134,27 @@ export async function GET(req: NextRequest) {
 - Título de página: `<h1>` + `<InfoButton content={info} />` (de `getInfoContent(pathname)`) + subtítulo `<p className="text-sm text-slate-500 ...">`.
 - Toasts: `import { toast } from "sonner"`.
 - Tema dark: sempre usar classes `dark:` junto com as claras (ex. `text-slate-900 dark:text-slate-50`).
+
+### 8.1 Modal de Informação ("i") — OBRIGATÓRIO e sempre atualizado
+
+**Toda tela precisa ter o modal de informação.** É parte da entrega, junto com o teste. E **toda vez que a tela mudar** (card novo, coluna nova, campo novo, filtro novo, mudança de regra/fluxo, texto, comportamento de botão), o conteúdo do modal **precisa ser atualizado na mesma alteração**. Nunca deixe o "i" descrevendo uma tela que não existe mais.
+
+- **Onde fica**: `src/lib/info-content/<dominio>.ts` (ex. `bi.ts`, `cadastros.ts`, `crm.ts`). Não existe mais o arquivo único `src/lib/info-content.ts` — ele virou pasta por domínio, agregada em `src/lib/info-content/index.ts`. Se o domínio não existe, crie o arquivo e some no `index.ts`.
+- **Como a tela usa**: `const info = getInfoContent(pathname)` e renderize `<InfoButton content={info} />` ao lado do `<h1>`. `getInfoContent` casa por rota exata e, na falta, por prefixo mais longo.
+- **Estrutura do `InfoContent`** (ver `type InfoContent` em `types.ts`):
+  - `title`: título do modal.
+  - `description`: o que a tela é, em uma frase.
+  - `rules[]`: cada regra de negócio/comportamento em uma frase. É aqui que a dinâmica (cards, filtros, o que segue o quê) é explicada.
+  - `columns[]`: `{ name, desc }` de cada coluna/dado exibido.
+  - `fields[]`: `{ name, desc }` de cada campo/filtro/seletor/botão da tela.
+  - `examples[]`: `{ title, desc }` com situações reais e números reais (ajuda a conferir).
+- **Alterações que OBRIGAM mexer no modal** (checklist mental a cada mudança de tela):
+  - card/KPI novo ou removido → `description` + `rules` (+ `examples` com número real);
+  - coluna nova/renomeada → `columns`;
+  - filtro/campo/seletor/botão novo/alterado → `fields` (+ `rules` se muda o fluxo);
+  - mudança de regra, valor padrão, o que um gráfico respeita, o que um botão faz → `rules` e/ou `examples`;
+  - texto que ficou obsoleto (ex. "a tela recua sozinha", "aviso azul") → **remover**.
+- **Teste obrigatório**: ao mexer no modal, atualize/crie o teste em `src/lib/info-content/info-content.test.ts` cobrindo os termos-chave da nova dinâmica (evita regressão do texto). Ver `docs/modais-de-informacao.md`.
 
 ## 9. Banco de Dados (Drizzle)
 
@@ -202,6 +223,6 @@ Nova entidade/tela completa:
 4. API: `route.ts` (GET list/POST) + `[id]/route.ts` (GET/PUT/DELETE) com `force-dynamic`, auth, `validateRequest`, `handleApiError`, paginação.
 5. Telas: lista (com `matchesSearch`/`useListFilters`), formulário (`/novo`, `/[id]/editar`), detalhe (`/[id]`).
 6. Registro: `search-registry.ts` (+ `MODULO_LABELS`/ícone em `menu-icones.tsx` se módulo novo; matcher no middleware se área nova).
-7. `info-content.ts` para a tela, quando útil.
+7. **Modal de informação obrigatório**: entrada em `src/lib/info-content/<dominio>.ts` + `<InfoButton>` na tela + teste em `info-content.test.ts`. Sempre que a tela mudar depois, atualize o modal (ver §8.1).
 8. Validação final: `tsc --noEmit`, `npm run build`, `npm run test`.
 9. Exports/imports (Excel/API) e PDFs apenas quando o domínio exigir.

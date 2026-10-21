@@ -140,6 +140,16 @@ O teste deve ser criado **na mesma entrega/commit** da funcionalidade. Regressã
    - Verificar se a quebra é pré-existente/fora do escopo → reportar ao usuário, não mascarar com `.skip`/`.only`.
 5. **Só então commitar** — teste verde na mesma entrega do código.
 6. **Tela nova** → além do teste, registrar no grafo (`graphify-out/`) se aplicável.
+7. **Atualizar o modal de informação ('i')** da tela alterada — obrigatório, ver abaixo.
+
+## REGRA OBRIGATÓRIA: modal de informação em toda tela, sempre atualizado
+
+**Toda tela precisa ter o modal de informação ("i") e ele deve ser atualizado em TODA alteração da tela — sejam quantos cards, colunas, campos, regras ou exemplos a mudança tocar.**
+
+- Conteúdo em `src/lib/info-content/<dominio>.ts` (pasta por domínio agregada no `index.ts`; **não** é mais o arquivo único `info-content.ts`). Renderize `<InfoButton content={getInfoContent(pathname)} />` ao lado do `<h1>`.
+- A cada mudança de tela, revise e atualize: `description`, `rules`, `columns`, `fields`, `examples`. **Remova frases obsoletas** (ex.: "a tela recua sozinha", "aviso azul").
+- Teste: atualize/crie em `src/lib/info-content/info-content.test.ts` cobrindo os termos-chave da nova dinâmica.
+- Guia completo: **`docs/modais-de-informacao.md`**.
 
 ## Comandos
 

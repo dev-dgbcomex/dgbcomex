@@ -4,12 +4,12 @@ export const biContent: Record<string, InfoContent> = {
   "/bi/integracoes/contas-pagas": {
     title: "Contas Pagas — as baixas que formam o valor",
     description:
-      "Detalhe do card 'Contas Pagas': cada baixa de conta a pagar (documento, fornecedor, banco, empresa, departamento e valor), as quatro janelas do card — mês atual, mês anterior, ano atual e ano anterior — e os grupos do recorte: mês a mês, fornecedor, banco, empresa e departamento.",
+      "Detalhe do card 'Contas Pagas': cada baixa de conta a pagar (documento, fornecedor, banco, empresa, departamento e valor), as quatro janelas fixas do card — mês atual, mês anterior, ano atual e ano anterior — mais o card 'Período selecionado', e os grupos do recorte: mês a mês, fornecedor, banco, empresa e departamento.",
     rules: [
       "O valor considera a DATA DA BAIXA, não a data de vencimento: uma conta vencida em abril e paga em maio entra em maio.",
       "O card soma a view vwContasPagas, que tem só duas colunas (Data_Baixa e valorPago) — por isso ele mostra apenas o total. A lista vem da tabela Pag_Baixas, que está por trás dessa view. As duas foram conferidas no ERP e batem com diferença R$ 0,00 em cada mês.",
       "A tela nasce com um trimestre: a Data inicial vem no 1º dia do mês três meses atrás e a Data final em hoje. Os quatro cards do topo (Mês atual, Mês anterior, Ano atual e Ano anterior) são fixos — medem sempre as janelas do mês corrente, como o card do BI. O quinto card, 'Período selecionado', acompanha as datas.",
-      "O seletor 'Mês' fica fora dos filtros: ele não recorta o período, escolhe qual mês *dentro* dele olhar. 'Todos os meses do período' mostra o período inteiro das datas; escolher um mês faz a lista, os grupos e os gráficos de grupo seguirem aquele mês — só o gráfico de pagamentos mês a mês continua mostrando o período.",
+      "O seletor 'Mês' fica fora dos filtros: ele não recorta o período, escolhe qual mês *dentro* dele olhar. 'Todos os meses do período' mostra o período inteiro das datas; escolher um mês faz a lista, os grupos e os gráficos de grupo seguirem aquele mês. O gráfico de pagamentos mês a mês é a exceção: ele mostra sempre a evolução do período inteiro, seja 'Todos' ou um mês escolhido.",
       "Os gráficos são os mesmos do faturamento: área do valor mês a mês com a contagem de baixas em linha, barras verticais nos grupos e pizza na participação por departamento.",
       "Todos os gráficos — inclusive o 'mês a mês' — respeitam os filtros de fornecedor, banco, empresa e departamento: escolher um fornecedor mostra a evolução só daquele fornecedor, escolher um banco só os títulos daquele banco.",
       "Cada card pode ser arrastado ou movido pelas setas, e a ordem fica salva por usuário (ela segue a pessoa entre máquinas). É o mesmo mechanism do faturamento, em outro painel.",
@@ -79,7 +79,7 @@ export const biContent: Record<string, InfoContent> = {
       },
       {
         name: "Limpar",
-        desc: "Zera os filtros e a busca; a tela continua no mês escolhido.",
+        desc: "Volta ao período padrão (1º dia do mês três meses atrás até hoje), seleciona 'Todos os meses do período' e limpa filtros e busca.",
       },
       {
         name: "Exportar CSV",
@@ -92,20 +92,20 @@ export const biContent: Record<string, InfoContent> = {
     ],
     examples: [
       {
-        title: "Por que o mês está zerado",
-        desc: "Em outubro/2026 o card mostra R$ 0,00: nenhuma conta teve baixa com data dentro de outubro até agora. Por isso a tela abre em setembro/2026 — o último mês com baixa, R$ 1.724.382,10 em 118 baixas — e diz isso num aviso azul no topo.",
+        title: "Por que o 'Mês atual' pode estar zerado",
+        desc: "O card 'Mês atual' mede só o mês corrente, como o card do BI. Em outubro/2026, se nenhuma conta teve baixa com data dentro de outubro ainda, ele mostra R$ 0,00 — não é erro de carga. O 'Período selecionado' e a lista, porém, seguem o intervalo das datas; a tela abre com um trimestre (1º dia de três meses atrás até hoje).",
       },
       {
         title: "Conferindo um pagamento",
-        desc: "Ao escolher setembro/2026, o topo mostra que as 118 baixas saíram todas pelo BANCO SANTANDER, e o maior fornecedor do mês é ATUAL ASSESSORIA E DESPACHOS ADUANEIRO, com R$ 621.064,93 em 5 baixas.",
+        desc: "Ao escolher setembro/2026 no seletor 'Mês', o topo mostra que as 118 baixas do mês saíram todas pelo BANCO SANTANDER, e o maior fornecedor do mês é ATUAL ASSESSORIA E DESPACHOS ADUANEIRO, com R$ 621.064,93 em 5 baixas.",
       },
       {
         title: "Baixa de folha com departamento",
         desc: "FOLHA DE PAGAMENTO 00002, documento 016092026, baixa de 16/09: R$ 2.740,01 classificados como despesa FIXOS e departamento ADM SBO (1.1.1.1). Abrindo o card do fornecedor FOLHA DE PAGAMENTO, a linha mostra o mesmo valor com o mesmo departamento — é a mesma classificação que a tela de custo administrativo mostra.",
       },
       {
-        title: "Recorte de datas",
-        desc: "Com data inicial 15/08 e data final 10/09, a faixa aparece na barra de filtros como '(recorte aplicado)' e a lista passa a ter só as baixas desse intervalo. Os quatro cards do topo continuam sendo do mês âncora, que é o que o card do BI mede.",
+        title: "Período selecionado x janelas fixas",
+        desc: "Com data inicial 15/08 e data final 10/09, a faixa aparece na barra de filtros como '(recorte aplicado)' e a lista passa a ter só as baixas desse intervalo. O card 'Período selecionado' mostra o total e o nº de baixas exatamente desse intervalo, enquanto os quatro cards fixos (Mês atual, Mês anterior, Ano atual, Ano anterior) continuam sendo as janelas do mês corrente, que é o que o card do BI mede.",
       },
     ],
   },
