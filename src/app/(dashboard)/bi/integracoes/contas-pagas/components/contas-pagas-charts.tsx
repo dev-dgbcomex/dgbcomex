@@ -46,27 +46,43 @@ const ALTURA_MIN_GRAFICO = "min-h-[260px]"
 
 const TOP = 8
 
+/** `12,5%` — o mesmo formato nos eixos, nas barras e no tooltip dos gráficos em %. */
+const formatarPercentual = (valor: number) =>
+  `${valor.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`
+
 const PAINEL = "contas-pagas"
 const CHAVE_CACHE = "contas_pagas_graficos_ordem"
 
-type IdGrafico = "mes" | "fornecedor" | "fornecedor_pct" | "banco" | "empresa" | "departamento"
+type IdGrafico =
+  | "mes"
+  | "fornecedor"
+  | "fornecedor_pct"
+  | "fornecedor_fat"
+  | "banco"
+  | "empresa"
+  | "departamento"
+  | "departamento_fat"
 
 const ORDEM_PADRAO: IdGrafico[] = [
   "mes",
   "fornecedor",
   "fornecedor_pct",
+  "fornecedor_fat",
   "banco",
   "empresa",
   "departamento",
+  "departamento_fat",
 ]
 
 const TITULOS: Record<IdGrafico, string> = {
   mes: "Pagamentos mês a mês",
   fornecedor: "Pagamentos por fornecedor (top 8)",
   fornecedor_pct: "Participação do fornecedor — % do total pago (top 8)",
+  fornecedor_fat: "Fornecedor sobre o faturamento — % pago ÷ faturado (top 8)",
   banco: "Pagamentos por banco — de onde saiu o dinheiro (top 8)",
   empresa: "Pagamentos por empresa (top 8)",
   departamento: "Participação por departamento",
+  departamento_fat: "Departamento sobre o faturamento — % pago ÷ faturado (top 8)",
 }
 
 /** Ignora ids desconhecidos (versão antiga salva) e completa os que faltarem. */
@@ -85,7 +101,8 @@ interface Props {
   porEmpresa: GrupoPorChave[]
   porDepartamento: GrupoPorChave[]
   total: number
-  totalBaixas: number
+  /** Faturamento do mesmo recorte: denominador da razão pagamento ÷ faturamento. */
+  faturamento?: number
 }
 
 interface KpiProps {
@@ -235,7 +252,7 @@ export function ContasPagasCharts({
   porEmpresa,
   porDepartamento,
   total,
-  totalBaixas,
+  faturamento,
 }: Props) {
   const [ordem, setOrdem] = useState<IdGrafico[]>(ORDEM_PADRAO)
   const queryClient = useQueryClient()
@@ -337,6 +354,34 @@ export function ContasPagasCharts({
     [topFornecedor, total]
   )
 
+  // Sobre o faturamento: quanto do que foi faturado no recorte cada fornecedor comeu.
+  // É a mesma leitura do card, só que por grupo — a barra é `pago ÷ faturado`.
+  const barrasFornecedorFat = useMemo(
+    () =>
+      topFornecedor.map((item) => ({
+        rotulo: item.rotulo,
+        valor: faturamento && faturamento > 0 ? (item.valor / faturamento) * 100 : 0,
+      })),
+    [topFornecedor, faturamento]
+  )
+
+  const topDepartamento = useMemo(
+    () =>
+      porDepartamento
+        .slice(0, TOP)
+        .map((grupo) => ({ rotulo: String(grupo.departamento || "—"), valor: Number(grupo.valor) })),
+    [porDepartamento]
+  )
+
+  const barrasDepartamentoFat = useMemo(
+    () =>
+      topDepartamento.map((item) => ({
+        rotulo: item.rotulo,
+        valor: faturamento && faturamento > 0 ? (item.valor / faturamento) * 100 : 0,
+      })),
+    [topDepartamento, faturamento]
+  )
+
   const linhasMes: LinhaDados[] = useMemo(
     () =>
       serieMes.map((ponto) => ({
@@ -426,8 +471,22 @@ export function ContasPagasCharts({
     ),
     fornecedor: graficoBarras(topFornecedor, "gradFornecedor", "#1d4ed8"),
     fornecedor_pct: graficoBarrasVerticais(barrasFornecedorPct, "gradFornecedorPct", "#1d4ed8"),
+    fornecedor_fat: graficoBarras(
+      barrasFornecedorFat,
+      "gradFornecedorFat",
+      "#be123c",
+      formatarPercentual,
+      "% do faturamento"
+    ),
     banco: graficoBarras(topBanco, "gradBanco", "#0f766e"),
     empresa: graficoBarras(topEmpresa, "gradEmpresa", "#b45309"),
+    departamento_fat: graficoBarras(
+      barrasDepartamentoFat,
+      "gradDepartamentoFat",
+      "#be123c",
+      formatarPercentual,
+      "% do faturamento"
+    ),
     departamento: (
       <>
         <ChartCardBody className={ALTURA_MIN_GRAFICO}>
@@ -474,7 +533,7 @@ export function ContasPagasCharts({
               dados={
                 id === "mes"
                   ? linhasMes
-                  : id === "fornecedor" || id === "fornecedor_pct"
+                  : id === "fornecedor" || id === "fornecedor_pct" || id === "fornecedor_fat"
                     ? linhasFornecedor
                     : id === "banco"
                       ? linhasBanco
@@ -560,8 +619,18 @@ function graficoBarrasVerticais(
   )
 }
 
-/** Barras deitadas, o mesmo desenho dos cards de cliente e produto do faturamento. */
-function graficoBarras(dados: { rotulo: string; valor: number }[], gradiente: string, cor: string) {
+/**
+ * Barras deitadas, o mesmo desenho dos cards de cliente e produto do faturamento.
+ * O `formatador`/`nome` permitem reaproveitar o desenho para os gráficos em % sobre o
+ * faturamento, em vez de duplicar o componente só para trocar o eixo.
+ */
+function graficoBarras(
+  dados: { rotulo: string; valor: number }[],
+  gradiente: string,
+  cor: string,
+  formatador: (valor: number) => string = FORMATAR.valor,
+  nome = "Valor pago"
+) {
   return (
     <ChartCardBody className={ALTURA_MIN_GRAFICO}>
       <ResponsiveContainer width="100%" height="100%">
@@ -577,7 +646,7 @@ function graficoBarras(dados: { rotulo: string; valor: number }[], gradiente: st
             type="number"
             tick={{ fontSize: 10 }}
             stroke="#94a3b8"
-            tickFormatter={(v) => FORMATAR.valor(Number(v))}
+            tickFormatter={(v) => formatador(Number(v))}
           />
           <YAxis
             type="category"
@@ -589,11 +658,11 @@ function graficoBarras(dados: { rotulo: string; valor: number }[], gradiente: st
           />
           <Tooltip
             cursor={{ fill: "#94a3b8", fillOpacity: 0.08 }}
-            content={<ChartTooltip formatter={(v) => FORMATAR.valor(Number(v))} />}
+            content={<ChartTooltip formatter={(v) => formatador(Number(v))} />}
           />
           <Bar
             dataKey="valor"
-            name="Valor pago"
+            name={nome}
             fill={`url(#${gradiente})`}
             radius={[0, 6, 6, 0]}
             maxBarSize={26}

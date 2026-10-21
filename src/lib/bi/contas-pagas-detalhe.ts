@@ -51,6 +51,11 @@ export interface JanelaContasPagas {
   periodo: string
   total: number
   lancamentos: number
+  /**
+   * Faturamento da mesma janela (Σ Vr_Total + Σ Acres_Desc do `vwFaturamento`). É o
+   * denominador da razão pagamento ÷ faturamento; `0` quando não veio ou não há nota.
+   */
+  faturamento?: number
 }
 
 export interface MesContasPagas {
@@ -72,6 +77,8 @@ export interface DetalheContasPagas {
     /** Total e baixas do intervalo: é o 5º card, o "período selecionado". */
     total: number
     lancamentos: number
+    /** Faturamento do mesmo recorte — o denominador da razão pagamento ÷ faturamento. */
+    faturamento?: number
   }
   /** A primeira baixa do conjunto consultado; preenche a data inicial da tela. */
   min_data: string | null
@@ -233,6 +240,25 @@ export function seriePorMes(itens: PagamentoConta[], meses: MesContasPagas[]): M
     })
 
   return [...resultado, ...extras]
+}
+
+/**
+ * Limite a partir do qual o pagamento sobre o faturamento é sinalizado em vermelho —
+ * acima disso o período está "comendo" mais que dois terços do que faturou.
+ */
+export const LIMITE_PAGAMENTO_FATURAMENTO = 65
+
+/**
+ * O quanto o pagamento representa do faturamento, em %. `null` quando não há
+ * faturamento (não dá para medir a razão). Sem % limitado: devolve o valor real, e
+ * quem exibe decide como cortar (o card usa o vermelho a partir do limite).
+ */
+export function percentualDoFaturamento(
+  pagamento: number,
+  faturamento: number | undefined
+): number | null {
+  if (!faturamento || faturamento <= 0) return null
+  return (pagamento / faturamento) * 100
 }
 
 /** Documento com série e parcela: `000007424/U 01`. */

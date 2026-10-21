@@ -21,8 +21,10 @@ import { getInfoContent } from "@/lib/info-content"
 import {
   FILTROS_VAZIOS,
   FORMATAR,
+  LIMITE_PAGAMENTO_FATURAMENTO,
   agruparPorFornecedor,
   filtrarPorFiltros,
+  percentualDoFaturamento,
   seriePorMes,
   type DetalheContasPagas,
   type FiltrosContasPagas,
@@ -292,6 +294,26 @@ export default function ContasPagasDetalhePage() {
 
   const gruposSelecionados = grupos.filter((grupo) => selecionados.has(grupo.chave))
 
+  /**
+   * O detalhe de cada card: as baixas e, quando há faturamento, o quanto o pagamento
+   * representa dele. Passou do limite (65%), o texto fica vermelho — é o alerta de
+   * que o período está pagando mais que dois terços do que faturou.
+   */
+  const detalheDoCard = (janela: {
+    lancamentos: number
+    total: number
+    faturamento?: number
+  }): { detalhe: string; detalheAlerta: boolean } => {
+    const baixas = `${FORMATAR.numero(janela.lancamentos)} baixas`
+    const percentual = percentualDoFaturamento(janela.total, janela.faturamento)
+    if (percentual === null) return { detalhe: baixas, detalheAlerta: false }
+    const arredondado = percentual.toLocaleString("pt-BR", { maximumFractionDigits: 1 })
+    return {
+      detalhe: `${baixas} · ${arredondado}% do faturamento`,
+      detalheAlerta: percentual > LIMITE_PAGAMENTO_FATURAMENTO,
+    }
+  }
+
   async function baixarPdfSelecionadas() {
     if (gruposSelecionados.length === 0) return
     setGerandoPdf(true)
@@ -402,35 +424,35 @@ export default function ContasPagasDetalhePage() {
               rotulo="Mês atual"
               periodo={detalhe.mes.periodo}
               valor={FORMATAR.valor(detalhe.mes.total)}
-              detalhe={`${FORMATAR.numero(detalhe.mes.lancamentos)} baixas`}
+              {...detalheDoCard(detalhe.mes)}
               statusLabel="total do mês atual"
             />
             <KpiCard
               rotulo="Mês anterior"
               periodo={detalhe.mes_anterior.periodo}
               valor={FORMATAR.valor(detalhe.mes_anterior.total)}
-              detalhe={`${FORMATAR.numero(detalhe.mes_anterior.lancamentos)} baixas`}
+              {...detalheDoCard(detalhe.mes_anterior)}
               statusLabel="total do mês anterior"
             />
             <KpiCard
               rotulo="Ano atual"
               periodo={detalhe.ano_atual.periodo}
               valor={FORMATAR.valor(detalhe.ano_atual.total)}
-              detalhe={`${FORMATAR.numero(detalhe.ano_atual.lancamentos)} baixas`}
+              {...detalheDoCard(detalhe.ano_atual)}
               statusLabel="total do ano atual"
             />
             <KpiCard
               rotulo="Ano anterior"
               periodo={detalhe.ano_anterior.periodo}
               valor={FORMATAR.valor(detalhe.ano_anterior.total)}
-              detalhe={`${FORMATAR.numero(detalhe.ano_anterior.lancamentos)} baixas`}
+              {...detalheDoCard(detalhe.ano_anterior)}
               statusLabel="total do ano anterior"
             />
             <KpiCard
               rotulo="Período selecionado"
               periodo={detalhe.periodo.periodo}
               valor={FORMATAR.valor(detalhe.periodo.total)}
-              detalhe={`${FORMATAR.numero(detalhe.periodo.lancamentos)} baixas`}
+              {...detalheDoCard(detalhe.periodo)}
               statusLabel="total do período selecionado"
             />
           </div>
@@ -448,7 +470,7 @@ export default function ContasPagasDetalhePage() {
             porEmpresa={porEmpresa}
             porDepartamento={porDepartamento}
             total={total}
-            totalBaixas={itens.length}
+            faturamento={detalhe.periodo.faturamento}
           />
 
           {detalhe.mes.lancamentos === 0 ? (

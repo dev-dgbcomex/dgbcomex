@@ -9,8 +9,10 @@ import { ContasPagasToolbar, type OpcoesDoRecorte } from "./components/contas-pa
 import { exportarCsvContasPagas } from "./components/contas-pagas-csv"
 import {
   FILTROS_VAZIOS,
+  LIMITE_PAGAMENTO_FATURAMENTO,
   agruparPorFornecedor,
   filtrarPorFiltros,
+  percentualDoFaturamento,
   rotuloDocumento,
   seriePorMes,
   type DetalheContasPagas,
@@ -299,9 +301,12 @@ describe("ContasPagasDetalhePage", () => {
     for (const titulo of [
       "Pagamentos mês a mês",
       "Pagamentos por fornecedor (top 8)",
+      "Participação do fornecedor — % do total pago (top 8)",
+      "Fornecedor sobre o faturamento — % pago ÷ faturado (top 8)",
       "Pagamentos por banco — de onde saiu o dinheiro (top 8)",
       "Pagamentos por empresa (top 8)",
       "Participação por departamento",
+      "Departamento sobre o faturamento — % pago ÷ faturado (top 8)",
     ]) {
       expect(screen.getByText(titulo)).toBeInTheDocument()
     }
@@ -310,6 +315,38 @@ describe("ContasPagasDetalhePage", () => {
     fireEvent.click(screen.getByLabelText("Abrir opções de Banco"))
     const bancos = screen.getByRole("listbox", { name: "Banco" })
     expect(within(bancos).getByText(/BANCO BLU/)).toBeInTheDocument()
+  })
+
+  it("mostra o % do faturamento no card e pinta de vermelho acima de 65%", async () => {
+    // Mês atual: 1.724.382,10 sobre 2.000.000 de faturamento = 86,2% → vermelho.
+    // Mês anterior: 1.683.509,91 sobre 4.000.000 = 42,1% → neutro.
+    const { fn } = mockRotas(
+      detalhe({
+        mes: {
+          ...janela({ faturamento: 2000000 }),
+          itens: [pagamento()],
+          por_fornecedor: [],
+          por_banco: [],
+          por_empresa: [],
+          por_departamento: [],
+          por_despesa: [],
+        },
+        mes_anterior: janela({
+          rotulo: "agosto",
+          total: 1683509.91,
+          lancamentos: 130,
+          faturamento: 4000000,
+        }),
+      })
+    )
+    vi.stubGlobal("fetch", fn)
+
+    renderPage(<ContasPagasDetalhePage />)
+
+    const cardMes = await screen.findByRole("status", { name: "total do mês atual" })
+    const alerta = within(cardMes.closest("div")!).getByText(/86,2% do faturamento/)
+    expect(alerta).toBeInTheDocument()
+    expect(alerta.className).toMatch(/text-red-/)
   })
 
   it("nasce com 'Todos' e semeia as datas com o 1º dia de 3 meses atrás e hoje", async () => {
@@ -561,29 +598,63 @@ describe("ContasPagasCharts", () => {
     porEmpresa: [grupo("", { empresa: "13", valor: 500 })],
     porDepartamento: [grupo("", { departamento: "TRANSPORTE", valor: 500 })],
     total: 500,
-    totalBaixas: 4,
+    faturamento: 1000,
   }
 
   beforeEach(() => {
     localStorage.clear()
   })
 
-  it("desenha os seis cards, na ordem padrão", () => {
+  it("desenha os oito cards, na ordem padrão", () => {
     renderPage(<ContasPagasCharts {...base} />)
 
     for (const titulo of [
       "Pagamentos mês a mês",
       "Pagamentos por fornecedor (top 8)",
       "Participação do fornecedor — % do total pago (top 8)",
+      "Fornecedor sobre o faturamento — % pago ÷ faturado (top 8)",
       "Pagamentos por banco — de onde saiu o dinheiro (top 8)",
       "Pagamentos por empresa (top 8)",
       "Participação por departamento",
+      "Departamento sobre o faturamento — % pago ÷ faturado (top 8)",
     ]) {
       expect(screen.getByText(titulo)).toBeInTheDocument()
     }
     // Cada card pode ser arrastado e movido pelo teclado.
     expect(screen.getByLabelText("Arrastar Pagamentos mês a mês para reordenar")).toBeInTheDocument()
     expect(screen.getByLabelText("Mover Participação por departamento para cima")).toBeInTheDocument()
+  })
+
+  it("os gráficos sobre o faturamento usam % pago ÷ faturado do recorte", () => {
+    // METADE = 500 pago sobre 1000 faturado = 50%; o outro fornecedor 250 = 25%.
+    const fornecedores = [
+      grupo("", { razao_social: "METADE", valor: 500 }),
+      grupo("", { razao_social: "QUARTO", valor: 250 }),
+    ]
+    renderPage(
+      <ContasPagasCharts
+        {...base}
+        porFornecedor={fornecedores}
+        porDepartamento={[grupo("", { departamento: "FRETE", valor: 500 })]}
+        total={750}
+        faturamento={1000}
+      />
+    )
+
+    for (const titulo of [
+      "Fornecedor sobre o faturamento — % pago ÷ faturado (top 8)",
+      "Departamento sobre o faturamento — % pago ÷ faturado (top 8)",
+    ]) {
+      expect(screen.getByText(titulo)).toBeInTheDocument()
+    }
+
+    fireEvent.click(
+      screen.getByLabelText("Dados de Fornecedor sobre o faturamento — % pago ÷ faturado (top 8)")
+    )
+    return screen.findByRole("dialog").then((dialog) => {
+      expect(within(dialog).getByText("METADE")).toBeInTheDocument()
+      expect(within(dialog).getByText("QUARTO")).toBeInTheDocument()
+    })
   })
 
   it("o gráfico de percentual do fornecedor usa o total pago no recorte como base", () => {
@@ -607,21 +678,19 @@ describe("ContasPagasCharts", () => {
   it("reposiciona por teclado e guarda a ordem do usuário", async () => {
     renderPage(<ContasPagasCharts {...base} />)
 
+    const ultimo = "Departamento sobre o faturamento — % pago ÷ faturado (top 8)"
+
     // Extremos travados: o primeiro não sobe e o último não desce.
     expect(screen.getByLabelText("Mover Pagamentos mês a mês para cima")).toBeDisabled()
-    expect(
-      screen.getByLabelText("Mover Participação por departamento para baixo")
-    ).toBeDisabled()
+    expect(screen.getByLabelText(`Mover ${ultimo} para baixo`)).toBeDisabled()
 
-    fireEvent.click(screen.getByLabelText("Mover Participação por departamento para cima"))
+    fireEvent.click(screen.getByLabelText(`Mover ${ultimo} para cima`))
 
     await waitFor(() => {
-      expect(localStorage.getItem("contas_pagas_graficos_ordem")).toContain("departamento")
+      expect(localStorage.getItem("contas_pagas_graficos_ordem")).toContain("departamento_fat")
     })
     // Subindo, ele deixou de ser o último e agora pode voltar para baixo.
-    expect(
-      screen.getByLabelText("Mover Participação por departamento para baixo")
-    ).toBeEnabled()
+    expect(screen.getByLabelText(`Mover ${ultimo} para baixo`)).toBeEnabled()
   })
 
   it("o i de cada card abre o modal com todos os dados, sem o corte do top 8", async () => {
@@ -974,5 +1043,24 @@ describe("seriePorMes", () => {
   it("ignora item sem data de baixa", () => {
     const serie = seriePorMes([pagamento({ data_baixa: null, valor: 500 })], eixo)
     expect(serie.every((m) => m.total === 0)).toBe(true)
+  })
+})
+
+describe("percentualDoFaturamento", () => {
+  it("mede o pagamento sobre o faturamento em %", () => {
+    expect(percentualDoFaturamento(500, 1000)).toBe(50)
+    expect(percentualDoFaturamento(65, 100)).toBe(65)
+  })
+
+  it("devolve null quando não há faturamento (não dá para medir a razão)", () => {
+    expect(percentualDoFaturamento(500, 0)).toBeNull()
+    expect(percentualDoFaturamento(500, undefined)).toBeNull()
+    expect(percentualDoFaturamento(500, -10)).toBeNull()
+  })
+
+  it("cruza o limite de 65% sem arredondar antes da comparação", () => {
+    // 66% passa do limite; o card é quem decide o vermelho.
+    expect(percentualDoFaturamento(66, 100)).toBeGreaterThan(LIMITE_PAGAMENTO_FATURAMENTO)
+    expect(percentualDoFaturamento(64, 100)).toBeLessThan(LIMITE_PAGAMENTO_FATURAMENTO)
   })
 })

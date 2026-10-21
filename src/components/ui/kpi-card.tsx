@@ -12,6 +12,7 @@ export function KpiCard({
   detalhe,
   periodo,
   statusLabel,
+  detalheAlerta = false,
 }: {
   rotulo: string
   valor: string
@@ -20,6 +21,8 @@ export function KpiCard({
   periodo?: string
   /** Quando informado, o valor vira `role="status"` com esse rótulo acessível. */
   statusLabel?: string
+  /** Pinta o `detalhe` em vermelho — usado quando o indicador passa do limite. */
+  detalheAlerta?: boolean
 }) {
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow dark:border-slate-800 dark:bg-slate-900">
@@ -38,7 +41,17 @@ export function KpiCard({
       >
         {valor}
       </p>
-      {detalhe && <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{detalhe}</p>}
+      {detalhe && (
+        <p
+          className={
+            detalheAlerta
+              ? "mt-0.5 text-xs font-semibold text-red-600 dark:text-red-400"
+              : "mt-0.5 text-xs text-slate-500 dark:text-slate-400"
+          }
+        >
+          {detalhe}
+        </p>
+      )}
     </div>
   )
 }

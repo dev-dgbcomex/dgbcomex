@@ -66,6 +66,12 @@ describe("getInfoContent", () => {
     // O gráfico de barras em pé com a participação (%) do fornecedor no total.
     expect(texto).toMatch(/participação do fornecedor/i)
     expect(texto).toMatch(/barras em pé|barras EM PÉ/i)
+    // Os dois gráficos sobre o faturamento e a fonte (vwFaturamento / data da nota).
+    expect(texto).toMatch(/sobre o faturamento/i)
+    expect(texto).toMatch(/vwFaturamento/)
+    // O detalhe vermelho a partir de 65%.
+    expect(texto).toMatch(/65%/)
+    expect(texto).toMatch(/do faturamento/)
     // Não pode sobrar a descrição do recuo automático (aviso azul), que não existe mais.
     expect(texto).not.toMatch(/aviso azul|recua sozinha|último mês fechado/i)
   })
