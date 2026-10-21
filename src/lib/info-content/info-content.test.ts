@@ -63,6 +63,9 @@ describe("getInfoContent", () => {
     expect(texto).toMatch(/mês a mês[\s\S]*respeitam os filtros|respeitam os filtros[\s\S]*mês a mês/)
     // O 'Limpar' volta ao período padrão, não fica no mês escolhido.
     expect(texto).toMatch(/Limpar: .*período padrão/)
+    // O gráfico de barras em pé com a participação (%) do fornecedor no total.
+    expect(texto).toMatch(/participação do fornecedor/i)
+    expect(texto).toMatch(/barras em pé|barras EM PÉ/i)
     // Não pode sobrar a descrição do recuo automático (aviso azul), que não existe mais.
     expect(texto).not.toMatch(/aviso azul|recua sozinha|último mês fechado/i)
   })

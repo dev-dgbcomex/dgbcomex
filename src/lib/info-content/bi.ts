@@ -4,13 +4,13 @@ export const biContent: Record<string, InfoContent> = {
   "/bi/integracoes/contas-pagas": {
     title: "Contas Pagas — as baixas que formam o valor",
     description:
-      "Detalhe do card 'Contas Pagas': cada baixa de conta a pagar (documento, fornecedor, banco, empresa, departamento e valor), as quatro janelas fixas do card — mês atual, mês anterior, ano atual e ano anterior — mais o card 'Período selecionado', e os grupos do recorte: mês a mês, fornecedor, banco, empresa e departamento.",
+      "Detalhe do card 'Contas Pagas': cada baixa de conta a pagar (documento, fornecedor, banco, empresa, departamento e valor), as quatro janelas fixas do card — mês atual, mês anterior, ano atual e ano anterior — mais o card 'Período selecionado', e os gráficos do recorte: mês a mês, fornecedor, participação do fornecedor (% do total), banco, empresa e departamento.",
     rules: [
       "O valor considera a DATA DA BAIXA, não a data de vencimento: uma conta vencida em abril e paga em maio entra em maio.",
       "O card soma a view vwContasPagas, que tem só duas colunas (Data_Baixa e valorPago) — por isso ele mostra apenas o total. A lista vem da tabela Pag_Baixas, que está por trás dessa view. As duas foram conferidas no ERP e batem com diferença R$ 0,00 em cada mês.",
       "A tela nasce com um trimestre: a Data inicial vem no 1º dia do mês três meses atrás e a Data final em hoje. Os quatro cards do topo (Mês atual, Mês anterior, Ano atual e Ano anterior) são fixos — medem sempre as janelas do mês corrente, como o card do BI. O quinto card, 'Período selecionado', acompanha as datas.",
       "O seletor 'Mês' fica fora dos filtros: ele não recorta o período, escolhe qual mês *dentro* dele olhar. 'Todos os meses do período' mostra o período inteiro das datas; escolher um mês faz a lista, os grupos e os gráficos de grupo seguirem aquele mês. O gráfico de pagamentos mês a mês é a exceção: ele mostra sempre a evolução do período inteiro, seja 'Todos' ou um mês escolhido.",
-      "Os gráficos são os mesmos do faturamento: área do valor mês a mês com a contagem de baixas em linha, barras verticais nos grupos e pizza na participação por departamento.",
+      "Os gráficos seguem o desenho do faturamento: área do valor mês a mês com a contagem de baixas em linha, barras deitadas nos grupos (fornecedor, banco, empresa) e pizza na participação por departamento. Há ainda um gráfico de barras EM PÉ com a participação do fornecedor: cada barra é o quanto o fornecedor representa do total pago no recorte, em %.",
       "Todos os gráficos — inclusive o 'mês a mês' — respeitam os filtros de fornecedor, banco, empresa e departamento: escolher um fornecedor mostra a evolução só daquele fornecedor, escolher um banco só os títulos daquele banco.",
       "Cada card pode ser arrastado ou movido pelas setas, e a ordem fica salva por usuário (ela segue a pessoa entre máquinas). É o mesmo mechanism do faturamento, em outro painel.",
       "O 'i' de cada card abre um modal com TODOS os dados daquele gráfico, sem o corte do top 8 — é por ele que se vê o grupo que ficou fora das barras e se confere linha a linha.",

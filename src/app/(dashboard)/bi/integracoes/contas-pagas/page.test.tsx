@@ -568,12 +568,13 @@ describe("ContasPagasCharts", () => {
     localStorage.clear()
   })
 
-  it("desenha os cinco cards, na ordem padrão", () => {
+  it("desenha os seis cards, na ordem padrão", () => {
     renderPage(<ContasPagasCharts {...base} />)
 
     for (const titulo of [
       "Pagamentos mês a mês",
       "Pagamentos por fornecedor (top 8)",
+      "Participação do fornecedor — % do total pago (top 8)",
       "Pagamentos por banco — de onde saiu o dinheiro (top 8)",
       "Pagamentos por empresa (top 8)",
       "Participação por departamento",
@@ -583,6 +584,24 @@ describe("ContasPagasCharts", () => {
     // Cada card pode ser arrastado e movido pelo teclado.
     expect(screen.getByLabelText("Arrastar Pagamentos mês a mês para reordenar")).toBeInTheDocument()
     expect(screen.getByLabelText("Mover Participação por departamento para cima")).toBeInTheDocument()
+  })
+
+  it("o gráfico de percentual do fornecedor usa o total pago no recorte como base", () => {
+    const fornecedores = [
+      grupo("", { razao_social: "METADE", valor: 300 }),
+      grupo("", { razao_social: "QUARTO", valor: 150 }),
+    ]
+    renderPage(<ContasPagasCharts {...base} porFornecedor={fornecedores} total={600} />)
+
+    const titulo = "Participação do fornecedor — % do total pago (top 8)"
+    expect(screen.getByText(titulo)).toBeInTheDocument()
+
+    fireEvent.click(screen.getByLabelText(`Dados de ${titulo}`))
+    return screen.findByRole("dialog").then((dialog) => {
+      // 300 de 600 = 50%; 150 de 600 = 25%.
+      expect(within(dialog).getByText("50%")).toBeInTheDocument()
+      expect(within(dialog).getByText("25%")).toBeInTheDocument()
+    })
   })
 
   it("reposiciona por teclado e guarda a ordem do usuário", async () => {

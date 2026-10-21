@@ -40,7 +40,7 @@ const CORES = ["#0f766e", "#1d4ed8", "#b45309", "#7c3aed", "#be123c", "#0369a1",
 /**
  * Altura mínima da área do gráfico. O `ResponsiveContainer` usa `height="100%"`, e um
  * pai sem altura intrínseca colapsaria para zero; o mínimo é o que dá corpo ao card. O
- * `auto-rows-fr` iguala os cinco pela altura do maior.
+ * `auto-rows-fr` iguala os seis pela altura do maior.
  */
 const ALTURA_MIN_GRAFICO = "min-h-[260px]"
 
@@ -49,11 +49,12 @@ const TOP = 8
 const PAINEL = "contas-pagas"
 const CHAVE_CACHE = "contas_pagas_graficos_ordem"
 
-type IdGrafico = "mes" | "fornecedor" | "banco" | "empresa" | "departamento"
+type IdGrafico = "mes" | "fornecedor" | "fornecedor_pct" | "banco" | "empresa" | "departamento"
 
 const ORDEM_PADRAO: IdGrafico[] = [
   "mes",
   "fornecedor",
+  "fornecedor_pct",
   "banco",
   "empresa",
   "departamento",
@@ -62,6 +63,7 @@ const ORDEM_PADRAO: IdGrafico[] = [
 const TITULOS: Record<IdGrafico, string> = {
   mes: "Pagamentos mês a mês",
   fornecedor: "Pagamentos por fornecedor (top 8)",
+  fornecedor_pct: "Participação do fornecedor — % do total pago (top 8)",
   banco: "Pagamentos por banco — de onde saiu o dinheiro (top 8)",
   empresa: "Pagamentos por empresa (top 8)",
   departamento: "Participação por departamento",
@@ -222,8 +224,9 @@ function LegendaGrupos({ dados }: { dados: { rotulo: string; percentual: number 
 
 /**
  * Os mesmos gráficos do faturamento, com os dados de contas pagas: área do valor
- * mês a mês com a contagem de baixas em linha, barras verticais nos grupos e pizza
- * na participação. A diferença não é no desenho, é no que cada card responde.
+ * mês a mês com a contagem de baixas em linha, barras deitadas nos grupos, o
+ * percentual do fornecedor em barras em pé e pizza na participação. A diferença não
+ * é no desenho, é no que cada card responde.
  */
 export function ContasPagasCharts({
   meses,
@@ -325,6 +328,15 @@ export function ContasPagasCharts({
   const topBanco = useMemo(() => top(porBanco, "banco"), [porBanco])
   const topEmpresa = useMemo(() => top(porEmpresa, "empresa"), [porEmpresa])
 
+  const barrasFornecedorPct = useMemo(
+    () =>
+      topFornecedor.map((item) => ({
+        rotulo: item.rotulo,
+        valor: total > 0 ? (item.valor / total) * 100 : 0,
+      })),
+    [topFornecedor, total]
+  )
+
   const linhasMes: LinhaDados[] = useMemo(
     () =>
       serieMes.map((ponto) => ({
@@ -413,6 +425,7 @@ export function ContasPagasCharts({
       </ChartCardBody>
     ),
     fornecedor: graficoBarras(topFornecedor, "gradFornecedor", "#1d4ed8"),
+    fornecedor_pct: graficoBarrasVerticais(barrasFornecedorPct, "gradFornecedorPct", "#1d4ed8"),
     banco: graficoBarras(topBanco, "gradBanco", "#0f766e"),
     empresa: graficoBarras(topEmpresa, "gradEmpresa", "#b45309"),
     departamento: (
@@ -461,7 +474,7 @@ export function ContasPagasCharts({
               dados={
                 id === "mes"
                   ? linhasMes
-                  : id === "fornecedor"
+                  : id === "fornecedor" || id === "fornecedor_pct"
                     ? linhasFornecedor
                     : id === "banco"
                       ? linhasBanco
@@ -479,7 +492,75 @@ export function ContasPagasCharts({
   )
 }
 
-/** Barra vertical, o mesmo desenho dos cards de cliente e produto do faturamento. */
+/**
+ * Barras em pé: cada fornecedor é uma barra e a altura é o quanto ele representa do
+ * total pago no recorte (%). O eixo Y fica em %, o rótulo do fornecedor vai no eixo X
+ * (girado), e o topo da barra traz o próprio número, que é o que interessa ler de longe.
+ */
+function graficoBarrasVerticais(
+  dados: { rotulo: string; valor: number }[],
+  gradiente: string,
+  cor: string
+) {
+  const pct = (v: number) =>
+    `${v.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`
+  const maxPct = dados.reduce((maior, item) => Math.max(maior, item.valor), 0)
+
+  return (
+    <ChartCardBody className={ALTURA_MIN_GRAFICO}>
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={dados} margin={{ top: 20, left: 8, right: 8, bottom: 8 }}>
+          <defs>
+            <linearGradient id={gradiente} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={cor} stopOpacity={0.95} />
+              <stop offset="100%" stopColor={cor} stopOpacity={0.4} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+          <XAxis
+            type="category"
+            dataKey="rotulo"
+            tick={{ fontSize: 9 }}
+            stroke="#94a3b8"
+            interval={0}
+            height={64}
+            tickFormatter={(v: string) => (v.length > 14 ? `${v.slice(0, 13)}…` : v)}
+            angle={-35}
+            textAnchor="end"
+          />
+          <YAxis
+            type="number"
+            tick={{ fontSize: 10 }}
+            stroke="#94a3b8"
+            width={48}
+            domain={[0, Math.max(1, Math.ceil(maxPct))]}
+            tickFormatter={(v) => `${v}%`}
+          />
+          <Tooltip
+            cursor={{ fill: "#94a3b8", fillOpacity: 0.08 }}
+            content={<ChartTooltip formatter={(v) => pct(Number(v))} />}
+          />
+          <Bar
+            dataKey="valor"
+            name="% do total pago"
+            fill={`url(#${gradiente})`}
+            radius={[6, 6, 0, 0]}
+            maxBarSize={48}
+            animationDuration={1000}
+            label={{
+              position: "top",
+              fontSize: 10,
+              fill: "#64748b",
+              formatter: (v: unknown) => pct(Number(v)),
+            }}
+          />
+        </BarChart>
+      </ResponsiveContainer>
+    </ChartCardBody>
+  )
+}
+
+/** Barras deitadas, o mesmo desenho dos cards de cliente e produto do faturamento. */
 function graficoBarras(dados: { rotulo: string; valor: number }[], gradiente: string, cor: string) {
   return (
     <ChartCardBody className={ALTURA_MIN_GRAFICO}>
