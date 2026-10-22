@@ -14,6 +14,9 @@
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css,json}\"",
     "db:migrate": "node scripts/migrate.js",
     "db:migrate:all": "node scripts/migrate-all.js",
+    "db:migrate:wms": "node scripts/migrar-wms-local.js",
+    "db:replicar-neon": "node scripts/replicar-neon-local.js",
+    "db:verificar-local": "node scripts/verify-neon-local.js",
     "test": "vitest run",
     "test:watch": "vitest"
   },

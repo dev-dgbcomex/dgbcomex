@@ -48,6 +48,8 @@ import {
   Bot,
   Receipt,
   LifeBuoy,
+  Warehouse,
+  Boxes,
 } from "lucide-react"
 
 // [título (pt-BR), nome do ícone (lucide), componente]
@@ -120,6 +122,9 @@ const ENTRADAS: [string, string, LucideIcon][] = [
   ["Subprocessos", "Layers", Layers],
   ["Atividades", "CheckSquare", CheckSquare],
   ["Diagramas", "Workflow", Workflow],
+  ["WMS", "Warehouse", Warehouse],
+  ["Armazém", "Warehouse", Warehouse],
+  ["Almoxarifado", "Boxes", Boxes],
 ]
 
 export interface OpcaoIcone {
@@ -213,6 +218,7 @@ const URL_ICONES: [string, LucideIcon][] = [
   ["/processos/empresas", Building2],
   ["/processos", GitBranch],
   ["/chamados", LifeBuoy],
+  ["/wms", Warehouse],
 ]
 
 export function iconForUrl(url: string): LucideIcon {
