@@ -73,6 +73,8 @@ async function main() {
         id serial PRIMARY KEY,
         tipo varchar(20) NOT NULL,
         estoque_id integer REFERENCES public.wms_estoque(id) ON DELETE SET NULL,
+        nro_rolo varchar(30),
+        nro_peca varchar(30),
         endereco_origem_id integer REFERENCES public.wms_enderecos(id) ON DELETE SET NULL,
         endereco_destino_id integer REFERENCES public.wms_enderecos(id) ON DELETE SET NULL,
         usuario_id integer,
@@ -82,6 +84,12 @@ async function main() {
         created_at timestamp NOT NULL DEFAULT now()
       )
     `)
+    await pool.query(
+      `ALTER TABLE public.wms_movimentos ADD COLUMN IF NOT EXISTS nro_rolo varchar(30)`
+    )
+    await pool.query(
+      `ALTER TABLE public.wms_movimentos ADD COLUMN IF NOT EXISTS nro_peca varchar(30)`
+    )
     await pool.query(
       `CREATE INDEX IF NOT EXISTS wms_movimentos_created_idx ON public.wms_movimentos (created_at)`
     )
