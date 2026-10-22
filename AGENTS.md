@@ -196,3 +196,12 @@ O módulo `src/app/(dashboard)/comercial` está **100% sem `any`** (0 matches em
 - **Multi-banco obrigatório**: o schema `ativos*.ts` deve ser replicado aos 4 bancos (generate → migrate → migrate:all → sync-all-dbs → compare-schemas).
 - Seed: `node scripts/seed-vistorias.js` (categorias + tipos da taxonomia, idempotente).
 - Testes: `agendamento.test.ts` (unitário) + list/form pages + telas atípicas (tipos-vistoria form, agenda de vistorias, dashboard).
+
+# Commits — sempre
+
+**Ao concluir qualquer entrega, commitar e dar push — sem precisar perguntar.** Vale para os dois repos:
+
+- `M:\dev\dgbcomex` → `main` (remote `github-dgbcomex`).
+- `M:\dev\api-microdata` → `main` (remote `github.com:devtiagoabreu/api-microdata`).
+
+Só commitar quando a suíte estiver verde (regra de testes acima) e nunca incluir `.env.local`/segredos. Mensagem no estilo do repo (`feat(escopo): ...`, `fix(...)`, `docs(...)`), em português, com bullets no corpo quando a mudança tiver várias partes.
