@@ -297,42 +297,30 @@ export default function PedidosPage() {
           renderCard={(pedido) => {
             const situacao = situacoes.find((s) => s.id === pedido.situacaoId)
             return (
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="text-base font-bold text-slate-900 dark:text-slate-50">
-                      Pedido {pedido.pedido}
+                    <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                      #{pedido.pedido}
                     </p>
-                    <p className="text-sm text-slate-600 dark:text-slate-300 break-words">
-                      {pedido.clienteNome ?? pedido.clienteCodigo ?? "—"}
+                    <p className="text-xs text-slate-600 dark:text-slate-300 break-words line-clamp-2">
+                      {pedido.clienteNome ?? pedido.clienteCodigo ?? "-"}
                     </p>
                   </div>
-                  <span className="text-sm font-semibold text-slate-600 dark:text-slate-300 whitespace-nowrap">
+                  <span className="text-xs font-semibold text-slate-600 dark:text-slate-300 whitespace-nowrap">
                     {pedido.saldoMetros.toFixed(1)} m
                   </span>
                 </div>
-                <div className="flex flex-wrap items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+                <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-slate-400">
                   <span>{pedido.totalItens} item(ns)</span>
-                  <span aria-hidden>·</span>
-                  <span>entrega {pedido.dataEntrega ?? "—"}</span>
+                  <span>•</span>
+                  <span>Entrega {pedido.dataEntrega ?? "-"}</span>
                 </div>
-                <span
-                  className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-semibold"
-                  style={{
-                    color: corDaSituacao(situacao),
-                    backgroundColor: `${corDaSituacao(situacao)}1a`,
-                  }}
-                >
-                  <span
-                    className="w-2 h-2 rounded-full"
-                    style={{ backgroundColor: corDaSituacao(situacao) }}
-                  />
-                  {nomeDaSituacao(pedido, situacoes)}
-                </span>
                 {pedido.separacaoId && (
                   <Link
                     href={`/wms/separacoes/${pedido.separacaoId}`}
-                    className="block text-xs font-medium text-blue-600 hover:underline"
+                    className="inline-flex text-[10px] font-medium text-blue-600 hover:underline"
+                    onClick={(e) => e.stopPropagation()}
                   >
                     Abrir ordem #{pedido.separacaoId}
                   </Link>

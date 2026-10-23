@@ -1,10 +1,10 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 import {
   DndContext,
   DragOverlay,
-  KeyboardSensor,
   PointerSensor,
   useDraggable,
   useDroppable,
@@ -20,142 +20,78 @@ export type KanbanColuna<T> = {
   itens: T[]
 }
 
-function CartaoArrastavel<T>({
-  item,
-  chave,
-  destacado,
-  renderCard,
-  destinos,
-  onMover,
-  rotuloMover,
+function DroppableColumn({
+  id,
+  children,
+  rotulo,
+  cor,
+  count,
 }: {
-  item: T
-  chave: string
-  destacado: boolean
-  renderCard: (item: T) => React.ReactNode
-  destinos: KanbanColuna<T>[]
-  onMover?: (item: T, colunaId: string) => void
-  rotuloMover: string
+  id: string
+  children: React.ReactNode
+  rotulo: string
+  cor: string
+  count: number
 }) {
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    id: chave,
-    data: { item },
-    disabled: !onMover,
-  })
+  const { setNodeRef, isOver } = useDroppable({ id })
 
   return (
-    <article
+    <div
       ref={setNodeRef}
-      {...attributes}
-      {...listeners}
-      className={`space-y-2 rounded-lg border bg-white dark:bg-slate-950 p-3 shadow-sm transition-shadow ${
-        destacado ? "border-blue-500 ring-2 ring-blue-500/30" : "border-slate-200 dark:border-slate-700"
-      } ${isDragging ? "opacity-40" : "opacity-100"} ${
-        onMover ? "cursor-grab active:cursor-grabbing" : ""
-      } hover:shadow-md`}
+      className={`flex flex-col h-full w-72 bg-slate-100 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 transition-colors shrink-0 ${
+        isOver ? "border-blue-400 bg-blue-50 dark:bg-blue-950/30" : ""
+      }`}
     >
-      {renderCard(item)}
-      {onMover && destinos.length > 0 && (
-        <select
-          aria-label={`${rotuloMover}: ${chave}`}
-          value=""
-          onPointerDown={(event) => event.stopPropagation()}
-          onKeyDown={(event) => event.stopPropagation()}
-          onChange={(event) => {
-            const destino = event.target.value
-            if (destino) onMover(item, destino)
-            event.target.value = ""
-          }}
-          className="w-full h-8 rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-2 text-xs text-slate-600 dark:text-slate-300"
-        >
-          <option value="">{rotuloMover}…</option>
-          {destinos.map((destino) => (
-            <option key={destino.id} value={destino.id}>
-              {destino.rotulo}
-            </option>
-          ))}
-        </select>
-      )}
-    </article>
+      <div className="flex items-center gap-2 px-3 py-2.5 border-b border-slate-200 dark:border-slate-800 shrink-0">
+        <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: cor }} />
+        <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+          {rotulo}
+        </span>
+        <span className="ml-auto text-xs font-medium text-slate-400 bg-slate-200 dark:bg-slate-800 px-1.5 py-0.5 rounded-full">
+          {count}
+        </span>
+      </div>
+      <div className="flex-1 min-h-0 p-2 space-y-2 overflow-y-auto">{children}</div>
+    </div>
   )
 }
 
-function ColunaKanban<T>({
-  coluna,
-  ativa,
-  renderCard,
-  chave,
-  colunas,
-  podeMover,
-  onMover,
-  rotuloMover,
-  vazio,
+function DraggableCard<T>({
+  id,
+  item,
+  disabled,
+  children,
 }: {
-  coluna: KanbanColuna<T>
-  ativa: boolean
-  renderCard: (item: T) => React.ReactNode
-  chave: (item: T) => string
-  colunas: KanbanColuna<T>[]
-  podeMover?: (item: T, colunaId: string) => boolean
-  onMover?: (item: T, colunaId: string) => void
-  rotuloMover: string
-  vazio: string
+  id: string
+  item: T
+  disabled?: boolean
+  children: React.ReactNode
 }) {
-  const { setNodeRef, isOver } = useDroppable({ id: coluna.id })
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id,
+    data: { item },
+    disabled,
+  })
+
+  const style = transform
+    ? {
+        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+        zIndex: 50,
+      }
+    : undefined
 
   return (
-    <section
+    <div
       ref={setNodeRef}
-      aria-label={`Coluna ${coluna.rotulo}`}
-      className={`flex flex-col flex-1 min-w-[220px] rounded-xl border bg-slate-100 dark:bg-slate-900 transition-colors ${
-        isOver
-          ? "border-blue-400 bg-blue-50 dark:bg-blue-950/30"
-          : "border-slate-200 dark:border-slate-800"
-      }`}
-      style={{ borderTopColor: coluna.cor, borderTopWidth: 4 }}
+      {...attributes}
+      {...listeners}
+      style={style}
+      className={`bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-3 cursor-grab active:cursor-grabbing transition-shadow hover:shadow-md ${
+        isDragging ? "opacity-50 shadow-lg" : ""
+      } ${disabled ? "cursor-not-allowed opacity-70" : ""}`}
     >
-      <div className="flex items-center gap-2 px-3 py-3 border-b border-slate-200 dark:border-slate-800">
-        <div
-          className="w-3 h-3 rounded-full shrink-0"
-          style={{ backgroundColor: coluna.cor }}
-        />
-        <span className="text-sm font-bold text-slate-800 dark:text-slate-100">
-          {coluna.rotulo}
-        </span>
-        <span className="ml-auto text-xs font-semibold text-slate-500 dark:text-slate-400 bg-slate-200 dark:bg-slate-800 px-2 py-0.5 rounded-full">
-          {coluna.itens.length}
-        </span>
-      </div>
-      <div className="flex-1 p-2.5 space-y-2.5 min-h-[140px]">
-        {coluna.itens.length === 0 ? (
-          <p className="px-2 py-8 text-center text-xs text-slate-400 dark:text-slate-500">
-            {vazio}
-          </p>
-        ) : (
-          coluna.itens.map((item) => {
-            const destinos = onMover
-              ? colunas.filter(
-                  (destino) =>
-                    destino.id !== coluna.id &&
-                    (!podeMover || podeMover(item, destino.id))
-                )
-              : []
-            return (
-              <CartaoArrastavel
-                key={chave(item)}
-                item={item}
-                chave={chave(item)}
-                destacado={ativa}
-                renderCard={renderCard}
-                destinos={destinos}
-                onMover={onMover}
-                rotuloMover={rotuloMover}
-              />
-            )
-          })
-        )}
-      </div>
-    </section>
+      {children}
+    </div>
   )
 }
 
@@ -165,61 +101,76 @@ export function KanbanWms<T>({
   chave,
   onMover,
   podeMover,
-  rotuloMover = "Mover para",
-  vazio,
+  vazio = "Nenhum item",
+  className,
 }: {
   colunas: KanbanColuna<T>[]
   renderCard: (item: T) => React.ReactNode
   chave?: (item: T) => string
   onMover?: (item: T, colunaId: string) => void
   podeMover?: (item: T, colunaId: string) => boolean
-  rotuloMover?: string
   vazio?: string
+  className?: string
 }) {
-  const [ativo, setAtivo] = useState<T | null>(null)
+  const [ativo, setAtivo] = useState<{ item: T; colunaId: string } | null>(null)
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(KeyboardSensor)
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   )
   const idDoItem = chave ?? ((item: T) => String(item))
 
   function iniciar(event: DragStartEvent) {
-    setAtivo((event.active.data.current?.item as T | undefined) ?? null)
+    const item = event.active.data.current?.item as T | undefined
+    if (!item) return
+    const colunaId = colunas.find((c) => c.itens.includes(item))?.id
+    setAtivo(colunaId ? { item, colunaId } : { item, colunaId: "" })
   }
 
   function soltar(event: DragEndEvent) {
-    setAtivo(null)
     const { active, over } = event
-    if (!over || !onMover) return
     const item = active.data.current?.item as T | undefined
+    setAtivo(null)
+    if (!over || !item || !onMover) return
     const destino = String(over.id)
-    if (!item) return
+    if (ativo?.colunaId === destino) return
     if (podeMover && !podeMover(item, destino)) return
     onMover(item, destino)
   }
 
   return (
     <DndContext sensors={sensors} onDragStart={iniciar} onDragEnd={soltar}>
-      <div className="flex items-stretch gap-3 overflow-x-auto pb-2 min-w-full">
+      <div
+        className={`flex h-[calc(100vh-280px)] min-h-[520px] gap-3 overflow-x-auto overflow-y-hidden pb-2 ${className ?? ""}`}
+      >
         {colunas.map((coluna) => (
-          <ColunaKanban
+          <DroppableColumn
             key={coluna.id}
-            coluna={coluna}
-            ativa={ativo != null && coluna.itens.includes(ativo)}
-            renderCard={renderCard}
-            chave={idDoItem}
-            colunas={colunas}
-            podeMover={podeMover}
-            onMover={onMover}
-            rotuloMover={rotuloMover}
-            vazio={vazio ?? "Nenhum item"}
-          />
+            id={coluna.id}
+            rotulo={coluna.rotulo}
+            cor={coluna.cor}
+            count={coluna.itens.length}
+          >
+            {coluna.itens.length === 0 ? (
+              <div className="flex h-full items-center justify-center text-xs text-slate-400 dark:text-slate-500">
+                {vazio}
+              </div>
+            ) : (
+              coluna.itens.map((item) => {
+                const id = idDoItem(item)
+                const arrastavel = !!onMover && (!podeMover || podeMover(item, coluna.id))
+                return (
+                  <DraggableCard key={id} id={id} item={item} disabled={!arrastavel}>
+                    {renderCard(item)}
+                  </DraggableCard>
+                )
+              })
+            )}
+          </DroppableColumn>
         ))}
       </div>
-      <DragOverlay dropAnimation={null}>
+      <DragOverlay>
         {ativo ? (
-          <div className="w-72 rounded-lg border border-blue-400 bg-white dark:bg-slate-950 p-3 shadow-xl">
-            {renderCard(ativo)}
+          <div className="w-72 rounded-lg border border-blue-400 bg-white dark:bg-slate-800 p-3 shadow-xl cursor-grabbing">
+            {renderCard(ativo.item)}
           </div>
         ) : null}
       </DragOverlay>
