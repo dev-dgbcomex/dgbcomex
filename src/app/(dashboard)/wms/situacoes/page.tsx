@@ -1,11 +1,11 @@
-"use client"
+﻿"use client"
 
 import { useMemo, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useSession } from "next-auth/react"
 import { usePathname } from "next/navigation"
 import { toast } from "sonner"
-import { Loader2, Pencil, Plus, Trash2 } from "lucide-react"
+import { Copy, Loader2, Pencil, Plus, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { InfoButton } from "@/components/ui/info-button"
@@ -156,6 +156,19 @@ export default function SituacoesPage() {
     setAberto(true)
   }
 
+  function copiarSituacao(situacao: WmsSituacaoPedido) {
+    setEditando(null)
+    setFormulario({
+      nome: `Cópia de ${situacao.nome}`,
+      cor: situacao.cor,
+      ordem: String((situacoes.at(-1)?.ordem ?? situacao.ordem) + 1),
+      acao: situacao.acao,
+      perfis: [...situacao.perfis],
+      ativo: situacao.ativo,
+    })
+    setAberto(true)
+  }
+
   function alternarPerfil(perfil: string) {
     setFormulario((atual) => ({
       ...atual,
@@ -264,6 +277,15 @@ export default function SituacoesPage() {
                   </td>
                   <td className="px-3 py-2">
                     <div className="flex items-center justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        aria-label={`Copiar ${situacao.nome}`}
+                        disabled={!podeAdministrar}
+                        onClick={() => copiarSituacao(situacao)}
+                      >
+                        <Copy size={14} />
+                      </Button>
                       <Button
                         variant="ghost"
                         size="sm"
