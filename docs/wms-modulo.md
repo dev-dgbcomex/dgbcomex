@@ -114,7 +114,8 @@ das operações para auditoria.
 | Rota | Conteúdo |
 |---|---|
 | `/wms` | Dashboard: pedidos liberados, separações por status, peças/metros reservados, estoque em aberto, gavetas |
-| `/wms/pedidos` | Pedidos aprovados no ERP com saldo; "Marcar para separação" cria a ordem |
+| `/wms/pedidos` | Pedidos aprovados no ERP com saldo, em kanban por situações (drag & drop ou seletor Mover para) |
+| `/wms/situacoes` | Cadastro local das colunas do kanban (nome, cor, ordem, ação e perfis) |
 | `/wms/separacoes` | Ordens por status (LIBERADO, EM_SEPARACAO, SEPARADO, CANCELADO) |
 | `/wms/separacoes/[id]` | Detalhe: itens do pedido, peças reservadas, iniciar/concluir/cancelar, seletor de peças |
 | `/wms/estoque` | Peças em aberto (exclui reservadas), filtros busca/gaveta/sub-lote/aviso/cor/produto |
@@ -128,7 +129,9 @@ das operações para auditoria.
   `GET /wms/separacoes/{id}/itens/{item}/pecas`,
   `POST /wms/separacoes/{id}/pecas`, `DELETE /wms/separacoes/{id}/pecas/{peca_id}`.
 
-**Banco local** (`scripts/migrar-wms-local.js`): `wms_separacoes`, `wms_separacao_pecas`,
+**Kanban e situações (local)**: GET|POST /wms/situacoes, GET|PUT|DELETE /wms/situacoes/{id}, POST /wms/pedidos/{empresa}/{pedido}/situacao (valida a ação e os perfis da situação), GET /wms/separacoes/{id}/itens/{item}/pecas?campo=lote|aviso|gaveta. A situação do pedido existe só no banco local e cada situação ativa gera uma coluna do kanban.
+
+**Banco local** (`scripts/migrar-wms-local.js`): tabelas `wms_separacoes`, `wms_separacao_pecas`, `wms_separacao_eventos`, `wms_situacoes_pedido`, `wms_pedidos_situacao` e `wms_pedido_eventos`. Índices únicos parciais garantem **uma ordem ativa por pedido** e **uma peça em apenas uma ordem ativa**. As tabelas antigas `wms_enderecos`, `wms_estoque` e `wms_movimentos` foram removidas.
 `wms_separacao_eventos`. Índices únicos parciais garantem **uma ordem ativa por pedido** e
 **uma peça em apenas uma ordem ativa**. As tabelas antigas `wms_enderecos`, `wms_estoque` e
 `wms_movimentos` foram removidas.
@@ -218,7 +221,7 @@ peças no banco local. O WMS nunca escreve no ERP.
 
 1. Comercial vê a lista de pedidos liberados em `/wms/pedidos` e marca o **pedido inteiro**
    para separação (os itens são informativos).
-2. A marcação cria uma ordem `LIBERADO` em `wms_separacoes` (uma ordem ativa por pedido).
+2. Arrastar para **Liberado** apenas registra a situação (COMERCIAL). Arrastar para **Em separação** cria/inicia a ordem em wms_separacoes (COMERCIAL, EXPEDICAO; uma ordem ativa por pedido).
 3. Estoque abre a ordem, inicia (`EM_SEPARACAO`) e seleciona peças por item. A lista de
    peças já exclui as reservadas/separadas por ordens ativas e respeita a **grade**
    produto + situação + cor + desenho + variante + categoria (a largura não filtra porque o
@@ -232,6 +235,8 @@ peças no banco local. O WMS nunca escreve no ERP.
    e permite trocar/remover a peça.
 8. O saldo separado tem **tolerância para mais e para menos**: é possível concluir com
    saldo remanescente no pedido.
+
+**Situações e permissões**: o cadastro em /wms/situacoes define nome, cor, ordem, ação (NENHUMA, CRIAR_ORDEM, CONCLUIR_ORDEM, CANCELAR_ORDEM), perfis autorizados e se está ativa. As situações de sistema não podem ser excluídas e uma situação em uso não pode ser removida (desative-a). ADMIN e SUDO sempre podem mover. A role EXPEDICAO precisa existir na tabela oles para ser atribuída a usuários. O drag & drop usa @dnd-kit/core, com o seletor Mover para como alternativa acessível por teclado. O modal de peças da ordem tem abas para buscar por lote (sub-lote), aviso ou gaveta.
 
 **Eventos**: toda transição (criar, iniciar, adicionar/remover peça, concluir, cancelar) é
 registrada em `wms_separacao_eventos` (payload JSONB, autor e data).

@@ -7,6 +7,7 @@
 import { requisitarWms } from "./cliente"
 import type {
   NovaSeparacao,
+  NovaSituacaoPedido,
   PecaEmAberto,
   PecaRef,
   WmsDashboard,
@@ -17,6 +18,7 @@ import type {
   WmsPecaSeparacao,
   WmsSeparacao,
   WmsSeparacaoDetalhe,
+  WmsSituacaoPedido,
 } from "./tipos"
 
 export type * from "./tipos"
@@ -75,6 +77,55 @@ export async function detalhePedido(
 ): Promise<WmsPedidoDetalhe> {
   return requisitarWms<WmsPedidoDetalhe>(
     `/wms/pedidos/${encodeURIComponent(empresa)}/${encodeURIComponent(pedido)}`
+  )
+}
+
+export async function listarSituacoes(opcoes: {
+  ativo?: boolean
+} = {}): Promise<WmsPaginado<WmsSituacaoPedido>> {
+  const params = new URLSearchParams()
+  if (opcoes.ativo != null) params.set("ativo", String(opcoes.ativo))
+  const query = params.toString()
+  return requisitarWms<WmsPaginado<WmsSituacaoPedido>>(
+    `/wms/situacoes${query ? `?${query}` : ""}`
+  )
+}
+
+export async function detalheSituacao(id: number): Promise<WmsSituacaoPedido> {
+  return requisitarWms<WmsSituacaoPedido>(`/wms/situacoes/${id}`)
+}
+
+export async function criarSituacao(
+  dados: NovaSituacaoPedido
+): Promise<WmsSituacaoPedido> {
+  return requisitarWms<WmsSituacaoPedido>("/wms/situacoes", {
+    metodo: "POST",
+    corpo: dados,
+  })
+}
+
+export async function editarSituacao(
+  id: number,
+  dados: Partial<NovaSituacaoPedido>
+): Promise<WmsSituacaoPedido> {
+  return requisitarWms<WmsSituacaoPedido>(`/wms/situacoes/${id}`, {
+    metodo: "PUT",
+    corpo: dados,
+  })
+}
+
+export async function excluirSituacao(id: number): Promise<void> {
+  await requisitarWms(`/wms/situacoes/${id}`, { metodo: "DELETE" })
+}
+
+export async function moverPedidoSituacao(
+  empresa: string,
+  pedido: string,
+  dados: { situacaoId: number; observacao?: string | null; usuarioId?: number | null }
+): Promise<WmsPedidoDetalhe> {
+  return requisitarWms<WmsPedidoDetalhe>(
+    `/wms/pedidos/${encodeURIComponent(empresa)}/${encodeURIComponent(pedido)}/situacao`,
+    { metodo: "POST", corpo: dados }
   )
 }
 
@@ -168,6 +219,7 @@ export async function pecasDoItem(
     gaveta?: string
     subLote?: string
     aviso?: string
+    campo?: string
     limite?: number
     offset?: number
   } = {}
@@ -178,6 +230,7 @@ export async function pecasDoItem(
       gaveta: (opcoes.gaveta ?? "").trim(),
       subLote: (opcoes.subLote ?? "").trim(),
       aviso: (opcoes.aviso ?? "").trim(),
+      campo: (opcoes.campo ?? "").trim(),
     }),
     opcoes.limite,
     opcoes.offset

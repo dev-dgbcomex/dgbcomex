@@ -53,6 +53,7 @@ describe("GET /api/wms/separacoes/[id]/itens/[item]/pecas", () => {
       gaveta: "A-01",
       subLote: "",
       aviso: "",
+      campo: "",
       limite: 200,
       offset: 0,
     })

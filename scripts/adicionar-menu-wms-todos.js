@@ -1,4 +1,4 @@
-// Insere o menu "WMS" para TODOS os usuarios (Neon).
+﻿// Insere o menu "WMS" para TODOS os usuarios (Neon).
 //
 // O /api/user/menus resolve nesta ordem: menus do usuario -> menus do role -> DEFAULT.
 // Entao, para o WMS aparecer em todo mundo:
@@ -14,9 +14,10 @@ const ICONE = "Warehouse"
 const ITENS = [
   { titulo: "Dashboard", url: "/wms", ordem: 0 },
   { titulo: "Pedidos", url: "/wms/pedidos", ordem: 1 },
-  { titulo: "Ordens de Separação", url: "/wms/separacoes", ordem: 2 },
-  { titulo: "Estoque em Aberto", url: "/wms/estoque", ordem: 3 },
-  { titulo: "Gavetas", url: "/wms/gavetas", ordem: 4 },
+  { titulo: "Situações", url: "/wms/situacoes", ordem: 2 },
+  { titulo: "Ordens de Separação", url: "/wms/separacoes", ordem: 3 },
+  { titulo: "Estoque em Aberto", url: "/wms/estoque", ordem: 4 },
+  { titulo: "Gavetas", url: "/wms/gavetas", ordem: 5 },
 ]
 const URLS_OBSOLETAS = ["/wms/enderecos", "/wms/movimentos"]
 

@@ -46,6 +46,53 @@ export type WmsGaveta = {
   metros: number
 }
 
+export const WMS_SITUACAO_ACOES = [
+  "NENHUMA",
+  "CRIAR_ORDEM",
+  "CONCLUIR_ORDEM",
+  "CANCELAR_ORDEM",
+] as const
+export type WmsSituacaoAcao = (typeof WMS_SITUACAO_ACOES)[number]
+
+export const WMS_SITUACAO_ACOES_ROTULOS: Record<WmsSituacaoAcao, string> = {
+  NENHUMA: "Somente mover",
+  CRIAR_ORDEM: "Criar/iniciar ordem",
+  CONCLUIR_ORDEM: "Concluir ordem",
+  CANCELAR_ORDEM: "Cancelar ordem",
+}
+
+export const WMS_PERFIS = ["COMERCIAL", "EXPEDICAO"] as const
+export type WmsPerfil = (typeof WMS_PERFIS)[number]
+export const WMS_PERFIS_ROTULOS: Record<WmsPerfil, string> = {
+  COMERCIAL: "Comercial",
+  EXPEDICAO: "Expedição",
+}
+export const WMS_PERFIS_ADMIN = ["ADMIN", "SUDO"]
+
+export type WmsSituacaoPedido = {
+  id: number
+  codigo: string
+  nome: string
+  cor: string
+  ordem: number
+  acao: WmsSituacaoAcao
+  perfis: string[]
+  ativo: boolean
+  sistema: boolean
+  pedidos: number | null
+  criadoEm: string | null
+  atualizadoEm: string | null
+}
+
+export type NovaSituacaoPedido = {
+  nome: string
+  cor: string
+  ordem?: number
+  acao?: WmsSituacaoAcao
+  perfis?: string[]
+  ativo?: boolean
+}
+
 export type WmsPedido = {
   empresa: string
   pedido: string
@@ -57,7 +104,13 @@ export type WmsPedido = {
   totalItens: number
   saldoMetros: number
   separacaoId: number | null
-  separacaoStatus: WmsPedidoStatus
+  separacaoStatus: string
+  situacaoId: number | null
+  situacaoNome: string | null
+  situacaoCor: string | null
+  situacaoOrdem: number
+  situacaoAcao: WmsSituacaoAcao
+  situacaoPerfis: string[]
 }
 
 export type WmsItemPedido = {

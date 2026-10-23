@@ -89,7 +89,7 @@ async function token(): Promise<{ config: Config; valor: string }> {
 }
 
 export type OpcoesRequisicao = {
-  metodo?: "GET" | "POST" | "DELETE"
+  metodo?: "GET" | "POST" | "PUT" | "DELETE"
   corpo?: unknown
 }
 

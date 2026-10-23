@@ -1,4 +1,4 @@
-// Cria o menu "WMS" (Armazém) para o role ADMIN com seus itens.
+﻿// Cria o menu "WMS" (Armazém) para o role ADMIN com seus itens.
 // Idempotente: se o menu/item ja existir, nao duplica.
 require("dotenv").config({ path: require("path").join(__dirname, "..", ".env.local") })
 const { Pool } = require("pg")
@@ -8,9 +8,10 @@ const TITULO_MENU = "WMS"
 const ITENS = [
   { titulo: "Dashboard", url: "/wms", ordem: 0 },
   { titulo: "Pedidos", url: "/wms/pedidos", ordem: 1 },
-  { titulo: "Ordens de Separação", url: "/wms/separacoes", ordem: 2 },
-  { titulo: "Estoque em Aberto", url: "/wms/estoque", ordem: 3 },
-  { titulo: "Gavetas", url: "/wms/gavetas", ordem: 4 },
+  { titulo: "Situações", url: "/wms/situacoes", ordem: 2 },
+  { titulo: "Ordens de Separação", url: "/wms/separacoes", ordem: 3 },
+  { titulo: "Estoque em Aberto", url: "/wms/estoque", ordem: 4 },
+  { titulo: "Gavetas", url: "/wms/gavetas", ordem: 5 },
 ]
 const URLS_OBSOLETAS = ["/wms/enderecos", "/wms/movimentos"]
 

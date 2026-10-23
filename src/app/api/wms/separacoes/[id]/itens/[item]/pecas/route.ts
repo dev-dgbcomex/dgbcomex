@@ -35,6 +35,7 @@ export async function GET(
         gaveta: searchParams.get("gaveta") ?? "",
         subLote: searchParams.get("subLote") ?? "",
         aviso: searchParams.get("aviso") ?? "",
+        campo: searchParams.get("campo") ?? "",
         limite: Number.isFinite(limite) ? limite : 50,
         offset: Number.isFinite(offset) ? offset : 0,
       })

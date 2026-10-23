@@ -457,13 +457,15 @@ function SeletorPecas({
 }) {
   const [busca, setBusca] = useState("")
   const [buscaAplicada, setBuscaAplicada] = useState("")
+  const [campo, setCampo] = useState<"" | "lote" | "aviso" | "gaveta">("")
   const [selecionadas, setSelecionadas] = useState<Set<string>>(new Set())
 
   const { data, isLoading } = useQuery<WmsPaginado<PecaEmAberto>>({
-    queryKey: ["wms-pecas-item", separacaoId, item.item, buscaAplicada],
+    queryKey: ["wms-pecas-item", separacaoId, item.item, buscaAplicada, campo],
     queryFn: async () => {
       const params = new URLSearchParams({
         busca: buscaAplicada,
+        campo,
         limite: "200",
         offset: "0",
       })
@@ -540,23 +542,64 @@ function SeletorPecas({
           </Button>
         </div>
 
-        <form
-          className="px-4 py-3 flex gap-2 border-b border-slate-200 dark:border-slate-800"
-          onSubmit={(e) => {
-            e.preventDefault()
-            setBuscaAplicada(busca.trim())
-          }}
-        >
-          <Input
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-            placeholder="Rolo ou peça"
-            aria-label="Buscar peças disponíveis"
-          />
-          <Button type="submit" variant="outline">
-            Buscar
-          </Button>
-        </form>
+        <div className="border-b border-slate-200 dark:border-slate-800">
+          <div
+            className="flex gap-1 px-4 pt-3"
+            role="tablist"
+            aria-label="Campo de busca das peças"
+          >
+            {[
+              { id: "" as const, rotulo: "Rolo/peça" },
+              { id: "lote" as const, rotulo: "Lote" },
+              { id: "aviso" as const, rotulo: "Aviso" },
+              { id: "gaveta" as const, rotulo: "Gaveta" },
+            ].map((aba) => (
+              <button
+                key={aba.id || "geral"}
+                type="button"
+                role="tab"
+                aria-selected={campo === aba.id}
+                onClick={() => {
+                  setCampo(aba.id)
+                  setBusca("")
+                  setBuscaAplicada("")
+                }}
+                className={`rounded-t-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+                  campo === aba.id
+                    ? "bg-blue-600 text-white"
+                    : "text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+                }`}
+              >
+                {aba.rotulo}
+              </button>
+            ))}
+          </div>
+          <form
+            className="px-4 py-3 flex gap-2"
+            onSubmit={(e) => {
+              e.preventDefault()
+              setBuscaAplicada(busca.trim())
+            }}
+          >
+            <Input
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              placeholder={
+                campo === "lote"
+                  ? "Buscar por lote/sub-lote"
+                  : campo === "aviso"
+                    ? "Buscar por aviso"
+                    : campo === "gaveta"
+                      ? "Buscar por gaveta (endereço)"
+                      : "Rolo ou peça"
+              }
+              aria-label="Buscar peças disponíveis"
+            />
+            <Button type="submit" variant="outline">
+              Buscar
+            </Button>
+          </form>
+        </div>
 
         <div className="flex-1 overflow-auto">
           {isLoading ? (
