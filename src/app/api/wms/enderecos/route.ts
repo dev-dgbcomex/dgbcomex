@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireAuth } from "@/lib/auth"
-import { handleApiError } from "@/lib/api-error"
 import { criarEndereco, listarEnderecos } from "@/lib/wms/repo"
-import { WMS_ENDERECO_TIPO } from "@/lib/db/schema/wms"
+import { erroWms } from "@/lib/wms/resposta-erro"
+import { WMS_ENDERECO_TIPO } from "@/lib/wms/tipos"
+
+export const dynamic = "force-dynamic"
 
 const TIPOS = new Set<string>(WMS_ENDERECO_TIPO)
 
@@ -18,7 +20,7 @@ export async function GET() {
     if (auth instanceof NextResponse) return auth
     return NextResponse.json(await listarEnderecos())
   } catch (error) {
-    return handleApiError(error, "GET /api/wms/enderecos")
+    return erroWms(error, "GET /api/wms/enderecos")
   }
 }
 
@@ -48,6 +50,6 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(endereco, { status: 201 })
   } catch (error) {
-    return handleApiError(error, "POST /api/wms/enderecos")
+    return erroWms(error, "POST /api/wms/enderecos")
   }
 }

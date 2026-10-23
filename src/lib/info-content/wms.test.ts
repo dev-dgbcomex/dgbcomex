@@ -13,9 +13,10 @@ function texto(path: string) {
 }
 
 describe("info-content do WMS", () => {
-  it("explica que o WMS usa o banco local e o ERP é somente leitura", () => {
+  it("explica que o WMS usa o banco local via api-microdata e o ERP é somente leitura", () => {
     const t = texto("/wms")
     expect(t).toMatch(/PostgreSQL local/)
+    expect(t).toMatch(/api-microdata/)
     expect(t).toMatch(/somente leitura/)
     expect(t).toMatch(/raw\.cte_peca/)
     expect(t).toMatch(/raw\.cte_baixa/)
@@ -27,6 +28,7 @@ describe("info-content do WMS", () => {
     expect(t).toMatch(/Nro\. Rolo \+ Nro\. Peça/)
     expect(t).toMatch(/Transferência/)
     expect(t).toMatch(/movimento auditável/)
+    expect(t).toMatch(/histórico continua legível/)
   })
 
   it("descreve os tipos de endereço", () => {

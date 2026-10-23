@@ -64,7 +64,9 @@ Levantamento (feito), decisões (feitas) e plano de execução. **Entrega: este 
 
 ### Fase 2 — Banco local como base (fundação) — ✅ concluída
 1. **Config de conexão** no dgbcomex: variável `DATABASE_URL_LOCAL` e um client Drizzle
-   dedicado (`src/lib/db/local.ts`) para não misturar com o Neon. **Feito.**
+   dedicado para não misturar com o Neon. **Feito — e depois removido**: o dgbcomex (Vercel)
+   não alcança o Postgres local, então o acesso passou a ser via api-microdata (ver Fase 4).
+   A `DATABASE_URL_LOCAL` continua sendo da api-microdata (ETL e rotas `/wms`).
 2. **Script de cópia Neon→local** (`scripts/replicar-neon-local.js`), idempotente e
    repetível:
    - cria no local os bancos/schemas que faltam (`marts`, `auth`, `etl`, e as tabelas de
@@ -98,12 +100,26 @@ Saída: `docs/wms-ferramentas.md` — recomendação **construir nativo no dgbco
   `/wms/movimentos`, com `InfoButton` e `src/lib/info-content/wms.ts`. **Feito.**
 - Entrada no menu via `scripts/adicionar-menu-wms.js` (idempotente, Neon/ADMIN) + ícone
   `Warehouse` em `src/lib/menu-icones.tsx`. **Feito.**
-- Schema local `src/lib/db/schema/wms.ts` (`wms_enderecos`, `wms_estoque`,
-  `wms_movimentos`) + DDL idempotente em `scripts/migrar-wms-local.js`. **Feito.**
-- API: `/api/wms/dashboard`, `/api/wms/enderecos`, `/api/wms/estoque`,
-  `/api/wms/estoque/alocado`, `/api/wms/movimentos` (lê `raw.cte_peca` read-only e
-  escreve só no local). **Feito.**
-- Testes de página, API e info-content. **Feito.**
+- Schema local das tabelas `wms_enderecos`, `wms_estoque`, `wms_movimentos` + DDL
+  idempotente em `scripts/migrar-wms-local.js` (inclui `nro_rolo`/`nro_peca` de snapshot
+  nos movimentos). **Feito.**
+- **Arquitetura de acesso**: o front chama `/api/wms/*` (Next.js), que faz proxy
+  autenticado para a **api-microdata** (`app/src/api/routers/wms.py`), que por sua vez
+  lê `raw.cte_peca` (read-only) e escreve em `public.wms_*` no Postgres local. O dgbcomex
+  não abre conexão com o banco local:
+
+  ```
+  /wms (React) → /api/wms/* (Next) → api-microdata /wms/* (FastAPI) → dgbcomex_warehouse
+  ```
+
+  Auth: rotas Next usam `requireAuth` (sessão); a api-microdata usa o usuário de serviço
+  (`MICRODATA_SERVICE_EMAIL`/`MICRODATA_SERVICE_SENHA`) com escopo `estoque:leitura`. O
+  `usuarioId` do dgbcomex vai no corpo do movimento para auditoria. **Feito.**
+- Cliente/mapping no dgbcomex em `src/lib/wms/cliente.ts`, `src/lib/wms/repo.ts` e
+  `src/lib/wms/tipos.ts`; testes do cliente (token cache, retry 401, mapeamento de erro) e
+  das rotas. **Feito.**
+- Removidos `src/lib/db/local.ts` e `src/lib/db/schema/wms.ts` (não há mais acesso direto
+  ao banco local no dgbcomex). **Feito.**
 - Registrar a integração read-only do ERP (padrão `adicionar-integracao-*.js`) — **pendente**.
 - Só depois começa a lógica de negócio avançada (recebimento, conferência, ondas etc.).
 
@@ -120,10 +136,12 @@ Saída: `docs/wms-ferramentas.md` — recomendação **construir nativo no dgbco
 ## 6. Riscos e pontos em aberto
 
 - **Ambiente local**: precisa do PostgreSQL 17 no ar (`localhost:5432`) e do
-  `dgbcomex_warehouse` acessível pelo dgbcomex (hoje só a microdata o usa).
-- **Credentials/segurança**: o dgbcomex em produção (Vercel) **não alcança** o Postgres
-  local. Decidir se o WMS roda on-premise ou expõe o local por túnel/rede — ponto a resolver
-  antes da fase 4.
+  `dgbcomex_warehouse` acessível **pela api-microdata**. O dgbcomex não conecta no local.
+- **Credentials/segurança (resolvido na arquitetura)**: o dgbcomex em produção (Vercel)
+  **não alcança** o Postgres local; o acesso é sempre via api-microdata. Falta definir no
+  Vercel as variáveis `MICRODATA_API_URL`, `MICRODATA_SERVICE_EMAIL` e
+  `MICRODATA_SERVICE_SENHA`, com a API alcançável a partir da Vercel (IP público, VPN ou
+  túnel). Sem isso as telas do WMS carregam, mas as rotas respondem 503.
 - **Cópia de `public`**: FKs entre tabelas exigem ordem de cópia; colunas com default
   `nextval` precisam de reset de sequência (mesma dor do backup/restore documentada no
   AGENTS.md).
@@ -133,7 +151,8 @@ Saída: `docs/wms-ferramentas.md` — recomendação **construir nativo no dgbco
 
 1. ~~Fase 2: client local + cópia/validação Neon→local + ETL nos dois bancos.~~ ✅
 2. ~~Fase 3: comparação de ferramentas (`docs/wms-ferramentas.md`).~~ ✅
-3. Fase 4: registrar a integração read-only do ERP e validar o módulo em execução
-   (`npm run dev` → `/wms`).
-4. Resolver o risco de produção: o Vercel **não alcança** o Postgres local — decidir
-   on-premise/túnel antes de expor o WMS em produção.
+3. ~~Fase 4: rotas WMS via api-microdata (cliente, mapeamento, testes, docs e info).~~ ✅
+4. Configurar no Vercel as variáveis `MICRODATA_*` apontando para uma API alcançável e
+   validar o módulo em execução (`npm run dev` → `/wms`).
+5. Registrar a integração read-only do ERP e seguir para a lógica avançada (recebimento,
+   conferência, ondas etc.).

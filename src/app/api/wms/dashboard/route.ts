@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server"
 import { requireAuth } from "@/lib/auth"
-import { handleApiError } from "@/lib/api-error"
 import { dashboard } from "@/lib/wms/repo"
+import { erroWms } from "@/lib/wms/resposta-erro"
+
+export const dynamic = "force-dynamic"
 
 export async function GET() {
   try {
@@ -10,6 +12,6 @@ export async function GET() {
 
     return NextResponse.json(await dashboard())
   } catch (error) {
-    return handleApiError(error, "GET /api/wms/dashboard")
+    return erroWms(error, "GET /api/wms/dashboard")
   }
 }

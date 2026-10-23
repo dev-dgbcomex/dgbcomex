@@ -39,5 +39,7 @@ export const config = {
     "/chamados",
     "/chamados/:path*",
     "/api/chamados/:path*",
+    "/wms",
+    "/wms/:path*",
   ],
 }

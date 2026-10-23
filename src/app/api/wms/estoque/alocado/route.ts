@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server"
 import { requireAuth } from "@/lib/auth"
-import { handleApiError } from "@/lib/api-error"
 import { listarPecasAlocadas } from "@/lib/wms/repo"
+import { erroWms } from "@/lib/wms/resposta-erro"
+
+export const dynamic = "force-dynamic"
 
 export async function GET() {
   try {
@@ -9,6 +11,6 @@ export async function GET() {
     if (auth instanceof NextResponse) return auth
     return NextResponse.json(await listarPecasAlocadas())
   } catch (error) {
-    return handleApiError(error, "GET /api/wms/estoque/alocado")
+    return erroWms(error, "GET /api/wms/estoque/alocado")
   }
 }

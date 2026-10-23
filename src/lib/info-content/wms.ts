@@ -4,13 +4,15 @@ export const wmsContent: Record<string, InfoContent> = {
   "/wms": {
     title: "WMS — Gestão de Armazém",
     description:
-      "Módulo de armazém que trabalha com o estoque em aberto vindo do ERP e com endereçamento próprio. Os dados do WMS ficam no PostgreSQL local (dgbcomex_warehouse); o ERP é somente leitura.",
+      "Módulo de armazém que trabalha com o estoque em aberto vindo do ERP e com endereçamento próprio. Os dados do WMS ficam no PostgreSQL local (dgbcomex_warehouse) e são acessados pela api-microdata; o front nunca conecta direto no banco local e o ERP é somente leitura.",
     rules: [
       "O estoque em aberto é lido de raw.cte_peca descontando as baixas de raw.cte_baixa — nada é escrito no ERP.",
+      "As rotas /api/wms/* fazem proxy autenticado para a api-microdata, que é quem acessa o banco local.",
       "Endereços, peças alocadas e movimentos ficam apenas no banco local.",
       "Alocar uma peça exige um endereço de destino válido.",
       "Uma mesma peça (Nro. Rolo + Nro. Peça) não pode ser alocada duas vezes.",
       "Transferência muda o endereço da peça; saída remove a alocação — os dois geram movimento auditável.",
+      "O movimento guarda rolo/peça no próprio registro, então o histórico continua legível depois da saída.",
       "Qualquer usuário autenticado pode consultar; criar endereço e movimentar exige sessão ativa.",
     ],
     fields: [
@@ -65,7 +67,7 @@ export const wmsContent: Record<string, InfoContent> = {
       "A lista vem de raw.cte_peca com antijoin em raw.cte_baixa e ignora rolos de origem (nro_rolo_origem).",
       "Peças já alocadas no WMS deixam de aparecer como disponíveis para nova alocação.",
       "A busca filtra por número de rolo, produto, cor ou lote interno.",
-      "Alocar exige escolher um endereço de destino; a operação gera um movimento de ENTRADA.",
+      "Alocar exige escolher um endereço de destino; a operação gera um movimento de ENTRADA e é enviada pela api-microdata.",
     ],
     columns: [
       { name: "Rolo / Peça", desc: "Identificação da peça no ERP" },

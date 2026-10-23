@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { NextRequest, NextResponse } from "next/server"
 import { requireAuth } from "@/lib/auth"
 import { criarEndereco, listarEnderecos } from "@/lib/wms/repo"
+import { ErroWms } from "@/lib/wms/cliente"
 import { GET, POST } from "./route"
 
 vi.mock("@/lib/auth", () => ({ requireAuth: vi.fn() }))
@@ -73,5 +74,16 @@ describe("/api/wms/enderecos", () => {
 
     await POST(req({ codigo: "C-01", tipo: "INVALIDO" }))
     expect(criarEndereco).toHaveBeenCalledWith(expect.objectContaining({ tipo: "PULMAO" }))
+  })
+
+  it("POST repassa 409 de código duplicado da api-microdata", async () => {
+    vi.mocked(requireAuth).mockResolvedValue({ userId: 1 } as Awaited<ReturnType<typeof requireAuth>>)
+    vi.mocked(criarEndereco).mockRejectedValue(
+      new ErroWms("Já existe um endereço com este código", 409)
+    )
+
+    const res = await POST(req({ codigo: "A-01" }))
+    expect(res.status).toBe(409)
+    expect(await res.json()).toEqual({ error: "Já existe um endereço com este código" })
   })
 })
