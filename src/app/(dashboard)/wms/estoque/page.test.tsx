@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { fireEvent, screen, waitFor } from "@testing-library/react"
-import { createFetchMock, findCall, navMock, renderPage, toastMock } from "@/test/harness"
+import { createFetchMock, findCall, navMock, renderPage } from "@/test/harness"
 import EstoquePage from "./page"
 
 const pecas = [
@@ -9,33 +9,37 @@ const pecas = [
     empresa: "13",
     nro_rolo: "R100",
     nro_peca: "1",
-    produto: "TECIDO A",
-    categoria: "1",
+    produto: "29",
+    produto_desc: "TECIDO A",
+    situacao: "E",
+    situacao_desc: "Estoque",
     cor: "010",
+    cor_desc: "Azul",
     desenho: "20",
+    desenho_desc: null,
     variante: "1",
+    variante_desc: null,
+    categoria: "1",
+    categoria_desc: null,
     largura: "1,40",
+    sub_lote: "L-01",
+    aviso: "A1",
+    gaveta: "A-01-01",
+    gaveta_descricao: "Gaveta A",
+    zona: "DEPÓSITO",
     metros: 55.6,
     peso: 13.9,
-    situacao: "E",
-    lote_interno: "L-01",
     data_entrada: "2026-06-11",
   },
 ]
 
-const enderecos = [
-  { id: 5, codigo: "A-01-01", tipo: "PULMAO", ativo: true },
-  { id: 6, codigo: "PIC-01", tipo: "PICKING", ativo: true },
-]
+const URL_BASE = (extra = "") =>
+  `/api/wms/estoque?busca=&gaveta=&subLote=&aviso=&cor=&produto=&limite=100&offset=0${extra}`
 
 function mock({ total = 1, itens = pecas } = {}) {
   return createFetchMock(({ method, url }) => {
-    if (method === "GET" && url === "/api/wms/estoque?busca=&limite=50&offset=0") {
+    if (method === "GET" && url === URL_BASE()) {
       return { json: { itens, total } }
-    }
-    if (method === "GET" && url === "/api/wms/enderecos") return { json: enderecos }
-    if (method === "POST" && url === "/api/wms/movimentos") {
-      return { status: 201, json: { ok: true } }
     }
     return { status: 404, json: {} }
   })
@@ -45,20 +49,19 @@ describe("WMS — estoque em aberto", () => {
   beforeEach(() => {
     navMock.reset()
     navMock.setPathname("/wms/estoque")
-    toastMock.success.mockClear()
-    toastMock.error.mockClear()
   })
 
-  it("lista as peças em aberto do ERP", async () => {
+  it("lista as peças em aberto com gaveta e zona", async () => {
     const fetchMock = mock()
     vi.stubGlobal("fetch", fetchMock.fn)
 
     renderPage(<EstoquePage />)
 
-    expect(await screen.findByText("R100")).toBeTruthy()
+    expect(await screen.findByText("R100/1")).toBeTruthy()
     expect(screen.getByText("TECIDO A")).toBeTruthy()
-    expect(screen.getByText("1,40")).toBeTruthy()
     expect(screen.getByText("55.60")).toBeTruthy()
+    expect(screen.getByText("A-01-01")).toBeTruthy()
+    expect(screen.getByText("DEPÓSITO")).toBeTruthy()
   })
 
   it("mostra estado vazio quando não há peças", async () => {
@@ -70,50 +73,35 @@ describe("WMS — estoque em aberto", () => {
     expect(await screen.findByText("Nenhuma peça em aberto encontrada.")).toBeTruthy()
   })
 
-  it("aloca a peça no endereço escolhido", async () => {
+  it("aplica o filtro de gaveta na consulta", async () => {
     const fetchMock = mock()
     vi.stubGlobal("fetch", fetchMock.fn)
 
     renderPage(<EstoquePage />)
-    await screen.findByText("R100")
+    await screen.findByText("R100/1")
 
-    fireEvent.change(screen.getByLabelText("Endereço de destino do rolo R100"), {
-      target: { value: "5" },
+    fireEvent.change(screen.getByLabelText("Filtrar por gaveta"), {
+      target: { value: "A-01-01" },
     })
-    fireEvent.click(screen.getByRole("button", { name: "Alocar" }))
+    fireEvent.click(screen.getByRole("button", { name: "Buscar" }))
 
-    await waitFor(() => expect(toastMock.success).toHaveBeenCalledWith("Peça alocada"))
-    const post = findCall(fetchMock.calls, "/api/wms/movimentos", "POST")
-    expect(post?.body).toMatchObject({
-      tipo: "ENTRADA",
-      enderecoDestinoId: 5,
-      peca: { nroRolo: "R100", nroPeca: "1", metros: 55.6 },
-    })
+    await waitFor(() =>
+      expect(
+        findCall(fetchMock.calls, URL_BASE().replace("gaveta=&", "gaveta=A-01-01&"))
+      ).toBeTruthy()
+    )
   })
 
-  it("exibe o erro da API ao falhar a alocação", async () => {
-    const fetchMock = createFetchMock(({ method, url }) => {
-      if (method === "GET" && url === "/api/wms/estoque?busca=&limite=50&offset=0") {
-        return { json: { itens: pecas, total: 1 } }
-      }
-      if (method === "GET" && url === "/api/wms/enderecos") return { json: enderecos }
-      if (method === "POST" && url === "/api/wms/movimentos") {
-        return { status: 409, json: { error: "Esta peça já está alocada" } }
-      }
-      return { status: 404, json: {} }
-    })
+  it("alterna para o kanban agrupando por zona", async () => {
+    const fetchMock = mock()
     vi.stubGlobal("fetch", fetchMock.fn)
 
     renderPage(<EstoquePage />)
-    await screen.findByText("R100")
+    await screen.findByText("R100/1")
 
-    fireEvent.change(screen.getByLabelText("Endereço de destino do rolo R100"), {
-      target: { value: "5" },
-    })
-    fireEvent.click(screen.getByRole("button", { name: "Alocar" }))
+    fireEvent.click(screen.getByRole("button", { name: "Kanban" }))
 
-    await waitFor(() =>
-      expect(toastMock.error).toHaveBeenCalledWith("Esta peça já está alocada")
-    )
+    expect(await screen.findByText("DEPÓSITO")).toBeTruthy()
+    expect(screen.getByText("55.6 m")).toBeTruthy()
   })
 })

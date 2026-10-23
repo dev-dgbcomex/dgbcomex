@@ -13,10 +13,12 @@ const TITULO = "WMS"
 const ICONE = "Warehouse"
 const ITENS = [
   { titulo: "Dashboard", url: "/wms", ordem: 0 },
-  { titulo: "Endereços", url: "/wms/enderecos", ordem: 1 },
-  { titulo: "Estoque em Aberto", url: "/wms/estoque", ordem: 2 },
-  { titulo: "Movimentos", url: "/wms/movimentos", ordem: 3 },
+  { titulo: "Pedidos", url: "/wms/pedidos", ordem: 1 },
+  { titulo: "Ordens de Separação", url: "/wms/separacoes", ordem: 2 },
+  { titulo: "Estoque em Aberto", url: "/wms/estoque", ordem: 3 },
+  { titulo: "Gavetas", url: "/wms/gavetas", ordem: 4 },
 ]
+const URLS_OBSOLETAS = ["/wms/enderecos", "/wms/movimentos"]
 
 async function garantirMenu(pool, { usuarioId, role }) {
   const escopo = usuarioId ? "usuario" : `role ${role}`
@@ -48,12 +50,30 @@ async function garantirMenu(pool, { usuarioId, role }) {
     console.log(`  + menu WMS do ${escopo}: id=${menuId}`)
   }
 
-  for (const item of ITENS) {
+  for (const url of URLS_OBSOLETAS) {
     const { rowCount } = await pool.query(
-      `SELECT id FROM user_menu_itens WHERE user_menu_id = $1 AND url = $2`,
+      `DELETE FROM user_menu_itens WHERE user_menu_id = $1 AND url = $2`,
+      [menuId, url]
+    )
+    if (rowCount > 0) console.log(`      - removido item obsoleto ${url}`)
+  }
+
+  for (const item of ITENS) {
+    const existenteItem = await pool.query(
+      `SELECT id, titulo, ordem FROM user_menu_itens WHERE user_menu_id = $1 AND url = $2`,
       [menuId, item.url]
     )
-    if (rowCount > 0) continue
+    if (existenteItem.rowCount > 0) {
+      const atual = existenteItem.rows[0]
+      if (atual.titulo !== item.titulo || atual.ordem !== item.ordem) {
+        await pool.query(
+          `UPDATE user_menu_itens SET titulo = $1, ordem = $2, updated_at = now() WHERE id = $3`,
+          [item.titulo, item.ordem, atual.id]
+        )
+        console.log(`      ~ ${item.titulo} ${item.url}`)
+      }
+      continue
+    }
     await pool.query(
       `INSERT INTO user_menu_itens (user_menu_id, titulo, url, ordem, ativo, created_at, updated_at)
        VALUES ($1, $2, $3, $4, true, now(), now())`,

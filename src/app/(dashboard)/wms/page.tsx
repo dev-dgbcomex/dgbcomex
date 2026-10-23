@@ -3,30 +3,52 @@
 import { useQuery } from "@tanstack/react-query"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Boxes, Loader2, Package, Ruler, Warehouse, ArrowLeftRight, MapPin } from "lucide-react"
+import {
+  Boxes,
+  ClipboardList,
+  Layers,
+  Loader2,
+  MapPin,
+  Package,
+  Ruler,
+  Warehouse,
+} from "lucide-react"
 import { InfoButton } from "@/components/ui/info-button"
 import { getInfoContent } from "@/lib/info-content"
-
-interface Resumo {
-  enderecos: number
-  enderecosAtivos: number
-  pecasAlocadas: number
-  metrosAlocados: number
-  pecasEmAberto: number
-  movimentosHoje: number
-}
+import type { WmsDashboard } from "@/lib/wms/tipos"
 
 const atalhos = [
-  { href: "/wms/enderecos", label: "Endereços", desc: "Cadastrar posições do armazém", icon: MapPin },
-  { href: "/wms/estoque", label: "Estoque em aberto", desc: "Peças do ERP e alocação", icon: Package },
-  { href: "/wms/movimentos", label: "Movimentos", desc: "Entradas, transferências e saídas", icon: ArrowLeftRight },
+  {
+    href: "/wms/pedidos",
+    label: "Pedidos",
+    desc: "Pedidos aprovados no ERP e marcação para separação",
+    icon: ClipboardList,
+  },
+  {
+    href: "/wms/separacoes",
+    label: "Separações",
+    desc: "Ordens liberadas, em andamento e concluídas",
+    icon: Boxes,
+  },
+  {
+    href: "/wms/estoque",
+    label: "Estoque em aberto",
+    desc: "Peças sem baixa no ERP, excluindo as reservadas",
+    icon: Package,
+  },
+  {
+    href: "/wms/gavetas",
+    label: "Gavetas",
+    desc: "Catálogo de endereços do ERP e ocupação",
+    icon: MapPin,
+  },
 ]
 
 export default function WmsPage() {
   const pathname = usePathname()
   const info = getInfoContent(pathname)
 
-  const { data, isLoading } = useQuery<Resumo>({
+  const { data, isLoading } = useQuery<WmsDashboard>({
     queryKey: ["wms-dashboard"],
     queryFn: async () => {
       const res = await fetch("/api/wms/dashboard")
@@ -44,10 +66,42 @@ export default function WmsPage() {
   }
 
   const cards = [
-    { label: "Endereços", value: data.enderecos, icon: Warehouse, hint: `${data.enderecosAtivos} ativos` },
-    { label: "Peças alocadas", value: data.pecasAlocadas, icon: Boxes, hint: `${data.metrosAlocados.toFixed(0)} m` },
-    { label: "Peças em aberto", value: data.pecasEmAberto, icon: Package, hint: "no ERP, sem baixa" },
-    { label: "Movimentos hoje", value: data.movimentosHoje, icon: Ruler, hint: "entradas e saídas" },
+    {
+      label: "Pedidos liberados",
+      value: data.pedidosLiberados,
+      icon: ClipboardList,
+      hint: "aprovados com saldo no ERP",
+    },
+    {
+      label: "Separações em aberto",
+      value: data.separacoesLiberadas + data.separacoesEmAndamento,
+      icon: Boxes,
+      hint: `${data.separacoesLiberadas} liberadas · ${data.separacoesEmAndamento} em andamento`,
+    },
+    {
+      label: "Peças reservadas",
+      value: data.pecasReservadas,
+      icon: Ruler,
+      hint: `${data.metrosReservados.toFixed(1)} m reservados`,
+    },
+    {
+      label: "Peças em aberto",
+      value: data.pecasEmAberto,
+      icon: Package,
+      hint: "no ERP, sem baixa",
+    },
+    {
+      label: "Separações concluídas",
+      value: data.separacoesConcluidas,
+      icon: Layers,
+      hint: "aguardando baixa no ERP",
+    },
+    {
+      label: "Gavetas",
+      value: data.gavetas,
+      icon: Warehouse,
+      hint: "endereços do ERP",
+    },
   ]
 
   return (
@@ -58,11 +112,12 @@ export default function WmsPage() {
           {info && <InfoButton content={info} />}
         </h1>
         <p className="text-sm text-slate-500 dark:text-slate-400">
-          Endereçamento e movimentação sobre o estoque em aberto, com dados no banco local.
+          Ordens de separação sobre os pedidos liberados no ERP. O WMS jamais escreve no ERP;
+          as ordens e peças reservadas ficam no banco local.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {cards.map(({ label, value, icon: Icon, hint }) => (
           <div
             key={label}
@@ -74,13 +129,15 @@ export default function WmsPage() {
                 <Icon size={18} className="text-slate-600 dark:text-slate-300" />
               </div>
             </div>
-            <p className="mt-3 text-2xl font-bold text-slate-900 dark:text-slate-50">{value}</p>
+            <p className="mt-3 text-2xl font-bold text-slate-900 dark:text-slate-50">
+              {value.toLocaleString("pt-BR")}
+            </p>
             <p className="text-xs text-slate-400">{hint}</p>
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
         {atalhos.map(({ href, label, desc, icon: Icon }) => (
           <Link
             key={href}

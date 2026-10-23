@@ -71,13 +71,33 @@ describe("requisitarWms", () => {
     vi.stubGlobal("fetch", fetchMock)
     const { requisitarWms } = await carregar()
 
-    await requisitarWms("/wms/enderecos", { metodo: "POST", corpo: { codigo: "A-01" } })
+    await requisitarWms("/wms/separacoes", {
+      metodo: "POST",
+      corpo: { empresa: "13", pedido: "00005902" },
+    })
 
     expect(fetchMock.mock.calls[1][1]).toMatchObject({
       method: "POST",
       headers: { Authorization: "Bearer jwt-1", "Content-Type": "application/json" },
-      body: JSON.stringify({ codigo: "A-01" }),
+      body: JSON.stringify({ empresa: "13", pedido: "00005902" }),
     })
+  })
+
+  it("envia DELETE sem corpo", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(resposta({ corpo: { token: "jwt-1" } }))
+      .mockResolvedValueOnce(resposta({ corpo: { removida: { id: 11 } } }))
+    vi.stubGlobal("fetch", fetchMock)
+    const { requisitarWms } = await carregar()
+
+    await requisitarWms("/wms/separacoes/9/pecas/11", { metodo: "DELETE" })
+
+    expect(fetchMock.mock.calls[1][1]).toMatchObject({
+      method: "DELETE",
+      headers: { Authorization: "Bearer jwt-1" },
+    })
+    expect((fetchMock.mock.calls[1][1] as RequestInit).body).toBeUndefined()
   })
 
   it("renova o token e repete uma vez em 401", async () => {
@@ -105,14 +125,20 @@ describe("requisitarWms", () => {
         .fn()
         .mockResolvedValueOnce(resposta({ corpo: { token: "jwt-1" } }))
         .mockResolvedValueOnce(
-          resposta({ status: 409, corpo: { detail: "Já existe um endereço com este código" } })
+          resposta({
+            status: 409,
+            corpo: { detail: "Peça 123/1 já está reservada em outra ordem" },
+          })
         )
     )
     const { requisitarWms } = await carregar()
 
     await expect(
-      requisitarWms("/wms/enderecos", { metodo: "POST", corpo: {} })
-    ).rejects.toMatchObject({ status: 409, message: "Já existe um endereço com este código" })
+      requisitarWms("/wms/separacoes/9/pecas", { metodo: "POST", corpo: {} })
+    ).rejects.toMatchObject({
+      status: 409,
+      message: "Peça 123/1 já está reservada em outra ordem",
+    })
   })
 
   it("usa a mensagem do primeiro erro de validação", async () => {
@@ -127,7 +153,7 @@ describe("requisitarWms", () => {
     )
     const { requisitarWms } = await carregar()
 
-    await expect(requisitarWms("/wms/movimentos")).rejects.toMatchObject({
+    await expect(requisitarWms("/wms/separacoes/9")).rejects.toMatchObject({
       status: 422,
       message: "campo inválido",
     })

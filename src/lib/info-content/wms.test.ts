@@ -1,56 +1,69 @@
 import { describe, expect, it } from "vitest"
 import { getInfoContent } from "./index"
 
-function texto(path: string) {
-  const info = getInfoContent(path)
+const textoDe = (pathname: string) => {
+  const info = getInfoContent(pathname)
+  if (!info) return ""
   return [
-    info?.description ?? "",
-    ...(info?.rules ?? []),
-    ...(info?.fields ?? []).map((f) => `${f.name}: ${f.desc}`),
-    ...(info?.columns ?? []).map((c) => `${c.name}: ${c.desc}`),
-    ...(info?.examples ?? []).map((e) => `${e.title}: ${e.desc}`),
+    info.description,
+    ...(info.rules ?? []),
+    ...(info.columns ?? []).map((c) => `${c.name}: ${c.desc}`),
+    ...(info.fields ?? []).map((f) => `${f.name}: ${f.desc}`),
+    ...(info.examples ?? []).map((e) => `${e.title}: ${e.desc}`),
   ].join("\n")
 }
 
 describe("info-content do WMS", () => {
-  it("explica que o WMS usa o banco local via api-microdata e o ERP é somente leitura", () => {
-    const t = texto("/wms")
-    expect(t).toMatch(/PostgreSQL local/)
-    expect(t).toMatch(/api-microdata/)
-    expect(t).toMatch(/somente leitura/)
-    expect(t).toMatch(/raw\.cte_peca/)
-    expect(t).toMatch(/raw\.cte_baixa/)
+  it("cobre a tela do dashboard com o fluxo de ordens de separação", () => {
+    const texto = textoDe("/wms")
+
+    expect(texto).toMatch(/ordens de separação/i)
+    expect(texto).toMatch(/LIBERADO/)
+    expect(texto).toMatch(/EM_SEPARACAO/)
+    expect(texto).toMatch(/concluir.*não libera|não libera.*concluir/i)
+    expect(texto).toMatch(/somente leitura|nunca grava/i)
+    expect(texto).not.toMatch(/endereço de destino|movimentaç/i)
   })
 
-  it("documenta as regras de alocação", () => {
-    const t = texto("/wms")
-    expect(t).toMatch(/endereço de destino válido/)
-    expect(t).toMatch(/Nro\. Rolo \+ Nro\. Peça/)
-    expect(t).toMatch(/Transferência/)
-    expect(t).toMatch(/movimento auditável/)
-    expect(t).toMatch(/histórico continua legível/)
+  it("explica os pedidos liberados e a marcação por pedido inteiro", () => {
+    const texto = textoDe("/wms/pedidos")
+
+    expect(texto).toMatch(/status 2/i)
+    expect(texto).toMatch(/pedido inteiro/i)
+    expect(texto).toMatch(/409|já.*ordem ativa/i)
+    expect(texto).toMatch(/qtde.*romaneio.*acerto/i)
   })
 
-  it("descreve os tipos de endereço", () => {
-    const t = texto("/wms/enderecos")
-    for (const tipo of ["PULMAO", "PICKING", "EXPEDICAO", "AVARIA"]) {
-      expect(t).toContain(tipo)
+  it("explica os status das ordens de separação", () => {
+    const texto = textoDe("/wms/separacoes")
+
+    for (const status of ["LIBERADO", "EM_SEPARACAO", "SEPARADO", "CANCELADO"]) {
+      expect(texto).toContain(status)
     }
-    expect(t).toMatch(/código.*único/i)
+    expect(texto).toMatch(/peças.*voltam ao estoque em aberto/i)
   })
 
-  it("descreve o estoque em aberto e a busca", () => {
-    const t = texto("/wms/estoque")
-    expect(t).toMatch(/sem baixa/i)
-    expect(t).toMatch(/nro_rolo_origem/)
-    expect(t).toMatch(/número de rolo, produto, cor ou lote interno/)
+  it("detalha o estoque em aberto e a grade de seleção", () => {
+    const texto = textoDe("/wms/estoque")
+
+    expect(texto).toMatch(/nro_rolo_origem/)
+    expect(texto).toMatch(/gaveta/)
+    expect(texto).toMatch(/sub-lote/)
+    expect(texto).toMatch(/largura não filtra/i)
   })
 
-  it("descreve os movimentos", () => {
-    const t = texto("/wms/movimentos")
-    for (const tipo of ["ENTRADA", "SAIDA", "TRANSFERENCIA", "AJUSTE"]) {
-      expect(t).toContain(tipo)
-    }
-    expect(t).toMatch(/imutável|não podem ser editados/i)
+  it("documenta as gavetas como somente leitura", () => {
+    const texto = textoDe("/wms/gavetas")
+
+    expect(texto).toMatch(/somente leitura/i)
+    expect(texto).toMatch(/ERP/)
+    expect(texto).toMatch(/DEPÓSITO/)
+    expect(texto).toMatch(/PRODUÇÃO/)
+  })
+
+  it("resolve o detalhe da ordem pelo prefixo das separações", () => {
+    const info = getInfoContent("/wms/separacoes/9")
+
+    expect(info?.title).toBe("Ordens de Separação")
   })
 })

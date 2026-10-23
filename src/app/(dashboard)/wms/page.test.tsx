@@ -4,56 +4,51 @@ import { screen } from "@testing-library/react"
 import { createFetchMock, navMock, renderPage, routeJson } from "@/test/harness"
 import WmsPage from "./page"
 
+const resumo = {
+  pedidosLiberados: 3,
+  separacoesLiberadas: 1,
+  separacoesEmAndamento: 2,
+  separacoesConcluidas: 4,
+  pecasReservadas: 42,
+  metrosReservados: 1234.5,
+  pecasEmAberto: 18310,
+  gavetas: 829,
+}
+
 describe("WMS — dashboard", () => {
   beforeEach(() => {
     navMock.reset()
     navMock.setPathname("/wms")
   })
 
-  it("renderiza os indicadores do armazém", async () => {
-    const fetchMock = createFetchMock(
-      routeJson({
-        "GET /api/wms/dashboard": {
-          enderecos: 12,
-          enderecosAtivos: 10,
-          pecasAlocadas: 42,
-          metrosAlocados: 1234.5,
-          pecasEmAberto: 18310,
-          movimentosHoje: 7,
-        },
-      })
-    )
+  it("renderiza os indicadores de separação e estoque", async () => {
+    const fetchMock = createFetchMock(routeJson({ "GET /api/wms/dashboard": resumo }))
     vi.stubGlobal("fetch", fetchMock.fn)
 
     renderPage(<WmsPage />)
 
-    expect(await screen.findByText("18310")).toBeTruthy()
-    expect(await screen.findByText("42")).toBeTruthy()
-    expect(screen.getByText("12")).toBeTruthy()
-    expect(screen.getByText("7")).toBeTruthy()
-    expect(screen.getByText("10 ativos")).toBeTruthy()
+    expect(await screen.findByText("Pedidos liberados")).toBeTruthy()
+    expect(screen.getByText("18.310")).toBeTruthy()
+    expect(screen.getByText("42")).toBeTruthy()
+    expect(screen.getByText("1 liberadas · 2 em andamento")).toBeTruthy()
+    expect(screen.getByText("1234.5 m reservados")).toBeTruthy()
+    expect(screen.getByText("endereços do ERP")).toBeTruthy()
   })
 
   it("mostra atalhos para as telas do módulo", async () => {
-    const fetchMock = createFetchMock(
-      routeJson({
-        "GET /api/wms/dashboard": {
-          enderecos: 0,
-          enderecosAtivos: 0,
-          pecasAlocadas: 0,
-          metrosAlocados: 0,
-          pecasEmAberto: 0,
-          movimentosHoje: 0,
-        },
-      })
-    )
+    const fetchMock = createFetchMock(routeJson({ "GET /api/wms/dashboard": resumo }))
     vi.stubGlobal("fetch", fetchMock.fn)
 
     renderPage(<WmsPage />)
 
     const links = await screen.findAllByRole("link")
     expect(links.map((l) => l.getAttribute("href"))).toEqual(
-      expect.arrayContaining(["/wms/enderecos", "/wms/estoque", "/wms/movimentos"])
+      expect.arrayContaining([
+        "/wms/pedidos",
+        "/wms/separacoes",
+        "/wms/estoque",
+        "/wms/gavetas",
+      ])
     )
   })
 })

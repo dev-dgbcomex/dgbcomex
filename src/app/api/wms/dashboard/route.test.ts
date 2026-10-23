@@ -8,6 +8,17 @@ import { GET } from "./route"
 vi.mock("@/lib/auth", () => ({ requireAuth: vi.fn() }))
 vi.mock("@/lib/wms/repo", () => ({ dashboard: vi.fn() }))
 
+const resumo = {
+  pedidosLiberados: 3,
+  separacoesLiberadas: 1,
+  separacoesEmAndamento: 2,
+  separacoesConcluidas: 4,
+  pecasReservadas: 42,
+  metrosReservados: 1234.5,
+  pecasEmAberto: 18310,
+  gavetas: 829,
+}
+
 describe("GET /api/wms/dashboard", () => {
   beforeEach(() => {
     vi.mocked(requireAuth).mockReset()
@@ -24,18 +35,11 @@ describe("GET /api/wms/dashboard", () => {
 
   it("retorna o resumo do armazém", async () => {
     vi.mocked(requireAuth).mockResolvedValue({ userId: 1 } as Awaited<ReturnType<typeof requireAuth>>)
-    vi.mocked(dashboard).mockResolvedValue({
-      enderecos: 3,
-      enderecosAtivos: 2,
-      pecasAlocadas: 10,
-      metrosAlocados: 100,
-      pecasEmAberto: 500,
-      movimentosHoje: 4,
-    })
+    vi.mocked(dashboard).mockResolvedValue(resumo)
 
     const res = await GET()
     expect(res.status).toBe(200)
-    expect(await res.json()).toMatchObject({ enderecos: 3, pecasEmAberto: 500 })
+    expect(await res.json()).toEqual(resumo)
   })
 
   it("repassa o status/mensagem da api-microdata", async () => {

@@ -95,38 +95,56 @@ a avaliar (a confirmar):
 
 Saída: `docs/wms-ferramentas.md` — recomendação **construir nativo no dgbcomex (9.0/10)**.
 
-### Fase 4 — Esqueleto do módulo WMS no dgbcomex — 🚧 em andamento
-- Rotas `src/app/(dashboard)/wms` (dashboard), `/wms/enderecos`, `/wms/estoque`,
-  `/wms/movimentos`, com `InfoButton` e `src/lib/info-content/wms.ts`. **Feito.**
-- Entrada no menu via `scripts/adicionar-menu-wms.js` (idempotente, Neon/ADMIN) + ícone
-  `Warehouse` em `src/lib/menu-icones.tsx`. **Feito.**
-- Schema local das tabelas `wms_enderecos`, `wms_estoque`, `wms_movimentos` + DDL
-  idempotente em `scripts/migrar-wms-local.js` (inclui `nro_rolo`/`nro_peca` de snapshot
-  nos movimentos). **Feito.**
-- **Arquitetura de acesso**: o front chama `/api/wms/*` (Next.js), que faz proxy
-  autenticado para a **api-microdata** (`app/src/api/routers/wms.py`), que por sua vez
-  lê `raw.cte_peca` (read-only) e escreve em `public.wms_*` no Postgres local. O dgbcomex
-  não abre conexão com o banco local:
+### Fase 4 — Módulo WMS no dgbcomex — ✅ concluída (v2: ordens de separação)
 
-  ```
-  /wms (React) → /api/wms/* (Next) → api-microdata /wms/* (FastAPI) → dgbcomex_warehouse
-  ```
+**Arquitetura de acesso** — o front chama `/api/wms/*` (Next.js), que faz proxy autenticado
+para a **api-microdata** (`app/src/api/routers/wms.py`), que lê o ERP (`raw.cte_*`) e
+escreve as separações no Postgres local. O dgbcomex não abre conexão com o banco local:
 
-  Auth: rotas Next usam `requireAuth` (sessão); a api-microdata usa o usuário de serviço
-  (`MICRODATA_SERVICE_EMAIL`/`MICRODATA_SERVICE_SENHA`) com escopo `estoque:leitura`. O
-  `usuarioId` do dgbcomex vai no corpo do movimento para auditoria. **Feito.**
-- Cliente/mapping no dgbcomex em `src/lib/wms/cliente.ts`, `src/lib/wms/repo.ts` e
-  `src/lib/wms/tipos.ts`; testes do cliente (token cache, retry 401, mapeamento de erro) e
-  das rotas. **Feito.**
-- Removidos `src/lib/db/local.ts` e `src/lib/db/schema/wms.ts` (não há mais acesso direto
-  ao banco local no dgbcomex). **Feito.**
-- Registrar a integração read-only do ERP (padrão `adicionar-integracao-*.js`) — **pendente**.
-- Só depois começa a lógica de negócio avançada (recebimento, conferência, ondas etc.).
+```
+/wms (React) → /api/wms/* (Next) → api-microdata /wms/* (FastAPI) → dgbcomex_warehouse
+```
+
+Auth: rotas Next usam `requireAuth` (sessão); a api-microdata usa o usuário de serviço
+(`MICRODATA_SERVICE_EMAIL`/`MICRODATA_SERVICE_SENHA`). O `usuarioId` da sessão vai no corpo
+das operações para auditoria.
+
+**Telas** (todas com `InfoButton`, kanban + lista e export CSV/PDF):
+
+| Rota | Conteúdo |
+|---|---|
+| `/wms` | Dashboard: pedidos liberados, separações por status, peças/metros reservados, estoque em aberto, gavetas |
+| `/wms/pedidos` | Pedidos aprovados no ERP com saldo; "Marcar para separação" cria a ordem |
+| `/wms/separacoes` | Ordens por status (LIBERADO, EM_SEPARACAO, SEPARADO, CANCELADO) |
+| `/wms/separacoes/[id]` | Detalhe: itens do pedido, peças reservadas, iniciar/concluir/cancelar, seletor de peças |
+| `/wms/estoque` | Peças em aberto (exclui reservadas), filtros busca/gaveta/sub-lote/aviso/cor/produto |
+| `/wms/gavetas` | Catálogo read-only de gavetas com ocupação, kanban por zona |
+
+**API (api-microdata)**:
+- `GET /wms/dashboard`, `GET /wms/gavetas`, `GET /wms/pedidos`,
+  `GET /wms/pedidos/{empresa}/{pedido}`, `GET /wms/estoque`.
+- `GET|POST /wms/separacoes`, `GET /wms/separacoes/{id}`,
+  `POST /wms/separacoes/{id}/iniciar|concluir|cancelar`,
+  `GET /wms/separacoes/{id}/itens/{item}/pecas`,
+  `POST /wms/separacoes/{id}/pecas`, `DELETE /wms/separacoes/{id}/pecas/{peca_id}`.
+
+**Banco local** (`scripts/migrar-wms-local.js`): `wms_separacoes`, `wms_separacao_pecas`,
+`wms_separacao_eventos`. Índices únicos parciais garantem **uma ordem ativa por pedido** e
+**uma peça em apenas uma ordem ativa**. As tabelas antigas `wms_enderecos`, `wms_estoque` e
+`wms_movimentos` foram removidas.
+
+**Menu**: `scripts/adicionar-menu-wms-todos.js` (todos os roles/usuários do Neon) e
+`scripts/adicionar-menu-wms.js` (ADMIN), idempotentes, removendo os itens obsoletos
+`/wms/enderecos` e `/wms/movimentos`.
+
+**Removidos**: `src/lib/db/local.ts`, `src/lib/db/schema/wms.ts`, as rotas/telas de
+endereços, movimentos e alocação — não há mais acesso direto ao banco local no dgbcomex.
+
 
 ## 5. Princípios do módulo WMS
 
 - **ERP read-only**: todo acesso ao ERP é `SELECT` via api-microdata (proxy de detalhe).
-- **Escrita local**: movimentos, endereços, conferências e histórico ficam no
+- **Escrita local**: ordens de separação, peças reservadas e eventos ficam no
   `dgbcomex_warehouse`.
 - **Domínio têxtil**: trabalhar com as unidades reais do negócio — **rolo**, **peça**,
   **metros**, **peso**, e as chaves cor/desenho/lote. O `raw` local já tem `cte_peca`
@@ -152,7 +170,68 @@ Saída: `docs/wms-ferramentas.md` — recomendação **construir nativo no dgbco
 1. ~~Fase 2: client local + cópia/validação Neon→local + ETL nos dois bancos.~~ ✅
 2. ~~Fase 3: comparação de ferramentas (`docs/wms-ferramentas.md`).~~ ✅
 3. ~~Fase 4: rotas WMS via api-microdata (cliente, mapeamento, testes, docs e info).~~ ✅
-4. Configurar no Vercel as variáveis `MICRODATA_*` apontando para uma API alcançável e
+4. ~~Fluxo de ordens de separação (pedidos liberados → peças → conclusão) e telas.~~ ✅
+5. Configurar no Vercel as variáveis `MICRODATA_*` apontando para uma API alcançável e
    validar o módulo em execução (`npm run dev` → `/wms`).
-5. Registrar a integração read-only do ERP e seguir para a lógica avançada (recebimento,
+6. Registrar a integração read-only do ERP e seguir para a lógica avançada (recebimento,
    conferência, ondas etc.).
+
+## 8. Gavetas do ERP = endereços do WMS
+
+Levantamento completo no repositório da api-microdata:
+`docs/estudo/24-enderecamento-gavetas-wms-comex.md` (estrutura, flags, contagens e views).
+Resumo operacional:
+
+- No Microdata o endereço físico da peça se chama **gaveta**. A peça carrega o texto em
+  `Cte_Peca.Gaveta`; o cadastro é `Cte_Gaveta` (741 posições) e as zonas são
+  `Cte_GrupoGaveta` (9: DEPÓSITO 01/02/03, PRODUÇÃO, TRANSPORTE, CANAL VERDE,
+  CANAL VERMELHO, ETIQUETAGEM, INVENTÁRIO).
+- Código da gaveta: coordenada `AA.BB.CC.D` (725 de 741, ex. `01.00.01.0`) ou nomeada
+  (`PACKLIST`, `AVARIA 01`, `RACK 01 PQN`, `SEPARACAO 06`, `CONFERENCIA`, `INVENTARIO01`,
+  `LOTE_MISTO`, `ROMANEIOS PEDIDOS`…). `PACKLIST` é o staging da importação.
+- `Cte_Gaveta` também tem `Faz_Sugestao`, `Estoque_Plano` e `confirmarTransferencia`.
+- Movimentação de endereço no ERP: `Cte_Peca_Gaveta_Log` (trigger) e `CTE_PalmGav_Log`
+  (coletor). O ERP é **somente leitura** para o WMS.
+
+**No WMS a tela se chama "Gavetas" e a gaveta é o endereço da peça.** O WMS não cria,
+edita, inativa nem transfere gavetas — apenas lê. O catálogo é uma visão read-only de
+`Cte_Gaveta`/`Cte_GrupoGaveta`, com a ocupação das peças em aberto (`/wms/gavetas`,
+`GET /wms/gavetas`).
+
+**Sync resolvido**: `Cte_Gaveta` (829 linhas) e `Cte_GrupoGaveta` (9) entraram no ETL
+read-only (`app/src/etl/sources.py`) e no `raw` local (`raw.cte_gaveta`,
+`raw.cte_grupo_gaveta`), permitindo mostrar zona/descrição e filtrar por gaveta.
+
+Contagens no local (peças em aberto, `core.estoque_pecas_em_aberto`): **18.334 peças**,
+**545 gavetas distintas**, 2 sem gaveta, 18.092 com aviso (85 avisos), 552 sublotes.
+`PACKLIST` lidera (1.268 peças).
+
+## 9. Regra de negócio do WMS — ordens de separação (implementada)
+
+Objetivo: transformar pedidos **liberados no ERP** em **ordens de separação**, reservando as
+peças no banco local. O WMS nunca escreve no ERP.
+
+**Pedido liberado**: `car_pedido.status = '2'` (aprovado), `status_ped` aberto, item
+`status_item` aberto e saldo (`qtde − qtde_romaneio − qtde_acerto`) > 0.
+
+**Fluxo**:
+
+1. Comercial vê a lista de pedidos liberados em `/wms/pedidos` e marca o **pedido inteiro**
+   para separação (os itens são informativos).
+2. A marcação cria uma ordem `LIBERADO` em `wms_separacoes` (uma ordem ativa por pedido).
+3. Estoque abre a ordem, inicia (`EM_SEPARACAO`) e seleciona peças por item. A lista de
+   peças já exclui as reservadas/separadas por ordens ativas e respeita a **grade**
+   produto + situação + cor + desenho + variante + categoria (a largura não filtra porque o
+   formato difere entre peça e item).
+4. Cada peça adicionada é **reservada na hora** (`wms_separacao_pecas`, uma ordem ativa por
+   peça) e sai do estoque em aberto.
+5. Concluir (`SEPARADO`) registra a separação, mas **não libera as peças**: elas continuam
+   bloqueadas até a baixa no ERP.
+6. Cancelar (`CANCELADO`) libera as peças reservadas de volta ao estoque em aberto.
+7. Se o ERP der baixa em uma peça durante a separação, a ordem sinaliza a **divergência**
+   e permite trocar/remover a peça.
+8. O saldo separado tem **tolerância para mais e para menos**: é possível concluir com
+   saldo remanescente no pedido.
+
+**Eventos**: toda transição (criar, iniciar, adicionar/remover peça, concluir, cancelar) é
+registrada em `wms_separacao_eventos` (payload JSONB, autor e data).
