@@ -33,7 +33,7 @@ export default function EstoquePage() {
     produto: "",
   })
   const [offset, setOffset] = useState(0)
-  const [modo, setModo] = useState<"lista" | "kanban">("lista")
+  const [modo, setModo] = useState<"lista" | "kanban">("kanban")
 
   const { data, isLoading } = useQuery<WmsPaginado<PecaEmAberto>>({
     queryKey: ["wms-estoque", filtros, offset],

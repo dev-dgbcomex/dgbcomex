@@ -49,7 +49,7 @@ export default function PedidosPage() {
   const [buscaAplicada, setBuscaAplicada] = useState("")
   const [status, setStatus] = useState("")
   const [offset, setOffset] = useState(0)
-  const [modo, setModo] = useState<"lista" | "kanban">("lista")
+  const [modo, setModo] = useState<"lista" | "kanban">("kanban")
 
   const pedidosQuery = useQuery<WmsPaginado<WmsPedido>>({
     queryKey: ["wms-pedidos", buscaAplicada, status, offset],
