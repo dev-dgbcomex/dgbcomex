@@ -100,6 +100,13 @@ export default function SeparacaoDetalhePage() {
     },
     onSuccess: () => {
       toast.success("Peça removida da ordem")
+      queryClient.invalidateQueries({ queryKey: ["wms", "separacao", id] })
+      queryClient.invalidateQueries({ queryKey: ["wms", "separacoes", id] })
+      queryClient.invalidateQueries({ queryKey: ["wms", "separacoes", "itens", id] })
+      queryClient.invalidateQueries({ queryKey: ["wms", "separacoes", "pecas", id] })
+      queryClient.invalidateQueries({ queryKey: ["wms", "estoque", "livre"] })
+      queryClient.invalidateQueries({ queryKey: ["wms", "pedidos"] })
+      queryClient.invalidateQueries({ queryKey: ["wms", "pedidos", "kanban"] })
       recarregar()
     },
     onError: (erro: Error) => toast.error(erro.message),
@@ -477,6 +484,7 @@ function SeletorPecas({
     },
   })
 
+  const queryClient2 = useQueryClient()
   const adicionar = useMutation({
     mutationFn: async (pecas: { nroRolo: string; nroPeca: string }[]) => {
       const res = await fetch(`/api/wms/separacoes/${separacaoId}/pecas`, {
@@ -492,6 +500,13 @@ function SeletorPecas({
     },
     onSuccess: () => {
       toast.success("Peças reservadas para a ordem")
+      queryClient2.invalidateQueries({ queryKey: ["wms", "separacao", separacaoId] })
+      queryClient2.invalidateQueries({ queryKey: ["wms", "separacoes", separacaoId] })
+      queryClient2.invalidateQueries({ queryKey: ["wms", "separacoes", "itens", separacaoId] })
+      queryClient2.invalidateQueries({ queryKey: ["wms", "separacoes", "pecas", separacaoId] })
+      queryClient2.invalidateQueries({ queryKey: ["wms", "estoque", "livre"] })
+      queryClient2.invalidateQueries({ queryKey: ["wms", "pedidos"] })
+      queryClient2.invalidateQueries({ queryKey: ["wms", "pedidos", "kanban"] })
       onAdicionado()
     },
     onError: (erro: Error) => toast.error(erro.message),
