@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useMemo, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
@@ -104,14 +104,8 @@ export default function PedidosPage() {
       }))
   }, [itens, situacoesAtivas, situacaoPadrao])
 
-  const mover = useMutation({
-    mutationFn: async ({
-      pedido,
-      situacao,
-    }: {
-      pedido: WmsPedido
-      situacao: WmsSituacaoPedido
-    }) => {
+  const mover: any = useMutation({
+    mutationFn: async ({ pedido, situacao, cancelarOrdem }: { pedido: WmsPedido; situacao: WmsSituacaoPedido; cancelarOrdem?: boolean }): Promise<any> => {
       const res = await fetch(
         `/api/wms/pedidos/${encodeURIComponent(pedido.empresa)}/${encodeURIComponent(
           pedido.pedido
@@ -119,12 +113,24 @@ export default function PedidosPage() {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ situacaoId: situacao.id }),
+          body: JSON.stringify({
+            situacaoId: situacao.id,
+            cancelar_ordem: cancelarOrdem ? true : undefined,
+          }),
         }
       )
       if (!res.ok) {
         const erro = await res.json().catch(() => ({}))
-        throw new Error(erro.error ?? "Falha ao mover o pedido")
+        const detalhe = erro.detail ?? erro.error ?? ""
+        if (res.status === 409 && detalhe === "ORDEN_ATIVA_CANCELAR" && !cancelarOrdem) {
+          const confirmado = window.confirm(
+            "Existe uma ordem de separação ativa. Deseja cancelar essa ordem e liberar as peças para serem separadas novamente?"
+          )
+          if (confirmado) {
+            return mover.mutateAsync({ pedido, situacao, cancelarOrdem: true })
+          }
+        }
+        throw new Error(erro.error ?? detalhe ?? "Falha ao mover o pedido")
       }
       return res.json()
     },
