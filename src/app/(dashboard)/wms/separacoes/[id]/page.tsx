@@ -100,6 +100,7 @@ export default function SeparacaoDetalhePage() {
     },
     onSuccess: () => {
       toast.success("Peça removida da ordem")
+      queryClient.invalidateQueries({ queryKey: ["wms-separacao", id] })
       queryClient.invalidateQueries({ queryKey: ["wms", "separacao", id] })
       queryClient.invalidateQueries({ queryKey: ["wms", "separacoes", id] })
       queryClient.invalidateQueries({ queryKey: ["wms", "separacoes", "itens", id] })
@@ -500,6 +501,7 @@ function SeletorPecas({
     },
     onSuccess: () => {
       toast.success("Peças reservadas para a ordem")
+      queryClient2.invalidateQueries({ queryKey: ["wms-separacao", separacaoId] })
       queryClient2.invalidateQueries({ queryKey: ["wms", "separacao", separacaoId] })
       queryClient2.invalidateQueries({ queryKey: ["wms", "separacoes", separacaoId] })
       queryClient2.invalidateQueries({ queryKey: ["wms", "separacoes", "itens", separacaoId] })
