@@ -205,8 +205,7 @@ export default function SeparacoesPage() {
                 {ordem.clienteNome ?? ordem.clienteCodigo ?? "—"}
               </p>
               <p className="text-xs text-slate-400">
-                {ordem.totalMetros.toFixed(1)} m separados · saldo {ordem.saldoMetros.toFixed(1)} m
-              </p>
+                {ordem.totalMetros.toFixed(1)} m separados • saldo {ordem.saldoMetros.toFixed(1)} m{ordem.artigos ? ` • Artigos: ${ordem.artigos}` : ""}\n              </p>
             </Link>
           )}
         />

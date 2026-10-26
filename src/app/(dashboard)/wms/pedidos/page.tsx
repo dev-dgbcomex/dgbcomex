@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import { useMemo, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
@@ -318,7 +318,7 @@ export default function PedidosPage() {
                   </span>
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-slate-400">
-                  <span>{pedido.totalItens} item(ns)</span>
+                  <span>{pedido.totalItens} item(ns)</span>{pedido.artigos && (<><span>•</span><span className="truncate max-w-[140px]" title={pedido.artigos}>Artigos: {pedido.artigos}</span></>)}
                   <span>•</span>
                   <span>Entrega {pedido.dataEntrega ?? "-"}</span>
                 </div>

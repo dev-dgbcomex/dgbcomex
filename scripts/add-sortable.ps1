@@ -1,0 +1,1 @@
+﻿$p="src/app/(dashboard)/wms/components/kanban.tsx";$s=Get-Content $p -Raw;$s=$s.Replace("from \"@dnd-kit/core\"\n","from \"@dnd-kit/core\"\nimport { SortableContext, verticalListSortingStrategy, useSortable } from \"@dnd-kit/sortable\"\nimport { CSS } from \"@dnd-kit/utilities\"\n");Set-Content $p $s -NoNewline
