@@ -111,6 +111,7 @@ export type WmsPedido = {
   situacaoOrdem: number
   situacaoAcao: WmsSituacaoAcao
   situacaoPerfis: string[]
+  artigos?: string | null
 }
 
 export type WmsItemPedido = {
@@ -166,6 +167,7 @@ export type WmsSeparacao = {
   totalMetros: number
   itensSeparados: number
   saldoMetros: number
+  artigos?: string | null
 }
 
 export type WmsPecaSeparacao = {
