@@ -11,6 +11,7 @@ import { getInfoContent } from "@/lib/info-content"
 import { exportCSV, exportPDFRelatorio } from "@/lib/export-utils"
 import type { PecaEmAberto, WmsPaginado } from "@/lib/wms/tipos"
 import { KanbanWms, Paginacao, VisualizacaoToggle } from "../components/kanban"
+import { VoltarSeparacoes } from "../components/voltar-separacoes"
 
 const PAGINA = 100
 const CORES_ZONA = ["#2563eb", "#16a34a", "#f59e0b", "#ef4444", "#8b5cf6", "#0891b2", "#db2777"]
@@ -155,7 +156,8 @@ export default function EstoquePage() {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
+        <div className="space-y-1">
+          <VoltarSeparacoes />
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-50 flex items-center gap-2">
             Estoque em Aberto
             {info && <InfoButton content={info} />}
@@ -319,6 +321,10 @@ export default function EstoquePage() {
           onProxima={() => setOffset((o) => o + PAGINA)}
         />
       )}
+
+      <div className="border-t border-slate-200 dark:border-slate-800 pt-3">
+        <VoltarSeparacoes />
+      </div>
     </div>
   )
 }

@@ -51,7 +51,7 @@ describe("WMS — estoque em aberto", () => {
     navMock.setPathname("/wms/estoque")
   })
 
-  it("lista as peças em aberto com gaveta e zona", async () => {
+  it("abre no kanban agrupado por zona", async () => {
     const fetchMock = mock()
     vi.stubGlobal("fetch", fetchMock.fn)
 
@@ -59,9 +59,35 @@ describe("WMS — estoque em aberto", () => {
 
     expect(await screen.findByText("R100/1")).toBeTruthy()
     expect(screen.getByText("TECIDO A")).toBeTruthy()
+    expect(screen.getByText("55.6 m")).toBeTruthy()
+    expect(screen.getByText(/A-01-01 · Azul/)).toBeTruthy()
+    expect(screen.getByText("DEPÓSITO")).toBeTruthy()
+  })
+
+  it("mostra a tabela ao alternar para lista", async () => {
+    const fetchMock = mock()
+    vi.stubGlobal("fetch", fetchMock.fn)
+
+    renderPage(<EstoquePage />)
+    await screen.findByText("R100/1")
+
+    fireEvent.click(screen.getByRole("button", { name: "Lista" }))
+
+    await waitFor(() => expect(screen.getByRole("table")).toBeTruthy())
     expect(screen.getByText("55.60")).toBeTruthy()
     expect(screen.getByText("A-01-01")).toBeTruthy()
-    expect(screen.getByText("DEPÓSITO")).toBeTruthy()
+  })
+
+  it("oferece o retorno às separações no topo e no rodapé", async () => {
+    const fetchMock = mock()
+    vi.stubGlobal("fetch", fetchMock.fn)
+
+    renderPage(<EstoquePage />)
+    await screen.findByText("R100/1")
+
+    const voltar = screen.getAllByRole("link", { name: "Voltar para as separações" })
+    expect(voltar).toHaveLength(2)
+    expect(voltar[0].getAttribute("href")).toBe("/wms/separacoes")
   })
 
   it("mostra estado vazio quando não há peças", async () => {

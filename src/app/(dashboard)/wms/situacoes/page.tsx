@@ -382,7 +382,7 @@ export default function SituacoesPage() {
                       acao: event.target.value as WmsSituacaoAcao,
                     }))
                   }
-                  className="h-9 w-full rounded-lg border border-input bg-transparent px-2 text-sm"
+                  className="h-9 w-full rounded-lg border border-input bg-background text-foreground px-2 text-sm"
                 >
                   {WMS_SITUACAO_ACOES.map((acao) => (
                     <option key={acao} value={acao}>

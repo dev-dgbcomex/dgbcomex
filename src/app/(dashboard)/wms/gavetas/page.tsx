@@ -11,6 +11,7 @@ import { getInfoContent } from "@/lib/info-content"
 import { exportCSV, exportPDFRelatorio } from "@/lib/export-utils"
 import type { WmsGaveta, WmsPaginado } from "@/lib/wms/tipos"
 import { KanbanWms, Paginacao, VisualizacaoToggle } from "../components/kanban"
+import { VoltarSeparacoes } from "../components/voltar-separacoes"
 
 const PAGINA = 100
 const CORES_ZONA = ["#2563eb", "#16a34a", "#f59e0b", "#ef4444", "#8b5cf6", "#0891b2", "#db2777"]
@@ -107,7 +108,8 @@ export default function GavetasPage() {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
+        <div className="space-y-1">
+          <VoltarSeparacoes />
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-50 flex items-center gap-2">
             Gavetas do Armazém
             {info && <InfoButton content={info} />}
@@ -148,7 +150,7 @@ export default function GavetasPage() {
         </div>
         <select
           aria-label="Filtrar por zona"
-          className="h-9 rounded-lg border border-input bg-transparent px-2 text-sm"
+          className="h-9 rounded-lg border border-input bg-background text-foreground px-2 text-sm"
           value={zona}
           onChange={(e) => {
             setOffset(0)
@@ -244,6 +246,10 @@ export default function GavetasPage() {
           onProxima={() => setOffset((o) => o + PAGINA)}
         />
       )}
+
+      <div className="border-t border-slate-200 dark:border-slate-800 pt-3">
+        <VoltarSeparacoes />
+      </div>
     </div>
   )
 }

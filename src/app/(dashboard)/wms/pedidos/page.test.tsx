@@ -27,6 +27,7 @@ const pedidos = [
     separacaoStatus: "SEM_SEPARACAO",
     situacaoId: 1,
     situacaoNome: "Sem separação",
+    artigos: "BELGA, OXFORD",
   },
   {
     empresa: "13",
@@ -42,6 +43,7 @@ const pedidos = [
     separacaoStatus: "EM_SEPARACAO",
     situacaoId: 3,
     situacaoNome: "Em separação",
+    artigos: "OXFORD",
   },
 ]
 
@@ -60,6 +62,12 @@ function mock() {
     if (method === "GET" && url === URL_SITUACOES) {
       return { json: { itens: situacoes, total: situacoes.length } }
     }
+    if (method === "GET" && url.startsWith("/api/wms/kanban/ordem")) {
+      return { json: {} }
+    }
+    if (method === "POST" && url === "/api/wms/kanban/reordenar") {
+      return { json: { ok: true } }
+    }
     if (method === "POST" && url.includes("/situacao")) {
       return { json: { ...pedidos[0], situacaoId: 2 } }
     }
@@ -75,17 +83,28 @@ describe("WMS - pedidos para separação", () => {
     toastMock.error.mockClear()
   })
 
-  it("lista os pedidos liberados com a situação do kanban", async () => {
+  it("abre no modo kanban com as colunas das situações", async () => {
     const fetchMock = mock()
     vi.stubGlobal("fetch", fetchMock.fn)
 
     renderPage(<PedidosPage />)
 
-    expect(await screen.findByText("00005902")).toBeTruthy()
+    expect(
+      await screen.findByRole("region", { name: "Coluna Sem separação" })
+    ).toBeTruthy()
+    expect(screen.getByRole("region", { name: "Coluna Liberado" })).toBeTruthy()
+    expect(screen.getByRole("region", { name: "Coluna Em separação" })).toBeTruthy()
+    expect(screen.getByText("#00005902")).toBeTruthy()
     expect(screen.getByText("Cliente Teste")).toBeTruthy()
-    expect(screen.getAllByText("Sem separação").length).toBeGreaterThan(0)
-    expect(screen.getAllByText("Em separação").length).toBeGreaterThan(0)
-    expect(screen.getByText("462.00")).toBeTruthy()
+  })
+
+  it("mostra os artigos do pedido no card", async () => {
+    const fetchMock = mock()
+    vi.stubGlobal("fetch", fetchMock.fn)
+
+    renderPage(<PedidosPage />)
+
+    expect(await screen.findByText(/Artigos: BELGA, OXFORD/)).toBeTruthy()
   })
 
   it("mostra estado vazio quando não há pedidos", async () => {
@@ -94,7 +113,7 @@ describe("WMS - pedidos para separação", () => {
       if (url === URL_SITUACOES) {
         return { json: { itens: situacoes, total: situacoes.length } }
       }
-      return { status: 404, json: {} }
+      return { json: {} }
     })
     vi.stubGlobal("fetch", fetchMock.fn)
 
@@ -103,25 +122,7 @@ describe("WMS - pedidos para separação", () => {
     expect(await screen.findByText("Nenhum pedido liberado encontrado.")).toBeTruthy()
   })
 
-  it("move o pedido para outra situação pelo seletor e recarrega a lista", async () => {
-    const fetchMock = mock()
-    vi.stubGlobal("fetch", fetchMock.fn)
-
-    renderPage(<PedidosPage />)
-    await screen.findByText("00005902")
-
-    fireEvent.change(screen.getByLabelText("Mover pedido 00005902"), {
-      target: { value: "2" },
-    })
-
-    await waitFor(() =>
-      expect(toastMock.success).toHaveBeenCalledWith("Pedido movido para Liberado")
-    )
-    const post = findCall(fetchMock.calls, "/api/wms/pedidos/13/00005902/situacao", "POST")
-    expect(post?.body).toEqual({ situacaoId: 2 })
-  })
-
-  it("exibe o erro da API ao falhar o movimento", async () => {
+  it("ordena os cards pela posição salva do kanban", async () => {
     const fetchMock = createFetchMock(({ method, url }) => {
       if (method === "GET" && url === URL_LISTA) {
         return { json: { itens: pedidos, total: 2 } }
@@ -129,23 +130,29 @@ describe("WMS - pedidos para separação", () => {
       if (method === "GET" && url === URL_SITUACOES) {
         return { json: { itens: situacoes, total: situacoes.length } }
       }
-      if (method === "POST" && url.includes("/situacao")) {
-        return { status: 409, json: { error: "Pedido já possui ordem ativa" } }
+      if (method === "GET" && url.startsWith("/api/wms/kanban/ordem")) {
+        return { json: { EM_SEPARACAO: {} } }
       }
-      return { status: 404, json: {} }
+      return { json: {} }
     })
     vi.stubGlobal("fetch", fetchMock.fn)
 
     renderPage(<PedidosPage />)
-    await screen.findByText("00005902")
 
-    fireEvent.change(screen.getByLabelText("Mover pedido 00005902"), {
-      target: { value: "2" },
-    })
+    expect(await screen.findByText("#00006094")).toBeTruthy()
+  })
 
-    await waitFor(() =>
-      expect(toastMock.error).toHaveBeenCalledWith("Pedido já possui ordem ativa")
-    )
+  it("exibe a lista ao alternar a visualização", async () => {
+    const fetchMock = mock()
+    vi.stubGlobal("fetch", fetchMock.fn)
+
+    renderPage(<PedidosPage />)
+    await screen.findByText("#00005902")
+
+    fireEvent.click(screen.getByRole("button", { name: "Lista" }))
+
+    await waitFor(() => expect(screen.getByRole("table")).toBeTruthy())
+    expect(screen.getByText("462.00")).toBeTruthy()
   })
 
   it("abre a ordem de um pedido já em separação", async () => {
@@ -153,23 +160,33 @@ describe("WMS - pedidos para separação", () => {
     vi.stubGlobal("fetch", fetchMock.fn)
 
     renderPage(<PedidosPage />)
-    await screen.findByText("00006094")
+    await screen.findByText("#00006094")
 
-    const link = screen.getByRole("link", { name: "Abrir ordem" })
+    const link = screen.getByRole("link", { name: "Abrir ordem #7" })
     expect(link.getAttribute("href")).toBe("/wms/separacoes/7")
   })
 
-  it("mostra o kanban com colunas dinâmicas", async () => {
+  it("oferece o retorno às separações no topo e no rodapé", async () => {
     const fetchMock = mock()
     vi.stubGlobal("fetch", fetchMock.fn)
 
     renderPage(<PedidosPage />)
-    await screen.findByText("00005902")
+    await screen.findByText("#00005902")
 
-    fireEvent.click(screen.getByRole("button", { name: "Kanban" }))
+    const voltar = screen.getAllByRole("link", { name: "Voltar para as separações" })
+    expect(voltar).toHaveLength(2)
+    expect(voltar[0].getAttribute("href")).toBe("/wms/separacoes")
+  })
 
-    expect(await screen.findByRole("region", { name: "Coluna Liberado" })).toBeTruthy()
-    expect(screen.getByRole("region", { name: "Coluna Em separação" })).toBeTruthy()
-    expect(screen.getByText("Pedido 00005902")).toBeTruthy()
+  it("carrega a ordem vertical global do kanban", async () => {
+    const fetchMock = mock()
+    vi.stubGlobal("fetch", fetchMock.fn)
+
+    renderPage(<PedidosPage />)
+    await screen.findByText("#00005902")
+
+    expect(
+      findCall(fetchMock.calls, "/api/wms/kanban/ordem?tipo=PEDIDO&colunas=SEM_SEPARACAO%2CLIBERADO%2CEM_SEPARACAO%2CSEPARADO%2CCANCELADO", "GET")
+    ).toBeTruthy()
   })
 })

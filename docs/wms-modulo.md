@@ -131,10 +131,11 @@ das operações para auditoria.
 
 **Kanban e situações (local)**: GET|POST /wms/situacoes, GET|PUT|DELETE /wms/situacoes/{id}, POST /wms/pedidos/{empresa}/{pedido}/situacao (valida a ação e os perfis da situação), GET /wms/separacoes/{id}/itens/{item}/pecas?campo=lote|aviso|gaveta. A situação do pedido existe só no banco local e cada situação ativa gera uma coluna do kanban.
 
-**Banco local** (`scripts/migrar-wms-local.js`): tabelas `wms_separacoes`, `wms_separacao_pecas`, `wms_separacao_eventos`, `wms_situacoes_pedido`, `wms_pedidos_situacao` e `wms_pedido_eventos`. Índices únicos parciais garantem **uma ordem ativa por pedido** e **uma peça em apenas uma ordem ativa**. As tabelas antigas `wms_enderecos`, `wms_estoque` e `wms_movimentos` foram removidas.
-`wms_separacao_eventos`. Índices únicos parciais garantem **uma ordem ativa por pedido** e
-**uma peça em apenas uma ordem ativa**. As tabelas antigas `wms_enderecos`, `wms_estoque` e
-`wms_movimentos` foram removidas.
+**Ordem vertical do kanban (global)**: `GET /wms/kanban/ordem?tipo=PEDIDO|SEPARACAO&colunas=...` devolve `{coluna: {chave: posicao}}` e `POST /wms/kanban/reordenar` salva `{tipo, coluna, itens:[{chave, posicao}], usuario_id}`. A posição fica em `wms_kanban_ordem` (unique `tipo+chave+coluna`), vale para todos os usuários e é editável por COMERCIAL, EXPEDICAO, ADMIN e SUDO. No dgbcomex os BFFs são `/api/wms/kanban/ordem` e `/api/wms/kanban/reordenar`. A tarja lateral do cartão deriva da posição: vermelha no topo (5%), amarela até 50% e verde no fim.
+
+**Avulsos**: `POST /wms/pedidos/{empresa}/{pedido}/situacao` aceita `cancelar_ordem: true`; sem a flag, ordem ativa com peças retorna 409 `ORDEN_ATIVA_CANCELAR` (o front confirma e reenvia). Os cartões mostram os artigos (`string_agg` dos itens abertos) e as telas têm o link "Voltar para as separações" no topo e no rodapé.
+
+**Banco local** (`scripts/migrar-wms-local.js`): tabelas `wms_separacoes`, `wms_separacao_pecas`, `wms_separacao_eventos`, `wms_situacoes_pedido`, `wms_pedidos_situacao`, `wms_pedido_eventos` e `wms_kanban_ordem` (DDL em `M:\dev\api-microdata\app\scripts\criar-kanban-ordem.py`). Índices únicos parciais garantem **uma ordem ativa por pedido** e **uma peça em apenas uma ordem ativa**. As tabelas antigas `wms_enderecos`, `wms_estoque` e `wms_movimentos` foram removidas.
 
 **Menu**: `scripts/adicionar-menu-wms-todos.js` (todos os roles/usuários do Neon) e
 `scripts/adicionar-menu-wms.js` (ADMIN), idempotentes, removendo os itens obsoletos

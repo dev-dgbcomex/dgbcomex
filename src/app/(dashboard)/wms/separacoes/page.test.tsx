@@ -28,9 +28,14 @@ const ordem = {
   totalMetros: 120.5,
   itensSeparados: 1,
   saldoMetros: 341.5,
+  artigos: "BELGA",
 }
 
 const URL_LISTA = "/api/wms/separacoes?busca=&status=&limite=50&offset=0"
+
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({ data: { user: { role: "EXPEDICAO" } }, status: "authenticated" }),
+}))
 
 describe("WMS — ordens de separação", () => {
   beforeEach(() => {
@@ -49,7 +54,14 @@ describe("WMS — ordens de separação", () => {
     expect(await screen.findByText("#9 · Pedido 00005902")).toBeTruthy()
     expect(screen.getByText("Cliente Teste")).toBeTruthy()
     expect(screen.getByText("2 pç")).toBeTruthy()
-    expect(screen.getByText("120.5 m separados · saldo 341.5 m")).toBeTruthy()
+    expect(
+      screen.getByText(
+        (_, elemento) =>
+          elemento?.tagName === "P" &&
+          elemento.textContent?.trim() ===
+            "120.5 m separados · saldo 341.5 m · Artigos: BELGA"
+      )
+    ).toBeTruthy()
   })
 
   it("mostra estado vazio quando não há ordens", async () => {

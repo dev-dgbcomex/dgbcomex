@@ -75,4 +75,26 @@ describe("getInfoContent", () => {
     // Não pode sobrar a descrição do recuo automático (aviso azul), que não existe mais.
     expect(texto).not.toMatch(/aviso azul|recua sozinha|último mês fechado/i)
   })
+
+  it("o conteúdo do WMS reflete a ordenação vertical e as prioridades", () => {
+    const pedidos = getInfoContent("/wms/pedidos")
+    const separacoes = getInfoContent("/wms/separacoes")
+    const estoque = getInfoContent("/wms/estoque")
+    const gavetas = getInfoContent("/wms/gavetas")
+
+    const texto = [pedidos, separacoes, estoque, gavetas]
+      .flatMap((item) => [
+        item?.description ?? "",
+        ...(item?.rules ?? []),
+      ])
+      .join("\n")
+
+    expect(texto).toMatch(/ordem vertical dos cartões é global/i)
+    expect(texto).toMatch(/arrastando o cartão para cima ou para baixo|arrastando para cima\/baixo/i)
+    expect(texto).toMatch(/vermelha no topo \(5%\)/)
+    expect(texto).toMatch(/COMERCIAL, EXPEDICAO, ADMIN e SUDO/)
+    expect(texto).toMatch(/artigos do pedido/i)
+    expect(texto).toMatch(/Voltar para as separações/)
+    expect(texto).toMatch(/cancela a ordem, liberando as peças/i)
+  })
 })

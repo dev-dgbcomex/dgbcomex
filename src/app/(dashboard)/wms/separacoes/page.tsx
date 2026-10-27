@@ -1,15 +1,18 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useSession } from "next-auth/react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { toast } from "sonner"
 import { Download, FileText, Loader2, Search } from "lucide-react"
 import { InfoButton } from "@/components/ui/info-button"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { getInfoContent } from "@/lib/info-content"
 import { exportCSV, exportPDFRelatorio } from "@/lib/export-utils"
+import { podeReordenarKanban } from "@/lib/wms/permissoes"
 import type { WmsPaginado, WmsSeparacao, WmsSeparacaoStatus } from "@/lib/wms/tipos"
 import {
   CORES_STATUS,
@@ -24,6 +27,9 @@ const STATUS: WmsSeparacaoStatus[] = ["LIBERADO", "EM_SEPARACAO", "SEPARADO", "C
 
 export default function SeparacoesPage() {
   const pathname = usePathname()
+  const queryClient = useQueryClient()
+  const { data: session } = useSession()
+  const role = session?.user?.role ?? null
   const info = getInfoContent(pathname)
   const [busca, setBusca] = useState("")
   const [buscaAplicada, setBuscaAplicada] = useState("")
@@ -48,16 +54,71 @@ export default function SeparacoesPage() {
 
   const itens = useMemo(() => data?.itens ?? [], [data])
 
+  const ordemQuery = useQuery<Record<string, Record<string, number>>>({
+    queryKey: ["wms-kanban-ordem", "SEPARACAO"],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        tipo: "SEPARACAO",
+        colunas: STATUS.join(","),
+      })
+      const res = await fetch(`/api/wms/kanban/ordem?${params.toString()}`)
+      if (!res.ok) return {}
+      return res.json()
+    },
+  })
+
+  const posicoes = useMemo(() => ordemQuery.data ?? {}, [ordemQuery.data])
+
   const colunas = useMemo(
     () =>
-      STATUS.map((id) => ({
-        id,
-        rotulo: ROTULOS_STATUS[id] ?? id,
-        cor: CORES_STATUS[id] ?? "#94a3b8",
-        itens: itens.filter((ordem) => ordem.status === id),
-      })),
-    [itens]
+      STATUS.map((id) => {
+        const posicao = posicoes[id] ?? {}
+        const ordenadas = itens
+          .filter((ordem) => ordem.status === id)
+          .sort((a, b) => {
+            const pa = posicao[String(a.id)]
+            const pb = posicao[String(b.id)]
+            if (pa == null && pb == null) return 0
+            if (pa == null) return 1
+            if (pb == null) return -1
+            return pa - pb
+          })
+        return {
+          id,
+          rotulo: ROTULOS_STATUS[id] ?? id,
+          cor: CORES_STATUS[id] ?? "#94a3b8",
+          itens: ordenadas,
+        }
+      }),
+    [itens, posicoes]
   )
+
+  const reordenar = useMutation({
+    mutationFn: async ({ coluna, ids }: { coluna: string; ids: string[] }) => {
+      const res = await fetch("/api/wms/kanban/reordenar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tipo: "SEPARACAO",
+          coluna,
+          itens: ids.map((chave, posicao) => ({ chave, posicao })),
+        }),
+      })
+      if (!res.ok) {
+        const erro = await res.json().catch(() => ({}))
+        throw new Error(erro.error ?? "Falha ao reordenar as ordens")
+      }
+      return res.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["wms-kanban-ordem"] })
+    },
+    onError: (erro: Error) => toast.error(erro.message),
+  })
+
+  function reordenarColuna(colunaId: string, ids: string[]) {
+    reordenar.mutate({ coluna: colunaId, ids })
+  }
 
   function exportarCSV() {
     exportCSV(
@@ -156,7 +217,7 @@ export default function SeparacoesPage() {
         </div>
         <select
           aria-label="Filtrar por status"
-          className="h-9 rounded-lg border border-input bg-transparent px-2 text-sm"
+          className="h-9 rounded-lg border border-input bg-background text-foreground px-2 text-sm"
           value={status}
           onChange={(e) => {
             setOffset(0)
@@ -186,7 +247,11 @@ export default function SeparacoesPage() {
       ) : modo === "kanban" ? (
         <KanbanWms
           colunas={colunas}
+          chave={(ordem) => String(ordem.id)}
           vazio="Nenhuma ordem"
+          onReordenar={reordenarColuna}
+          podeReordenar={podeReordenarKanban(role)}
+          prioridade
           renderCard={(ordem) => (
             <Link
               key={ordem.id}
@@ -205,7 +270,10 @@ export default function SeparacoesPage() {
                 {ordem.clienteNome ?? ordem.clienteCodigo ?? "—"}
               </p>
               <p className="text-xs text-slate-400">
-                {ordem.totalMetros.toFixed(1)} m separados • saldo {ordem.saldoMetros.toFixed(1)} m{ordem.artigos ? ` • Artigos: ${ordem.artigos}` : ""}\n              </p>
+                {ordem.totalMetros.toFixed(1)} m separados · saldo{" "}
+                {ordem.saldoMetros.toFixed(1)} m
+                {ordem.artigos ? ` · Artigos: ${ordem.artigos}` : ""}
+              </p>
             </Link>
           )}
         />

@@ -1,23 +1,47 @@
 "use client"
 
 import { useState } from "react"
-import Link from "next/link"
 import {
   DndContext,
   DragOverlay,
+  KeyboardSensor,
   PointerSensor,
-  useDraggable,
+  closestCenter,
   useDroppable,
   useSensor,
   useSensors,
 } from "@dnd-kit/core"
 import type { DragEndEvent, DragStartEvent } from "@dnd-kit/core"
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable"
+import { CSS } from "@dnd-kit/utilities"
 
 export type KanbanColuna<T> = {
   id: string
   rotulo: string
   cor: string
   itens: T[]
+}
+
+export function corDaPrioridade(indice: number, total: number): string {
+  if (total <= 0) return "bg-slate-300 dark:bg-slate-600"
+  const fracao = indice / total
+  if (indice === 0 || fracao <= 0.05) return "bg-red-500"
+  if (fracao <= 0.5) return "bg-amber-400"
+  return "bg-emerald-500"
+}
+
+export function rotuloDaPrioridade(indice: number, total: number): string {
+  const cor = corDaPrioridade(indice, total)
+  if (cor === "bg-red-500") return "Prioridade alta"
+  if (cor === "bg-amber-400") return "Prioridade média"
+  if (cor === "bg-emerald-500") return "Prioridade baixa"
+  return "Prioridade"
 }
 
 function DroppableColumn({
@@ -38,6 +62,8 @@ function DroppableColumn({
   return (
     <div
       ref={setNodeRef}
+      role="region"
+      aria-label={`Coluna ${rotulo}`}
       className={`flex flex-col h-full w-72 bg-slate-100 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 transition-colors shrink-0 ${
         isOver ? "border-blue-400 bg-blue-50 dark:bg-blue-950/30" : ""
       }`}
@@ -56,29 +82,37 @@ function DroppableColumn({
   )
 }
 
-function DraggableCard<T>({
+function DraggableCard({
   id,
   item,
+  colunaId,
   disabled,
+  prioridade,
+  indice,
+  total,
   children,
 }: {
   id: string
-  item: T
+  item: unknown
+  colunaId: string
   disabled?: boolean
+  prioridade?: boolean
+  indice: number
+  total: number
   children: React.ReactNode
 }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id,
-    data: { item },
-    disabled,
-  })
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({
+      id,
+      data: { item, colunaId },
+      disabled,
+    })
 
-  const style = transform
-    ? {
-        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-        zIndex: 50,
-      }
-    : undefined
+  const style = {
+    transform: CSS.Translate.toString(transform),
+    transition,
+    zIndex: isDragging ? 50 : undefined,
+  }
 
   return (
     <div
@@ -86,10 +120,21 @@ function DraggableCard<T>({
       {...attributes}
       {...listeners}
       style={style}
-      className={`bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-3 cursor-grab active:cursor-grabbing transition-shadow hover:shadow-md ${
-        isDragging ? "opacity-50 shadow-lg" : ""
-      } ${disabled ? "cursor-not-allowed opacity-70" : ""}`}
+      className={`relative bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-3 cursor-grab active:cursor-grabbing transition-shadow hover:shadow-md ${
+        prioridade ? "pl-4" : ""
+      } ${isDragging ? "opacity-50 shadow-lg" : ""} ${
+        disabled ? "cursor-not-allowed opacity-70" : ""
+      }`}
     >
+      {prioridade && total > 0 && (
+        <>
+          <span
+            aria-hidden="true"
+            className={`absolute left-0 top-0 h-full w-1 rounded-l-lg ${corDaPrioridade(indice, total)}`}
+          />
+          <span className="sr-only">{rotuloDaPrioridade(indice, total)}</span>
+        </>
+      )}
       {children}
     </div>
   )
@@ -101,6 +146,9 @@ export function KanbanWms<T>({
   chave,
   onMover,
   podeMover,
+  onReordenar,
+  podeReordenar = true,
+  prioridade = false,
   vazio = "Nenhum item",
   className,
 }: {
@@ -109,35 +157,63 @@ export function KanbanWms<T>({
   chave?: (item: T) => string
   onMover?: (item: T, colunaId: string) => void
   podeMover?: (item: T, colunaId: string) => boolean
+  onReordenar?: (colunaId: string, ids: string[]) => void
+  podeReordenar?: boolean
+  prioridade?: boolean
   vazio?: string
   className?: string
 }) {
   const [ativo, setAtivo] = useState<{ item: T; colunaId: string } | null>(null)
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   )
   const idDoItem = chave ?? ((item: T) => String(item))
 
   function iniciar(event: DragStartEvent) {
     const item = event.active.data.current?.item as T | undefined
     if (!item) return
-    const colunaId = colunas.find((c) => c.itens.includes(item))?.id
-    setAtivo(colunaId ? { item, colunaId } : { item, colunaId: "" })
+    const colunaId = String(event.active.data.current?.colunaId ?? "")
+    setAtivo({ item, colunaId })
   }
 
   function soltar(event: DragEndEvent) {
     const { active, over } = event
     const item = active.data.current?.item as T | undefined
+    const origemId = active.data.current?.colunaId as string | undefined
     setAtivo(null)
-    if (!over || !item || !onMover) return
-    const destino = String(over.id)
-    if (ativo?.colunaId === destino) return
-    if (podeMover && !podeMover(item, destino)) return
-    onMover(item, destino)
+    if (!over || !item || !origemId) return
+
+    const overId = String(over.id)
+    const colunaDestino = colunas.find((c) => c.id === overId)
+    const colunaDoItem = colunas.find((c) =>
+      c.itens.some((i) => idDoItem(i) === overId)
+    )
+    const destinoId = colunaDestino?.id ?? colunaDoItem?.id
+    if (!destinoId) return
+
+    if (destinoId === origemId) {
+      if (!onReordenar || !podeReordenar) return
+      const ids = (colunas.find((c) => c.id === origemId)?.itens ?? []).map(idDoItem)
+      const de = ids.indexOf(String(active.id))
+      const para = colunaDestino ? ids.length - 1 : ids.indexOf(overId)
+      if (de < 0 || para < 0 || de === para) return
+      onReordenar(origemId, arrayMove(ids, de, para))
+      return
+    }
+
+    if (!onMover) return
+    if (podeMover && !podeMover(item, destinoId)) return
+    onMover(item, destinoId)
   }
 
   return (
-    <DndContext sensors={sensors} onDragStart={iniciar} onDragEnd={soltar}>
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragStart={iniciar}
+      onDragEnd={soltar}
+    >
       <div
         className={`flex h-[calc(100vh-280px)] min-h-[520px] gap-3 overflow-x-auto overflow-y-hidden pb-2 ${className ?? ""}`}
       >
@@ -154,15 +230,33 @@ export function KanbanWms<T>({
                 {vazio}
               </div>
             ) : (
-              coluna.itens.map((item) => {
-                const id = idDoItem(item)
-                const arrastavel = !!onMover && (!podeMover || podeMover(item, coluna.id))
-                return (
-                  <DraggableCard key={id} id={id} item={item} disabled={!arrastavel}>
-                    {renderCard(item)}
-                  </DraggableCard>
-                )
-              })
+              <SortableContext
+                items={coluna.itens.map(idDoItem)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="space-y-2">
+                  {coluna.itens.map((item, indice) => {
+                    const id = idDoItem(item)
+                    const permitido = !podeMover || podeMover(item, coluna.id)
+                    const arrastavel =
+                      (!!onMover || !!onReordenar) && permitido
+                    return (
+                      <DraggableCard
+                        key={id}
+                        id={id}
+                        item={item}
+                        colunaId={coluna.id}
+                        disabled={!arrastavel}
+                        prioridade={prioridade}
+                        indice={indice}
+                        total={coluna.itens.length}
+                      >
+                        {renderCard(item)}
+                      </DraggableCard>
+                    )
+                  })}
+                </div>
+              </SortableContext>
             )}
           </DroppableColumn>
         ))}

@@ -99,4 +99,18 @@ describe("WMS — gavetas", () => {
     expect(await screen.findByText("320.50")).toBeTruthy()
     expect(screen.getByText("Expedição")).toBeTruthy()
   })
+
+  it("oferece o retorno às separações no topo e no rodapé", async () => {
+    const fetchMock = createFetchMock(({ url }) =>
+      url === URL_BASE ? { json: { itens: gavetas, total: 2 } } : { status: 404, json: {} }
+    )
+    vi.stubGlobal("fetch", fetchMock.fn)
+
+    renderPage(<GavetasPage />)
+    await screen.findByText("A-01-01")
+
+    const voltar = screen.getAllByRole("link", { name: "Voltar para as separações" })
+    expect(voltar).toHaveLength(2)
+    expect(voltar[0].getAttribute("href")).toBe("/wms/separacoes")
+  })
 })

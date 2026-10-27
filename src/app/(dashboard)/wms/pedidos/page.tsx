@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { getInfoContent } from "@/lib/info-content"
 import { exportCSV, exportPDFRelatorio } from "@/lib/export-utils"
-import { podeMoverParaSituacao } from "@/lib/wms/permissoes"
+import { podeMoverParaSituacao, podeReordenarKanban } from "@/lib/wms/permissoes"
 import type {
   WmsPaginado,
   WmsPedido,
@@ -23,6 +23,7 @@ import {
   Paginacao,
   VisualizacaoToggle,
 } from "../components/kanban"
+import { VoltarSeparacoes } from "../components/voltar-separacoes"
 
 const PAGINA = 50
 
@@ -89,20 +90,53 @@ export default function PedidosPage() {
     [situacoes]
   )
 
+  const codigosColunas = useMemo(
+    () => situacoesAtivas.map((s) => s.codigo).join(","),
+    [situacoesAtivas]
+  )
+
+  const ordemQuery = useQuery<Record<string, Record<string, number>>>({
+    queryKey: ["wms-kanban-ordem", "PEDIDO", codigosColunas],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        tipo: "PEDIDO",
+        colunas: codigosColunas,
+      })
+      const res = await fetch(`/api/wms/kanban/ordem?${params.toString()}`)
+      if (!res.ok) return {}
+      return res.json()
+    },
+  })
+
+  const posicoes = useMemo(() => ordemQuery.data ?? {}, [ordemQuery.data])
+
   const colunas = useMemo(() => {
     const comPedidos = new Set(itens.map((p) => p.situacaoId))
     return situacoesAtivas
       .filter((s) => s.ativo || comPedidos.has(s.id))
-      .map((situacao) => ({
-        id: String(situacao.id),
-        rotulo: situacao.nome,
-        cor: situacao.cor,
-        itens: itens.filter(
-          (pedido) =>
-            (pedido.situacaoId ?? situacaoPadrao?.id ?? null) === situacao.id
-        ),
-      }))
-  }, [itens, situacoesAtivas, situacaoPadrao])
+      .map((situacao) => {
+        const posicao = posicoes[situacao.codigo] ?? {}
+        const ordenados = itens
+          .filter(
+            (pedido) =>
+              (pedido.situacaoId ?? situacaoPadrao?.id ?? null) === situacao.id
+          )
+          .sort((a, b) => {
+            const pa = posicao[`${a.empresa}|${a.pedido}`]
+            const pb = posicao[`${b.empresa}|${b.pedido}`]
+            if (pa == null && pb == null) return 0
+            if (pa == null) return 1
+            if (pb == null) return -1
+            return pa - pb
+          })
+        return {
+          id: String(situacao.id),
+          rotulo: situacao.nome,
+          cor: situacao.cor,
+          itens: ordenados,
+        }
+      })
+  }, [itens, situacoesAtivas, situacaoPadrao, posicoes])
 
   const mover: any = useMutation({
     mutationFn: async ({ pedido, situacao, cancelarOrdem }: { pedido: WmsPedido; situacao: WmsSituacaoPedido; cancelarOrdem?: boolean }): Promise<any> => {
@@ -143,6 +177,35 @@ export default function PedidosPage() {
     },
     onError: (erro: Error) => toast.error(erro.message),
   })
+
+  const reordenar = useMutation({
+    mutationFn: async ({ coluna, ids }: { coluna: string; ids: string[] }) => {
+      const res = await fetch("/api/wms/kanban/reordenar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tipo: "PEDIDO",
+          coluna,
+          itens: ids.map((chave, posicao) => ({ chave, posicao })),
+        }),
+      })
+      if (!res.ok) {
+        const erro = await res.json().catch(() => ({}))
+        throw new Error(erro.error ?? "Falha ao reordenar os pedidos")
+      }
+      return res.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["wms-kanban-ordem"] })
+    },
+    onError: (erro: Error) => toast.error(erro.message),
+  })
+
+  function reordenarColuna(colunaId: string, ids: string[]) {
+    const situacao = situacoes.find((s) => String(s.id) === colunaId)
+    if (!situacao) return
+    reordenar.mutate({ coluna: situacao.codigo, ids })
+  }
 
   function moverPedido(pedido: WmsPedido, situacaoId: string) {
     const situacao = situacoes.find((s) => String(s.id) === situacaoId)
@@ -219,7 +282,8 @@ export default function PedidosPage() {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
+        <div className="space-y-1">
+          <VoltarSeparacoes />
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-50 flex items-center gap-2">
             Pedidos para Separação
             {info && <InfoButton content={info} />}
@@ -266,7 +330,7 @@ export default function PedidosPage() {
         </div>
         <select
           aria-label="Filtrar por situação"
-          className="h-9 rounded-lg border border-input bg-transparent px-2 text-sm"
+          className="h-9 rounded-lg border border-input bg-background text-foreground px-2 text-sm"
           value={status}
           onChange={(e) => {
             setOffset(0)
@@ -300,6 +364,9 @@ export default function PedidosPage() {
           vazio="Nenhum pedido"
           onMover={moverPedido}
           podeMover={podeMover}
+          onReordenar={reordenarColuna}
+          podeReordenar={podeReordenarKanban(role)}
+          prioridade
           renderCard={(pedido) => {
             const situacao = situacoes.find((s) => s.id === pedido.situacaoId)
             return (
@@ -390,7 +457,7 @@ export default function PedidosPage() {
                             if (destino) moverPedido(pedido, destino)
                             e.target.value = ""
                           }}
-                          className="h-8 rounded-md border border-slate-200 dark:border-slate-700 bg-transparent px-2 text-xs"
+                          className="h-8 rounded-md border border-slate-200 dark:border-slate-700 bg-background text-foreground px-2 text-xs"
                         >
                           <option value="">Mover para…</option>
                           {destinos.map((destino) => (
@@ -430,6 +497,10 @@ export default function PedidosPage() {
           onProxima={() => setOffset((o) => o + PAGINA)}
         />
       )}
+
+      <div className="border-t border-slate-200 dark:border-slate-800 pt-3">
+        <VoltarSeparacoes />
+      </div>
     </div>
   )
 }
