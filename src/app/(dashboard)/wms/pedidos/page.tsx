@@ -131,15 +131,28 @@ export default function PedidosPage() {
   const posicoes = useMemo(() => ordemQuery.data ?? {}, [ordemQuery.data])
 
   const colunas = useMemo(() => {
-    const comPedidos = new Set(itens.map((p) => p.situacaoId))
+    const codigoParaSituacao = new Map(
+      situacoes.map((s) => [s.codigo, s])
+    )
+    const situacoesComPedidos = new Set<string>()
+    itens.forEach((p) => {
+      const codigo = p.separacaoStatus ?? p.situacaoNome ?? ""
+      const situ = codigoParaSituacao.get(codigo)
+      if (situ) situacoesComPedidos.add(String(situ.id))
+      else if (p.situacaoId != null) situacoesComPedidos.add(String(p.situacaoId))
+    })
     return situacoesAtivas
-      .filter((s) => s.ativo || comPedidos.has(s.id))
+      .filter((s) => s.ativo || situacoesComPedidos.has(String(s.id)))
       .map((situacao) => {
         const posicao = posicoes[situacao.codigo] ?? {}
         const ordenados = ordenarPorPosicao(
           itens.filter(
-            (pedido) =>
-              (pedido.situacaoId ?? situacaoPadrao?.id ?? null) === situacao.id
+            (pedido) => {
+              const codigo = pedido.separacaoStatus ?? pedido.situacaoNome ?? ""
+              const situ = codigoParaSituacao.get(codigo)
+              const colunaId = situ ? String(situ.id) : String(pedido.situacaoId ?? situacaoPadrao?.id ?? null)
+              return colunaId === String(situacao.id)
+            }
           ),
           chavePedido,
           posicao
@@ -151,7 +164,7 @@ export default function PedidosPage() {
           itens: ordenados,
         }
       })
-  }, [itens, situacoesAtivas, situacaoPadrao, posicoes])
+  }, [itens, situacoesAtivas, situacaoPadrao, posicoes, situacoes])
 
   const mover = useMutation<
     any,
