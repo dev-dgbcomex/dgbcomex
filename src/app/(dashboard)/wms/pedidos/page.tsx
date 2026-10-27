@@ -4,7 +4,7 @@ import { useMemo, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useSession } from "next-auth/react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { Archive, Download, FileText, Loader2, Search } from "lucide-react"
 import { InfoButton } from "@/components/ui/info-button"
@@ -18,7 +18,9 @@ import {
   podeMoverParaSituacao,
   podeReordenarKanban,
 } from "@/lib/wms/permissoes"
+import { estoqueDisponivelParaItem, detalhePedido } from "@/lib/wms/repo"
 import type {
+  EstoqueDisponivelParaItem,
   WmsPaginado,
   WmsPedido,
   WmsSituacaoPedido,
@@ -28,12 +30,19 @@ import {
   Paginacao,
   VisualizacaoToggle,
 } from "../components/kanban"
-import { VoltarSeparacoes } from "../components/voltar-separacoes"
 
 const PAGINA = 50
 
 function corDaSituacao(situacao?: WmsSituacaoPedido | null): string {
   return situacao?.cor ?? "#94a3b8"
+}
+
+function corCapacidade(percentual: number): string {
+  if (percentual >= 100) return "bg-green-100 text-green-700 border-green-200"
+  if (percentual > 50) return "bg-blue-100 text-blue-700 border-blue-200"
+  if (percentual >= 20) return "bg-amber-100 text-amber-800 border-amber-200"
+  if (percentual >= 5) return "bg-orange-100 text-orange-800 border-orange-200"
+  return "bg-red-100 text-red-700 border-red-200"
 }
 
 function nomeDaSituacao(
@@ -51,6 +60,11 @@ export default function PedidosPage() {
   const { data: session } = useSession()
   const role = session?.user?.role ?? null
   const podeArquivar = podeArquivarWms(role)
+  const router = useRouter()
+  const [modalPedido, setModalPedido] = useState<WmsPedido | null>(null)
+  const [modalEstoque, setModalEstoque] = useState<
+    Map<string, EstoqueDisponivelParaItem>
+  >(new Map())
   const info = getInfoContent(pathname)
   const [busca, setBusca] = useState("")
   const [buscaAplicada, setBuscaAplicada] = useState("")
@@ -304,6 +318,31 @@ export default function PedidosPage() {
     mover.mutate({ pedido, situacao })
   }
 
+  async function abrirPedidoModal(pedido: WmsPedido) {
+    setModalPedido(pedido)
+    setModalEstoque(new Map())
+    try {
+      const detalhe = await detalhePedido(pedido.empresa, pedido.pedido)
+      const mapa = new Map<string, EstoqueDisponivelParaItem>()
+      for (const item of detalhe.itens) {
+        try {
+          const est = await estoqueDisponivelParaItem(
+            pedido.empresa,
+            pedido.pedido,
+            item.item
+          )
+          mapa.set(String(item.item), est)
+        } catch {
+          // ignora falha de um item individual
+        }
+      }
+      setModalEstoque(mapa)
+    } catch (erro) {
+      toast.error("Falha ao carregar os detalhes do pedido")
+      console.error(erro)
+    }
+  }
+
   function podeMover(pedido: WmsPedido, destino: string): boolean {
     const situacao = situacoes.find((s) => String(s.id) === destino)
     if (!situacao || !situacao.ativo) return false
@@ -373,7 +412,14 @@ export default function PedidosPage() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
-          <VoltarSeparacoes />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => router.push("/wms/separacoes")}
+            className="gap-1.5"
+          >
+            <Archive size={14} /> Ordens de Separação
+          </Button>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-50 flex items-center gap-2">
             Pedidos para Separação
             {info && <InfoButton content={info} />}
@@ -466,7 +512,11 @@ export default function PedidosPage() {
           renderCard={(pedido) => {
             const situacao = situacoes.find((s) => s.id === pedido.situacaoId)
             return (
-              <div className="space-y-1.5">
+              <div
+                className="space-y-1.5 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-lg p-2 transition-colors border border-transparent hover:border-slate-200 dark:hover:border-slate-700"
+                onClick={() => abrirPedidoModal(pedido)}
+                onPointerDown={(e) => e.stopPropagation()}
+              >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
@@ -621,8 +671,116 @@ export default function PedidosPage() {
       )}
 
       <div className="border-t border-slate-200 dark:border-slate-800 pt-3">
-        <VoltarSeparacoes />
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => router.push("/wms/separacoes")}
+          className="gap-1.5 w-full"
+        >
+          <Archive size={14} /> Ordens de Separação
+        </Button>
       </div>
+
+      {modalPedido && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Detalhes do pedido"
+          onClick={() => setModalPedido(null)}
+        >
+          <div
+            className="w-full max-w-4xl max-h-[90vh] flex flex-col rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+              <div>
+                <h2 className="font-semibold text-slate-900 dark:text-slate-50">
+                  Pedido #{modalPedido.pedido}
+                </h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {modalPedido.clienteNome ?? modalPedido.clienteCodigo ?? "—"} ·
+                  Entrega {modalPedido.dataEntrega ?? "—"} · Saldo{" "}
+                  {modalPedido.saldoMetros.toFixed(2)} m
+                </p>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => setModalPedido(null)}>
+                Fechar
+              </Button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4">
+              <table className="w-full text-sm divide-y divide-slate-200 dark:divide-slate-800">
+                <thead className="bg-slate-50 dark:bg-slate-800/50">
+                  <tr>
+                    <th className="px-3 py-2 font-medium text-left text-slate-600 dark:text-slate-300">
+                      Item
+                    </th>
+                    <th className="px-3 py-2 font-medium text-left text-slate-600 dark:text-slate-300">
+                      Produto / Cor
+                    </th>
+                    <th className="px-3 py-2 font-medium text-right text-slate-600 dark:text-slate-300">
+                      Saldo
+                    </th>
+                    <th className="px-3 py-2 font-medium text-right text-slate-600 dark:text-slate-300">
+                      Estoque disp. (m)
+                    </th>
+                    <th className="px-3 py-2 font-medium text-center text-slate-600 dark:text-slate-300">
+                      Capacidade
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {([...modalEstoque.entries()]).map(([itemId, est]) => {
+                    const pct = est.percentualCapacidade
+                    return (
+                      <tr key={itemId} className="group">
+                        <td className="px-3 py-2 font-medium text-slate-900 dark:text-slate-50">
+                          {est.item.item}
+                        </td>
+                        <td className="px-3 py-2">
+                          <div className="text-slate-900 dark:text-slate-100">
+                            {est.item.produtoDesc ?? est.item.produto ?? "—"}
+                          </div>
+                          <div className="text-xs text-slate-500 dark:text-slate-400">
+                            {est.item.corDesc ?? est.item.cor ?? ""}
+                            {est.item.largura && ` · L ${est.item.largura}`}
+                          </div>
+                        </td>
+                        <td className="px-3 py-2 text-right">
+                          {est.item.saldo.toFixed(2)} {est.item.unid ?? ""}
+                        </td>
+                        <td className="px-3 py-2 text-right">
+                          {est.totalMetrosDisponiveis.toFixed(2)}
+                        </td>
+                        <td className="px-3 py-2 text-center">
+                          <span
+                            className={`inline-flex items-center justify-center rounded border px-2 py-0.5 text-xs font-medium ${corCapacidade(pct)}`}
+                          >
+                            {pct.toFixed(0)}%
+                          </span>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                  {modalEstoque.size === 0 && (
+                    <tr>
+                      <td colSpan={5} className="px-3 py-8 text-center text-sm text-slate-500">
+                        Nenhum item com estoque disponível.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+              {modalEstoque.size > 0 && (
+                <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
+                  Verde ≥ 100% · Azul &gt; 50% · Amarelo 20–50% · Laranja 5–20% · Vermelho &lt; 5%
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

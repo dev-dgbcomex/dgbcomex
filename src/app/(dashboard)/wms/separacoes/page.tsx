@@ -4,7 +4,7 @@ import { useMemo, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useSession } from "next-auth/react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { Archive, Download, FileText, Loader2, Search } from "lucide-react"
 import { InfoButton } from "@/components/ui/info-button"
@@ -31,6 +31,7 @@ export default function SeparacoesPage() {
   const { data: session } = useSession()
   const role = session?.user?.role ?? null
   const podeArquivar = podeArquivarWms(role)
+  const router = useRouter()
   const info = getInfoContent(pathname)
   const [busca, setBusca] = useState("")
   const [buscaAplicada, setBuscaAplicada] = useState("")
@@ -240,6 +241,14 @@ export default function SeparacoesPage() {
           >
             <Archive size={14} /> Arquivados
           </Link>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => router.push("/wms/pedidos")}
+            className="gap-1.5"
+          >
+            Pedidos
+          </Button>
           <Button variant="outline" size="sm" onClick={exportarCSV} className="gap-1.5">
             <Download size={14} /> CSV
           </Button>

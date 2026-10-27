@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { usePathname } from "next/navigation"
-import { Download, FileText, Loader2, Search } from "lucide-react"
+import { Download, FileText, Info, Loader2, Search } from "lucide-react"
 import { InfoButton } from "@/components/ui/info-button"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -34,7 +34,7 @@ export default function EstoquePage() {
     produto: "",
   })
   const [offset, setOffset] = useState(0)
-  const [modo, setModo] = useState<"lista" | "kanban">("kanban")
+  const [modo, setModo] = useState<"lista" | "kanban">("lista")
 
   const { data, isLoading } = useQuery<WmsPaginado<PecaEmAberto>>({
     queryKey: ["wms-estoque", filtros, offset],
@@ -193,43 +193,75 @@ export default function EstoquePage() {
             placeholder="Rolo, peça, produto ou cor"
             className="pl-8"
             aria-label="Buscar no estoque"
+            title="Busca em rolo, peça, produto (código ou descrição) e cor"
           />
+          <Info className="absolute right-2 top-2 text-xs text-slate-400" size={14} aria-label="Ajuda: busca" />
         </div>
-        <Input
-          value={gaveta}
-          onChange={(e) => setGaveta(e.target.value)}
-          placeholder="Gaveta"
-          aria-label="Filtrar por gaveta"
-          className="w-36"
-        />
-        <Input
-          value={subLote}
-          onChange={(e) => setSubLote(e.target.value)}
-          placeholder="Sub-lote"
-          aria-label="Filtrar por sub-lote"
-          className="w-32"
-        />
-        <Input
-          value={aviso}
-          onChange={(e) => setAviso(e.target.value)}
-          placeholder="Aviso"
-          aria-label="Filtrar por aviso"
-          className="w-28"
-        />
-        <Input
-          value={cor}
-          onChange={(e) => setCor(e.target.value)}
-          placeholder="Cor"
-          aria-label="Filtrar por cor"
-          className="w-28"
-        />
-        <Input
-          value={produto}
-          onChange={(e) => setProduto(e.target.value)}
-          placeholder="Produto"
-          aria-label="Filtrar por produto"
-          className="w-32"
-        />
+        <div className="flex items-center gap-1">
+          <Input
+            value={gaveta}
+            onChange={(e) => setGaveta(e.target.value)}
+            placeholder="Gaveta"
+            aria-label="Filtrar por gaveta"
+            className="w-36"
+            title="Código da gaveta (endereço físico da peça)"
+          />
+          <span title="Código da gaveta (endereço físico da peça)" className="text-slate-400 cursor-help">
+            <Info className="text-xs" size={14} />
+          </span>
+        </div>
+        <div className="flex items-center gap-1">
+          <Input
+            value={subLote}
+            onChange={(e) => setSubLote(e.target.value)}
+            placeholder="Sub-lote"
+            aria-label="Filtrar por sub-lote"
+            className="w-32"
+            title="Sub-lote (lote) da peça"
+          />
+          <span title="Sub-lote (lote) da peça" className="text-slate-400 cursor-help">
+            <Info className="text-xs" size={14} />
+          </span>
+        </div>
+        <div className="flex items-center gap-1">
+          <Input
+            value={aviso}
+            onChange={(e) => setAviso(e.target.value)}
+            placeholder="Aviso"
+            aria-label="Filtrar por aviso"
+            className="w-28"
+            title="Aviso / marcação da peça"
+          />
+          <span title="Aviso / marcação da peça" className="text-slate-400 cursor-help">
+            <Info className="text-xs" size={14} />
+          </span>
+        </div>
+        <div className="flex items-center gap-1">
+          <Input
+            value={cor}
+            onChange={(e) => setCor(e.target.value)}
+            placeholder="Cor"
+            aria-label="Filtrar por cor"
+            className="w-28"
+            title="Código da cor da peça"
+          />
+          <span title="Código da cor da peça" className="text-slate-400 cursor-help">
+            <Info className="text-xs" size={14} />
+          </span>
+        </div>
+        <div className="flex items-center gap-1">
+          <Input
+            value={produto}
+            onChange={(e) => setProduto(e.target.value)}
+            placeholder="Produto"
+            aria-label="Filtrar por produto"
+            className="w-32"
+            title="Código do produto (busca parcial, ex.: 000029)"
+          />
+          <span title="Código do produto (busca parcial)" className="text-slate-400 cursor-help">
+            <Info className="text-xs" size={14} />
+          </span>
+        </div>
         <Button type="submit" variant="outline">
           Buscar
         </Button>
@@ -276,6 +308,7 @@ export default function EstoquePage() {
             <thead className="bg-slate-50 dark:bg-slate-800/50 text-left text-slate-600 dark:text-slate-300">
               <tr>
                 <th className="px-3 py-2 font-medium">Rolo / Peça</th>
+                <th className="px-3 py-2 font-medium">Cód. Produto</th>
                 <th className="px-3 py-2 font-medium">Produto</th>
                 <th className="px-3 py-2 font-medium">Cor / Situação</th>
                 <th className="px-3 py-2 font-medium">Largura</th>
@@ -290,6 +323,9 @@ export default function EstoquePage() {
                 <tr key={`${peca.empresa}-${peca.nro_rolo}-${peca.nro_peca}`}>
                   <td className="px-3 py-2 font-medium text-slate-900 dark:text-slate-50">
                     {peca.nro_rolo}/{peca.nro_peca}
+                  </td>
+                  <td className="px-3 py-2 font-medium text-slate-600 dark:text-slate-400">
+                    {peca.produto ?? "—"}
                   </td>
                   <td className="px-3 py-2">{peca.produto_desc ?? peca.produto ?? "—"}</td>
                   <td className="px-3 py-2">

@@ -1,9 +1,9 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useState, useEffect } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import Link from "next/link"
-import { useParams, usePathname } from "next/navigation"
+import { useParams, usePathname, useRouter } from "next/navigation"
 import { toast } from "sonner"
 import {
   AlertTriangle,
@@ -21,7 +21,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { getInfoContent } from "@/lib/info-content"
 import { exportCSV, exportPDFRelatorio } from "@/lib/export-utils"
+import { estoqueDisponivelParaItem } from "@/lib/wms/repo"
 import type {
+  EstoqueDisponivelParaItem,
   PecaEmAberto,
   WmsPaginado,
   WmsPecaSeparacao,
@@ -32,6 +34,14 @@ import { CORES_STATUS, ROTULOS_STATUS } from "../../components/kanban"
 
 const STATUS_EDITAVEIS = new Set(["LIBERADO", "EM_SEPARACAO"])
 
+function corCapacidade(percentual: number): string {
+  if (percentual >= 100) return "bg-green-100 text-green-700 border-green-200"
+  if (percentual > 50) return "bg-blue-100 text-blue-700 border-blue-200"
+  if (percentual >= 20) return "bg-amber-100 text-amber-800 border-amber-200"
+  if (percentual >= 5) return "bg-orange-100 text-orange-800 border-orange-200"
+  return "bg-red-100 text-red-700 border-red-200"
+}
+
 export default function SeparacaoDetalhePage() {
   const pathname = usePathname()
   const params = useParams<{ id: string }>()
@@ -39,6 +49,10 @@ export default function SeparacaoDetalhePage() {
   const info = getInfoContent("/wms/separacoes")
   const id = Number(params?.id)
   const [itemAberto, setItemAberto] = useState<WmsItemPedido | null>(null)
+  const router = useRouter()
+  const [estoquePorItem, setEstoquePorItem] = useState<
+    Map<string, EstoqueDisponivelParaItem>
+  >(new Map())
 
   const { data, isLoading } = useQuery<WmsSeparacaoDetalhe>({
     queryKey: ["wms-separacao", id],
@@ -60,6 +74,28 @@ export default function SeparacaoDetalhePage() {
     queryClient.invalidateQueries({ queryKey: ["wms-dashboard"] })
     queryClient.invalidateQueries({ queryKey: ["wms-estoque"] })
   }
+
+  useEffect(() => {
+    if (!data) return
+    const mapa = new Map<string, EstoqueDisponivelParaItem>()
+    let carregando = 0
+    for (const item of data.itens) {
+      carregando++
+      estoqueDisponivelParaItem(
+        data.empresa,
+        data.pedido,
+        item.item
+      ).then((est) => {
+        mapa.set(String(item.item), est)
+        carregando--
+        if (carregando === 0) setEstoquePorItem(mapa)
+      }).catch(() => {
+        carregando--
+        if (carregando === 0) setEstoquePorItem(mapa)
+      })
+    }
+    if (data.itens.length === 0) setEstoquePorItem(new Map())
+  }, [data])
 
   const acao = useMutation({
     mutationFn: async (tipo: "iniciar" | "concluir" | "cancelar") => {
@@ -217,6 +253,14 @@ export default function SeparacaoDetalhePage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => router.push("/wms/pedidos")}
+            className="gap-1.5"
+          >
+            Pedidos
+          </Button>
           <Button variant="outline" size="sm" onClick={exportarCSV} className="gap-1.5">
             <Download size={14} /> CSV
           </Button>
@@ -317,6 +361,8 @@ export default function SeparacaoDetalhePage() {
               <th className="px-3 py-2 font-medium">Cor / Desenho</th>
               <th className="px-3 py-2 font-medium">Largura</th>
               <th className="px-3 py-2 font-medium">Saldo</th>
+              <th className="px-3 py-2 font-medium text-right">Estoque disp. (m)</th>
+              <th className="px-3 py-2 font-medium text-center">Capacidade</th>
               <th className="px-3 py-2 font-medium">Reservado</th>
               <th className="px-3 py-2 font-medium"></th>
             </tr>
@@ -344,6 +390,27 @@ export default function SeparacaoDetalhePage() {
                   </td>
                   <td className="px-3 py-2">{item.largura ?? "—"}</td>
                   <td className="px-3 py-2">{item.saldo.toFixed(2)}</td>
+                  <td className="px-3 py-2 text-right">
+                    {(() => {
+                      const est = estoquePorItem.get(String(item.item))
+                      if (!est) return "—"
+                      return est.totalMetrosDisponiveis.toFixed(2)
+                    })()}
+                  </td>
+                  <td className="px-3 py-2 text-center">
+                    {(() => {
+                      const est = estoquePorItem.get(String(item.item))
+                      if (!est) return <span className="text-xs text-slate-400">—</span>
+                      const pct = est.percentualCapacidade
+                      return (
+                        <span
+                          className={`inline-flex items-center justify-center rounded border px-2 py-0.5 text-xs font-medium ${corCapacidade(pct)}`}
+                        >
+                          {pct.toFixed(0)}%
+                        </span>
+                      )
+                    })()}
+                  </td>
                   <td className="px-3 py-2">
                     {doItem.length} pç ·{" "}
                     {doItem.reduce((soma, p) => soma + (p.metros ?? 0), 0).toFixed(2)} m

@@ -6,6 +6,7 @@
  */
 import { requisitarWms } from "./cliente"
 import type {
+  EstoqueDisponivelParaItem,
   NovaSeparacao,
   NovaSituacaoPedido,
   PecaEmAberto,
@@ -151,6 +152,16 @@ export async function arquivarPedido(
   return requisitarWms<WmsPedidoDetalhe>(
     `/wms/pedidos/${encodeURIComponent(empresa)}/${encodeURIComponent(pedido)}/arquivar`,
     { metodo: "POST", corpo: {} }
+  )
+}
+
+export async function estoqueDisponivelParaItem(
+  empresa: string,
+  pedido: string,
+  item: number
+): Promise<EstoqueDisponivelParaItem> {
+  return requisitarWms<EstoqueDisponivelParaItem>(
+    `/wms/pedidos/${encodeURIComponent(empresa)}/${encodeURIComponent(pedido)}/itens/${item}/estoque-disponivel`
   )
 }
 

@@ -205,16 +205,15 @@ describe("WMS - pedidos para separação", () => {
     })
   })
 
-  it("oferece o retorno às separações no topo e no rodapé", async () => {
+  it("oferece o botão Ordens de Separação no topo", async () => {
     const fetchMock = mock()
     vi.stubGlobal("fetch", fetchMock.fn)
 
     renderPage(<PedidosPage />)
     await screen.findByText("#00005902")
 
-    const voltar = screen.getAllByRole("link", { name: "Voltar para as separações" })
-    expect(voltar).toHaveLength(2)
-    expect(voltar[0].getAttribute("href")).toBe("/wms/separacoes")
+    const botoes = screen.getAllByRole("button", { name: /Ordens de Separação/ })
+    expect(botoes.length).toBeGreaterThanOrEqual(1)
   })
 
   it("carrega a ordem vertical global do kanban", async () => {

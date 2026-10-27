@@ -247,3 +247,31 @@ export type PecaRef = {
   nroRolo: string
   nroPeca: string
 }
+
+export type EstoqueItemDisponivel = {
+  item: number
+  produto: string | null
+  produtoDesc: string | null
+  situacao: string | null
+  situacaoDesc: string | null
+  cor: string | null
+  corDesc: string | null
+  desenho: string | null
+  desenhoDesc: string | null
+  variante: string | null
+  varianteDesc: string | null
+  categoria: string | null
+  categoriaDesc: string | null
+  largura: string | null
+  saldo: number
+  unid: string | null
+}
+
+export type EstoqueDisponivelParaItem = {
+  item: EstoqueItemDisponivel
+  itens: PecaEmAberto[]
+  total: number
+  totalMetrosDisponiveis: number
+  saldoItem: number
+  percentualCapacidade: number
+}
