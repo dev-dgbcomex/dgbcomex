@@ -38,6 +38,7 @@ describe("GET /api/wms/pedidos", () => {
     expect(listarPedidos).toHaveBeenCalledWith({
       busca: "5902",
       statusSeparacao: "SEM_SEPARACAO",
+      arquivados: false,
       limite: 10,
       offset: 20,
     })

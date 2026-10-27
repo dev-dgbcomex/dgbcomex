@@ -18,6 +18,7 @@ export async function GET(req: NextRequest) {
       await listarPedidos({
         busca: searchParams.get("busca") ?? "",
         statusSeparacao: searchParams.get("statusSeparacao") ?? "",
+        arquivados: searchParams.get("arquivados") === "true",
         limite: Number.isFinite(limite) ? limite : 50,
         offset: Number.isFinite(offset) ? offset : 0,
       })

@@ -52,9 +52,10 @@ export const wmsContent: Record<string, InfoContent> = {
       "Cada coluna define os perfis autorizados; ADMIN e SUDO sempre podem mover.",
       "A tela abre no modo Kanban; use Lista para o seletor Mover para de cada pedido.",
       "A ordem vertical dos cartões é global por coluna (vale para todos os usuários) e é alterada arrastando o cartão para cima ou para baixo; COMERCIAL, EXPEDICAO, ADMIN e SUDO podem reordenar.",
-      "A tarja lateral do cartão indica a prioridade pela posição: vermelha no topo (5%), amarela até a metade e verde no fim da coluna.",
+      "A tarja no topo do cartão indica a prioridade pela posição: vermelha no topo (5%), amarela até a metade e verde no fim da coluna.",
       "Os artigos do pedido aparecem no cartão (vindos dos itens abertos no ERP).",
       "Ao mover um pedido com ordem ativa e peças reservadas, o sistema pede confirmação e cancela a ordem, liberando as peças para nova separação.",
+      "Pedidos cancelados podem ser arquivados para sair do kanban e da lista; use Arquivados para consultar, gerar relatório ou devolver o pedido a uma situação de produção.",
       "O link Voltar para as separações aparece no topo e no rodapé da tela.",
       "O saldo em metros é a soma de qtde − qtde_romaneio − qtde_acerto dos itens abertos.",
     ],
@@ -122,8 +123,9 @@ export const wmsContent: Record<string, InfoContent> = {
       "SEPARADO: conclusão registrada; as peças continuam bloqueadas até a baixa no ERP.",
       "CANCELADO: ordem encerrada; as peças reservadas voltam ao estoque em aberto.",
       "A ordem vertical dos cartões é global por coluna (compartilhada entre usuários) e pode ser alterada arrastando para cima/baixo; COMERCIAL, EXPEDICAO, ADMIN e SUDO podem reordenar.",
-      "A tarja lateral do cartão indica a prioridade pela posição: vermelha no topo (5%), amarela até a metade e verde no fim.",
+      "A tarja no topo do cartão indica a prioridade pela posição: vermelha no topo (5%), amarela até a metade e verde no fim.",
       "O cartão mostra os artigos do pedido e o link para abrir a ordem.",
+      "Ordens canceladas podem ser arquivadas para sair do kanban e da lista; em Arquivados é possível gerar relatório, reabrir como Liberado ou Em separação e desarquivar.",
       "A API impede concluir sem peças e impede remover peças fora de EM_SEPARACAO.",
     ],
     columns: [
@@ -137,6 +139,36 @@ export const wmsContent: Record<string, InfoContent> = {
       {
         title: "Ordem em andamento",
         desc: "Abra a ordem, selecione peças compatíveis com cada item e clique em Concluir quando terminar.",
+      },
+    ],
+  },
+  "/wms/arquivados": {
+    title: "Pedidos e Ordens Arquivados",
+    description:
+      "Consulta dos pedidos e ordens de separação cancelados que foram arquivados para não poluir o kanban e as listas do WMS. O arquivamento é local (não altera o ERP) e pode ser revertido a qualquer momento.",
+    rules: [
+      "Somente pedidos e ordens com situação/status CANCELADO podem ser arquivados.",
+      "Arquivar não apaga nada: histórico, eventos e peças já liberadas permanecem.",
+      "Ao devolver um pedido para uma situação de produção (Sem separação, Liberado, Em separação etc.), ele sai automaticamente do arquivo.",
+      "Uma ordem cancelada pode ser reaberta como Liberado ou Em separação; reabrir também desarquiva e volta a situação do pedido para o status escolhido.",
+      "Desarquivar mantém o pedido/ordem cancelado, apenas devolve o item ao kanban e às listas.",
+      "Arquivar, desarquivar e reabrir exigem os perfis COMERCIAL, EXPEDICAO, ADMIN ou SUDO.",
+      "A tela tem abas para Pedidos e Separações e exporta os itens filtrados em CSV/PDF.",
+    ],
+    columns: [
+      { name: "Pedido / Cliente", desc: "Pedido e cliente do item arquivado" },
+      { name: "Situação / Status", desc: "CANCELADO no momento do arquivamento" },
+      { name: "Arquivado em", desc: "Data e hora do arquivamento" },
+      { name: "Peças / Metros", desc: "Nas ordens: peças e metros separados antes do cancelamento" },
+    ],
+    examples: [
+      {
+        title: "Limpar o kanban",
+        desc: "Na coluna Cancelado, clique em Arquivar no cartão. O item sai do kanban e passa a aparecer em Arquivados.",
+      },
+      {
+        title: "Voltar à produção",
+        desc: "Em Arquivados, escolha a situação de destino do pedido ou reabra a ordem como Liberado/Em separação.",
       },
     ],
   },

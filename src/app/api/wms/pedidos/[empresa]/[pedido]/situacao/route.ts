@@ -42,6 +42,7 @@ export async function POST(
         observacao:
           typeof body.observacao === "string" ? body.observacao : null,
         usuarioId: auth.userId,
+        cancelarOrdem: body.cancelar_ordem === true,
       })
     )
   } catch (error) {

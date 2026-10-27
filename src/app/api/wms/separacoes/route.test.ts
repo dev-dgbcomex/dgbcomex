@@ -50,6 +50,7 @@ describe("/api/wms/separacoes", () => {
     expect(listarSeparacoes).toHaveBeenCalledWith({
       status: "LIBERADO",
       busca: "5902",
+      arquivadas: false,
       limite: 10,
       offset: 20,
     })

@@ -12,6 +12,7 @@ const ITENS = [
   { titulo: "Ordens de Separação", url: "/wms/separacoes", ordem: 3 },
   { titulo: "Estoque em Aberto", url: "/wms/estoque", ordem: 4 },
   { titulo: "Gavetas", url: "/wms/gavetas", ordem: 5 },
+  { titulo: "Arquivados", url: "/wms/arquivados", ordem: 6 },
 ]
 const URLS_OBSOLETAS = ["/wms/enderecos", "/wms/movimentos"]
 

@@ -73,7 +73,16 @@ describe("info-content do WMS", () => {
     expect(texto).toMatch(/somente leitura/i)
     expect(texto).toMatch(/ERP/)
     expect(texto).toMatch(/DEP.SITO/)
-    expect(texto).toMatch(/PRODU.ÃO/)
+    expect(texto).toMatch(/PRODUÇÃO/)
+  })
+
+  it("documenta o arquivo de pedidos e ordens cancelados", () => {
+    const texto = textoDe("/wms/arquivados")
+
+    expect(texto).toMatch(/arquiv/i)
+    expect(texto).toMatch(/CANCELADO/)
+    expect(texto).toMatch(/LIBERADO|EM_SEPARACAO|producao/i)
+    expect(texto).toMatch(/CSV|PDF/i)
   })
 
   it("resolve o detalhe da ordem pelo prefixo das separações", () => {

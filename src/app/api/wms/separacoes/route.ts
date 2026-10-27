@@ -18,6 +18,7 @@ export async function GET(req: NextRequest) {
       await listarSeparacoes({
         status: searchParams.get("status") ?? "",
         busca: searchParams.get("busca") ?? "",
+        arquivadas: searchParams.get("arquivadas") === "true",
         limite: Number.isFinite(limite) ? limite : 50,
         offset: Number.isFinite(offset) ? offset : 0,
       })

@@ -121,7 +121,7 @@ function DraggableCard({
       {...listeners}
       style={style}
       className={`relative bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-3 cursor-grab active:cursor-grabbing transition-shadow hover:shadow-md ${
-        prioridade ? "pl-4" : ""
+        prioridade ? "pt-4" : ""
       } ${isDragging ? "opacity-50 shadow-lg" : ""} ${
         disabled ? "cursor-not-allowed opacity-70" : ""
       }`}
@@ -130,7 +130,7 @@ function DraggableCard({
         <>
           <span
             aria-hidden="true"
-            className={`absolute left-0 top-0 h-full w-1 rounded-l-lg ${corDaPrioridade(indice, total)}`}
+            className={`absolute left-0 top-0 h-1 w-full rounded-t-lg ${corDaPrioridade(indice, total)}`}
           />
           <span className="sr-only">{rotuloDaPrioridade(indice, total)}</span>
         </>
@@ -262,11 +262,33 @@ export function KanbanWms<T>({
         ))}
       </div>
       <DragOverlay>
-        {ativo ? (
-          <div className="w-72 rounded-lg border border-blue-400 bg-white dark:bg-slate-800 p-3 shadow-xl cursor-grabbing">
-            {renderCard(ativo.item)}
-          </div>
-        ) : null}
+        {ativo
+          ? (() => {
+              const itensAtivos =
+                colunas.find((c) => c.id === ativo.colunaId)?.itens ?? []
+              const indice = itensAtivos.findIndex(
+                (i) => idDoItem(i) === idDoItem(ativo.item)
+              )
+              return (
+                <div
+                  className={`relative w-72 rounded-lg border border-blue-400 bg-white dark:bg-slate-800 p-3 shadow-xl cursor-grabbing ${
+                    prioridade ? "pt-4" : ""
+                  }`}
+                >
+                  {prioridade && indice >= 0 && itensAtivos.length > 0 && (
+                    <span
+                      aria-hidden="true"
+                      className={`absolute left-0 top-0 h-1 w-full rounded-t-lg ${corDaPrioridade(
+                        indice,
+                        itensAtivos.length
+                      )}`}
+                    />
+                  )}
+                  {renderCard(ativo.item)}
+                </div>
+              )
+            })()
+          : null}
       </DragOverlay>
     </DndContext>
   )

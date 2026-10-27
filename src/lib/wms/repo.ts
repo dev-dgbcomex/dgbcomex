@@ -57,6 +57,7 @@ export async function listarGavetas(opcoes: {
 export async function listarPedidos(opcoes: {
   busca?: string
   statusSeparacao?: string
+  arquivados?: boolean
   limite?: number
   offset?: number
 }): Promise<WmsPaginado<WmsPedido>> {
@@ -68,6 +69,7 @@ export async function listarPedidos(opcoes: {
     opcoes.limite,
     opcoes.offset
   )
+  if (opcoes.arquivados) params.set("arquivados", "true")
   return requisitarWms<WmsPaginado<WmsPedido>>(`/wms/pedidos?${params.toString()}`)
 }
 
@@ -121,11 +123,44 @@ export async function excluirSituacao(id: number): Promise<void> {
 export async function moverPedidoSituacao(
   empresa: string,
   pedido: string,
-  dados: { situacaoId: number; observacao?: string | null; usuarioId?: number | null }
+  dados: {
+    situacaoId: number
+    observacao?: string | null
+    usuarioId?: number | null
+    cancelarOrdem?: boolean
+  }
 ): Promise<WmsPedidoDetalhe> {
   return requisitarWms<WmsPedidoDetalhe>(
     `/wms/pedidos/${encodeURIComponent(empresa)}/${encodeURIComponent(pedido)}/situacao`,
-    { metodo: "POST", corpo: dados }
+    {
+      metodo: "POST",
+      corpo: {
+        situacaoId: dados.situacaoId,
+        observacao: dados.observacao,
+        usuarioId: dados.usuarioId,
+        cancelar_ordem: dados.cancelarOrdem ? true : false,
+      },
+    }
+  )
+}
+
+export async function arquivarPedido(
+  empresa: string,
+  pedido: string
+): Promise<WmsPedidoDetalhe> {
+  return requisitarWms<WmsPedidoDetalhe>(
+    `/wms/pedidos/${encodeURIComponent(empresa)}/${encodeURIComponent(pedido)}/arquivar`,
+    { metodo: "POST", corpo: {} }
+  )
+}
+
+export async function desarquivarPedido(
+  empresa: string,
+  pedido: string
+): Promise<WmsPedidoDetalhe> {
+  return requisitarWms<WmsPedidoDetalhe>(
+    `/wms/pedidos/${encodeURIComponent(empresa)}/${encodeURIComponent(pedido)}/desarquivar`,
+    { metodo: "POST", corpo: {} }
   )
 }
 
@@ -157,6 +192,7 @@ export async function listarEstoque(opcoes: {
 export async function listarSeparacoes(opcoes: {
   status?: string
   busca?: string
+  arquivadas?: boolean
   limite?: number
   offset?: number
 }): Promise<WmsPaginado<WmsSeparacao>> {
@@ -168,6 +204,7 @@ export async function listarSeparacoes(opcoes: {
     opcoes.limite,
     opcoes.offset
   )
+  if (opcoes.arquivadas) params.set("arquivadas", "true")
   return requisitarWms<WmsPaginado<WmsSeparacao>>(`/wms/separacoes?${params.toString()}`)
 }
 
@@ -208,6 +245,34 @@ export async function cancelarSeparacao(
   return requisitarWms<WmsSeparacao>(`/wms/separacoes/${id}/cancelar`, {
     metodo: "POST",
     corpo: { motivo, usuarioId },
+  })
+}
+
+export async function arquivarSeparacao(id: number): Promise<WmsSeparacao> {
+  return requisitarWms<WmsSeparacao>(`/wms/separacoes/${id}/arquivar`, {
+    metodo: "POST",
+    corpo: {},
+  })
+}
+
+export async function desarquivarSeparacao(id: number): Promise<WmsSeparacao> {
+  return requisitarWms<WmsSeparacao>(`/wms/separacoes/${id}/desarquivar`, {
+    metodo: "POST",
+    corpo: {},
+  })
+}
+
+export async function reabrirSeparacao(
+  id: number,
+  dados: { status?: string; usuarioId?: number | null; observacao?: string | null } = {}
+): Promise<WmsSeparacao> {
+  return requisitarWms<WmsSeparacao>(`/wms/separacoes/${id}/reabrir`, {
+    metodo: "POST",
+    corpo: {
+      status: dados.status ?? "LIBERADO",
+      usuarioId: dados.usuarioId,
+      observacao: dados.observacao,
+    },
   })
 }
 

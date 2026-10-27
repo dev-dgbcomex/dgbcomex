@@ -6,14 +6,18 @@ import { useSession } from "next-auth/react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { toast } from "sonner"
-import { Download, FileText, Loader2, Search } from "lucide-react"
+import { Archive, Download, FileText, Loader2, Search } from "lucide-react"
 import { InfoButton } from "@/components/ui/info-button"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { getInfoContent } from "@/lib/info-content"
 import { exportCSV, exportPDFRelatorio } from "@/lib/export-utils"
 import { chavePedido, ordenarPorPosicao } from "@/lib/wms/kanban"
-import { podeMoverParaSituacao, podeReordenarKanban } from "@/lib/wms/permissoes"
+import {
+  podeArquivarWms,
+  podeMoverParaSituacao,
+  podeReordenarKanban,
+} from "@/lib/wms/permissoes"
 import type {
   WmsPaginado,
   WmsPedido,
@@ -46,6 +50,7 @@ export default function PedidosPage() {
   const queryClient = useQueryClient()
   const { data: session } = useSession()
   const role = session?.user?.role ?? null
+  const podeArquivar = podeArquivarWms(role)
   const info = getInfoContent(pathname)
   const [busca, setBusca] = useState("")
   const [buscaAplicada, setBuscaAplicada] = useState("")
@@ -134,8 +139,13 @@ export default function PedidosPage() {
       })
   }, [itens, situacoesAtivas, situacaoPadrao, posicoes])
 
-  const mover: any = useMutation({
-    mutationFn: async ({ pedido, situacao, cancelarOrdem }: { pedido: WmsPedido; situacao: WmsSituacaoPedido; cancelarOrdem?: boolean }): Promise<any> => {
+  const mover = useMutation<
+    any,
+    Error,
+    { pedido: WmsPedido; situacao: WmsSituacaoPedido; cancelarOrdem?: boolean },
+    { anteriores?: [readonly unknown[], WmsPaginado<WmsPedido> | undefined][] }
+  >({
+    mutationFn: async ({ pedido, situacao, cancelarOrdem }): Promise<any> => {
       const res = await fetch(
         `/api/wms/pedidos/${encodeURIComponent(pedido.empresa)}/${encodeURIComponent(
           pedido.pedido
@@ -171,7 +181,42 @@ export default function PedidosPage() {
       queryClient.invalidateQueries({ queryKey: ["wms-separacoes"] })
       queryClient.invalidateQueries({ queryKey: ["wms-situacoes"] })
     },
-    onError: (erro: Error) => toast.error(erro.message),
+    onMutate: async ({ pedido, situacao }) => {
+      await queryClient.cancelQueries({ queryKey: ["wms-pedidos"] })
+      const anteriores = queryClient.getQueriesData<WmsPaginado<WmsPedido>>({
+        queryKey: ["wms-pedidos"],
+      })
+      queryClient.setQueriesData<WmsPaginado<WmsPedido>>(
+        { queryKey: ["wms-pedidos"] },
+        (atual) => {
+          if (!atual) return atual
+          return {
+            ...atual,
+            itens: atual.itens.map((item) =>
+              item.empresa === pedido.empresa && item.pedido === pedido.pedido
+                ? {
+                    ...item,
+                    situacaoId: situacao.id,
+                    situacaoNome: situacao.nome,
+                    situacaoCor: situacao.cor,
+                    situacaoOrdem: situacao.ordem,
+                    situacaoAcao: situacao.acao,
+                    situacaoPerfis: situacao.perfis ?? [],
+                    separacaoStatus: situacao.codigo,
+                  }
+                : item
+            ),
+          }
+        }
+      )
+      return { anteriores }
+    },
+    onError: (erro: Error, _variaveis, contexto) => {
+      contexto?.anteriores?.forEach(([chave, dados]) => {
+        queryClient.setQueryData(chave, dados)
+      })
+      toast.error(erro.message)
+    },
   })
 
   const reordenar = useMutation({
@@ -228,6 +273,29 @@ export default function PedidosPage() {
     if (!situacao) return
     reordenar.mutate({ coluna: situacao.codigo, ids })
   }
+
+  const arquivar = useMutation({
+    mutationFn: async (pedido: WmsPedido) => {
+      const res = await fetch(
+        `/api/wms/pedidos/${encodeURIComponent(pedido.empresa)}/${encodeURIComponent(
+          pedido.pedido
+        )}/arquivar`,
+        { method: "POST" }
+      )
+      if (!res.ok) {
+        const erro = await res.json().catch(() => ({}))
+        throw new Error(erro.error ?? "Falha ao arquivar o pedido")
+      }
+      return res.json()
+    },
+    onSuccess: (_dados, pedido) => {
+      toast.success(`Pedido ${pedido.pedido} arquivado`)
+      queryClient.invalidateQueries({ queryKey: ["wms-pedidos"] })
+      queryClient.invalidateQueries({ queryKey: ["wms-dashboard"] })
+      queryClient.invalidateQueries({ queryKey: ["wms-situacoes"] })
+    },
+    onError: (erro: Error) => toast.error(erro.message),
+  })
 
   function moverPedido(pedido: WmsPedido, situacaoId: string) {
     const situacao = situacoes.find((s) => String(s.id) === situacaoId)
@@ -322,6 +390,12 @@ export default function PedidosPage() {
             className="text-sm font-medium text-blue-600 hover:underline"
           >
             Situações
+          </Link>
+          <Link
+            href="/wms/arquivados"
+            className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:underline"
+          >
+            <Archive size={14} /> Arquivados
           </Link>
           <Button variant="outline" size="sm" onClick={exportarCSV} className="gap-1.5">
             <Download size={14} /> CSV
@@ -420,6 +494,20 @@ export default function PedidosPage() {
                     Abrir ordem #{pedido.separacaoId}
                   </Link>
                 )}
+                {situacao?.codigo === "CANCELADO" && podeArquivar && (
+                  <button
+                    type="button"
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      arquivar.mutate(pedido)
+                    }}
+                    disabled={arquivar.isPending}
+                    className="inline-flex items-center gap-1 rounded-md border border-slate-300 dark:border-slate-600 px-1.5 py-0.5 text-[10px] font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50"
+                  >
+                    <Archive size={11} /> Arquivar
+                  </button>
+                )}
               </div>
             )
           }}
@@ -493,14 +581,26 @@ export default function PedidosPage() {
                       )}
                     </td>
                     <td className="px-3 py-2 text-right">
-                      {pedido.separacaoId && (
-                        <Link
-                          href={`/wms/separacoes/${pedido.separacaoId}`}
-                          className="text-blue-600 hover:underline"
-                        >
-                          Abrir ordem
-                        </Link>
-                      )}
+                      <div className="flex items-center justify-end gap-2">
+                        {pedido.separacaoId && (
+                          <Link
+                            href={`/wms/separacoes/${pedido.separacaoId}`}
+                            className="text-blue-600 hover:underline"
+                          >
+                            Abrir ordem
+                          </Link>
+                        )}
+                        {situacao?.codigo === "CANCELADO" && podeArquivar && (
+                          <button
+                            type="button"
+                            onClick={() => arquivar.mutate(pedido)}
+                            disabled={arquivar.isPending}
+                            className="inline-flex items-center gap-1 rounded-md border border-slate-300 dark:border-slate-600 px-2 py-1 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50"
+                          >
+                            <Archive size={12} /> Arquivar
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 )

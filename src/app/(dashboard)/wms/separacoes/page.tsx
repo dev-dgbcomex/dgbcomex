@@ -6,13 +6,13 @@ import { useSession } from "next-auth/react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { toast } from "sonner"
-import { Download, FileText, Loader2, Search } from "lucide-react"
+import { Archive, Download, FileText, Loader2, Search } from "lucide-react"
 import { InfoButton } from "@/components/ui/info-button"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { getInfoContent } from "@/lib/info-content"
 import { exportCSV, exportPDFRelatorio } from "@/lib/export-utils"
-import { podeReordenarKanban } from "@/lib/wms/permissoes"
+import { podeArquivarWms, podeReordenarKanban } from "@/lib/wms/permissoes"
 import type { WmsPaginado, WmsSeparacao, WmsSeparacaoStatus } from "@/lib/wms/tipos"
 import {
   CORES_STATUS,
@@ -30,6 +30,7 @@ export default function SeparacoesPage() {
   const queryClient = useQueryClient()
   const { data: session } = useSession()
   const role = session?.user?.role ?? null
+  const podeArquivar = podeArquivarWms(role)
   const info = getInfoContent(pathname)
   const [busca, setBusca] = useState("")
   const [buscaAplicada, setBuscaAplicada] = useState("")
@@ -146,6 +147,25 @@ export default function SeparacoesPage() {
     reordenar.mutate({ coluna: colunaId, ids })
   }
 
+  const arquivar = useMutation({
+    mutationFn: async (ordem: WmsSeparacao) => {
+      const res = await fetch(`/api/wms/separacoes/${ordem.id}/arquivar`, {
+        method: "POST",
+      })
+      if (!res.ok) {
+        const erro = await res.json().catch(() => ({}))
+        throw new Error(erro.error ?? "Falha ao arquivar a ordem")
+      }
+      return res.json()
+    },
+    onSuccess: (_dados, ordem) => {
+      toast.success(`Ordem #${ordem.id} arquivada`)
+      queryClient.invalidateQueries({ queryKey: ["wms-separacoes"] })
+      queryClient.invalidateQueries({ queryKey: ["wms-dashboard"] })
+    },
+    onError: (erro: Error) => toast.error(erro.message),
+  })
+
   function exportarCSV() {
     exportCSV(
       "wms-separacoes",
@@ -214,6 +234,12 @@ export default function SeparacoesPage() {
         </div>
         <div className="flex items-center gap-2">
           <VisualizacaoToggle modo={modo} onChange={setModo} />
+          <Link
+            href="/wms/arquivados"
+            className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:underline"
+          >
+            <Archive size={14} /> Arquivados
+          </Link>
           <Button variant="outline" size="sm" onClick={exportarCSV} className="gap-1.5">
             <Download size={14} /> CSV
           </Button>
@@ -279,28 +305,43 @@ export default function SeparacoesPage() {
           podeReordenar={podeReordenarKanban(role)}
           prioridade
           renderCard={(ordem) => (
-            <Link
-              key={ordem.id}
-              href={`/wms/separacoes/${ordem.id}`}
-              className="block rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 p-3 space-y-1.5 hover:border-blue-400"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <p className="text-sm font-semibold text-slate-900 dark:text-slate-50">
-                  #{ordem.id} · Pedido {ordem.pedido}
+            <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 p-3 space-y-1.5">
+              <Link
+                href={`/wms/separacoes/${ordem.id}`}
+                className="block space-y-1.5 hover:text-blue-600"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-sm font-semibold text-slate-900 dark:text-slate-50">
+                    #{ordem.id} · Pedido {ordem.pedido}
+                  </p>
+                  <span className="text-xs text-slate-500 whitespace-nowrap">
+                    {ordem.totalPecas} pç
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                  {ordem.clienteNome ?? ordem.clienteCodigo ?? "—"}
                 </p>
-                <span className="text-xs text-slate-500 whitespace-nowrap">
-                  {ordem.totalPecas} pç
-                </span>
-              </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                {ordem.clienteNome ?? ordem.clienteCodigo ?? "—"}
-              </p>
-              <p className="text-xs text-slate-400">
-                {ordem.totalMetros.toFixed(1)} m separados · saldo{" "}
-                {ordem.saldoMetros.toFixed(1)} m
-                {ordem.artigos ? ` · Artigos: ${ordem.artigos}` : ""}
-              </p>
-            </Link>
+                <p className="text-xs text-slate-400">
+                  {ordem.totalMetros.toFixed(1)} m separados · saldo{" "}
+                  {ordem.saldoMetros.toFixed(1)} m
+                  {ordem.artigos ? ` · Artigos: ${ordem.artigos}` : ""}
+                </p>
+              </Link>
+              {ordem.status === "CANCELADO" && podeArquivar && (
+                <button
+                  type="button"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    arquivar.mutate(ordem)
+                  }}
+                  disabled={arquivar.isPending}
+                  className="inline-flex items-center gap-1 rounded-md border border-slate-300 dark:border-slate-600 px-1.5 py-0.5 text-[10px] font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50"
+                >
+                  <Archive size={11} /> Arquivar
+                </button>
+              )}
+            </div>
           )}
         />
       ) : (
@@ -342,12 +383,24 @@ export default function SeparacoesPage() {
                   <td className="px-3 py-2">{ordem.totalMetros.toFixed(2)}</td>
                   <td className="px-3 py-2">{ordem.saldoMetros.toFixed(2)}</td>
                   <td className="px-3 py-2 text-right">
-                    <Link
-                      href={`/wms/separacoes/${ordem.id}`}
-                      className="text-blue-600 hover:underline"
-                    >
-                      Abrir
-                    </Link>
+                    <div className="flex items-center justify-end gap-2">
+                      {ordem.status === "CANCELADO" && podeArquivar && (
+                        <button
+                          type="button"
+                          onClick={() => arquivar.mutate(ordem)}
+                          disabled={arquivar.isPending}
+                          className="inline-flex items-center gap-1 rounded-md border border-slate-300 dark:border-slate-600 px-2 py-1 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50"
+                        >
+                          <Archive size={12} /> Arquivar
+                        </button>
+                      )}
+                      <Link
+                        href={`/wms/separacoes/${ordem.id}`}
+                        className="text-blue-600 hover:underline"
+                      >
+                        Abrir
+                      </Link>
+                    </div>
                   </td>
                 </tr>
               ))}

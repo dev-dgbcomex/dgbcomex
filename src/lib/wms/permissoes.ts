@@ -18,3 +18,10 @@ export function podeReordenarKanban(role: string | null | undefined): boolean {
   if (!role) return false
   return REORDENAR.has(role.toUpperCase())
 }
+
+const ARQUIVAR = new Set(["ADMIN", "SUDO", "COMERCIAL", "EXPEDICAO"])
+
+export function podeArquivarWms(role: string | null | undefined): boolean {
+  if (!role) return false
+  return ARQUIVAR.has(role.toUpperCase())
+}
