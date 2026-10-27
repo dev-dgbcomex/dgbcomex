@@ -4,7 +4,7 @@ import "leaflet/dist/leaflet.css"
 import { cn } from "@/lib/utils"
 import { urlBase } from "@/lib/branding"
 
-const TITULO = "DGBCOMEX"
+const TITULO = "PDM"
 const DESCRICAO = "Sistema de operações Comex"
 
 /**

@@ -92,9 +92,9 @@ function SidebarContent({ onClose, collapsed }: { onClose?: () => void; collapse
           href={paginaInicial}
           onClick={onClose}
           className="flex items-center justify-center w-10 h-10 rounded-lg bg-blue-600 shadow-sm mb-3"
-          title="DGBCOMEX"
+          title="PDM"
         >
-          <span className="text-sm font-bold text-white">DG</span>
+          <span className="text-sm font-bold text-white">PDM</span>
         </NavLink>
         {loading ? (
           <div className="py-4">
@@ -155,7 +155,7 @@ function SidebarContent({ onClose, collapsed }: { onClose?: () => void; collapse
             <span className="text-sm font-bold text-white">DG</span>
           </div>
           <span className="text-base font-semibold text-slate-900 dark:text-slate-50">
-            DGBCOMEX
+            PDM
           </span>
         </NavLink>
         {onClose && (
