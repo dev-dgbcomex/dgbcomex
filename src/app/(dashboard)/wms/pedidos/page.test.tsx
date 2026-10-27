@@ -166,6 +166,45 @@ describe("WMS - pedidos para separação", () => {
     expect(link.getAttribute("href")).toBe("/wms/separacoes/7")
   })
 
+  it("respeita a ordem vertical salva na coluna", async () => {
+    const naMesmaColuna = [
+      pedidos[0],
+      {
+        ...pedidos[1],
+        situacaoId: 1,
+        situacaoNome: "Sem separação",
+        separacaoId: null,
+        separacaoStatus: "SEM_SEPARACAO",
+      },
+    ]
+    const fetchMock = createFetchMock(({ method, url }) => {
+      if (method === "GET" && url === URL_LISTA) {
+        return { json: { itens: naMesmaColuna, total: 2 } }
+      }
+      if (method === "GET" && url === URL_SITUACOES) {
+        return { json: { itens: situacoes, total: situacoes.length } }
+      }
+      if (method === "GET" && url.startsWith("/api/wms/kanban/ordem")) {
+        return {
+          json: { SEM_SEPARACAO: { "13|00005902": 1, "13|00006094": 0 } },
+        }
+      }
+      return { json: {} }
+    })
+    vi.stubGlobal("fetch", fetchMock.fn)
+
+    renderPage(<PedidosPage />)
+
+    await screen.findAllByText(/#00005902|#00006094/)
+    await waitFor(() => {
+      const cards = screen.getAllByText(/#00005902|#00006094/)
+      expect(cards.map((card) => card.textContent)).toEqual([
+        "#00006094",
+        "#00005902",
+      ])
+    })
+  })
+
   it("oferece o retorno às separações no topo e no rodapé", async () => {
     const fetchMock = mock()
     vi.stubGlobal("fetch", fetchMock.fn)

@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { getInfoContent } from "@/lib/info-content"
 import { exportCSV, exportPDFRelatorio } from "@/lib/export-utils"
+import { chavePedido, ordenarPorPosicao } from "@/lib/wms/kanban"
 import { podeMoverParaSituacao, podeReordenarKanban } from "@/lib/wms/permissoes"
 import type {
   WmsPaginado,
@@ -116,19 +117,14 @@ export default function PedidosPage() {
       .filter((s) => s.ativo || comPedidos.has(s.id))
       .map((situacao) => {
         const posicao = posicoes[situacao.codigo] ?? {}
-        const ordenados = itens
-          .filter(
+        const ordenados = ordenarPorPosicao(
+          itens.filter(
             (pedido) =>
               (pedido.situacaoId ?? situacaoPadrao?.id ?? null) === situacao.id
-          )
-          .sort((a, b) => {
-            const pa = posicao[`${a.empresa}|${a.pedido}`]
-            const pb = posicao[`${b.empresa}|${b.pedido}`]
-            if (pa == null && pb == null) return 0
-            if (pa == null) return 1
-            if (pb == null) return -1
-            return pa - pb
-          })
+          ),
+          chavePedido,
+          posicao
+        )
         return {
           id: String(situacao.id),
           rotulo: situacao.nome,
@@ -195,10 +191,36 @@ export default function PedidosPage() {
       }
       return res.json()
     },
+    onMutate: async ({ coluna, ids }) => {
+      const queryKey = ["wms-kanban-ordem", "PEDIDO", codigosColunas]
+      await queryClient.cancelQueries({ queryKey })
+      const anterior = queryClient.getQueryData<
+        Record<string, Record<string, number>>
+      >(queryKey)
+      queryClient.setQueryData<Record<string, Record<string, number>>>(
+        queryKey,
+        (atual = {}) => ({
+          ...atual,
+          [coluna]: Object.fromEntries(
+            ids.map((chave, posicao) => [chave, posicao])
+          ),
+        })
+      )
+      return { anterior, queryKey }
+    },
+    onError: (
+      erro: Error,
+      _variaveis,
+      contexto: { anterior?: Record<string, Record<string, number>>; queryKey: string[] } | undefined
+    ) => {
+      if (contexto?.anterior) {
+        queryClient.setQueryData(contexto.queryKey, contexto.anterior)
+      }
+      toast.error(erro.message)
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["wms-kanban-ordem"] })
     },
-    onError: (erro: Error) => toast.error(erro.message),
   })
 
   function reordenarColuna(colunaId: string, ids: string[]) {
@@ -360,7 +382,7 @@ export default function PedidosPage() {
       ) : modo === "kanban" ? (
         <KanbanWms
           colunas={colunas}
-          chave={(pedido) => `${pedido.empresa}-${pedido.pedido}`}
+          chave={chavePedido}
           vazio="Nenhum pedido"
           onMover={moverPedido}
           podeMover={podeMover}

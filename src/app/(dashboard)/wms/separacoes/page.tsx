@@ -110,10 +110,36 @@ export default function SeparacoesPage() {
       }
       return res.json()
     },
+    onMutate: async ({ coluna, ids }) => {
+      const queryKey = ["wms-kanban-ordem", "SEPARACAO"]
+      await queryClient.cancelQueries({ queryKey })
+      const anterior = queryClient.getQueryData<
+        Record<string, Record<string, number>>
+      >(queryKey)
+      queryClient.setQueryData<Record<string, Record<string, number>>>(
+        queryKey,
+        (atual = {}) => ({
+          ...atual,
+          [coluna]: Object.fromEntries(
+            ids.map((chave, posicao) => [chave, posicao])
+          ),
+        })
+      )
+      return { anterior, queryKey }
+    },
+    onError: (
+      erro: Error,
+      _variaveis,
+      contexto: { anterior?: Record<string, Record<string, number>>; queryKey: string[] } | undefined
+    ) => {
+      if (contexto?.anterior) {
+        queryClient.setQueryData(contexto.queryKey, contexto.anterior)
+      }
+      toast.error(erro.message)
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["wms-kanban-ordem"] })
     },
-    onError: (erro: Error) => toast.error(erro.message),
   })
 
   function reordenarColuna(colunaId: string, ids: string[]) {
