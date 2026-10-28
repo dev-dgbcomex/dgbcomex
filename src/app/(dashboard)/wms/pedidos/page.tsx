@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useSession } from "next-auth/react"
 import Link from "next/link"
@@ -18,8 +18,9 @@ import {
   podeMoverParaSituacao,
   podeReordenarKanban,
 } from "@/lib/wms/permissoes"
-import { estoqueDisponivelParaItem, detalhePedido } from "@/lib/wms/repo"
+import { estoqueDisponivelParaItem, detalhePedido, executarCargaPedidos, obterEstadoCargaPedidos } from "@/lib/wms/repo"
 import type {
+  CargaPedidosEstado,
   EstoqueDisponivelParaItem,
   WmsPaginado,
   WmsPedido,
@@ -72,6 +73,48 @@ export default function PedidosPage() {
   const [status, setStatus] = useState("")
   const [offset, setOffset] = useState(0)
   const [modo, setModo] = useState<"lista" | "kanban">("kanban")
+
+  const [cargaEstado, setCargaEstado] = useState<CargaPedidosEstado | null>(null)
+  const [cargaExecutando, setCargaExecutando] = useState(false)
+
+  const executarCarga = useMutation({
+    mutationFn: async (dados: { forcar?: boolean; limite_dias?: number }) => {
+      return executarCargaPedidos(dados)
+    },
+    onSuccess: (dados) => {
+      setCargaExecutando(false)
+      toast.success(
+        `Carga concluída: ${dados.pedidos_inseridos} inseridos, ${dados.pedidos_atualizados} atualizados, ${dados.itens_inseridos} itens`
+      )
+      queryClient.invalidateQueries({ queryKey: ["wms-pedidos"] })
+      queryClient.invalidateQueries({ queryKey: ["wms-dashboard"] })
+      obterEstadoCargaPedidos().then(setCargaEstado)
+    },
+    onError: (erro: Error) => {
+      setCargaExecutando(false)
+      toast.error(`Falha na carga: ${erro.message}`)
+    },
+  })
+
+  useEffect(() => {
+    let jaExecutou = false
+    async function garantirCarga() {
+      if (jaExecutou) return
+      jaExecutou = true
+      try {
+        const estado = await obterEstadoCargaPedidos()
+        setCargaEstado(estado)
+        // Se nunca carregou ou não tem pedidos, dispara carga completa
+        if (!estado.carga_completa || estado.contagem === 0) {
+          setCargaExecutando(true)
+          executarCarga.mutate({ forcar: false })
+        }
+      } catch {
+        // Se o endpoint não existir ainda, ignora silenciosamente
+      }
+    }
+    garantirCarga()
+  }, [])
 
   const pedidosQuery = useQuery<WmsPaginado<WmsPedido>>({
     queryKey: ["wms-pedidos", buscaAplicada, status, offset],

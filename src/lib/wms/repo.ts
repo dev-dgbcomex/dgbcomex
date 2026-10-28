@@ -339,3 +339,30 @@ export async function removerPeca(
     { metodo: "DELETE" }
   )
 }
+
+export type CargaPedidosEstado = {
+  carga_completa: boolean
+  contagem: number
+  ultima_data: string | null
+  atualizado_em: string | null
+}
+
+export async function obterEstadoCargaPedidos(): Promise<CargaPedidosEstado> {
+  return requisitarWms<CargaPedidosEstado>("/wms/pedidos/carga/estado")
+}
+
+export async function executarCargaPedidos(
+  dados: { forcar?: boolean; limite_dias?: number }
+): Promise<{
+  ok: boolean
+  pedidos_lidos: number
+  pedidos_inseridos: number
+  pedidos_atualizados: number
+  itens_inseridos: number
+  itens_atualizados: number
+}> {
+  return requisitarWms("/wms/pedidos/carga", {
+    metodo: "POST",
+    corpo: dados,
+  })
+}

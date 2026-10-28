@@ -248,6 +248,13 @@ export type PecaRef = {
   nroPeca: string
 }
 
+export type CargaPedidosEstado = {
+  carga_completa: boolean
+  contagem: number
+  ultima_data: string | null
+  atualizado_em: string | null
+}
+
 export type EstoqueItemDisponivel = {
   item: number
   produto: string | null
