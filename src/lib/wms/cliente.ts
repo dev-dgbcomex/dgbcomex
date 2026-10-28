@@ -56,8 +56,9 @@ async function obterCredenciaisWms(): Promise<Config> {
       method: "GET",
       headers: { "Content-Type": "application/json" },
       cache: "no-store",
+      credentials: "include",
     })
-      if (res.ok) {
+    if (res.ok) {
       const dados = await res.json()
       if (dados.base_url && dados.auth_config?.email && dados.auth_config?.senha) {
         return {
