@@ -60,11 +60,11 @@ async function obterCredenciaisWms(): Promise<Config> {
     })
     if (res.ok) {
       const dados = await res.json()
-      if (dados.base_url && dados.auth_config?.email && dados.auth_config?.senha) {
+      if (dados.baseUrl && dados.authConfig?.email && dados.authConfig?.senha) {
         return {
-          baseUrl: dados.base_url,
-          email: dados.auth_config?.email,
-          senha: dados.auth_config?.senha,
+          baseUrl: dados.baseUrl,
+          email: dados.authConfig?.email,
+          senha: dados.authConfig?.senha,
         }
       }
     }
