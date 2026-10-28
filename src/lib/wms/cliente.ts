@@ -13,7 +13,7 @@
  * ambientes sem a API configurada.
  */
 
-const TENTATIVA_LOGIN_MS = 8_000
+const TENTATIVA_LOGIN_MS = 15_000
 const REQUISICAO_MS = 20_000
 const VALIDADE_TOKEN_MS = 25 * 60_000
 
@@ -56,7 +56,6 @@ async function obterCredenciaisWms(): Promise<Config> {
       method: "GET",
       headers: { "Content-Type": "application/json" },
       cache: "no-store",
-      credentials: "include",
     })
     if (res.ok) {
       const dados = await res.json()
@@ -85,9 +84,8 @@ async function autenticar(config: Config): Promise<string> {
   try {
     resposta = await fetch(`${config.baseUrl}/auth/login`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify({ email: config.email, senha: config.senha }),
-      cache: "no-store",
       signal: AbortSignal.timeout(TENTATIVA_LOGIN_MS),
     })
   } catch {
