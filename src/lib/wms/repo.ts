@@ -1,8 +1,11 @@
 /**
  * Repositório do WMS no dgbcomex: apenas o mapeamento HTTP para a api-microdata.
  *
+ * No servidor (API routes) chama a api-microdata diretamente via `requisitarWms`.
+ * No cliente (navegador) chama as rotas `/api/wms/*` do próprio servidor Next.js,
+ * que fazem proxy para a api-microdata e evitam Mixed Content (HTTP dentro de HTTPS).
+ *
  * Não há conexão direta com o PostgreSQL local aqui (ver `src/lib/wms/cliente.ts`).
- * As rotas `/api/wms/*` autenticam o usuário e delegam para estas funções.
  */
 import { requisitarWms } from "./cliente"
 import type {
@@ -41,8 +44,33 @@ function paginar(params: URLSearchParams, limite?: number, offset?: number) {
   return params
 }
 
+/**
+ * No cliente: fetch para /api/wms* (próprio servidor, com sessão).
+ * No servidor: requisitarWms direto para a api-microdata.
+ */
+async function chamarWms<T>(
+  caminho: string,
+  opcoes: { metodo?: "GET" | "POST" | "PUT" | "DELETE"; corpo?: unknown } = {}
+): Promise<T> {
+  if (typeof window !== "undefined") {
+    const url = `/api/wms${caminho}`
+    const res = await fetch(url, {
+      method: opcoes.metodo ?? "GET",
+      headers: opcoes.corpo !== undefined ? { "Content-Type": "application/json" } : {},
+      body: opcoes.corpo !== undefined ? JSON.stringify(opcoes.corpo) : undefined,
+      credentials: "include",
+    })
+    if (!res.ok) {
+      const texto = await res.text().catch(() => "")
+      throw new Error(texto || `Falha na requisição WMS (${res.status})`)
+    }
+    return (await res.json()) as T
+  }
+  return requisitarWms<T>(caminho, opcoes)
+}
+
 export async function dashboard(): Promise<WmsDashboard> {
-  return requisitarWms<WmsDashboard>("/wms/dashboard")
+  return chamarWms<WmsDashboard>("/wms/dashboard")
 }
 
 export async function listarGavetas(opcoes: {
@@ -56,7 +84,7 @@ export async function listarGavetas(opcoes: {
     opcoes.limite,
     opcoes.offset
   )
-  return requisitarWms<WmsPaginado<WmsGaveta>>(`/wms/gavetas?${params.toString()}`)
+  return chamarWms<WmsPaginado<WmsGaveta>>(`/wms/gavetas?${params.toString()}`)
 }
 
 export async function listarPedidos(opcoes: {
@@ -75,14 +103,14 @@ export async function listarPedidos(opcoes: {
     opcoes.offset
   )
   if (opcoes.arquivados) params.set("arquivados", "true")
-  return requisitarWms<WmsPaginado<WmsPedido>>(`/wms/pedidos?${params.toString()}`)
+  return chamarWms<WmsPaginado<WmsPedido>>(`/wms/pedidos?${params.toString()}`)
 }
 
 export async function detalhePedido(
   empresa: string,
   pedido: string
 ): Promise<WmsPedidoDetalhe> {
-  return requisitarWms<WmsPedidoDetalhe>(
+  return chamarWms<WmsPedidoDetalhe>(
     `/wms/pedidos/${encodeURIComponent(empresa)}/${encodeURIComponent(pedido)}`
   )
 }
@@ -93,19 +121,19 @@ export async function listarSituacoes(opcoes: {
   const params = new URLSearchParams()
   if (opcoes.ativo != null) params.set("ativo", String(opcoes.ativo))
   const query = params.toString()
-  return requisitarWms<WmsPaginado<WmsSituacaoPedido>>(
+  return chamarWms<WmsPaginado<WmsSituacaoPedido>>(
     `/wms/situacoes${query ? `?${query}` : ""}`
   )
 }
 
 export async function detalheSituacao(id: number): Promise<WmsSituacaoPedido> {
-  return requisitarWms<WmsSituacaoPedido>(`/wms/situacoes/${id}`)
+  return chamarWms<WmsSituacaoPedido>(`/wms/situacoes/${id}`)
 }
 
 export async function criarSituacao(
   dados: NovaSituacaoPedido
 ): Promise<WmsSituacaoPedido> {
-  return requisitarWms<WmsSituacaoPedido>("/wms/situacoes", {
+  return chamarWms<WmsSituacaoPedido>("/wms/situacoes", {
     metodo: "POST",
     corpo: dados,
   })
@@ -115,14 +143,14 @@ export async function editarSituacao(
   id: number,
   dados: Partial<NovaSituacaoPedido>
 ): Promise<WmsSituacaoPedido> {
-  return requisitarWms<WmsSituacaoPedido>(`/wms/situacoes/${id}`, {
+  return chamarWms<WmsSituacaoPedido>(`/wms/situacoes/${id}`, {
     metodo: "PUT",
     corpo: dados,
   })
 }
 
 export async function excluirSituacao(id: number): Promise<void> {
-  await requisitarWms(`/wms/situacoes/${id}`, { metodo: "DELETE" })
+  await chamarWms(`/wms/situacoes/${id}`, { metodo: "DELETE" })
 }
 
 export async function moverPedidoSituacao(
@@ -135,8 +163,10 @@ export async function moverPedidoSituacao(
     cancelarOrdem?: boolean
   }
 ): Promise<WmsPedidoDetalhe> {
-  return requisitarWms<WmsPedidoDetalhe>(
-    `/wms/pedidos/${encodeURIComponent(empresa)}/${encodeURIComponent(pedido)}/situacao`,
+  return chamarWms<WmsPedidoDetalhe>(
+    `/wms/pedidos/${encodeURIComponent(empresa)}/${encodeURIComponent(
+      pedido
+    )}/situacao`,
     {
       metodo: "POST",
       corpo: {
@@ -153,8 +183,10 @@ export async function arquivarPedido(
   empresa: string,
   pedido: string
 ): Promise<WmsPedidoDetalhe> {
-  return requisitarWms<WmsPedidoDetalhe>(
-    `/wms/pedidos/${encodeURIComponent(empresa)}/${encodeURIComponent(pedido)}/arquivar`,
+  return chamarWms<WmsPedidoDetalhe>(
+    `/wms/pedidos/${encodeURIComponent(empresa)}/${encodeURIComponent(
+      pedido
+    )}/arquivar`,
     { metodo: "POST", corpo: {} }
   )
 }
@@ -164,8 +196,10 @@ export async function estoqueDisponivelParaItem(
   pedido: string,
   item: number
 ): Promise<EstoqueDisponivelParaItem> {
-  return requisitarWms<EstoqueDisponivelParaItem>(
-    `/wms/pedidos/${encodeURIComponent(empresa)}/${encodeURIComponent(pedido)}/itens/${item}/estoque-disponivel`
+  return chamarWms<EstoqueDisponivelParaItem>(
+    `/wms/pedidos/${encodeURIComponent(empresa)}/${encodeURIComponent(
+      pedido
+    )}/itens/${item}/estoque-disponivel`
   )
 }
 
@@ -173,8 +207,10 @@ export async function desarquivarPedido(
   empresa: string,
   pedido: string
 ): Promise<WmsPedidoDetalhe> {
-  return requisitarWms<WmsPedidoDetalhe>(
-    `/wms/pedidos/${encodeURIComponent(empresa)}/${encodeURIComponent(pedido)}/desarquivar`,
+  return chamarWms<WmsPedidoDetalhe>(
+    `/wms/pedidos/${encodeURIComponent(empresa)}/${encodeURIComponent(
+      pedido
+    )}/desarquivar`,
     { metodo: "POST", corpo: {} }
   )
 }
@@ -201,7 +237,7 @@ export async function listarEstoque(opcoes: {
     opcoes.limite,
     opcoes.offset
   )
-  return requisitarWms<WmsPaginado<PecaEmAberto>>(`/wms/estoque?${params.toString()}`)
+  return chamarWms<WmsPaginado<PecaEmAberto>>(`/wms/estoque?${params.toString()}`)
 }
 
 export async function listarSeparacoes(opcoes: {
@@ -220,22 +256,22 @@ export async function listarSeparacoes(opcoes: {
     opcoes.offset
   )
   if (opcoes.arquivadas) params.set("arquivadas", "true")
-  return requisitarWms<WmsPaginado<WmsSeparacao>>(`/wms/separacoes?${params.toString()}`)
+  return chamarWms<WmsPaginado<WmsSeparacao>>(`/wms/separacoes?${params.toString()}`)
 }
 
 export async function criarSeparacao(dados: NovaSeparacao): Promise<WmsSeparacao> {
-  return requisitarWms<WmsSeparacao>("/wms/separacoes", { metodo: "POST", corpo: dados })
+  return chamarWms<WmsSeparacao>("/wms/separacoes", { metodo: "POST", corpo: dados })
 }
 
 export async function detalheSeparacao(id: number): Promise<WmsSeparacaoDetalhe> {
-  return requisitarWms<WmsSeparacaoDetalhe>(`/wms/separacoes/${id}`)
+  return chamarWms<WmsSeparacaoDetalhe>(`/wms/separacoes/${id}`)
 }
 
 export async function iniciarSeparacao(
   id: number,
   usuarioId?: number | null
 ): Promise<WmsSeparacao> {
-  return requisitarWms<WmsSeparacao>(`/wms/separacoes/${id}/iniciar`, {
+  return chamarWms<WmsSeparacao>(`/wms/separacoes/${id}/iniciar`, {
     metodo: "POST",
     corpo: { usuarioId },
   })
@@ -246,7 +282,7 @@ export async function concluirSeparacao(
   usuarioId?: number | null,
   observacao?: string | null
 ): Promise<WmsSeparacao> {
-  return requisitarWms<WmsSeparacao>(`/wms/separacoes/${id}/concluir`, {
+  return chamarWms<WmsSeparacao>(`/wms/separacoes/${id}/concluir`, {
     metodo: "POST",
     corpo: { usuarioId, observacao },
   })
@@ -257,21 +293,21 @@ export async function cancelarSeparacao(
   motivo?: string | null,
   usuarioId?: number | null
 ): Promise<WmsSeparacao> {
-  return requisitarWms<WmsSeparacao>(`/wms/separacoes/${id}/cancelar`, {
+  return chamarWms<WmsSeparacao>(`/wms/separacoes/${id}/cancelar`, {
     metodo: "POST",
     corpo: { motivo, usuarioId },
   })
 }
 
 export async function arquivarSeparacao(id: number): Promise<WmsSeparacao> {
-  return requisitarWms<WmsSeparacao>(`/wms/separacoes/${id}/arquivar`, {
+  return chamarWms<WmsSeparacao>(`/wms/separacoes/${id}/arquivar`, {
     metodo: "POST",
     corpo: {},
   })
 }
 
 export async function desarquivarSeparacao(id: number): Promise<WmsSeparacao> {
-  return requisitarWms<WmsSeparacao>(`/wms/separacoes/${id}/desarquivar`, {
+  return chamarWms<WmsSeparacao>(`/wms/separacoes/${id}/desarquivar`, {
     metodo: "POST",
     corpo: {},
   })
@@ -281,7 +317,7 @@ export async function reabrirSeparacao(
   id: number,
   dados: { status?: string; usuarioId?: number | null; observacao?: string | null } = {}
 ): Promise<WmsSeparacao> {
-  return requisitarWms<WmsSeparacao>(`/wms/separacoes/${id}/reabrir`, {
+  return chamarWms<WmsSeparacao>(`/wms/separacoes/${id}/reabrir`, {
     metodo: "POST",
     corpo: {
       status: dados.status ?? "LIBERADO",
@@ -315,7 +351,7 @@ export async function pecasDoItem(
     opcoes.limite,
     opcoes.offset
   )
-  return requisitarWms(
+  return chamarWms(
     `/wms/separacoes/${separacaoId}/itens/${item}/pecas?${params.toString()}`
   )
 }
@@ -324,7 +360,7 @@ export async function adicionarPecas(
   separacaoId: number,
   dados: { item: number; pecas: PecaRef[]; usuarioId?: number | null }
 ): Promise<{ separacao: WmsSeparacao; adicionadas: number }> {
-  return requisitarWms(`/wms/separacoes/${separacaoId}/pecas`, {
+  return chamarWms(`/wms/separacoes/${separacaoId}/pecas`, {
     metodo: "POST",
     corpo: dados,
   })
@@ -338,7 +374,7 @@ export async function removerPeca(
   const params = new URLSearchParams()
   if (usuarioId != null) params.set("usuarioId", String(usuarioId))
   const query = params.toString()
-  return requisitarWms(
+  return chamarWms(
     `/wms/separacoes/${separacaoId}/pecas/${pecaId}${query ? `?${query}` : ""}`,
     { metodo: "DELETE" }
   )
@@ -352,7 +388,7 @@ export type CargaPedidosEstado = {
 }
 
 export async function obterEstadoCargaPedidos(): Promise<CargaPedidosEstado> {
-  return requisitarWms<CargaPedidosEstado>("/wms/pedidos/carga/estado")
+  return chamarWms<CargaPedidosEstado>("/wms/pedidos/carga/estado")
 }
 
 export async function executarCargaPedidos(
@@ -365,7 +401,7 @@ export async function executarCargaPedidos(
   itens_inseridos: number
   itens_atualizados: number
 }> {
-  return requisitarWms("/wms/pedidos/carga", {
+  return chamarWms("/wms/pedidos/carga", {
     metodo: "POST",
     corpo: dados,
   })
@@ -378,7 +414,7 @@ export async function listarSeparacoesColetor(
   if (opcoes.limite != null) params.set("limite", String(opcoes.limite))
   if (opcoes.offset != null) params.set("offset", String(opcoes.offset))
   const query = params.toString()
-  return requisitarWms<{ itens: WmsColetorSeparacao[]; total: number }>(
+  return chamarWms<{ itens: WmsColetorSeparacao[]; total: number }>(
     `/wms/coletor/separacoes${query ? `?${query}` : ""}`
   )
 }
@@ -386,7 +422,7 @@ export async function listarSeparacoesColetor(
 export async function detalheSeparacaoColetor(
   separacaoId: number
 ): Promise<WmsColetorSeparacaoDetalhe> {
-  return requisitarWms<WmsColetorSeparacaoDetalhe>(
+  return chamarWms<WmsColetorSeparacaoDetalhe>(
     `/wms/coletor/separacoes/${separacaoId}`
   )
 }
@@ -395,7 +431,7 @@ export async function pecasDisponiveisParaColetor(
   separacaoId: number,
   item: number
 ): Promise<{ itens: WmsColetorPecaDisponivel[]; total: number }> {
-  return requisitarWms<{ itens: WmsColetorPecaDisponivel[]; total: number }>(
+  return chamarWms<{ itens: WmsColetorPecaDisponível[]; total: number }>(
     `/wms/coletor/separacoes/${separacaoId}/itens/${item}/pecas-disponiveis`
   )
 }
@@ -404,7 +440,7 @@ export async function adicionarPecasColetor(
   separacaoId: number,
   dados: { item: number; pecas: { nroRolo: string; nroPeca: string; quantidade?: number }[] }
 ): Promise<{ ok: boolean; separacaoId: number }> {
-  return requisitarWms<{ ok: boolean; separacaoId: number }>(
+  return chamarWms<{ ok: boolean; separacaoId: number }>(
     `/wms/coletor/separacoes/${separacaoId}/pecas`,
     {
       metodo: "POST",
@@ -436,7 +472,7 @@ export async function gerarRomaneioColetor(
     incremento: number | null
   }>
 }> {
-  return requisitarWms<{
+  return chamarWms<{
     ok: boolean
     separacaoId: number
     romaneio: string | null
@@ -461,12 +497,12 @@ export async function sincronizarColetor(): Promise<{
   processados: number
   erros: number
 }> {
-  return requisitarWms<{ ok: boolean; processados: number; erros: number }>(
+  return chamarWms<{ ok: boolean; processados: number; erros: number }>(
     "/wms/coletor/sincronizar",
     { metodo: "POST" }
   )
 }
 
 export async function obterDashboardColetor(): Promise<ColetorDashboard> {
-  return requisitarWms<ColetorDashboard>("/wms/coletor/dashboard")
+  return chamarWms<ColetorDashboard>("/wms/coletor/dashboard")
 }
