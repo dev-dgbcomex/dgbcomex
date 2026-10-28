@@ -76,6 +76,7 @@ export default function PedidosPage() {
 
   const [cargaEstado, setCargaEstado] = useState<CargaPedidosEstado | null>(null)
   const [cargaExecutando, setCargaExecutando] = useState(false)
+  const [cargaErro, setCargaErro] = useState<string | null>(null)
 
   const executarCarga = useMutation({
     mutationFn: async (dados: { forcar?: boolean; limite_dias?: number }) => {
@@ -83,6 +84,7 @@ export default function PedidosPage() {
     },
     onSuccess: (dados) => {
       setCargaExecutando(false)
+      setCargaErro(null)
       toast.success(
         `Carga concluída: ${dados.pedidos_inseridos} inseridos, ${dados.pedidos_atualizados} atualizados, ${dados.itens_inseridos} itens`
       )
@@ -92,6 +94,7 @@ export default function PedidosPage() {
     },
     onError: (erro: Error) => {
       setCargaExecutando(false)
+      setCargaErro(erro.message)
       toast.error(`Falha na carga: ${erro.message}`)
     },
   })
@@ -109,8 +112,9 @@ export default function PedidosPage() {
           setCargaExecutando(true)
           executarCarga.mutate({ forcar: false })
         }
-      } catch {
-        // Se o endpoint não existir ainda, ignora silenciosamente
+      } catch (erro: any) {
+        setCargaErro(erro?.message ?? "Falha ao verificar estado da carga")
+        toast.error("Falha ao verificar estado da carga de pedidos")
       }
     }
     garantirCarga()
@@ -507,6 +511,46 @@ export default function PedidosPage() {
           <Button variant="outline" size="sm" onClick={exportarPDF} className="gap-1.5">
             <FileText size={14} /> PDF
           </Button>
+          {cargaEstado && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setCargaExecutando(true)
+                executarCarga.mutate({ forcar: true })
+              }}
+              disabled={cargaExecutando}
+              className="gap-1.5"
+            >
+              {cargaExecutando ? (
+                <>
+                  <Loader2 size={14} className="animate-spin" /> Carregando…
+                </>
+              ) : (
+                <>
+                  <Download size={14} /> Recarregar pedidos
+                </>
+              )}
+            </Button>
+          )}
+          {cargaEstado && (
+            <span className="text-xs text-slate-500 dark:text-slate-400">
+              {cargaEstado.carga_completa
+                ? `Última carga: ${cargaEstado.contagem} pedidos`
+                : "Sem carga inicial"}
+              {cargaEstado.ultima_data && (
+                <>
+                  {" · "}
+                  {new Date(cargaEstado.ultima_data).toLocaleString("pt-BR")}
+                </>
+              )}
+            </span>
+          )}
+          {cargaErro && (
+            <span className="text-xs text-red-500 dark:text-red-400">
+              ⚠ {cargaErro}
+            </span>
+          )}
         </div>
       </div>
 
