@@ -5,7 +5,10 @@
  * acesso ao WMS passa pela api-microdata (FastAPI, on-premise): o front chama as rotas
  * Next.js, que falam com esta API usando um usuário de serviço.
  *
- * Variáveis: `MICRODATA_API_URL`, `MICRODATA_SERVICE_EMAIL`, `MICRODATA_SERVICE_SENHA`.
+ * Variáveis de ambiente: `MICRODATA_API_URL`, `MICRODATA_SERVICE_EMAIL`, `MICRODATA_SERVICE_SENHA`.
+ * Alternativamente, as credenciais podem ser cadastradas na tabela `wms_config_integracao`
+ * do banco Neon (Drizzle) com nome "api-microdata-wms".
+ *
  * A configuração é lida em tempo de execução (não no import) para o build não quebrar em
  * ambientes sem a API configurada.
  */
@@ -28,29 +31,49 @@ type Config = { baseUrl: string; email: string; senha: string }
 
 let tokenEmCache: { token: string; expiraEm: number } | null = null
 
-function configuracao(): Config {
-  const baseUrl = (process.env.MICRODATA_API_URL ?? "").trim().replace(/\/+$/, "")
+async function obterCredenciaisWms(): Promise<Config> {
+  // 1. Tenta variáveis de ambiente primeiro
+  const empresa = (process.env.MICRODATA_API_URL ?? "").trim().replace(/\/+$/, "")
   const email = (process.env.MICRODATA_SERVICE_EMAIL ?? "").trim()
   const senha = process.env.MICRODATA_SERVICE_SENHA ?? ""
 
-  if (!baseUrl || !email || !senha) {
-    throw new ErroWms(
-      "Integração do WMS com a api-microdata não configurada " +
-        "(MICRODATA_API_URL, MICRODATA_SERVICE_EMAIL e MICRODATA_SERVICE_SENHA).",
-      503
-    )
+  if (empresa && email && senha) {
+    return { baseUrl: empresa, email, senha }
   }
 
-  return { baseUrl, email, senha }
-}
+  // 2. Tenta buscar na tabela wms_config_integracao do Neon
+  try {
+    const { db } = await import("@/lib/db")
+    const { integracoes } = await import("@/lib/db/schema/integrocoes")
+    const { eq } = await import("drizzle-orm")
 
-function mensagemDeErro(detail: unknown, status: number): string {
-  if (typeof detail === "string" && detail.trim()) return detail
-  if (Array.isArray(detail) && detail.length > 0) {
-    const primeiro = detail[0] as { msg?: unknown }
-    if (typeof primeiro?.msg === "string") return primeiro.msg
+    const linha = await db
+      .select()
+      .from(integrocoes)
+      .where(eq(integracoes.nome, "api-microdata-wms"))
+      .limit(1)
+
+    if (linha.length > 0 && existente[0].ativo) {
+      const configuracao = existente[0]
+      const authConfig = configuracao.auth_config as { email?: string; senha?: string } | null
+      if (configuracao.base_url && authConfig?.email && authConfig.senha) {
+        return {
+          baseUrl: configuracao.base_url,
+          email: authConfig.email,
+          senha: authConfig.senha,
+        }
+      }
+    }
+  } catch {
+    // Se falhar ao acessar o banco, continua abaixo para lançar erro claro
   }
-  return `Falha na comunicação com a api-microdata (${status})`
+
+  throw new ErroWms(
+    "Integração do WMS com a api-microdata não configurada " +
+      "(defina MICRODATA_API_URL, MICRODATA_SERVICE_EMAIL e MICRODATA_SERVICE_SENHA, " +
+      "ou cadastre a integração 'api-microdata-wms' em /admin/configuracoes/integracoes).",
+    503
+  )
 }
 
 async function autenticar(config: Config): Promise<string> {
@@ -81,7 +104,7 @@ async function autenticar(config: Config): Promise<string> {
 }
 
 async function token(): Promise<{ config: Config; valor: string }> {
-  const config = configuracao()
+  const config = await obterCredenciaisWms()
   if (tokenEmCache && tokenEmCache.expiraEm > Date.now()) {
     return { config, valor: tokenEmCache.token }
   }
