@@ -31,6 +31,7 @@ import type {
   WmsItemPedido,
 } from "@/lib/wms/tipos"
 import { CORES_STATUS, ROTULOS_STATUS } from "../../components/kanban"
+import { BotaoVoltar } from "../../components/botao-voltar"
 
 const STATUS_EDITAVEIS = new Set(["LIBERADO", "EM_SEPARACAO"])
 
@@ -231,12 +232,14 @@ export default function SeparacaoDetalhePage() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <Link
-            href="/wms/separacoes"
-            className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 mb-1"
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => router.push("/wms/separacoes")}
+            className="gap-1.5"
           >
-            <ArrowLeft size={12} /> Voltar para as separações
-          </Link>
+            <ArrowLeft size={14} /> Ordens de Separação
+          </Button>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-50 flex items-center gap-2">
             Ordem #{data.id} · Pedido {data.pedido}
             {info && <InfoButton content={info} />}
@@ -261,6 +264,7 @@ export default function SeparacaoDetalhePage() {
           >
             Pedidos
           </Button>
+          <BotaoVoltar />
           <Button variant="outline" size="sm" onClick={exportarCSV} className="gap-1.5">
             <Download size={14} /> CSV
           </Button>

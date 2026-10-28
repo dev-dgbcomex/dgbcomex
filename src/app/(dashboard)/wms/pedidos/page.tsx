@@ -30,6 +30,7 @@ import {
   Paginacao,
   VisualizacaoToggle,
 } from "../components/kanban"
+import { BotaoVoltar } from "../components/botao-voltar"
 
 const PAGINA = 50
 
@@ -433,6 +434,7 @@ export default function PedidosPage() {
           >
             <Archive size={14} /> Ordens de Separação
           </Button>
+          <BotaoVoltar />
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-50 flex items-center gap-2">
             Pedidos para Separação
             {info && <InfoButton content={info} />}

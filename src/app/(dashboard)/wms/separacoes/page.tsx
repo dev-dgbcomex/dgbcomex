@@ -21,6 +21,7 @@ import {
   ROTULOS_STATUS,
   VisualizacaoToggle,
 } from "../components/kanban"
+import { BotaoVoltar } from "../components/botao-voltar"
 
 const PAGINA = 50
 const STATUS: WmsSeparacaoStatus[] = ["LIBERADO", "EM_SEPARACAO", "SEPARADO", "CANCELADO"]
@@ -249,6 +250,7 @@ export default function SeparacoesPage() {
           >
             Pedidos
           </Button>
+          <BotaoVoltar />
           <Button variant="outline" size="sm" onClick={exportarCSV} className="gap-1.5">
             <Download size={14} /> CSV
           </Button>

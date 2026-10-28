@@ -12,6 +12,7 @@ import { exportCSV, exportPDFRelatorio } from "@/lib/export-utils"
 import type { PecaEmAberto, WmsPaginado } from "@/lib/wms/tipos"
 import { KanbanWms, Paginacao, VisualizacaoToggle } from "../components/kanban"
 import { VoltarSeparacoes } from "../components/voltar-separacoes"
+import { BotaoVoltar } from "../components/botao-voltar"
 
 const PAGINA = 100
 const CORES_ZONA = ["#2563eb", "#16a34a", "#f59e0b", "#ef4444", "#8b5cf6", "#0891b2", "#db2777"]
@@ -158,6 +159,7 @@ export default function EstoquePage() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
           <VoltarSeparacoes />
+          <BotaoVoltar />
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-50 flex items-center gap-2">
             Estoque em Aberto
             {info && <InfoButton content={info} />}

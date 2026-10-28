@@ -29,6 +29,7 @@ import {
   WMS_SITUACAO_ACOES,
   WMS_SITUACAO_ACOES_ROTULOS,
 } from "@/lib/wms/tipos"
+import { BotaoVoltar } from "../components/botao-voltar"
 
 const COR_PADRAO = "#2563eb"
 
@@ -182,6 +183,7 @@ export default function SituacoesPage() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
+          <BotaoVoltar />
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-50 flex items-center gap-2">
             Situações do Pedido
             {info && <InfoButton content={info} />}
