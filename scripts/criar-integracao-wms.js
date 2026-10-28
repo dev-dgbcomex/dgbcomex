@@ -20,8 +20,9 @@ async function main() {
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       )
     `)
+    console.log("Tabela wms_config_integracao criada ou já existente")
 
-    // Verificar se já existe uma integração de WMS
+    // Verificar se já existe a integração de WMS
     const existente = await client.query(
       "SELECT * FROM wms_config_integracao WHERE nome = $1",
       ["api-microdata-wms"]
@@ -29,7 +30,6 @@ async function main() {
 
     if (existente.rows.length > 0) {
       console.log("Integração WMS já existe:", existente.rows[0])
-      // Atualizar com as credenciais atuais
       await client.query(
         `UPDATE wms_config_integracao 
          SET base_url = $1, tipo_auth = $2, auth_config = $3, ativo = true, updated_at = NOW() 
@@ -40,13 +40,13 @@ async function main() {
           JSON.stringify({
             email: "adm.systextil@systextil.com.br",
             senha: "Syst#2025#Syst",
+            login_url: "http://10.156.0.124:58245/auth/login"
           }),
           existente.rows[0].id,
         ]
       )
       console.log("Integração WMS atualizada com credenciais do ERP")
     } else {
-      // Inserir nova integração
       const [nova] = await client.query(
         `INSERT INTO wms_config_integracao (nome, base_url, tipo_auth, auth_config, ativo, created_at, updated_at)
          VALUES ($1, $2, $3, $4, true, NOW(), NOW())
@@ -58,13 +58,13 @@ async function main() {
           JSON.stringify({
             email: "adm.systextil@systextil.com.br",
             senha: "Syst#2025#Syst",
+            login_url: "http://10.156.0.124:58245/auth/login"
           }),
         ]
       )
       console.log("Integração WMS criada:", nova.rows[0])
     }
 
-    // Listar todas as integrações para verificar
     const todas = await client.query("SELECT id, nome, base_url, tipo_auth, ativo FROM wms_config_integracao ORDER BY id")
     console.log("\nTodas as integrações de WMS:")
     for (const inc of todas.rows) {
