@@ -5,7 +5,7 @@
  * acesso ao WMS passa pela api-microdata (FastAPI, on-premise): o front chama as rotas
  * Next.js, que falam com esta API usando um usuário de serviço.
  *
- * Variáveis de ambiente: `MICRODATA_API_URL`, `MICRODATA_SERVICE_EMAIL`, `MICRODATA_SERVICE_SENHA`.
+ * Variáveis: `MICRODATA_API_URL`, `MICRODATA_SERVICE_EMAIL`, `MICRODATA_SERVICE_SENHA`.
  * Alternativamente, as credenciais podem ser cadastradas na tabela `wms_config_integracao`
  * do banco Neon (Drizzle) com nome "api-microdata-wms".
  *
@@ -31,41 +31,44 @@ type Config = { baseUrl: string; email: string; senha: string }
 
 let tokenEmCache: { token: string; expiraEm: number } | null = null
 
+function mensagemDeErro(detail: unknown, status: number): string {
+  if (typeof detail === "string" && detail.trim()) return detail
+  if (Array.isArray(detail) && detail.length > 0) {
+    const primeiro = detail[0] as { msg?: unknown }
+    if (typeof primeiro?.msg === "string") return primeiro.msg
+  }
+  return `Falha na comunicação com a api-microdata (${status})`
+}
+
 async function obterCredenciaisWms(): Promise<Config> {
   // 1. Tenta variáveis de ambiente primeiro
-  const empresa = (process.env.MICRODATA_API_URL ?? "").trim().replace(/\/+$/, "")
-  const email = (process.env.MICRODATA_SERVICE_EMAIL ?? "").trim()
-  const senha = process.env.MICRODATA_SERVICE_SENHA ?? ""
+  const baseUrlEnv = (process.env.MICRODATA_API_URL ?? "").trim().replace(/\/+$/, "")
+  const emailEnv = (process.env.MICRODATA_SERVICE_EMAIL ?? "").trim()
+  const senhaEnv = process.env.MICRODATA_SERVICE_SENHA ?? ""
 
-  if (empresa && email && senha) {
-    return { baseUrl: empresa, email, senha }
+  if (baseUrlEnv && emailEnv && senhaEnv) {
+    return { baseUrl: baseUrlEnv, email: emailEnv, senha: senhaEnv }
   }
 
-  // 2. Tenta buscar na tabela wms_config_integracao do Neon
+  // 2. Tenta buscar na tabela wms_config_integracao via API do dgbcomex
   try {
-    const { db } = await import("@/lib/db")
-    const { integracoes } = await import("@/lib/db/schema/integrocoes")
-    const { eq } = await import("drizzle-orm")
-
-    const linha = await db
-      .select()
-      .from(integrocoes)
-      .where(eq(integracoes.nome, "api-microdata-wms"))
-      .limit(1)
-
-    if (linha.length > 0 && existente[0].ativo) {
-      const configuracao = existente[0]
-      const authConfig = configuracao.auth_config as { email?: string; senha?: string } | null
-      if (configuracao.base_url && authConfig?.email && authConfig.senha) {
+    const res = await fetch("/api/wms/configuracao", {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+      cache: "no-store",
+    })
+      if (res.ok) {
+      const dados = await res.json()
+      if (dados.base_url && dados.auth_config?.email && dados.auth_config?.senha) {
         return {
-          baseUrl: configuracao.base_url,
-          email: authConfig.email,
-          senha: authConfig.senha,
+          baseUrl: dados.base_url,
+          email: dados.auth_config?.email,
+          senha: dados.auth_config?.senha,
         }
       }
     }
   } catch {
-    // Se falhar ao acessar o banco, continua abaixo para lançar erro claro
+    // Se falhar ao acessar a API, continua abaixo para lançar erro claro
   }
 
   throw new ErroWms(
