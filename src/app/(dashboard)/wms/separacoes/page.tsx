@@ -12,19 +12,21 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { getInfoContent } from "@/lib/info-content"
 import { exportCSV, exportPDFRelatorio } from "@/lib/export-utils"
-import { podeArquivarWms, podeReordenarKanban } from "@/lib/wms/permissoes"
-import type { WmsPaginado, WmsSeparacao, WmsSeparacaoStatus } from "@/lib/wms/tipos"
+import { podeArquivarWms, podeMoverParaSituacao, podeReordenarKanban } from "@/lib/wms/permissoes"
+import type {
+  WmsPaginado,
+  WmsSeparacao,
+  WmsSeparacaoStatus,
+  WmsSituacaoPedido,
+} from "@/lib/wms/tipos"
 import {
-  CORES_STATUS,
   KanbanWms,
   Paginacao,
-  ROTULOS_STATUS,
   VisualizacaoToggle,
 } from "../components/kanban"
 import { BotaoVoltar } from "../components/botao-voltar"
 
 const PAGINA = 50
-const STATUS: WmsSeparacaoStatus[] = ["LIBERADO", "EM_SEPARACAO", "SEPARADO", "CANCELADO"]
 
 export default function SeparacoesPage() {
   const pathname = usePathname()
@@ -57,12 +59,32 @@ export default function SeparacoesPage() {
 
   const itens = useMemo(() => data?.itens ?? [], [data])
 
+  const situacoesQuery = useQuery<WmsPaginado<WmsSituacaoPedido>>({
+    queryKey: ["wms-situacoes", "todas"],
+    queryFn: async () => {
+      const res = await fetch("/api/wms/situacoes")
+      if (!res.ok) throw new Error("Falha ao carregar as situações")
+      return res.json()
+    },
+  })
+
+  const situacoes = useMemo(() => situacoesQuery.data?.itens ?? [], [situacoesQuery.data])
+  const situacoesAtivas = useMemo(
+    () => situacoes.filter((s) => s.ativo),
+    [situacoes]
+  )
+
+  const codigosColunas = useMemo(
+    () => situacoesAtivas.map((s) => s.codigo).join(","),
+    [situacoesAtivas]
+  )
+
   const ordemQuery = useQuery<Record<string, Record<string, number>>>({
-    queryKey: ["wms-kanban-ordem", "SEPARACAO"],
+    queryKey: ["wms-kanban-ordem", "SEPARACAO", codigosColunas],
     queryFn: async () => {
       const params = new URLSearchParams({
         tipo: "SEPARACAO",
-        colunas: STATUS.join(","),
+        colunas: codigosColunas,
       })
       const res = await fetch(`/api/wms/kanban/ordem?${params.toString()}`)
       if (!res.ok) return {}
@@ -72,12 +94,20 @@ export default function SeparacoesPage() {
 
   const posicoes = useMemo(() => ordemQuery.data ?? {}, [ordemQuery.data])
 
-  const colunas = useMemo(
-    () =>
-      STATUS.map((id) => {
-        const posicao = posicoes[id] ?? {}
+  const colunas = useMemo(() => {
+    const comOrdens = new Set(itens.map((o) => o.status))
+    return situacoesAtivas
+      .filter(
+        (situacao) =>
+          situacao.ativo ||
+          comOrdens.has(situacao.codigo as WmsSeparacaoStatus)
+      )
+      .map((situacao) => {
+        const posicao = posicoes[situacao.codigo] ?? {}
         const ordenadas = itens
-          .filter((ordem) => ordem.status === id)
+          .filter(
+            (ordem) => ordem.status === (situacao.codigo as WmsSeparacaoStatus)
+          )
           .sort((a, b) => {
             const pa = posicao[String(a.id)]
             const pb = posicao[String(b.id)]
@@ -87,14 +117,13 @@ export default function SeparacoesPage() {
             return pa - pb
           })
         return {
-          id,
-          rotulo: ROTULOS_STATUS[id] ?? id,
-          cor: CORES_STATUS[id] ?? "#94a3b8",
+          id: String(situacao.id),
+          rotulo: situacao.nome,
+          cor: situacao.cor,
           itens: ordenadas,
         }
-      }),
-    [itens, posicoes]
-  )
+      })
+  }, [itens, situacoesAtivas, posicoes])
 
   const reordenar = useMutation({
     mutationFn: async ({ coluna, ids }: { coluna: string; ids: string[] }) => {
@@ -146,7 +175,9 @@ export default function SeparacoesPage() {
   })
 
   function reordenarColuna(colunaId: string, ids: string[]) {
-    reordenar.mutate({ coluna: colunaId, ids })
+    const situacao = situacoes.find((s) => String(s.id) === colunaId)
+    if (!situacao) return
+    reordenar.mutate({ coluna: situacao.codigo, ids })
   }
 
   const arquivar = useMutation({
@@ -171,17 +202,20 @@ export default function SeparacoesPage() {
   function exportarCSV() {
     exportCSV(
       "wms-separacoes",
-      ["Ordem", "Pedido", "Cliente", "Status", "Peças", "Metros", "Saldo (m)", "Criada em"],
-      itens.map((o) => [
-        o.id,
-        o.pedido,
-        o.clienteNome ?? o.clienteCodigo ?? "",
-        ROTULOS_STATUS[o.status] ?? o.status,
-        o.totalPecas,
-        o.totalMetros.toFixed(2),
-        o.saldoMetros.toFixed(2),
-        o.criadoEm ?? "",
-      ])
+      ["Ordem", "Pedido", "Cliente", "Situação", "Peças", "Metros", "Saldo (m)", "Criada em"],
+      itens.map((o) => {
+        const situacao = situacoes.find((s) => s.codigo === o.status)
+        return [
+          o.id,
+          o.pedido,
+          o.clienteNome ?? o.clienteCodigo ?? "",
+          situacao?.nome ?? o.status,
+          o.totalPecas,
+          o.totalMetros.toFixed(2),
+          o.saldoMetros.toFixed(2),
+          o.criadoEm ?? "",
+        ]
+      })
     )
   }
 
@@ -206,16 +240,19 @@ export default function SeparacoesPage() {
             "Saldo (m)",
             "Criada em",
           ],
-          rows: itens.map((o) => [
-            o.id,
-            o.pedido,
-            o.clienteNome ?? o.clienteCodigo ?? "",
-            ROTULOS_STATUS[o.status] ?? o.status,
-            o.totalPecas,
-            o.totalMetros.toFixed(2),
-            o.saldoMetros.toFixed(2),
-            o.criadoEm ?? "",
-          ]),
+          rows: itens.map((o) => {
+            const situacao = situacoes.find((s) => s.codigo === o.status)
+            return [
+              o.id,
+              o.pedido,
+              o.clienteNome ?? o.clienteCodigo ?? "",
+              situacao?.nome ?? o.status,
+              o.totalPecas,
+              o.totalMetros.toFixed(2),
+              o.saldoMetros.toFixed(2),
+              o.criadoEm ?? "",
+            ]
+          }),
         },
       ],
     })
@@ -279,7 +316,7 @@ export default function SeparacoesPage() {
           />
         </div>
         <select
-          aria-label="Filtrar por status"
+          aria-label="Filtrar por situação"
           className="h-9 rounded-lg border border-input bg-background text-foreground px-2 text-sm"
           value={status}
           onChange={(e) => {
@@ -287,10 +324,10 @@ export default function SeparacoesPage() {
             setStatus(e.target.value)
           }}
         >
-          <option value="">Todos os status</option>
-          {STATUS.map((valor) => (
-            <option key={valor} value={valor}>
-              {ROTULOS_STATUS[valor]}
+          <option value="">Todas as situações</option>
+          {situacoesAtivas.map((situacao) => (
+            <option key={situacao.codigo} value={situacao.codigo}>
+              {situacao.nome}
             </option>
           ))}
         </select>
@@ -381,13 +418,22 @@ export default function SeparacoesPage() {
                   <td className="px-3 py-2">
                     <span
                       className="inline-flex items-center gap-1.5 text-xs font-medium"
-                      style={{ color: CORES_STATUS[ordem.status] }}
+                      style={{
+                        color:
+                          situacoes.find((s) => s.codigo === ordem.status)?.cor ??
+                          "#94a3b8",
+                      }}
                     >
                       <span
                         className="w-2 h-2 rounded-full"
-                        style={{ backgroundColor: CORES_STATUS[ordem.status] }}
+                        style={{
+                          backgroundColor:
+                            situacoes.find((s) => s.codigo === ordem.status)?.cor ??
+                            "#94a3b8",
+                        }}
                       />
-                      {ROTULOS_STATUS[ordem.status] ?? ordem.status}
+                      {situacoes.find((s) => s.codigo === ordem.status)?.nome ??
+                        ordem.status}
                     </span>
                   </td>
                   <td className="px-3 py-2">{ordem.totalPecas}</td>

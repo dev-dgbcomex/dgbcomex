@@ -32,6 +32,15 @@ const ordem = {
 }
 
 const URL_LISTA = "/api/wms/separacoes?busca=&status=&limite=50&offset=0"
+const URL_SITUACOES = "/api/wms/situacoes"
+
+const situacoes = [
+  { id: 1, codigo: "SEM_SEPARACAO", nome: "Sem separação", cor: "#94a3b8", ordem: 0, acao: "NENHUMA", perfis: [], ativo: true },
+  { id: 2, codigo: "LIBERADO", nome: "Liberado", cor: "#f59e0b", ordem: 1, acao: "NENHUMA", perfis: [], ativo: true },
+  { id: 3, codigo: "EM_SEPARACAO", nome: "Em separação", cor: "#2563eb", ordem: 2, acao: "CRIAR_ORDEM", perfis: [], ativo: true },
+  { id: 4, codigo: "SEPARADO", nome: "Separado", cor: "#16a34a", ordem: 3, acao: "CONCLUIR_ORDEM", perfis: [], ativo: true },
+  { id: 5, codigo: "CANCELADO", nome: "Cancelado", cor: "#ef4444", ordem: 4, acao: "CANCELAR_ORDEM", perfis: [], ativo: true },
+]
 
 vi.mock("next-auth/react", () => ({
   useSession: () => ({ data: { user: { role: "EXPEDICAO" } }, status: "authenticated" }),
@@ -45,7 +54,11 @@ describe("WMS — ordens de separação", () => {
 
   it("mostra as ordens no kanban por status", async () => {
     const fetchMock = createFetchMock(({ url }) =>
-      url === URL_LISTA ? { json: { itens: [ordem], total: 1 } } : { status: 404, json: {} }
+      url === URL_LISTA
+        ? { json: { itens: [ordem], total: 1 } }
+        : url === URL_SITUACOES
+          ? { json: { itens: situacoes, total: situacoes.length } }
+          : { status: 404, json: {} }
     )
     vi.stubGlobal("fetch", fetchMock.fn)
 
@@ -66,7 +79,11 @@ describe("WMS — ordens de separação", () => {
 
   it("mostra estado vazio quando não há ordens", async () => {
     const fetchMock = createFetchMock(({ url }) =>
-      url === URL_LISTA ? { json: { itens: [], total: 0 } } : { status: 404, json: {} }
+      url === URL_LISTA
+        ? { json: { itens: [], total: 0 } }
+        : url === URL_SITUACOES
+          ? { json: { itens: situacoes, total: situacoes.length } }
+          : { status: 404, json: {} }
     )
     vi.stubGlobal("fetch", fetchMock.fn)
 
@@ -77,7 +94,11 @@ describe("WMS — ordens de separação", () => {
 
   it("abre a ordem a partir do card do kanban", async () => {
     const fetchMock = createFetchMock(({ url }) =>
-      url === URL_LISTA ? { json: { itens: [ordem], total: 1 } } : { status: 404, json: {} }
+      url === URL_LISTA
+        ? { json: { itens: [ordem], total: 1 } }
+        : url === URL_SITUACOES
+          ? { json: { itens: situacoes, total: situacoes.length } }
+          : { status: 404, json: {} }
     )
     vi.stubGlobal("fetch", fetchMock.fn)
 
