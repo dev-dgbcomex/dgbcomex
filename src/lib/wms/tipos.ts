@@ -282,3 +282,64 @@ export type EstoqueDisponivelParaItem = {
   saldoItem: number
   percentualCapacidade: number
 }
+
+export type WmsColetorSeparacao = {
+  id: number
+  empresa: string
+  pedido: string
+  cliente: string | null
+  status: WmsSeparacaoStatus
+  totalPecas: number
+  totalMetros: number
+  saldoMetros: number
+  criadoEm: string | null
+}
+
+export type WmsColetorSeparacaoDetalhe = {
+  id: number
+  empresa: string
+  pedido: string
+  cliente: string | null
+  status: WmsSeparacaoStatus
+  totalPecas: number
+  totalMetros: number
+  saldoMetros: number
+  criadoEm: string | null
+  itens: WmsColetorSeparacaoItem[]
+}
+
+export type WmsColetorSeparacaoItem = {
+  item: number
+  produto: string | null
+  produtoDesc: string | null
+  situacao: string | null
+  situacaoDesc: string | null
+  cor: string | null
+  corDesc: string | null
+  desenho: string | null
+  desenhoDesc: string | null
+  categoria: string | null
+  categoriaDesc: string | null
+  largura: string | null
+  saldo: number
+  unid: string | null
+  pecasReservadas: number
+}
+
+export type WmsColetorPecaDisponivel = {
+  nroRolo: string
+  nroPeca: string
+  produto: string | null
+  produtoDesc: string | null
+  metros: number | null
+  gaveta: string | null
+  gavetaDescricao: string | null
+  zona: string | null
+  selecionada: boolean
+}
+
+export type ColetorDashboard = {
+  pendentes: number
+  emAndamento: number
+  concluidasHoje: number
+}

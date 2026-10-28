@@ -6,11 +6,15 @@
  */
 import { requisitarWms } from "./cliente"
 import type {
+  ColetorDashboard,
   EstoqueDisponivelParaItem,
   NovaSeparacao,
   NovaSituacaoPedido,
   PecaEmAberto,
   PecaRef,
+  WmsColetorPecaDisponivel,
+  WmsColetorSeparacao,
+  WmsColetorSeparacaoDetalhe,
   WmsDashboard,
   WmsGaveta,
   WmsPaginado,
@@ -365,4 +369,104 @@ export async function executarCargaPedidos(
     metodo: "POST",
     corpo: dados,
   })
+}
+
+export async function listarSeparacoesColetor(
+  opcoes: { limite?: number; offset?: number } = {}
+): Promise<{ itens: WmsColetorSeparacao[]; total: number }> {
+  const params = new URLSearchParams()
+  if (opcoes.limite != null) params.set("limite", String(opcoes.limite))
+  if (opcoes.offset != null) params.set("offset", String(opcoes.offset))
+  const query = params.toString()
+  return requisitarWms<{ itens: WmsColetorSeparacao[]; total: number }>(
+    `/wms/coletor/separacoes${query ? `?${query}` : ""}`
+  )
+}
+
+export async function detalheSeparacaoColetor(
+  separacaoId: number
+): Promise<WmsColetorSeparacaoDetalhe> {
+  return requisitarWms<WmsColetorSeparacaoDetalhe>(
+    `/wms/coletor/separacoes/${separacaoId}`
+  )
+}
+
+export async function pecasDisponiveisParaColetor(
+  separacaoId: number,
+  item: number
+): Promise<{ itens: WmsColetorPecaDisponivel[]; total: number }> {
+  return requisitarWms<{ itens: WmsColetorPecaDisponivel[]; total: number }>(
+    `/wms/coletor/separacoes/${separacaoId}/itens/${item}/pecas-disponiveis`
+  )
+}
+
+export async function adicionarPecasColetor(
+  separacaoId: number,
+  dados: { item: number; pecas: { nroRolo: string; nroPeca: string; quantidade?: number }[] }
+): Promise<{ ok: boolean; separacaoId: number }> {
+  return requisitarWms<{ ok: boolean; separacaoId: number }>(
+    `/wms/coletor/separacoes/${separacaoId}/pecas`,
+    {
+      metodo: "POST",
+      corpo: {
+        item: dados.item,
+        pecas: dados.pecas.map((p) => ({
+          nroRolo: p.nroRolo,
+          nroPeca: p.nroPeca,
+          quantidade: p.quantidade ?? 1,
+        })),
+      },
+    }
+  )
+}
+
+export async function gerarRomaneioColetor(
+  separacaoId: number,
+  dados: { usuarioId?: number | null } = {}
+): Promise<{
+  ok: boolean
+  separacaoId: number
+  romaneio: string | null
+  pecasProcessadas: number
+  pecas: Array<{
+    itemSep: number
+    nroRolo: string
+    nroPeca: string
+    romaneio: string | null
+    incremento: number | null
+  }>
+}> {
+  return requisitarWms<{
+    ok: boolean
+    separacaoId: number
+    romaneio: string | null
+    pecasProcessadas: number
+    pecas: Array<{
+      itemSep: number
+      nroRolo: string
+      nroPeca: string
+      romaneio: string | null
+      incremento: number | null
+    }>
+  }>(`/wms/coletor/separacoes/${separacaoId}/romanear`, {
+    metodo: "POST",
+    corpo: {
+      usuarioId: dados.usuarioId,
+    },
+  })
+}
+
+export async function sincronizarColetor(): Promise<{
+  ok: boolean
+  processados: number
+  erros: number
+}> {
+  return requisitarWms<{ ok: boolean; processados: number; erros: number }>(
+    "/wms/coletor/sincronizar",
+    { metodo: "POST" }
+  )
+}
+
+export async function obterDashboardColetor(): Promise<ColetorDashboard> {
+  return requisitarWms<ColetorDashboard>("/wms/coletor/dashboard")
 }

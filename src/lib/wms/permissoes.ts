@@ -25,3 +25,10 @@ export function podeArquivarWms(role: string | null | undefined): boolean {
   if (!role) return false
   return ARQUIVAR.has(role.toUpperCase())
 }
+
+const COLETOR = new Set(["ADMIN", "SUDO", "OPERADOR_ESTOQUE"])
+
+export function podeColetarWms(role: string | null | undefined): boolean {
+  if (!role) return false
+  return COLETOR.has(role.toUpperCase())
+}
