@@ -431,7 +431,7 @@ export async function pecasDisponiveisParaColetor(
   separacaoId: number,
   item: number
 ): Promise<{ itens: WmsColetorPecaDisponivel[]; total: number }> {
-  return chamarWms<{ itens: WmsColetorPecaDisponível[]; total: number }>(
+  return chamarWms<{ itens: WmsColetorPecaDisponivel[]; total: number }>(
     `/wms/coletor/separacoes/${separacaoId}/itens/${item}/pecas-disponiveis`
   )
 }
