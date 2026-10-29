@@ -1,0 +1,5 @@
+const fs = require('fs')
+const s = fs.readFileSync('src/app/(dashboard)/wms/pedidos/page.tsx', 'utf8')
+console.log((s.match(/mostrarImportarApi/g)||[]).length)
+console.log((s.match(/Importar via API/g)||[]).length)
+console.log((s.match(/ImportarApiModal/g)||[]).length)

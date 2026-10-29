@@ -32,6 +32,7 @@ import {
   VisualizacaoToggle,
 } from "../components/kanban"
 import { BotaoVoltar } from "../components/botao-voltar"
+import ImportarApiModal from "@/components/integracao/ImportarApiModal"
 
 const PAGINA = 50
 
@@ -77,6 +78,7 @@ export default function PedidosPage() {
   const [cargaEstado, setCargaEstado] = useState<CargaPedidosEstado | null>(null)
   const [cargaExecutando, setCargaExecutando] = useState(false)
   const [cargaErro, setCargaErro] = useState<string | null>(null)
+  const [mostrarImportarApi, setMostrarImportarApi] = useState(false)
 
   const executarCarga = useMutation({
     mutationFn: async (dados: { forcar?: boolean; limite_dias?: number }) => {
@@ -473,14 +475,19 @@ export default function PedidosPage() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => router.push("/wms/separacoes")}
-            className="gap-1.5"
-          >
-            <Archive size={14} /> Ordens de Separação
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push("/wms/separacoes")}
+              className="gap-1.5"
+            >
+              <Archive size={14} /> Ordens de Separação
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setMostrarImportarApi(true)}>
+              Importar via API
+            </Button>
+          </div>
           <BotaoVoltar />
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-50 flex items-center gap-2">
             Pedidos para Separação
