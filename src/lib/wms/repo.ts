@@ -44,8 +44,40 @@ function paginar(params: URLSearchParams, limite?: number, offset?: number) {
   return params
 }
 
+function obterIntegracaoWms(caminho: string): { nome: string; resto: string } {
+  const c = caminho.startsWith("/") ? caminho : `/${caminho}`
+
+  if (c.startsWith("/auth/login")) {
+    return { nome: "api-microdata-wms-auth", resto: "auth/login" }
+  }
+  if (c.startsWith("/wms/dashboard")) {
+    return { nome: "api-microdata-wms-dashboard", resto: c.replace(/^\/wms\/dashboard\/?/, "").replace(/^\//, "") || "" }
+  }
+  if (c.startsWith("/wms/pedidos")) {
+    return { nome: "api-microdata-wms-pedidos", resto: c.replace(/^\/wms\/pedidos\/?/, "").replace(/^\//, "") || "" }
+  }
+  if (c.startsWith("/wms/situacoes")) {
+    return { nome: "api-microdata-wms-situacoes", resto: c.replace(/^\/wms\/situacoes\/?/, "").replace(/^\//, "") || "" }
+  }
+  if (c.startsWith("/wms/separacoes")) {
+    return { nome: "api-microdata-wms-separacoes", resto: c.replace(/^\/wms\/separacoes\/?/, "").replace(/^\//, "") || "" }
+  }
+  if (c.startsWith("/wms/estoque")) {
+    return { nome: "api-microdata-wms-estoque", resto: c.replace(/^\/wms\/estoque\/?/, "").replace(/^\//, "") || "" }
+  }
+  if (c.startsWith("/wms/gavetas")) {
+    return { nome: "api-microdata-wms-gavetas", resto: c.replace(/^\/wms\/gavetas\/?/, "").replace(/^\//, "") || "" }
+  }
+  if (c.startsWith("/wms/coletor")) {
+    return { nome: "api-microdata-wms-coletor", resto: c.replace(/^\/wms\/coletor\/?/, "").replace(/^\//, "") || "" }
+  }
+
+  // fallback
+  return { nome: "api-microdata-wms-pedidos", resto: c.replace(/^\/wms\/?/, "").replace(/^\//, "") || c.replace(/^\//, "") }
+}
+
 /**
- * No cliente: fetch para /api/wms* (próprio servidor, com sessão).
+ * No cliente: usa rota /api/integracao/wms/[nome]/[...resto] (modelo BI).
  * No servidor: requisitarWms direto para a api-microdata.
  */
 async function chamarWms<T>(
@@ -53,7 +85,9 @@ async function chamarWms<T>(
   opcoes: { metodo?: "GET" | "POST" | "PUT" | "DELETE"; corpo?: unknown } = {}
 ): Promise<T> {
   if (typeof window !== "undefined") {
-    const url = `/api/wms${caminho}`
+    const { nome, resto } = obterIntegracaoWms(caminho)
+    const baseUrl = `/api/integracao/wms/${encodeURIComponent(nome)}`
+    const url = resto ? `${baseUrl}/${resto}` : baseUrl
     const res = await fetch(url, {
       method: opcoes.metodo ?? "GET",
       headers: opcoes.corpo !== undefined ? { "Content-Type": "application/json" } : {},
