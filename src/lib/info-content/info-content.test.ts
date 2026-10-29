@@ -97,4 +97,30 @@ describe("getInfoContent", () => {
     expect(texto).toMatch(/Voltar para as separações/)
     expect(texto).toMatch(/cancela a ordem, liberando as peças/i)
   })
+
+  it("as telas do BI e do WMS mostram a integração em uso e o Importar via API", () => {
+    const telas = [
+      "/bi/integracoes/faturamento",
+      "/bi/integracoes/contas-pagas",
+      "/bi/integracoes/custos-administrativos",
+      "/bi/integracoes/custos-administrativos-anual",
+      "/wms/pedidos",
+    ]
+
+    for (const caminho of telas) {
+      const conteudo = getInfoContent(caminho)
+      expect(conteudo).not.toBeNull()
+
+      const texto = [
+        conteudo?.description ?? "",
+        ...(conteudo?.rules ?? []),
+        ...(conteudo?.fields ?? []).map((f) => `${f.name}: ${f.desc}`),
+      ].join("\n")
+
+      // A integração em uso fica à vista e o botão traz as APIs da tela.
+      expect(texto).toMatch(/Integração/)
+      expect(texto).toMatch(/Importar via API/)
+      expect(texto).toMatch(/já (selecionada|escolhida)/)
+    }
+  })
 })

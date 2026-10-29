@@ -274,6 +274,19 @@ describe("ContasPagasDetalhePage", () => {
     expect(consulta?.url).toContain("/api/integracao/4/detalhe/contas-pagas-detalhe")
   })
 
+  it("mostra a integração em uso e já a deixa selecionada no Importar via API", async () => {
+    const { fn } = mockRotas(detalhe())
+    vi.stubGlobal("fetch", fn)
+
+    renderPage(<ContasPagasDetalhePage />)
+
+    expect(await screen.findByText("Contas Pagas", { selector: "strong" })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole("button", { name: "Importar via API" }))
+    const emUso = await screen.findByRole("button", { name: /Contas Pagas/ })
+    expect(emUso).toHaveTextContent("(em uso)")
+  })
+
   it("lista um card por fornecedor com documento, banco e departamento", async () => {
     const { fn } = mockRotas(detalhe())
     vi.stubGlobal("fetch", fn)

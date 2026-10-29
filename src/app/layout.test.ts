@@ -27,7 +27,7 @@ const iconesDe = (m: Awaited<ReturnType<typeof metadata>>): Icones =>
   (m.icons ?? {}) as Icones
 
 describe("metadata da raiz", () => {
-  it("usa DGBCOMEX como título e a nova descrição", async () => {
+  it("usa PDM como título e a nova descrição", async () => {
     headersMock.mockResolvedValue(
       new Map([
         ["host", "dgbcomex.vercel.app"],
@@ -35,7 +35,7 @@ describe("metadata da raiz", () => {
       ]) as never
     )
     const m = await metadata()
-    expect(m.title).toBe("DGBCOMEX")
+    expect(m.title).toBe("PDM")
     expect(m.description).toBe("Sistema de operações Comex")
   })
 
@@ -74,6 +74,6 @@ describe("metadata da raiz", () => {
     headersMock.mockResolvedValue(new Map() as never)
     const m = await metadata()
     expect(m.metadataBase).toBeInstanceOf(URL)
-    expect(m.title).toBe("DGBCOMEX")
+    expect(m.title).toBe("PDM")
   })
 })

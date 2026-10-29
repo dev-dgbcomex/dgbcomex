@@ -58,6 +58,8 @@ export const wmsContent: Record<string, InfoContent> = {
       "Pedidos cancelados podem ser arquivados para sair do kanban e da lista; use Arquivados para consultar, gerar relatório ou devolver o pedido a uma situação de produção.",
       "O link Voltar para as separações aparece no topo e no rodapé da tela.",
       "O saldo em metros é a soma de qtde − qtde_romaneio − qtde_acerto dos itens abertos.",
+      "No topo, o rótulo 'Integração' mostra qual API está atendendo a tela (o endpoint de pedidos da api-microdata). Cada endpoint do WMS tem a sua própria integração cadastrada, com URL completa e login próprio.",
+      "O botão 'Importar via API' lista todas as APIs cadastradas para a tela WMS, com a que está em uso já selecionada. Ao confirmar, ele roda a carga de pedidos — é a mesma carga que a tela dispara sozinha quando a base está vazia.",
     ],
     columns: [
       { name: "Pedido / Cliente", desc: "Identificação do pedido e razão social do cliente" },
@@ -65,6 +67,10 @@ export const wmsContent: Record<string, InfoContent> = {
       { name: "Itens", desc: "Quantidade de itens abertos com saldo" },
       { name: "Saldo (m)", desc: "Metros ainda a separar no pedido" },
       { name: "Situação", desc: "Coluna atual do kanban e ordem de separação vinculada" },
+    ],
+    fields: [
+      { name: "Integração", desc: "API que está atendendo a tela, lida do cadastro de integrações" },
+      { name: "Importar via API", desc: "Abre a lista de APIs da tela WMS e roda a carga de pedidos com a integração escolhida" },
     ],
     examples: [
       {

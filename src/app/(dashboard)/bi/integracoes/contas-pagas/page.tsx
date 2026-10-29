@@ -15,9 +15,11 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { InfoButton } from "@/components/ui/info-button"
+import BotaoImportarApi from "@/components/integracao/BotaoImportarApi"
 import type { OpcaoFiltro } from "@/components/ui/filtro-combo"
 import { KpiCard } from "@/components/ui/kpi-card"
 import { getInfoContent } from "@/lib/info-content"
+import { resolverIntegracaoBi } from "@/lib/bi/integracao-bi"
 import {
   FILTROS_VAZIOS,
   FORMATAR,
@@ -112,8 +114,10 @@ export default function ContasPagasDetalhePage() {
   })
 
   // `/contas-pagas/` não casa com as integrações "programado" (`contas-a-pagar`).
+  // A busca é pelo nome exato do card: o regex pegava a integração do card, mas o
+  // nome é o que garante a tela e o painel apontarem para o mesmo endpoint.
   const integracao = useMemo(
-    () => integracoes?.find((i) => /contas-pagas/i.test(i.baseUrl)),
+    () => resolverIntegracaoBi(integracoes, "/bi/integracoes/contas-pagas", /contas-pagas/i),
     [integracoes]
   )
 
@@ -134,6 +138,12 @@ export default function ContasPagasDetalhePage() {
         return res.json()
       },
     })
+
+  /** "Importar via API" aqui é reler o recorte direto do ERP. */
+  async function importarDaApi() {
+    const resultado = await refetch()
+    if (resultado.error) throw resultado.error
+  }
 
   /**
    * As baixas do recorte, já filtradas. Quem filtra por fornecedor/banco/empresa/
@@ -372,6 +382,7 @@ export default function ContasPagasDetalhePage() {
             <RefreshCw className={`w-4 h-4 ${isFetching ? "animate-spin" : ""}`} />
             Recarregar do ERP
           </Button>
+          <BotaoImportarApi tela="bi" integracao={integracao} aoImportar={importarDaApi} />
         </div>
       </div>
 

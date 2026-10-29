@@ -32,7 +32,7 @@ import {
   VisualizacaoToggle,
 } from "../components/kanban"
 import { BotaoVoltar } from "../components/botao-voltar"
-import ImportarApiModal from "@/components/integracao/ImportarApiModal"
+import BotaoImportarApi from "@/components/integracao/BotaoImportarApi"
 
 const PAGINA = 50
 
@@ -78,7 +78,28 @@ export default function PedidosPage() {
   const [cargaEstado, setCargaEstado] = useState<CargaPedidosEstado | null>(null)
   const [cargaExecutando, setCargaExecutando] = useState(false)
   const [cargaErro, setCargaErro] = useState<string | null>(null)
-  const [mostrarImportarApi, setMostrarImportarApi] = useState(false)
+
+  /**
+   * Integração que atende esta tela. O registro de integrações é por endpoint
+   * (modelo BI): a de pedidos é a que aponta para `/wms/pedidos`.
+   */
+  const { data: integracoesWms } = useQuery<
+    { id: number; nome: string; baseUrl: string }[]
+  >({
+    queryKey: ["integracoes-wms"],
+    queryFn: async () => {
+      const res = await fetch("/api/integracao/listar?tela=wms")
+      if (!res.ok) return []
+      const corpo = await res.json()
+      return Array.isArray(corpo) ? corpo : []
+    },
+    staleTime: 600000,
+  })
+
+  const integracaoPedidos = useMemo(
+    () => integracoesWms?.find((i) => /\/wms\/pedidos(\/|$)/.test(i.baseUrl)),
+    [integracoesWms]
+  )
 
   const executarCarga = useMutation({
     mutationFn: async (dados: { forcar?: boolean; limite_dias?: number }) => {
@@ -100,6 +121,16 @@ export default function PedidosPage() {
       toast.error(`Falha na carga: ${erro.message}`)
     },
   })
+
+  /**
+   * "Importar via API" nesta tela é a carga de pedidos: o WMS não tem tabela local
+   * para receber a lista — a carga lê o endpoint de pedidos da api-microdata e
+   * atualiza a base do WMS.
+   */
+  async function importarDaApi() {
+    setCargaExecutando(true)
+    await executarCarga.mutateAsync({ forcar: true })
+  }
 
   useEffect(() => {
     let jaExecutou = false
@@ -484,9 +515,11 @@ export default function PedidosPage() {
             >
               <Archive size={14} /> Ordens de Separação
             </Button>
-            <Button variant="outline" size="sm" onClick={() => setMostrarImportarApi(true)}>
-              Importar via API
-            </Button>
+            <BotaoImportarApi
+              tela="wms"
+              integracao={integracaoPedidos}
+              aoImportar={importarDaApi}
+            />
           </div>
           <BotaoVoltar />
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-50 flex items-center gap-2">

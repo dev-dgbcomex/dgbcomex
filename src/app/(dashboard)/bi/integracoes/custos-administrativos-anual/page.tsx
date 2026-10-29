@@ -8,7 +8,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { InfoButton } from "@/components/ui/info-button"
+import BotaoImportarApi from "@/components/integracao/BotaoImportarApi"
 import { getInfoContent } from "@/lib/info-content"
+import { resolverIntegracaoBi } from "@/lib/bi/integracao-bi"
 import {
   FORMATAR,
   type DetalheCustosAdministrativosAnual,
@@ -77,7 +79,12 @@ export default function CustosAdministrativosAnualPage() {
   // A integração do card anual. O filtro precisa ser específico: a integração do card
   // mensal também tem "custos-administrativos" na baseUrl e apareceria antes na lista.
   const integracao = useMemo(
-    () => integracoes?.find((i) => /custos-administrativos-anual/i.test(i.baseUrl)),
+    () =>
+      resolverIntegracaoBi(
+        integracoes,
+        "/bi/integracoes/custos-administrativos-anual",
+        /custos-administrativos-anual/i
+      ),
     [integracoes]
   )
 
@@ -98,6 +105,12 @@ export default function CustosAdministrativosAnualPage() {
         return res.json()
       },
     })
+
+  /** "Importar via API" aqui é reler os 12 meses fechados direto do ERP. */
+  async function importarDaApi() {
+    const resultado = await refetch()
+    if (resultado.error) throw resultado.error
+  }
 
   const itens = useMemo(
     () => (detalhe ? itensFiltrados(detalhe, busca, mes) : []),
@@ -127,6 +140,8 @@ export default function CustosAdministrativosAnualPage() {
         </div>
         {info && <InfoButton content={info} />}
       </header>
+
+      <BotaoImportarApi tela="bi" integracao={integracao} aoImportar={importarDaApi} />
 
       <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">

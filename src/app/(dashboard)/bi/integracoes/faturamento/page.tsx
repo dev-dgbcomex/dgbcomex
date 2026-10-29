@@ -16,7 +16,9 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { InfoButton } from "@/components/ui/info-button"
+import BotaoImportarApi from "@/components/integracao/BotaoImportarApi"
 import { getInfoContent } from "@/lib/info-content"
+import { resolverIntegracaoBi } from "@/lib/bi/integracao-bi"
 import {
   consultar,
   estadoSalvo,
@@ -170,13 +172,12 @@ export default function FaturamentoDetalhePage() {
   })
 
   // A integração do detalhe é a que aponta para o endpoint `faturamento-detalhe`.
-  // Casar só pelo nome pegava o card "Faturamento Dia (diário)": ele também tem
-  // "faturamento" no nome, mas serve outro endpoint — e o `find` com OU devolvia
-  // o primeiro da lista, que quase sempre era esse.
+  // A busca é pelo nome exato do card ("Faturamento do Dia"): casar só pelo texto
+  // pegava "Faturamento Dia (diário)", que é outro endpoint — e o `find` com OU
+  // devolvia o primeiro da lista, que quase sempre era esse.
   const integracao = useMemo(
     () =>
-      integracoes?.find((i) => /faturamento-detalhe/i.test(i.baseUrl)) ??
-      integracoes?.find((i) => /faturamento/i.test(i.nome)),
+      resolverIntegracaoBi(integracoes, "/bi/integracoes/faturamento", /faturamento-detalhe/i),
     [integracoes]
   )
 
@@ -408,6 +409,22 @@ export default function FaturamentoDetalhePage() {
     },
     [integracao, filtros.dataInicio, filtros.dataFim, publicar]
   )
+
+  /**
+   * "Importar via API" na tela de faturamento: traz as notas do ERP.
+   *
+   * Com o cache local já populado, o caminho é o delta (merge no IndexedDB, sem
+   * reescrever o Neon); sem ele, é a carga dos 12 meses. É a mesma regra que a
+   * tela usa sozinha — aqui quem pediu foi a pessoa, então vai com `forcar`.
+   */
+  const importarDaApi = useCallback(async () => {
+    const resultado = temCacheLocal
+      ? await rodarSync({ motivo: "Importação via API", forcar: true })
+      : await rodarCarga({ motivo: "Importação via API", forcar: true })
+    if (resultado === "erro") {
+      throw new Error("Não foi possível importar a base da API")
+    }
+  }, [temCacheLocal, rodarSync, rodarCarga])
 
   /**
    * Espelho do Neon: popula o IndexedDB deste navegador sem tocar no ERP e sem
@@ -724,6 +741,7 @@ export default function FaturamentoDetalhePage() {
             <Download className="w-4 h-4" />
             Exportar CSV
           </Button>
+          <BotaoImportarApi tela="bi" integracao={integracao} aoImportar={importarDaApi} />
         </div>
       </div>
 

@@ -182,6 +182,18 @@ it("tem botão de informação explicando o uso da tela", async () => {
     expect(screen.getByText(/1 itens/)).toBeTruthy()
   })
 
+  it("mostra a integração em uso e já a deixa selecionada no Importar via API", async () => {
+    renderPage(<FaturamentoDetalhePage />)
+
+    expect(
+      await screen.findByText("Faturamento Detalhe", { selector: "strong" })
+    ).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole("button", { name: "Importar via API" }))
+    const emUso = await screen.findByRole("button", { name: /Faturamento Detalhe/ })
+    expect(emUso).toHaveTextContent("(em uso)")
+  })
+
   it("mostra o consolidado da nota com métragem, peso e valor", async () => {
     renderPage(<FaturamentoDetalhePage />)
 
@@ -550,7 +562,9 @@ it("tem botão de informação explicando o uso da tela", async () => {
     vi.stubGlobal("fetch", fetchMock.fn)
     renderPage(<FaturamentoDetalhePage />)
 
-    await waitFor(() => expect(screen.getByText(/Faturamento Detalhe/)).toBeTruthy())
+    await waitFor(() =>
+      expect(screen.getAllByText(/Faturamento Detalhe/).length).toBeGreaterThan(0)
+    )
     fireEvent.click(screen.getByRole("button", { name: /Recarregar base/ }))
 
     await waitFor(() =>
@@ -635,7 +649,9 @@ it("tem botão de informação explicando o uso da tela", async () => {
     vi.stubGlobal("fetch", fetchMock.fn)
     renderPage(<FaturamentoDetalhePage />)
 
-    await waitFor(() => expect(screen.getByText(/Faturamento Detalhe/)).toBeTruthy())
+    await waitFor(() =>
+      expect(screen.getAllByText(/Faturamento Detalhe/).length).toBeGreaterThan(0)
+    )
     fireEvent.click(screen.getByRole("button", { name: /Usar base do Neon/ }))
 
     await waitFor(() => expect(substituirBase).toHaveBeenCalled())
@@ -660,7 +676,9 @@ it("tem botão de informação explicando o uso da tela", async () => {
     vi.stubGlobal("fetch", fetchMock.fn)
     renderPage(<FaturamentoDetalhePage />)
 
-    await waitFor(() => expect(screen.getByText(/Faturamento Detalhe/)).toBeTruthy())
+    await waitFor(() =>
+      expect(screen.getAllByText(/Faturamento Detalhe/).length).toBeGreaterThan(0)
+    )
     fireEvent.click(screen.getByRole("button", { name: /Recarregar base/ }))
 
     await waitFor(() => expect(salvarEstado).toHaveBeenCalled())
@@ -715,7 +733,7 @@ it("tem botão de informação explicando o uso da tela", async () => {
     vi.stubGlobal("fetch", fetchMock.fn)
     renderPage(<FaturamentoDetalhePage />)
 
-    expect(await screen.findByText(/Faturamento Detalhe/)).toBeTruthy()
+    expect((await screen.findAllByText(/Faturamento Detalhe/)).length).toBeGreaterThan(0)
     expect(screen.queryByText(/Faturamento Dia/)).toBeNull()
   })
 

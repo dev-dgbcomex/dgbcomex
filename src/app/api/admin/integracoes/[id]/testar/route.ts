@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { integracoes } from "@/lib/db/schema/integracoes"
 import { eq } from "drizzle-orm"
+import { autenticarIntegracao } from "@/lib/integracao/autenticar"
 export const dynamic = "force-dynamic"
 
 function maskSensitive(value: string): string {
@@ -11,7 +12,38 @@ function maskSensitive(value: string): string {
   return value.slice(0, 4) + "****" + value.slice(-4)
 }
 
+function hoje(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+}
+
+/**
+ * Troca os marcadores `{param}` da URL base pelos valores recebidos na query.
+ * `{data}` sem valor cai em hoje — é o caso dos cards do BI (`/faturamento/{data}`).
+ */
+function resolverUrlBase(
+  baseUrl: string,
+  searchParams: URLSearchParams
+): { url: string; extras: [string, string][] } {
+  let base = baseUrl
+  const extras: [string, string][] = []
+  searchParams.forEach((value, key) => {
+    if (key === "tela") return
+    const token = `{${key}}`
+    if (base.includes(token)) {
+      base = base.split(token).join(encodeURIComponent(value))
+    } else {
+      extras.push([key, value])
+    }
+  })
+  if (base.includes("{data}")) {
+    base = base.split("{data}").join(hoje())
+  }
+  return { url: base, extras }
+}
+
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const startTime = Date.now()
   try {
     const session = await getServerSession(authOptions)
     if (!session) {
@@ -30,83 +62,34 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     }
 
     const authConfig = (integracao.authConfig || {}) as Record<string, unknown>
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-      Accept: "application/json",
+
+    // O mesmo login das demais rotas (`/executar`, proxy de detalhe): assim o botão
+    // "Executar" funciona também nas integrações com `tipoAuth = "login"`, que são
+    // as do BI e do WMS — antes elas iam sem Authorization e a API devolvia 401.
+    const resultado = await autenticarIntegracao(integracao)
+    if (!resultado.ok) {
+      return NextResponse.json({
+        success: false,
+        status: resultado.status,
+        time: Date.now() - startTime,
+        error: resultado.erro,
+        request: { url: integracao.baseUrl, method: "GET" },
+      })
     }
+    const headers = resultado.headers
 
-    const startTime = Date.now()
+    const { searchParams } = new URL(req.url)
+    const { url: baseResolvida, extras } = resolverUrlBase(integracao.baseUrl, searchParams)
 
-    switch (integracao.tipoAuth) {
-      case "bearer": {
-        const token = authConfig.token as string
-        if (token) headers["Authorization"] = `Bearer ${token}`
-        break
-      }
-      case "basic": {
-        const username = (authConfig.username as string) || ""
-        const password = (authConfig.password as string) || ""
-        const encoded = Buffer.from(`${username}:${password}`).toString("base64")
-        headers["Authorization"] = `Basic ${encoded}`
-        break
-      }
-      case "api_key": {
-        const key = authConfig.key as string
-        const keyName = (authConfig.key_name as string) || "x-api-key"
-        const location = (authConfig.in as string) || "header"
-        if (key && location === "header") {
-          headers[keyName] = key
-        }
-        break
-      }
-      case "oauth2": {
-        const grantType = (authConfig.grant_type as string) || "client_credentials"
-        const clientId = authConfig.client_id as string
-        const clientSecret = authConfig.client_secret as string
-        const tokenUrl = authConfig.token_url as string
-        const scope = authConfig.scope as string
-
-        if (tokenUrl && clientId && clientSecret) {
-          const bodyParams = new URLSearchParams()
-          bodyParams.append("grant_type", grantType)
-          if (scope) bodyParams.append("scope", scope)
-
-          // Credentials are sent via Basic Auth header (standard OAuth2)
-          const encodedCredentials = Buffer.from(`${clientId}:${clientSecret}`).toString("base64")
-
-          const tokenRes = await fetch(tokenUrl, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/x-www-form-urlencoded",
-              Authorization: `Basic ${encodedCredentials}`,
-            },
-            body: bodyParams.toString(),
-          })
-
-          if (!tokenRes.ok) {
-            const tokenError = await tokenRes.text()
-            return NextResponse.json({
-              success: false,
-              status: tokenRes.status,
-              time: Date.now() - startTime,
-              error: `Falha ao obter token OAuth2`,
-              responseBody: tokenError,
-              request: { url: integracao.baseUrl, method: "GET" },
-              requestHeaders: { Authorization: "Bearer <token_nao_obtido>" },
-            })
-          }
-
-          const tokenData = await tokenRes.json()
-          const accessToken = tokenData.access_token
-          if (accessToken) {
-            headers["Authorization"] = `Bearer ${accessToken}`
-          }
-        }
-        break
-      }
+    let url: URL
+    try {
+      url = new URL(baseResolvida)
+    } catch {
+      return NextResponse.json({ error: "URL base inválida" }, { status: 400 })
     }
-
-    const url = new URL(integracao.baseUrl)
+    for (const [key, value] of extras) {
+      url.searchParams.set(key, value)
+    }
 
     if (integracao.tipoAuth === "api_key") {
       const location = (authConfig.in as string) || "header"

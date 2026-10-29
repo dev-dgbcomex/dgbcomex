@@ -23,6 +23,7 @@ export async function GET(req: NextRequest) {
         baseUrl: integracoes.baseUrl,
         tipoAuth: integracoes.tipoAuth,
         telas: integracoes.telas,
+        mapping: integracoes.mapping,
       })
       .from(integracoes)
       .where(eq(integracoes.ativo, true))

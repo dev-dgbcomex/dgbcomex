@@ -13,13 +13,20 @@ interface MappingConfig {
   uniqueKey?: string
 }
 
-interface Integracao {
+export interface Integracao {
   id: number
   nome: string
   baseUrl: string
   mapping?: MappingConfig
   telas?: string[]
   ativo?: boolean
+}
+
+/** O que a tela recebe quando a importação é feita por ela (e não por uma tabela local). */
+export interface ContextoImportarApi {
+  integracao: Integracao
+  itens: Record<string, any>[]
+  corpo: unknown
 }
 
 interface ImportarApiModalProps {
@@ -30,6 +37,27 @@ interface ImportarApiModalProps {
   onClose: () => void
   extraImportParams?: Record<string, any>
   buscarExistentes?: () => Promise<Record<string, any>[]>
+  /** Integração que a tela está usando: vem pré-selecionada na lista. */
+  integracaoInicial?: number | null
+  /**
+   * Quando informado, o modal não importa numa tabela: ele entrega a integração
+   * escolhida e a resposta para a tela tratar (é o caso do BI e do WMS, que não
+   * têm tabela própria — a "importação" delas é a carga do ERP).
+   */
+  aoImportar?: (contexto: ContextoImportarApi) => Promise<void> | void
+  rotuloImportar?: string
+}
+
+/** A API pode devolver a lista em `items`, `itens` ou `data` — ou ser a própria lista. */
+function extrairItens(corpo: unknown): Record<string, any>[] {
+  if (Array.isArray(corpo)) return corpo as Record<string, any>[]
+  if (!corpo || typeof corpo !== "object") return []
+  const registro = corpo as Record<string, any>
+  const candidatos = [registro.items, registro.itens, registro.data]
+  for (const candidato of candidatos) {
+    if (Array.isArray(candidato)) return candidato as Record<string, any>[]
+  }
+  return []
 }
 
 export default function ImportarApiModal({
@@ -40,9 +68,13 @@ export default function ImportarApiModal({
   onClose,
   extraImportParams,
   buscarExistentes,
+  integracaoInicial = null,
+  aoImportar,
+  rotuloImportar,
 }: ImportarApiModalProps) {
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [items, setItems] = useState<Record<string, any>[]>([])
+  const [corpo, setCorpo] = useState<unknown>(null)
   const [loadingData, setLoadingData] = useState(false)
   const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set())
   const [importing, setImporting] = useState(false)
@@ -72,27 +104,42 @@ export default function ImportarApiModal({
     isLoading: loadingInt,
     isError: integracoesError,
   } = useQuery<Integracao[]>({
-    queryKey: ["admin-integracoes", tela],
+    queryKey: ["integracoes-tela", tela],
     queryFn: async () => {
-      const res = await fetch("/api/admin/integracoes")
-      const all = (await res.json()) as Integracao[]
-      return all.filter((i: any) => i.telas?.includes(tela) && i.ativo)
+      const res = await fetch(`/api/integracao/listar?tela=${encodeURIComponent(tela)}`)
+      if (!res.ok) throw new Error("Erro ao carregar integrações")
+      const corpo = await res.json()
+      const todas = (Array.isArray(corpo) ? corpo : (corpo?.integracoes ?? [])) as Integracao[]
+      // A rota já filtra pela tela; o filtro aqui só protege quando a integração
+      // traz as telas dela (sem o campo, é a lista que a rota devolveu).
+      return todas.filter((i) => i.ativo !== false && (!i.telas || i.telas.includes(tela)))
     },
     enabled: true,
   })
 
+  // A integração em uso pela tela vem pronta: é a que o card do BI e o proxy do WMS
+  // usam. Sem ela, cai na primeira da lista.
   useEffect(() => {
-    if (integracoes && integracoes.length > 0 && selectedId === null) {
-      setSelectedId(integracoes[0].id)
+    if (!integracoes || integracoes.length === 0) return
+    if (selectedId !== null && integracoes.some((i) => i.id === selectedId)) return
+    if (integracaoInicial && integracoes.some((i) => i.id === integracaoInicial)) {
+      setSelectedId(integracaoInicial)
+      return
     }
-  }, [integracoes, selectedId])
+    setSelectedId(integracoes[0].id)
+  }, [integracoes, selectedId, integracaoInicial])
 
   useEffect(() => {
     if (integracoesError) toast.error("Erro ao carregar integrações")
   }, [integracoesError])
 
-  const integracao = (integracoes ?? []).find((i: any) => i.id === selectedId) || null
-  const uniqueKey = (integracao?.mapping?.uniqueKey || existingKey) as string
+  const integracao = (integracoes ?? []).find((i) => i.id === selectedId) || null
+  /**
+   * Sem chave única configurada, nada é descartado por falta de campo. No modo
+   * `aoImportar` isso é o esperado: quem importa decide o que fazer com a resposta.
+   */
+  const uniqueKey = (integracao?.mapping?.uniqueKey ||
+    (aoImportar ? "" : existingKey)) as string
   const fieldMapping = (integracao?.mapping?.fields || {}) as Record<string, string>
 
   useEffect(() => {
@@ -114,6 +161,7 @@ export default function ImportarApiModal({
     if (!selectedId) return
     setLoadingData(true)
     setItems([])
+    setCorpo(null)
     setSelectedRows(new Set())
     setSearchQuery("")
     try {
@@ -126,15 +174,28 @@ export default function ImportarApiModal({
         return
       }
       const body = data.responseBody
-      const rawItems = body?.items || (Array.isArray(body) ? body : body?.data || [])
-      if (!Array.isArray(rawItems) || rawItems.length === 0) {
-        toast.error("Nenhum item encontrado na resposta")
+      const rawItems = extrairItens(body)
+      if (rawItems.length === 0) {
+        // Resposta sem lista (um consolidado, por exemplo): no modo da tela o corpo
+        // inteiro é entregue para ela tratar.
+        if (!aoImportar) {
+          toast.error("Nenhum item encontrado na resposta")
+          return
+        }
+        setCorpo(body)
+        toast.success("Resposta recebida")
         return
       }
+      setCorpo(body)
       setItems(rawItems)
       // Default: select all non-duplicate AND with required fields filled
       const autoSelect = new Set<number>()
       rawItems.forEach((_: any, idx: number) => {
+        // Sem chave única (telas sem tabela local), tudo é selecionável.
+        if (!uniqueKey) {
+          autoSelect.add(idx)
+          return
+        }
         const keyVal = rawItems[idx][uniqueKey]
         const hasRequiredField =
           rawItems[idx][uniqueKey] != null && String(rawItems[idx][uniqueKey]).trim() !== ""
@@ -199,6 +260,7 @@ export default function ImportarApiModal({
   }
 
   function isDuplicate(item: Record<string, any>) {
+    if (!uniqueKey) return false
     const apiKeyField = Object.entries(fieldMapping).find(([, v]) => v === existingKey)?.[0]
     const val = item[apiKeyField || uniqueKey]
     if (!val) return false
@@ -206,6 +268,7 @@ export default function ImportarApiModal({
   }
 
   function hasMissingRequiredField(item: Record<string, any>) {
+    if (!uniqueKey) return false
     const apiKeyField = Object.entries(fieldMapping).find(([, v]) => v === uniqueKey)?.[0]
     const val = item[apiKeyField || uniqueKey]
     return val == null || String(val).trim() === ""
@@ -226,15 +289,27 @@ export default function ImportarApiModal({
   )
 
   async function handleImport() {
-    if (selectedRows.size === 0) {
-      toast.error("Selecione ao menos um item")
-      return
-    }
+    if (!selectedId) return
     setImporting(true)
     try {
       const selectedItems = items.filter(
         (_: any, i: any) => selectedRows.has(i) && !hasMissingRequiredField(items[i])
       )
+
+      if (aoImportar) {
+        if (!integracao) throw new Error("Integração não encontrada")
+        await aoImportar({ integracao, itens: selectedItems, corpo })
+        toast.success("Importação concluída")
+        onImportado?.()
+        onClose()
+        return
+      }
+
+      if (selectedRows.size === 0) {
+        toast.error("Selecione ao menos um item")
+        return
+      }
+
       const res = await fetch("/api/integracao/importar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -263,6 +338,10 @@ export default function ImportarApiModal({
       setImporting(false)
     }
   }
+
+  const podeImportar = aoImportar
+    ? Boolean(integracao) && (items.length > 0 || corpo !== null)
+    : selectedRows.size > 0
 
   return (
     <DialogPrimitive.Root
@@ -310,6 +389,7 @@ export default function ImportarApiModal({
                         onClick={() => {
                           setSelectedId(int.id)
                           setItems([])
+                          setCorpo(null)
                           setSelectedRows(new Set())
                         }}
                         className={`px-3 py-1.5 text-sm rounded-lg border transition-colors ${
@@ -319,6 +399,11 @@ export default function ImportarApiModal({
                         }`}
                       >
                         {int.nome}
+                        {int.id === integracaoInicial && (
+                          <span className="ml-1 text-[10px] uppercase tracking-wide opacity-70">
+                            (em uso)
+                          </span>
+                        )}
                       </button>
                     ))}
                   </div>
@@ -336,6 +421,13 @@ export default function ImportarApiModal({
                     Executar
                   </Button>
                 </div>
+
+                {integracao && (
+                  <p className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                    <Globe size={13} className="shrink-0" />
+                    <span className="truncate">{integracao.baseUrl}</span>
+                  </p>
+                )}
 
                 {items.length > 0 && (
                   <>
@@ -407,7 +499,7 @@ export default function ImportarApiModal({
                             return (
                               <tr
                                 key={originalIdx}
-                                className={`hover:bg-slate-50 dark:hover:bg-slate-800/30 ${dup ? "opacity-50" : ""} ${missingField && !dup ? "opacity-40" : ""}`}
+                                className={`hover:bg-slate-50 dark:bg-slate-800/30 ${dup ? "opacity-50" : ""} ${missingField && !dup ? "opacity-40" : ""}`}
                               >
                                 <td className="p-2">
                                   <input
@@ -444,12 +536,20 @@ export default function ImportarApiModal({
                   </>
                 )}
 
+                {items.length === 0 && corpo !== null && (
+                  <pre className="max-h-80 overflow-auto rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700 dark:border-slate-800 dark:bg-slate-800/40 dark:text-slate-200">
+                    {JSON.stringify(corpo, null, 2)}
+                  </pre>
+                )}
+
                 <div className="flex items-center justify-between text-xs text-slate-400">
                   <span>
                     {searchQuery ? `Exibindo ${filteredItems.length} de ` : ""}
                     {items.length} itens | {selectedRows.size} selecionados | {existingSet.size}{" "}
-                    existentes | {items.filter((i: any) => hasMissingRequiredField(i)).length} sem{" "}
-                    {uniqueKey}
+                    existentes
+                    {uniqueKey
+                      ? ` | ${items.filter((i: any) => hasMissingRequiredField(i)).length} sem ${uniqueKey}`
+                      : ""}
                   </span>
                   {integracao?.mapping?.uniqueKey && (
                     <span className="flex items-center gap-1">
@@ -462,18 +562,19 @@ export default function ImportarApiModal({
             )}
           </div>
 
-          {items.length > 0 && (
+          {(items.length > 0 || (aoImportar && corpo !== null)) && (
             <div className="flex items-center justify-end gap-2 p-5 border-t border-slate-200 dark:border-slate-800">
               <Button variant="outline" onClick={onClose}>
                 Cancelar
               </Button>
               <Button
                 onClick={handleImport}
-                disabled={selectedRows.size === 0 || importing}
+                disabled={!podeImportar || importing}
                 className="gap-2"
               >
                 {importing && <Loader2 size={16} className="animate-spin" />}
-                Importar {selectedRows.size > 0 && `(${selectedRows.size})`}
+                {rotuloImportar ?? "Importar"}
+                {!aoImportar && selectedRows.size > 0 && ` (${selectedRows.size})`}
               </Button>
             </div>
           )}

@@ -137,6 +137,21 @@ describe("CustosAdministrativosAnualPage", () => {
     expect(consulta?.url).toContain("data=")
   })
 
+  it("mostra a integração em uso e já a deixa selecionada no Importar via API", async () => {
+    const { fn } = mockRotas(detalhe())
+    vi.stubGlobal("fetch", fn)
+
+    renderPage(<CustosAdministrativosAnualPage />)
+
+    expect(
+      await screen.findByText("Custos Administrativos Anual", { selector: "strong" })
+    ).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole("button", { name: "Importar via API" }))
+    const emUso = await screen.findByRole("button", { name: /Custos Administrativos Anual/ })
+    expect(emUso).toHaveTextContent("(em uso)")
+  })
+
   it("avisa quando algum mês passou do limite do faturamento", async () => {
     const { fn } = mockRotas(detalhe())
     vi.stubGlobal("fetch", fn)

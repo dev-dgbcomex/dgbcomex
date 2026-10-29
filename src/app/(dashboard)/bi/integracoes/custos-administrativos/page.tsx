@@ -16,7 +16,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { InfoButton } from "@/components/ui/info-button"
+import BotaoImportarApi from "@/components/integracao/BotaoImportarApi"
 import { getInfoContent } from "@/lib/info-content"
+import { resolverIntegracaoBi } from "@/lib/bi/integracao-bi"
 import { TabelaGruposCusto } from "./components/tabela-grupos-custo"
 import { TabelaLancamentosCusto } from "./components/tabela-lancamentos-custo"
 import { exportarCsv, rotuloData, variacao } from "./components/utils"
@@ -75,9 +77,16 @@ export default function CustosAdministrativosDetalhePage() {
   })
 
   // Mesma integração que serve o card de custos administrativos: a baseUrl já aponta
-  // para `custos-administrativos-mensal`, então o detalhe é a mesma origem.
+  // para `custos-administrativos-mensal`, então o detalhe é a mesma origem. A busca
+  // é pelo nome exato — o regex solto pegava "Custos Administrativos Anual", que vem
+  // antes na lista e é outro endpoint.
   const integracao = useMemo(
-    () => integracoes?.find((i) => /custos-administrativos/i.test(i.baseUrl)),
+    () =>
+      resolverIntegracaoBi(
+        integracoes,
+        "/bi/integracoes/custos-administrativos",
+        /custos-administrativos-mensal/i
+      ),
     [integracoes]
   )
 
@@ -96,6 +105,12 @@ export default function CustosAdministrativosDetalhePage() {
         return res.json()
       },
     })
+
+  /** "Importar via API" aqui é reler o mês direto do ERP. */
+  async function importarDaApi() {
+    const resultado = await refetch()
+    if (resultado.error) throw resultado.error
+  }
 
   const atual = detalhe?.mes_atual
   const anterior = detalhe?.mes_anterior
@@ -116,7 +131,10 @@ export default function CustosAdministrativosDetalhePage() {
             comparando o mês selecionado com o anterior.
           </p>
         </div>
-        {info && <InfoButton content={info} />}
+        <div className="flex flex-col items-start gap-2 sm:items-end">
+          {info && <InfoButton content={info} />}
+          <BotaoImportarApi tela="bi" integracao={integracao} aoImportar={importarDaApi} />
+        </div>
       </header>
 
       <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">

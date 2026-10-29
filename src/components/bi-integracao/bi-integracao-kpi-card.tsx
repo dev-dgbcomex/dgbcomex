@@ -7,17 +7,7 @@ import Link from "next/link"
 import { BiIntegracaoResumo } from "./bi-integracao-dashboard"
 import { BiIntegracaoKpiModal } from "./bi-integracao-kpi-modal"
 import { BI_KPI_METADADOS, formatarKpi } from "@/lib/bi-kpi-metadados"
-
-/**
- * Cards que têm tela de detalhe. A chave é o `nome` da integração (como está no
- * banco), não o título do catálogo — assim o botão não depende do texto exibido.
- */
-const ROTA_DETALHE: Record<string, string> = {
-  "Faturamento do Dia": "/bi/integracoes/faturamento",
-  "Custos Administrativos Mensal": "/bi/integracoes/custos-administrativos",
-  "Custos Administrativos Anual": "/bi/integracoes/custos-administrativos-anual",
-  "Contas Pagas": "/bi/integracoes/contas-pagas",
-}
+import { ROTA_DETALHE } from "@/lib/bi/integracao-bi"
 
 function valorNoCaminho(obj: Record<string, unknown> | null | undefined, caminho: string[]) {
   let atual: unknown = obj

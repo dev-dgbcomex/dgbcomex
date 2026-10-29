@@ -23,6 +23,7 @@ export const biContent: Record<string, InfoContent> = {
       "Filtros de fornecedor, banco, empresa e departamento rodam na tela: são ~130 linhas, não vale ir ao ERP a cada tecla. Só as datas vão para a API, porque elas mudam o volume mesmo.",
       "O CSV respeita o filtro ativo, sai com BOM UTF-8 (sem ele o Excel abre em latin-1) e traz o valor como número, para somar direto.",
       "Uma baixa é uma parcela. Quando a mesma fatura tem várias parcelas pagas no mês, elas aparecem como linhas separadas dentro do card do fornecedor.",
+      "No topo, o rótulo 'Integração' mostra qual API está atendendo a tela — é a mesma do card no painel. O botão 'Importar via API' lista todas as APIs cadastradas para a tela BI, com a que está em uso já selecionada; ao confirmar, a tela relê as baixas do ERP.",
     ],
     columns: [
       {
@@ -91,6 +92,14 @@ export const biContent: Record<string, InfoContent> = {
         name: "Recarregar do ERP",
         desc: "Repete a consulta do mesmo recorte. Útil depois de fechar um pagamento.",
       },
+      {
+        name: "Integração",
+        desc: "API que está atendendo a tela, lida do cadastro de integrações (é o mesmo card do painel).",
+      },
+      {
+        name: "Importar via API",
+        desc: "Abre a lista de APIs cadastradas para a tela BI, com a que está em uso já selecionada, e relê as baixas do ERP.",
+      },
     ],
     examples: [
       {
@@ -123,6 +132,7 @@ export const biContent: Record<string, InfoContent> = {
       "Meses em vermelho no gráfico e na tabela passaram de 50% do faturamento do próprio mês — naquele mês a administração consumiu mais que metade do que a empresa vendeu.",
       "Clicar numa linha da tabela de meses filtra a lista de lançamentos e o CSV por aquele mês. O filtro 'Filtrar por mês' faz o mesmo.",
       "O CSV respeita o filtro de mês e a busca: ele baixa exatamente as linhas que estão na lista.",
+      "No topo, o rótulo 'Integração' mostra qual API está atendendo a tela — é a mesma do card no painel. O botão 'Importar via API' lista todas as APIs cadastradas para a tela BI, com a que está em uso já selecionada; ao confirmar, a tela relê os 12 meses do ERP.",
     ],
     fields: [
       {
@@ -153,6 +163,14 @@ export const biContent: Record<string, InfoContent> = {
         name: "Recarregar do ERP",
         desc: "Repete a consulta sem trocar a referência. Útil depois de fechar contas pagas.",
       },
+      {
+        name: "Integração",
+        desc: "API que está atendendo a tela, lida do cadastro de integrações (é o mesmo card do painel).",
+      },
+      {
+        name: "Importar via API",
+        desc: "Abre a lista de APIs cadastradas para a tela BI, com a que está em uso já selecionada, e relê os 12 meses do ERP.",
+      },
     ],
   },
   "/bi/integracoes/custos-administrativos": {
@@ -166,6 +184,7 @@ export const biContent: Record<string, InfoContent> = {
       "A lista de lançamentos soma o valor absoluto das linhas, que é o que faz o total bater com o número do card. Entradas e saídas (estornos e rateios) aparecem sempre como custo positivo.",
       "As tabelas de departamento, despesa e fornecedor estão ordenadas do maior para o menor, e a % do total mostra a participação de cada um no mês.",
       "O mês anterior fica recolhido no fim da tela, com os mesmos agrupamentos e a lista completa, para você conferir a base da variação.",
+      "No topo, o rótulo 'Integração' mostra qual API está atendendo a tela — é a mesma do card no painel. O botão 'Importar via API' lista todas as APIs cadastradas para a tela BI, com a que está em uso já selecionada; ao confirmar, a tela relê os lançamentos do ERP.",
     ],
     fields: [
       {
@@ -192,6 +211,14 @@ export const biContent: Record<string, InfoContent> = {
         name: "Recarregar do ERP",
         desc: "Repete a consulta sem trocar o mês. Útil depois de fechar contas pagas no ERP.",
       },
+      {
+        name: "Integração",
+        desc: "API que está atendendo a tela, lida do cadastro de integrações (é o mesmo card do painel).",
+      },
+      {
+        name: "Importar via API",
+        desc: "Abre a lista de APIs cadastradas para a tela BI, com a que está em uso já selecionada, e relê os lançamentos do ERP.",
+      },
     ],
   },
   "/bi/integracoes/faturamento": {
@@ -208,6 +235,7 @@ export const biContent: Record<string, InfoContent> = {
       "Os filtros (período, representante, cliente, produto e nº da nota) só têm efeito depois de clicar em Aplicar filtros. A busca livre acima da lista filtra na hora, sem clicar em nada.",
       "Exportar CSV baixa exatamente os itens do filtro aplicado, incluindo todos os produtos e notas do período — não só a página visível.",
       "A base é compartilhada: o Neon tem uma cópia única. Outro usuário que já rodou a carga inicial basta usar a base existente.",
+      "No topo, o rótulo 'Integração' mostra qual API está atendendo a tela — é a mesma do card no painel. O botão 'Importar via API' lista todas as APIs cadastradas para a tela BI, com a que está em uso já selecionada; ao confirmar, a tela busca as notas no ERP (o delta quando o cache local já existe, a carga de 12 meses quando não).",
     ],
     fields: [
       {
@@ -245,6 +273,14 @@ export const biContent: Record<string, InfoContent> = {
       {
         name: "Carregar mais notas",
         desc: "A lista mostra um bloco de notas por vez para a tela não travar. Clique para carregar mais; os KPIs e os gráficos já cobrem o período inteiro, não só o que está visível.",
+      },
+      {
+        name: "Integração",
+        desc: "API que está atendendo a tela, lida do cadastro de integrações (é o mesmo card do painel).",
+      },
+      {
+        name: "Importar via API",
+        desc: "Abre a lista de APIs cadastradas para a tela BI, com a que está em uso já selecionada, e busca as notas no ERP.",
       },
     ],
     examples: [

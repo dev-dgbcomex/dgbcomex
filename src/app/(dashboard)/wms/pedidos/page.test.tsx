@@ -227,4 +227,82 @@ describe("WMS - pedidos para separação", () => {
       findCall(fetchMock.calls, "/api/wms/kanban/ordem?tipo=PEDIDO&colunas=SEM_SEPARACAO%2CLIBERADO%2CEM_SEPARACAO%2CSEPARADO%2CCANCELADO", "GET")
     ).toBeTruthy()
   })
+
+  it("mostra a integração em uso e importa pela API escolhida", async () => {
+    const fetchMock = createFetchMock(({ method, url }) => {
+      if (url.startsWith("/api/integracao/listar")) {
+        return {
+          json: [
+            {
+              id: 14,
+              nome: "api-microdata-wms-pedidos",
+              baseUrl: "http://erp/wms/pedidos",
+              telas: ["wms"],
+              ativo: true,
+            },
+            {
+              id: 15,
+              nome: "api-microdata-wms-dashboard",
+              baseUrl: "http://erp/wms/dashboard",
+              telas: ["wms"],
+              ativo: true,
+            },
+          ],
+        }
+      }
+      if (method === "GET" && url === URL_LISTA) {
+        return { json: { itens: pedidos, total: 2 } }
+      }
+      if (method === "GET" && url === URL_SITUACOES) {
+        return { json: { itens: situacoes, total: situacoes.length } }
+      }
+      if (method === "GET" && url.includes("/carga/estado")) {
+        return {
+          json: { carga_completa: true, contagem: 2, ultima_data: null, atualizado_em: null },
+        }
+      }
+      if (method === "POST" && url.includes("/carga")) {
+        return {
+          json: {
+            ok: true,
+            pedidos_lidos: 2,
+            pedidos_inseridos: 2,
+            pedidos_atualizados: 0,
+            itens_inseridos: 3,
+            itens_atualizados: 0,
+          },
+        }
+      }
+      if (method === "GET" && url.includes("/testar")) {
+        return { json: { success: true, status: 200, responseBody: { itens: [] } } }
+      }
+      return { status: 404, json: {} }
+    })
+    vi.stubGlobal("fetch", fetchMock.fn)
+
+    renderPage(<PedidosPage />)
+    await screen.findByText("#00005902")
+
+    // A integração em uso fica à vista no topo.
+    expect(await screen.findByText("api-microdata-wms-pedidos")).toBeTruthy()
+
+    fireEvent.click(screen.getByRole("button", { name: "Importar via API" }))
+    const emUso = await screen.findByRole("button", { name: /api-microdata-wms-pedidos/ })
+    expect(emUso).toHaveTextContent("(em uso)")
+    expect(screen.getByRole("button", { name: /api-microdata-wms-dashboard/ })).toBeTruthy()
+
+    fireEvent.click(screen.getByRole("button", { name: "Executar" }))
+    await waitFor(() => {
+      expect(fetchMock.calls.some((c) => c.url.includes("/testar"))).toBe(true)
+    })
+
+    fireEvent.click(screen.getByRole("button", { name: /^Importar/ }))
+    await waitFor(() => {
+      expect(
+        fetchMock.calls.some(
+          (c) => c.method === "POST" && c.url.includes("/api/integracao/wms/api-microdata-wms-pedidos/carga")
+        )
+      ).toBe(true)
+    })
+  })
 })
