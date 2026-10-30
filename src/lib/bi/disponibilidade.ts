@@ -52,7 +52,7 @@ export interface Disponibilidade {
 
 export const FORMATAR = {
   metros: (v: number) =>
-    `${Math.round(v || 0).toLocaleString("pt-BR")} m`,
+    `${(v || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })} m`,
   inteiro: (v: number) => Math.round(v || 0).toLocaleString("pt-BR"),
   valor: (v: number) => (v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }),
   data: (d?: string | null) => {
