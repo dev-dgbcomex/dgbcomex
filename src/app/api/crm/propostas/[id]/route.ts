@@ -8,6 +8,7 @@ import { eq } from "drizzle-orm"
 import { registrarLog, notificar, notificarDelecao } from "@/lib/notificar"
 import { inserirTimelineEvento, excluirTimelineEventosEntidade } from "@/lib/crm-timeline"
 import { handleApiError } from "@/lib/api-error"
+import { executarGatilhos } from "@/lib/crm/status-gatilhos"
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -124,7 +125,21 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       session.user.name
     )
 
-    return NextResponse.json(atualizada)
+    let gatilhos = { executadas: [] as string[], erros: [] as string[] }
+    if (body.status && body.status !== existente.status) {
+      gatilhos = await executarGatilhos({
+        tipo: "PROPOSTA",
+        statusNome: body.status,
+        statusAnterior: existente.status,
+        propostaId: atualizada.id,
+        empresaId: existente.empresaId,
+        responsavelId: existente.criadoPor,
+        titulo: existente.titulo,
+        usuarioNome: session.user.name,
+      })
+    }
+
+    return NextResponse.json({ ...atualizada, gatilhos })
   } catch (error) {
     return handleApiError(error, "PUT /api/crm/propostas/[id]")
   }

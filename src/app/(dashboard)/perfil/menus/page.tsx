@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { Suspense, useState, useEffect } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { usePathname } from "next/navigation"
+import { usePathname, useSearchParams } from "next/navigation"
 import { InfoButton } from "@/components/ui/info-button"
 import { getInfoContent } from "@/lib/info-content"
 import { toast } from "sonner"
@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { ConfirmModal } from "@/components/ui/confirm-modal"
 import { Loader2, Plus, Save, Copy } from "lucide-react"
+import { CadastroStatus } from "@/components/admin/cadastro-status"
 import {
   Select,
   SelectContent,
@@ -26,8 +27,18 @@ import { CopiarMenusDialog } from "./components/copiar-dialog"
 import { NovoMenuDialog } from "./components/novo-menu-dialog"
 
 export default function ConfigurarMenusPage() {
+  return (
+    <Suspense fallback={null}>
+      <ConfigurarMenusContent />
+    </Suspense>
+  )
+}
+
+function ConfigurarMenusContent() {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
   const info = getInfoContent(pathname)
+  const statusTipoInicial = searchParams.get("statusTipo") || ""
   const [telas, setTelas] = useState<Tela[]>([])
   const [menus, setMenus] = useState<Menu[]>([])
   const [paginaInicial, setPaginaInicial] = useState("")
@@ -549,6 +560,15 @@ export default function ConfigurarMenusPage() {
             </SortableContext>
           </DndContext>
         )}
+      </div>
+
+      {/* Status */}
+      <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6">
+        <CadastroStatus
+          tipoInicial={statusTipoInicial}
+          titulo="Status"
+          descricao="Cadastre os status de cada módulo e defina as ações (gatilhos) disparadas ao mover um registro."
+        />
       </div>
 
       <CopiarMenusDialog

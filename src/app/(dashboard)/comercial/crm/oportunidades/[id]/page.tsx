@@ -105,9 +105,15 @@ export default function DetalheOportunidadePage() {
         body: JSON.stringify({ status: statusValue }),
       })
       if (!res.ok) throw new Error("Erro ao atualizar")
+      const data = await res.json()
       setOportunidade((prev) => (prev ? { ...prev, status: statusValue } : prev))
       setEditingStatus(false)
-      toast.success("Status atualizado")
+      const executadas: string[] = data?.gatilhos?.executadas || []
+      toast.success(
+        executadas.length > 0
+          ? `Status atualizado. Ações disparadas: ${executadas.join(", ")}`
+          : "Status atualizado"
+      )
     } catch {
       toast.error("Erro ao atualizar status")
     }

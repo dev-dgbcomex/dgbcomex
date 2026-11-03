@@ -11,7 +11,8 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core"
-import { useStatuses, type StatusConfig } from "@/hooks/use-statuses"
+import { useStatuses, statusExibidosNoKanban, type StatusConfig } from "@/hooks/use-statuses"
+import { STATUS_PROPOSTA_PADRAO } from "@/lib/crm/status-proposta"
 import { DroppableColumn, KanbanSkeleton } from "./kanban-column"
 
 interface PropostaCard {
@@ -23,20 +24,7 @@ interface PropostaCard {
   status: string
 }
 
-const DEFAULT_STATUSES: Array<{
-  nome: string
-  rotulo: string | null
-  cor: string | null
-  ativo: boolean
-}> = [
-  { nome: "ENVIADA", rotulo: "Enviada", cor: "#3b82f6", ativo: true },
-  { nome: "ACEITA", rotulo: "Aceita", cor: "#22c55e", ativo: true },
-  { nome: "RECUSADA", rotulo: "Recusada", cor: "#ef4444", ativo: true },
-  { nome: "REVISAO", rotulo: "Em Revisão", cor: "#f59e0b", ativo: true },
-]
-
-type KanbanStatus =
-  StatusConfig | { nome: string; rotulo: string | null; cor: string | null; ativo: boolean }
+type KanbanStatus = StatusConfig
 
 const valorFormatter = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" })
 
@@ -105,7 +93,7 @@ export default function PropostasKanban({ propostas }: { propostas: PropostaCard
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
   const hasStatuses = statuses.length > 0
-  const effectiveStatuses = hasStatuses ? statuses : DEFAULT_STATUSES
+  const effectiveStatuses: KanbanStatus[] = hasStatuses ? statuses : STATUS_PROPOSTA_PADRAO
   const effectiveLoading = statusLoading && !hasStatuses
 
   const getLabel = (nome: string) => {
@@ -113,7 +101,7 @@ export default function PropostasKanban({ propostas }: { propostas: PropostaCard
       const s = statuses.find((s: StatusConfig) => s.nome === nome)
       return s?.rotulo || nome
     }
-    return DEFAULT_STATUSES.find((s) => s.nome === nome)?.rotulo || nome
+    return STATUS_PROPOSTA_PADRAO.find((s) => s.nome === nome)?.rotulo || nome
   }
 
   const getColor = (nome: string) => {
@@ -121,15 +109,13 @@ export default function PropostasKanban({ propostas }: { propostas: PropostaCard
       const s = statuses.find((s: StatusConfig) => s.nome === nome)
       return s?.cor || "#94a3b8"
     }
-    return DEFAULT_STATUSES.find((s) => s.nome === nome)?.cor || "#94a3b8"
+    return STATUS_PROPOSTA_PADRAO.find((s) => s.nome === nome)?.cor || "#94a3b8"
   }
 
-  const colunas = effectiveStatuses
-    .filter((s: KanbanStatus) => s.ativo !== false)
-    .map((col: KanbanStatus) => ({
-      ...col,
-      cards: cards.filter((p: PropostaCard) => p.status === col.nome),
-    }))
+  const colunas = statusExibidosNoKanban(effectiveStatuses).map((col: KanbanStatus) => ({
+    ...col,
+    cards: cards.filter((p: PropostaCard) => p.status === col.nome),
+  }))
 
   const handleDragStart = (event: any) => {
     const card = event.active.data.current?.proposta

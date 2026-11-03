@@ -69,6 +69,39 @@ describe("PropostasPage kanban", () => {
   })
 })
 
+describe("PropostasPage status do cadastro", () => {
+  it("usa rótulo e cor do cadastro de status", async () => {
+    const handler = ({ method, url }: { method: string; url: string }) => {
+      if (method === "GET" && url === "/api/crm/propostas?mine=true") return { json: propostas }
+      if (method === "GET" && url === "/api/admin/status?tipo=PROPOSTA") {
+        return {
+          json: [
+            {
+              id: 10,
+              nome: "ENVIADA",
+              rotulo: "Enviada ao cliente",
+              tipo: "PROPOSTA",
+              cor: "#3b82f6",
+              ordem: 1,
+              ativo: true,
+              exibirKanban: true,
+            },
+          ],
+        }
+      }
+      return { json: null }
+    }
+    const fetchMock = createFetchMock(handler)
+    vi.stubGlobal("fetch", fetchMock.fn)
+
+    renderPage(<PropostasPage />)
+
+    expect(await screen.findByText("Enviada ao cliente")).toBeInTheDocument()
+    expect(screen.queryByText("ENVIADA")).not.toBeInTheDocument()
+    expect(screen.getByLabelText("Filtrar por status")).toBeInTheDocument()
+  })
+})
+
 describe("PropostasPage exclusão", () => {
   let fetchMock: ReturnType<typeof createFetchMock>
 
@@ -127,5 +160,13 @@ describe("PropostasPage exclusão", () => {
     await screen.findByText("Proposta Comercial - Tecido X")
     const edit = screen.getAllByTitle("Editar proposta")[0].closest("a")
     expect(edit).toHaveAttribute("href", "/comercial/crm/propostas/1")
+  })
+
+  it("botão Status leva para o cadastro filtrado no Perfil", async () => {
+    renderPage(<PropostasPage />)
+    await screen.findByText("Proposta Comercial - Tecido X")
+
+    const link = screen.getByRole("link", { name: "Status" })
+    expect(link).toHaveAttribute("href", "/perfil/menus?statusTipo=PROPOSTA")
   })
 })

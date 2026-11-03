@@ -77,15 +77,15 @@ export const adminContent: Record<string, InfoContent> = {
   "/admin/configuracoes/status": {
     title: "Status",
     description:
-      "Cadastro único de status usado pelas telas do sistema. Cada status pertence a um tipo (módulo) e define rótulo, cor, ordem e regras de exibição.",
+      "O cadastro de status foi movido para Perfil › Menu de Navegação (seção Status), que também concentra os gatilhos de cada status. Esta tela redireciona para lá.",
     rules: [
+      "Use o parâmetro statusTipo na URL para abrir o cadastro já filtrado (ex: /perfil/menus?statusTipo=OPORTUNIDADE).",
       "O nome é o valor interno gravado nos registros (ex: QUALIFICACAO) e não pode se repetir dentro do mesmo tipo.",
-      "O rótulo é o texto exibido nas telas; quando vazio, o próprio nome é usado.",
       "A cor (hex) pinta a coluna do Kanban e o badge do status na listagem.",
       "A ordem define a posição da coluna no Kanban (menor primeiro).",
       "Status inativos ficam ocultos: somem do Kanban e das listas de seleção.",
-      "A flag 'Exibir no Kanban' (somente no tipo Oportunidade) permite cadastrar um status selecionável que não vira coluna do quadro.",
-      "As colunas do Kanban de Oportunidades saem deste cadastro: criar um status ativo aqui já cria a coluna correspondente.",
+      "A flag 'Exibir no Kanban' permite cadastrar um status selecionável que não vira coluna do quadro.",
+      "Gatilhos configurados por status disparam ações automáticas ao mover um registro (virar cliente, criar pedido de venda, notificar responsável, registrar na timeline).",
       "Apenas usuários ADMIN e SUDO podem criar, editar ou excluir status.",
     ],
     fields: [
@@ -95,7 +95,11 @@ export const adminContent: Record<string, InfoContent> = {
       { name: "Cor", desc: "Cor hexadecimal da coluna do Kanban e do badge" },
       { name: "Ordem", desc: "Posição da coluna no Kanban" },
       { name: "Ativo", desc: "Desmarcar oculta o status das listas e do Kanban" },
-      { name: "Exibir no Kanban", desc: "Cria ou não a coluna no quadro de oportunidades" },
+      {
+        name: "Exibir no Kanban",
+        desc: "Cria ou não a coluna no quadro de oportunidades e propostas",
+      },
+      { name: "Gatilhos", desc: "Ações automáticas executadas ao mover um registro para o status" },
     ],
   },
   "/admin/configuracoes": {

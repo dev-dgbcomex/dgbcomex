@@ -126,7 +126,7 @@ describe("getInfoContent", () => {
   })
 
   it("o cadastro de status e o kanban de oportunidades explicam a configuração de colunas", () => {
-    const cadastro = getInfoContent("/admin/configuracoes/status")
+    const cadastro = getInfoContent("/perfil/menus")
     const lista = getInfoContent("/comercial/crm/oportunidades")
     const kanban = getInfoContent("/comercial/crm/oportunidades/kanban")
 
@@ -145,6 +145,9 @@ describe("getInfoContent", () => {
     // A cor e a ordem definem a coluna.
     expect(textoCadastro).toMatch(/Cor/)
     expect(textoCadastro).toMatch(/Ordem/)
+    // Os gatilhos disparados ao entrar no status.
+    expect(textoCadastro).toMatch(/Gatilho/i)
+    expect(textoCadastro).toMatch(/gatilho/i)
 
     const textoKanban = [lista, kanban]
       .flatMap((item) => [...(item?.rules ?? []), ...(item?.fields ?? []).map((f) => f.desc)])
@@ -153,5 +156,13 @@ describe("getInfoContent", () => {
     // As colunas vêm do cadastro de status.
     expect(textoKanban).toMatch(/cadastro de Status/i)
     expect(textoKanban).toMatch(/Exibir no Kanban/)
+  })
+
+  it("a tela antiga de status aponta para o novo cadastro", () => {
+    const antigo = getInfoContent("/admin/configuracoes/status")
+
+    expect(antigo).not.toBeNull()
+    expect(antigo?.description).toMatch(/Menu de Navegação/)
+    expect(antigo?.rules?.join(" ")).toMatch(/statusTipo/)
   })
 })

@@ -15,6 +15,7 @@ import { eq, desc, sql } from "drizzle-orm"
 import { registrarLog, notificar, notificarDelecao } from "@/lib/notificar"
 import { handleApiError } from "@/lib/api-error"
 import { excluirOportunidadeCascade } from "@/lib/crm-cascade"
+import { executarGatilhos, vincularEmpresaComoCliente } from "@/lib/crm/status-gatilhos"
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -179,7 +180,27 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       session.user.name
     )
 
-    return NextResponse.json(atualizada)
+    let gatilhos = { executadas: [] as string[], erros: [] as string[] }
+    const statusAlterado = body.status !== undefined && body.status !== existente.status
+
+    if (statusAlterado) {
+      if (body.status === "FECHADO_GANHO" && existente.empresaId) {
+        await vincularEmpresaComoCliente(existente.empresaId)
+      }
+
+      gatilhos = await executarGatilhos({
+        tipo: "OPORTUNIDADE",
+        statusNome: body.status,
+        statusAnterior: existente.status,
+        oportunidadeId: atualizada.id,
+        empresaId: existente.empresaId,
+        responsavelId: existente.responsavelId,
+        titulo: existente.titulo,
+        usuarioNome: session.user.name,
+      })
+    }
+
+    return NextResponse.json({ ...atualizada, gatilhos })
   } catch (error) {
     return handleApiError(error, "PUT /api/crm/oportunidades/[id]")
   }

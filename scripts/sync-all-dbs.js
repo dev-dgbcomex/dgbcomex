@@ -12,6 +12,26 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
 END $$;
 
+-- status_acoes: gatilhos (acoes) executados ao mover para o status
+CREATE TABLE IF NOT EXISTS status_acoes (
+  id SERIAL PRIMARY KEY,
+  status_id INTEGER NOT NULL REFERENCES status(id) ON DELETE CASCADE,
+  acao VARCHAR(50) NOT NULL,
+  parametros JSONB DEFAULT '{}'::jsonb,
+  ativo BOOLEAN DEFAULT true,
+  created_at TIMESTAMP DEFAULT now(),
+  updated_at TIMESTAMP DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_status_acoes_status_id ON status_acoes (status_id);
+
+-- status: fluxo padrao de propostas
+INSERT INTO status (nome, rotulo, tipo, cor, ordem, ativo, exibir_kanban) VALUES
+  ('ENVIADA', 'Enviada', 'PROPOSTA', '#3b82f6', 1, true, true),
+  ('ACEITA', 'Aceita', 'PROPOSTA', '#22c55e', 2, true, true),
+  ('RECUSADA', 'Recusada', 'PROPOSTA', '#ef4444', 3, true, true),
+  ('REVISAO', 'Em Revisão', 'PROPOSTA', '#f59e0b', 4, true, true)
+ON CONFLICT DO NOTHING;
+
 -- crm_contatos: adicionar cliente_id
 DO $$ BEGIN
   ALTER TABLE crm_contatos ADD COLUMN IF NOT EXISTS cliente_id integer REFERENCES clientes(id);

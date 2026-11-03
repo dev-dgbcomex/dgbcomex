@@ -4,6 +4,10 @@ import { screen, fireEvent, within, waitFor } from "@testing-library/react"
 import ConfigurarMenusPage from "./page"
 import { createFetchMock, findCall, navMock, renderPage, toastMock } from "@/test/harness"
 
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({ data: { user: { id: "1", role: "ADMIN" } } }),
+}))
+
 const menus = [
   {
     id: 1,
@@ -21,6 +25,17 @@ const telas = [
   { id: "clientes", label: "Clientes", href: "/comercial/clientes", module: "comercial" },
 ]
 
+const statusOportunidade = {
+  id: 1,
+  nome: "FECHADO_GANHO",
+  rotulo: "Ganho",
+  tipo: "OPORTUNIDADE",
+  cor: "#22c55e",
+  ordem: 5,
+  ativo: true,
+  exibirKanban: true,
+}
+
 function handler() {
   return ({ method, url }: { method: string; url: string }) => {
     if (method === "GET" && url === "/api/user/menus") return { json: menus }
@@ -28,6 +43,10 @@ function handler() {
     if (method === "GET" && url === "/api/user/pagina-inicial") {
       return { json: { paginaInicial: "/dashboard" } }
     }
+    if (method === "GET" && url === "/api/admin/status?tipo=OPORTUNIDADE") {
+      return { json: [statusOportunidade] }
+    }
+    if (method === "GET" && url === "/api/admin/status") return { json: [statusOportunidade] }
     if (method === "POST" && url === "/api/user/menus") {
       return { json: { id: 2, titulo: "Financeiro", icone: "wallet", ordem: 1 } }
     }
@@ -134,5 +153,25 @@ describe("ConfigurarMenusPage", () => {
       expect(findCall(fetchMock.calls, "/api/user/menus/1", "DELETE")).toBeDefined()
     })
     await waitFor(() => expect(toastMock.success).toHaveBeenCalledWith("Menu excluído"))
+  })
+
+  it("mostra o cadastro de status na página", async () => {
+    const fetchMock = createFetchMock(handler())
+    vi.stubGlobal("fetch", fetchMock.fn)
+    renderPage(<ConfigurarMenusPage />)
+
+    expect(await screen.findByText("FECHADO_GANHO")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /Novo Status/ })).toBeInTheDocument()
+    expect(findCall(fetchMock.calls, "/api/admin/status")).toBeDefined()
+  })
+
+  it("filtra o cadastro de status pelo tipo da URL", async () => {
+    navMock.setSearchParams({ statusTipo: "OPORTUNIDADE" })
+    const fetchMock = createFetchMock(handler())
+    vi.stubGlobal("fetch", fetchMock.fn)
+    renderPage(<ConfigurarMenusPage />)
+
+    expect(await screen.findByText("FECHADO_GANHO")).toBeInTheDocument()
+    expect(findCall(fetchMock.calls, "/api/admin/status?tipo=OPORTUNIDADE")).toBeDefined()
   })
 })

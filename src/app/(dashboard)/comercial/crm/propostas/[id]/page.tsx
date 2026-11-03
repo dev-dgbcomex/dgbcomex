@@ -22,6 +22,8 @@ import Link from "next/link"
 import { useState } from "react"
 import { ConfirmModal } from "@/components/ui/confirm-modal"
 import { toast } from "sonner"
+import { useStatuses, statusAtivos, hexToRgba } from "@/hooks/use-statuses"
+import { STATUS_PROPOSTA_PADRAO } from "@/lib/crm/status-proposta"
 import type { Proposta, PropostaUpdate } from "../types"
 
 async function fetchProposta(id: string) {
@@ -30,29 +32,6 @@ async function fetchProposta(id: string) {
   return res.json() as Promise<Proposta>
 }
 
-const STATUS_OPCOES = [
-  {
-    value: "ENVIADA",
-    label: "Enviada",
-    cor: "text-blue-600 bg-blue-100 dark:bg-blue-950 dark:text-blue-400",
-  },
-  {
-    value: "REVISAO",
-    label: "Em Revisão",
-    cor: "text-amber-600 bg-amber-100 dark:bg-amber-950 dark:text-amber-400",
-  },
-  {
-    value: "ACEITA",
-    label: "Aceita",
-    cor: "text-green-600 bg-green-100 dark:bg-green-950 dark:text-green-400",
-  },
-  {
-    value: "RECUSADA",
-    label: "Recusada",
-    cor: "text-red-600 bg-red-100 dark:bg-red-950 dark:text-red-400",
-  },
-]
-
 export default function DetalhePropostaPage() {
   const params = useParams()
   const pathname = usePathname()
@@ -60,6 +39,9 @@ export default function DetalhePropostaPage() {
   const info = getInfoContent(pathname)
   const queryClient = useQueryClient()
   const { data: session } = useSession()
+  const { statuses } = useStatuses("PROPOSTA")
+  const statusLookup = statuses.length > 0 ? statuses : STATUS_PROPOSTA_PADRAO
+  const statusOpcoes = statusAtivos(statusLookup)
   const id = params.id as string
   const [statusToConfirm, setStatusToConfirm] = useState<string | null>(null)
   const [editing, setEditing] = useState(false)
@@ -81,9 +63,13 @@ export default function DetalhePropostaPage() {
       if (!res.ok) throw new Error("Falha ao atualizar status")
       return res.json()
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["crm-proposta", id] })
       queryClient.invalidateQueries({ queryKey: ["crm-propostas"] })
+      const executadas: string[] = data?.gatilhos?.executadas || []
+      if (executadas.length > 0) {
+        toast.success(`Status alterado. Ações disparadas: ${executadas.join(", ")}`)
+      }
     },
   })
 
@@ -146,6 +132,9 @@ export default function DetalhePropostaPage() {
   const isAdmin = userRole === "ADMIN" || userRole === "SUDO"
   const isOwner = userId != null && proposta?.criadoPor === userId
   const canEdit = isAdmin || isOwner
+
+  const labelStatus = (nome: string) => statusLookup.find((s) => s.nome === nome)?.rotulo || nome
+  const corStatus = (nome: string) => statusLookup.find((s) => s.nome === nome)?.cor || "#94a3b8"
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 animate-fade-in">
@@ -308,9 +297,12 @@ export default function DetalhePropostaPage() {
               Status
             </h2>
             <span
-              className={`inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-full font-medium ${
-                STATUS_OPCOES.find((s) => s.value === proposta.status)?.cor || ""
-              }`}
+              className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-full font-medium border"
+              style={{
+                backgroundColor: hexToRgba(corStatus(proposta.status), 0.12),
+                borderColor: hexToRgba(corStatus(proposta.status), 0.35),
+                color: corStatus(proposta.status),
+              }}
             >
               {proposta.status === "ACEITA" ? (
                 <CheckCircle2 size={14} />
@@ -321,7 +313,7 @@ export default function DetalhePropostaPage() {
               ) : (
                 <Clock size={14} />
               )}
-              {STATUS_OPCOES.find((s) => s.value === proposta.status)?.label || proposta.status}
+              {labelStatus(proposta.status)}
             </span>
           </div>
 
@@ -330,27 +322,28 @@ export default function DetalhePropostaPage() {
               Alterar Status
             </h2>
             <div className="space-y-2">
-              {STATUS_OPCOES.map((opcao) => (
+              {statusOpcoes.map((opcao) => (
                 <button
-                  key={opcao.value}
+                  key={opcao.nome}
                   onClick={() => {
-                    if (opcao.value === "RECUSADA") {
-                      setStatusToConfirm(opcao.value)
+                    if (opcao.nome === "RECUSADA") {
+                      setStatusToConfirm(opcao.nome)
                     } else {
-                      statusMutation.mutate(opcao.value)
+                      statusMutation.mutate(opcao.nome)
                     }
                   }}
-                  disabled={opcao.value === proposta.status || statusMutation.isPending}
+                  disabled={opcao.nome === proposta.status || statusMutation.isPending}
                   className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    opcao.value === proposta.status
+                    opcao.nome === proposta.status
                       ? "bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed"
                       : "hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300"
                   }`}
                 >
                   <span
-                    className={`inline-block w-2 h-2 rounded-full mr-2 ${opcao.cor.split(" ")[0]}`}
+                    className="inline-block w-2 h-2 rounded-full mr-2"
+                    style={{ backgroundColor: corStatus(opcao.nome) }}
                   />
-                  {opcao.label}
+                  {opcao.rotulo || opcao.nome}
                 </button>
               ))}
             </div>

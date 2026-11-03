@@ -87,9 +87,9 @@ const modulos = [
     color: "text-violet-600 bg-violet-50 dark:bg-violet-950/50",
   },
   {
-    href: "/admin/configuracoes/status",
+    href: "/perfil/menus?statusTipo=OPORTUNIDADE",
     label: "Status",
-    desc: "Gerenciar os status disponíveis para cada módulo do sistema",
+    desc: "Cadastrar status e gatilhos de cada módulo (Perfil › Menu de Navegação)",
     icon: CheckCircle2,
     color: "text-indigo-600 bg-indigo-50 dark:bg-indigo-950/50",
   },

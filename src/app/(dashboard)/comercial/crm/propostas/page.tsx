@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query"
 import { InfoButton } from "@/components/ui/info-button"
 import { getInfoContent } from "@/lib/info-content"
 import Link from "next/link"
-import { Suspense, useState } from "react"
+import { Suspense, useMemo, useState } from "react"
 import { useRouter, usePathname, useSearchParams } from "next/navigation"
 import {
   PlusCircle,
@@ -16,6 +16,7 @@ import {
   User,
   Pencil,
   Trash2,
+  Settings2,
 } from "lucide-react"
 import PropostasKanban from "@/components/crm/propostas-kanban"
 import { FloatableKanban } from "@/components/crm/floatable-kanban"
@@ -23,26 +24,14 @@ import ListFilters, { useListFilters } from "@/components/ui/list-filters"
 import { PageSkeleton } from "@/components/ui/page-skeleton"
 import { ConfirmModal } from "@/components/ui/confirm-modal"
 import { toast } from "sonner"
+import { useStatuses, hexToRgba } from "@/hooks/use-statuses"
+import { STATUS_PROPOSTA_PADRAO } from "@/lib/crm/status-proposta"
 import type { Proposta } from "./types"
 
 async function fetchPropostas(mine: boolean) {
   const res = await fetch(`/api/crm/propostas${mine ? "?mine=true" : ""}`)
   if (!res.ok) throw new Error("Falha ao carregar")
   return res.json() as Promise<Proposta[]>
-}
-
-const STATUS_LABELS: Record<string, string> = {
-  ENVIADA: "Enviada",
-  ACEITA: "Aceita",
-  RECUSADA: "Recusada",
-  REVISAO: "Em Revisão",
-}
-
-const STATUS_CORES: Record<string, string> = {
-  ENVIADA: "text-blue-600 bg-blue-50 dark:bg-blue-950/50 dark:text-blue-400",
-  ACEITA: "text-green-600 bg-green-50 dark:bg-green-950/50 dark:text-green-400",
-  RECUSADA: "text-red-600 bg-red-50 dark:bg-red-950/50 dark:text-red-400",
-  REVISAO: "text-amber-600 bg-amber-50 dark:bg-amber-950/50 dark:text-amber-400",
 }
 
 function PropostasPageContent() {
@@ -58,6 +47,22 @@ function PropostasPageContent() {
   const [deleteTarget, setDeleteTarget] = useState<Proposta | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [deleteBlocked, setDeleteBlocked] = useState(false)
+
+  const { statuses } = useStatuses("PROPOSTA")
+
+  const statusLookup = useMemo(
+    () => (statuses.length > 0 ? statuses : STATUS_PROPOSTA_PADRAO),
+    [statuses]
+  )
+
+  const statusOptions = useMemo(
+    () => statusLookup.map((s) => ({ value: s.nome, label: s.rotulo || s.nome })),
+    [statusLookup]
+  )
+
+  const labelDoStatus = (nome: string) => statusLookup.find((s) => s.nome === nome)?.rotulo || nome
+
+  const corDoStatus = (nome: string) => statusLookup.find((s) => s.nome === nome)?.cor || "#94a3b8"
 
   const {
     data: propostas,
@@ -91,12 +96,7 @@ function PropostasPageContent() {
   const filterState = useListFilters(
     {
       searchFields: ["titulo", "empresaNome", "clienteNome"],
-      statusOptions: [
-        { value: "ENVIADA", label: "Enviada" },
-        { value: "ACEITA", label: "Aceita" },
-        { value: "RECUSADA", label: "Recusada" },
-        { value: "REVISAO", label: "Revisão" },
-      ],
+      statusOptions,
       dateField: "createdAt",
     },
     propostas || []
@@ -166,6 +166,13 @@ function PropostasPageContent() {
             </button>
           </div>
           <Link
+            href="/perfil/menus?statusTipo=PROPOSTA"
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+          >
+            <Settings2 size={16} />
+            Status
+          </Link>
+          <Link
             href="/comercial/crm/propostas/novo"
             className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors shadow-sm"
           >
@@ -180,12 +187,7 @@ function PropostasPageContent() {
           <ListFilters
             config={{
               searchFields: ["titulo", "empresaNome", "clienteNome"],
-              statusOptions: [
-                { value: "ENVIADA", label: "Enviada" },
-                { value: "ACEITA", label: "Aceita" },
-                { value: "RECUSADA", label: "Recusada" },
-                { value: "REVISAO", label: "Revisão" },
-              ],
+              statusOptions,
               dateField: "createdAt",
             }}
             data={propostas || []}
@@ -250,11 +252,21 @@ function PropostasPageContent() {
                             : "—"}
                         </td>
                         <td className="px-4 py-3">
-                          <span
-                            className={`inline-flex text-[10px] px-2 py-0.5 rounded-full font-medium ${STATUS_CORES[p.status] || ""}`}
-                          >
-                            {STATUS_LABELS[p.status] || p.status}
-                          </span>
+                          {(() => {
+                            const cor = corDoStatus(p.status)
+                            return (
+                              <span
+                                className="inline-flex text-[10px] px-2 py-0.5 rounded-full font-medium border"
+                                style={{
+                                  backgroundColor: hexToRgba(cor, 0.12),
+                                  borderColor: hexToRgba(cor, 0.35),
+                                  color: cor,
+                                }}
+                              >
+                                {labelDoStatus(p.status)}
+                              </span>
+                            )
+                          })()}
                         </td>
                         <td className="px-4 py-3 text-sm text-slate-500">
                           {p.createdAt ? new Date(p.createdAt).toLocaleDateString("pt-BR") : "—"}

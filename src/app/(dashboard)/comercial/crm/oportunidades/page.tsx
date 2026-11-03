@@ -16,6 +16,7 @@ import {
   User,
   Pencil,
   Trash2,
+  Settings2,
 } from "lucide-react"
 import { toast } from "sonner"
 import { FloatableKanban } from "@/components/crm/floatable-kanban"
@@ -167,6 +168,13 @@ export default function OportunidadesPage() {
               Kanban
             </button>
           </div>
+          <Link
+            href="/perfil/menus?statusTipo=OPORTUNIDADE"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+          >
+            <Settings2 size={14} />
+            Status
+          </Link>
           <Link
             href="/comercial/crm/oportunidades/novo"
             className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 transition-colors shadow-sm"

@@ -169,4 +169,12 @@ describe("OportunidadesPage exclusão", () => {
     const edit = screen.getAllByTitle("Editar oportunidade")[0].closest("a")
     expect(edit).toHaveAttribute("href", "/comercial/crm/oportunidades/1")
   })
+
+  it("botão Status leva para o cadastro filtrado no Perfil", async () => {
+    renderPage(<OportunidadesPage />)
+    await screen.findByText("Venda de malha 100% algodão")
+
+    const link = screen.getByRole("link", { name: "Status" })
+    expect(link).toHaveAttribute("href", "/perfil/menus?statusTipo=OPORTUNIDADE")
+  })
 })

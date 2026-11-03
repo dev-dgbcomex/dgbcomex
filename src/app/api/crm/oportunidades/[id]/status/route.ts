@@ -2,46 +2,10 @@ import { NextRequest, NextResponse } from "next/server"
 import { requireAuth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { crmOportunidades } from "@/lib/db/schema/crm-oportunidades"
-import { crmPessoas } from "@/lib/db/schema/crm-pessoas"
-import { clientes } from "@/lib/db/schema/clientes"
 import { eq } from "drizzle-orm"
 import { registrarLog, notificar } from "@/lib/notificar"
 import { inserirTimelineEvento } from "@/lib/crm-timeline"
-
-async function sincronizarEmpresaCliente(empresaId: number) {
-  const [empresa] = await db.select().from(crmPessoas).where(eq(crmPessoas.id, empresaId)).limit(1)
-
-  if (!empresa || !empresa.cnpj) return
-  if (empresa.clienteId) return // já vinculada
-
-  const [existente] = await db
-    .select()
-    .from(clientes)
-    .where(eq(clientes.cnpj, empresa.cnpj))
-    .limit(1)
-
-  if (existente) {
-    await db
-      .update(crmPessoas)
-      .set({ clienteId: existente.id, updatedAt: new Date() })
-      .where(eq(crmPessoas.id, empresaId))
-    return
-  }
-
-  const [novoCliente] = await db
-    .insert(clientes)
-    .values({
-      nome: empresa.nomeFantasia || empresa.razaoSocial || "",
-      cnpj: empresa.cnpj!,
-      razaoSocial: empresa.razaoSocial || "",
-    })
-    .returning()
-
-  await db
-    .update(crmPessoas)
-    .set({ clienteId: novoCliente.id, updatedAt: new Date() })
-    .where(eq(crmPessoas.id, empresaId))
-}
+import { executarGatilhos, vincularEmpresaComoCliente } from "@/lib/crm/status-gatilhos"
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -98,7 +62,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       })
 
       if (status === "FECHADO_GANHO") {
-        await sincronizarEmpresaCliente(existente.empresaId)
+        await vincularEmpresaComoCliente(existente.empresaId)
 
         await inserirTimelineEvento({
           empresaId: existente.empresaId,
@@ -109,6 +73,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       }
     }
 
+    const gatilhos = await executarGatilhos({
+      tipo: "OPORTUNIDADE",
+      statusNome: status,
+      statusAnterior: existente.status,
+      oportunidadeId: atualizada.id,
+      empresaId: existente.empresaId,
+      responsavelId: existente.responsavelId,
+      titulo: existente.titulo,
+      usuarioNome: session.user.name,
+    })
+
     await notificar(
       "OPORTUNIDADE_STATUS",
       `Oportunidade "${existente.titulo}" movida para ${status}`,
@@ -116,7 +91,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       session.user.name
     )
 
-    return NextResponse.json(atualizada)
+    return NextResponse.json({ ...atualizada, gatilhos })
   } catch (error) {
     console.error("[PATCH /api/crm/oportunidades/[id]/status]", error)
     return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 })

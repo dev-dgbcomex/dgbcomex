@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useCallback, useEffect, useState } from "react"
 
 export type StatusConfig = {
   id: number
@@ -19,16 +19,29 @@ export function useStatuses(tipo: string) {
   const [statuses, setStatuses] = useState<StatusConfig[]>(cache.get(tipo) || [])
   const [loading, setLoading] = useState(!cache.has(tipo))
 
+  const aplicar = (data: unknown) => {
+    if (Array.isArray(data)) {
+      cache.set(tipo, data)
+      setStatuses(data)
+    }
+  }
+
+  const revalidar = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/admin/status?tipo=${encodeURIComponent(tipo)}`)
+      aplicar(await res.json())
+    } catch (erro) {
+      console.error(erro)
+    }
+  }, [tipo])
+
   useEffect(() => {
     let cancelado = false
 
     fetch(`/api/admin/status?tipo=${encodeURIComponent(tipo)}`)
       .then((r: any) => r.json())
       .then((data: any) => {
-        if (Array.isArray(data) && !cancelado) {
-          cache.set(tipo, data)
-          setStatuses(data)
-        }
+        if (!cancelado) aplicar(data)
       })
       .catch(console.error)
       .finally(() => {
@@ -47,7 +60,7 @@ export function useStatuses(tipo: string) {
 
   const getColor = (nome: string): string => getStatus(nome)?.cor || "#94a3b8"
 
-  return { statuses, loading, getStatus, getLabel, getColor }
+  return { statuses, loading, getStatus, getLabel, getColor, revalidar }
 }
 
 /** Status utilizáveis nas listas de seleção (desativados ficam ocultos). */

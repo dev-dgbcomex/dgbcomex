@@ -493,8 +493,8 @@ export const searchRegistry: SearchItem[] = [
     id: "admin-status",
     label: "Status",
     keywords: ["status", "admin", "configuracao", "tipo"],
-    href: "/admin/configuracoes/status",
-    description: "Configuração de status por módulo",
+    href: "/perfil/menus?statusTipo=OPORTUNIDADE",
+    description: "Configuração de status por módulo e gatilhos (Perfil › Menu de Navegação)",
     module: "Administrativo",
   },
   {
