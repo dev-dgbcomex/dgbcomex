@@ -146,7 +146,7 @@ export default function CrmDashboardPage() {
       ) : (
         <>
           {/* Linha 1: Cards de resumo */}
-          <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
+          <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-8">
             <SummaryCard
               href="/comercial/crm/leads"
               icon={<UserPlus size={20} />}
@@ -404,18 +404,19 @@ function SummaryCard({
   return (
     <Link
       href={href}
-      className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 hover:shadow-md transition-shadow"
+      title={label}
+      className="min-w-0 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 hover:shadow-md transition-shadow"
     >
-      <div className="flex items-center gap-3">
-        <div className={`rounded-lg ${bgColor} p-2.5`}>
+      <div className="flex items-center gap-3 min-w-0">
+        <div className={`shrink-0 rounded-lg ${bgColor} p-2.5`}>
           <span className={iconColor}>{icon}</span>
         </div>
-        <div>
-          <p className="text-2xl font-bold text-slate-900 dark:text-slate-50">{value}</p>
-          <p className="text-xs text-slate-500 dark:text-slate-400">{label}</p>
+        <div className="min-w-0 flex-1">
+          <p className="text-2xl font-bold text-slate-900 dark:text-slate-50 truncate">{value}</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{label}</p>
         </div>
       </div>
-      {sub && <p className="text-[10px] text-slate-400 mt-1.5">{sub}</p>}
+      {sub && <p className="text-[10px] text-slate-400 mt-1.5 truncate">{sub}</p>}
     </Link>
   )
 }
