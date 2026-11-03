@@ -24,7 +24,7 @@ export function DadosPessoaCard({
   estadoId,
 }: DadosPessoaCardProps) {
   return (
-    <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
+    <div className="min-w-0 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
       <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-50 mb-4">
         Dados da Pessoa (Negócio)
       </h2>
@@ -280,7 +280,7 @@ export function DadosPessoaCard({
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3 text-sm">
+        <div className="grid grid-cols-2 gap-3 text-sm min-w-0 break-words [&>div]:min-w-0">
           {pessoa.tipoPessoa === "PF" ? (
             <>
               <div className="col-span-2">
