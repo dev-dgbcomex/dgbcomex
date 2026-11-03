@@ -12,21 +12,21 @@ export function podeMoverParaSituacao(
   return situacao.perfis.map((perfil) => perfil.toUpperCase()).includes(normalizado)
 }
 
-const REORDENAR = new Set(["ADMIN", "SUDO", "COMERCIAL", "EXPEDICAO"])
+const REORDENAR = new Set(["ADMIN", "SUDO", "COMERCIAL", "EXPEDICAO", "GD"])
 
 export function podeReordenarKanban(role: string | null | undefined): boolean {
   if (!role) return false
   return REORDENAR.has(role.toUpperCase())
 }
 
-const ARQUIVAR = new Set(["ADMIN", "SUDO", "COMERCIAL", "EXPEDICAO"])
+const ARQUIVAR = new Set(["ADMIN", "SUDO", "COMERCIAL", "EXPEDICAO", "GD"])
 
 export function podeArquivarWms(role: string | null | undefined): boolean {
   if (!role) return false
   return ARQUIVAR.has(role.toUpperCase())
 }
 
-const COLETOR = new Set(["ADMIN", "SUDO", "OPERADOR_ESTOQUE"])
+const COLETOR = new Set(["ADMIN", "SUDO", "OPERADOR_ESTOQUE", "EXPEDICAO", "ESTOQUE", "GD"])
 
 export function podeColetarWms(role: string | null | undefined): boolean {
   if (!role) return false
