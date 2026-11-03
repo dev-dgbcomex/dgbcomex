@@ -1371,6 +1371,63 @@ export const searchRegistry: SearchItem[] = [
     description: "Dashboard de métricas de chamados por status, prioridade e fila",
     module: "Chamados",
   },
+  // WMS
+  {
+    id: "wms-dashboard",
+    label: "Dashboard WMS",
+    keywords: ["wms", "painel", "metricas", "estoque", "separacao", "dashboard"],
+    href: "/wms",
+    description: "Dashboard do sistema WMS com visão geral de pedidos e estoque",
+    module: "WMS",
+  },
+  {
+    id: "wms-pedidos",
+    label: "Pedidos WMS",
+    keywords: ["wms", "pedido", "separacao", "lista", "cliente", "status"],
+    href: "/wms/pedidos",
+    description: "Lista de pedidos de separação do WMS",
+    module: "WMS",
+  },
+  {
+    id: "wms-situacoes",
+    label: "Situações WMS",
+    keywords: ["wms", "situacao", "status", "pedido", "configuracao"],
+    href: "/wms/situacoes",
+    description: "Cadastro e gerenciamento de situações de pedido no WMS",
+    module: "WMS",
+  },
+  {
+    id: "wms-separacoes",
+    label: "Ordens de Separação",
+    keywords: ["wms", "separacao", "ordem", "picking", "andamento"],
+    href: "/wms/separacoes",
+    description: "Gerenciamento de ordens de separação no WMS",
+    module: "WMS",
+  },
+  {
+    id: "wms-estoque",
+    label: "Estoques WMS",
+    keywords: ["wms", "estoque", "gaveta", "disponivel", "metros"],
+    href: "/wms/estoque",
+    description: "Visualização de estoque aberto e disponível no WMS",
+    module: "WMS",
+  },
+  {
+    id: "wms-gavetas",
+    label: "Gavetas WMS",
+    keywords: ["wms", "gaveta", "posicao", "organizacao"],
+    href: "/wms/gavetas",
+    description: "Gerenciamento de gavetas no sistema WMS",
+    module: "WMS",
+  },
+  {
+    id: "wms-arquivados",
+    label: "Arquivados WMS",
+    keywords: ["wms", "arquivado", "historico", "concluido"],
+    href: "/wms/arquivados",
+    description: "PedidoS arquivados no sistema WMS",
+    module: "WMS",
+  },
 ]
 
 export function searchItems(query: string): SearchItem[] {
