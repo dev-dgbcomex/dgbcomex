@@ -19,7 +19,7 @@ import {
   type DragEndEvent,
 } from "@dnd-kit/core"
 import { Loader2, Plus, X } from "lucide-react"
-import { useStatuses } from "@/hooks/use-statuses"
+import { useStatuses, statusExibidosNoKanban } from "@/hooks/use-statuses"
 import type { Oportunidade } from "../types"
 
 interface OportunidadeCard {
@@ -163,12 +163,10 @@ export default function KanbanOportunidadesPage() {
     if (dadosCarregados) setOportunidades(dadosCarregados)
   }, [dadosCarregados])
 
-  const colunas = statuses
-    .filter((s) => s.ativo !== false)
-    .map((col) => ({
-      ...col,
-      cards: oportunidades.filter((o) => o.status === col.nome),
-    }))
+  const colunas = statusExibidosNoKanban(statuses).map((col) => ({
+    ...col,
+    cards: oportunidades.filter((o) => o.status === col.nome),
+  }))
 
   const handleDragStart = (event: DragStartEvent) => {
     const card = event.active.data.current?.oportunidade

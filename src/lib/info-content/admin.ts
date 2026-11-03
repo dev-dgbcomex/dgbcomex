@@ -74,6 +74,30 @@ export const adminContent: Record<string, InfoContent> = {
       { name: "Dashboard", desc: "Relatório de remessas com taxas de abertura e cliques por link" },
     ],
   },
+  "/admin/configuracoes/status": {
+    title: "Status",
+    description:
+      "Cadastro único de status usado pelas telas do sistema. Cada status pertence a um tipo (módulo) e define rótulo, cor, ordem e regras de exibição.",
+    rules: [
+      "O nome é o valor interno gravado nos registros (ex: QUALIFICACAO) e não pode se repetir dentro do mesmo tipo.",
+      "O rótulo é o texto exibido nas telas; quando vazio, o próprio nome é usado.",
+      "A cor (hex) pinta a coluna do Kanban e o badge do status na listagem.",
+      "A ordem define a posição da coluna no Kanban (menor primeiro).",
+      "Status inativos ficam ocultos: somem do Kanban e das listas de seleção.",
+      "A flag 'Exibir no Kanban' (somente no tipo Oportunidade) permite cadastrar um status selecionável que não vira coluna do quadro.",
+      "As colunas do Kanban de Oportunidades saem deste cadastro: criar um status ativo aqui já cria a coluna correspondente.",
+      "Apenas usuários ADMIN e SUDO podem criar, editar ou excluir status.",
+    ],
+    fields: [
+      { name: "Nome", desc: "Valor interno do status (ex: PENDENTE)" },
+      { name: "Rótulo", desc: "Texto exibido nas telas (ex: Pendente)" },
+      { name: "Tipo", desc: "Módulo que usa o status (ex: Oportunidade)" },
+      { name: "Cor", desc: "Cor hexadecimal da coluna do Kanban e do badge" },
+      { name: "Ordem", desc: "Posição da coluna no Kanban" },
+      { name: "Ativo", desc: "Desmarcar oculta o status das listas e do Kanban" },
+      { name: "Exibir no Kanban", desc: "Cria ou não a coluna no quadro de oportunidades" },
+    ],
+  },
   "/admin/configuracoes": {
     title: "Configurações",
     description:

@@ -60,7 +60,9 @@ describe("getInfoContent", () => {
     // O seletor 'Mês' e o 'Todos'.
     expect(texto).toContain("Todos os meses do período")
     // Todos os gráficos, inclusive o mês a mês, respeitam os filtros.
-    expect(texto).toMatch(/mês a mês[\s\S]*respeitam os filtros|respeitam os filtros[\s\S]*mês a mês/)
+    expect(texto).toMatch(
+      /mês a mês[\s\S]*respeitam os filtros|respeitam os filtros[\s\S]*mês a mês/
+    )
     // O 'Limpar' volta ao período padrão, não fica no mês escolhido.
     expect(texto).toMatch(/Limpar: .*período padrão/)
     // O gráfico de barras em pé com a participação (%) do fornecedor no total.
@@ -83,14 +85,13 @@ describe("getInfoContent", () => {
     const gavetas = getInfoContent("/wms/gavetas")
 
     const texto = [pedidos, separacoes, estoque, gavetas]
-      .flatMap((item) => [
-        item?.description ?? "",
-        ...(item?.rules ?? []),
-      ])
+      .flatMap((item) => [item?.description ?? "", ...(item?.rules ?? [])])
       .join("\n")
 
     expect(texto).toMatch(/ordem vertical dos cartões é global/i)
-    expect(texto).toMatch(/arrastando o cartão para cima ou para baixo|arrastando para cima\/baixo/i)
+    expect(texto).toMatch(
+      /arrastando o cartão para cima ou para baixo|arrastando para cima\/baixo/i
+    )
     expect(texto).toMatch(/vermelha no topo \(5%\)/)
     expect(texto).toMatch(/COMERCIAL, EXPEDICAO, ADMIN e SUDO/)
     expect(texto).toMatch(/artigos do pedido/i)
@@ -122,5 +123,35 @@ describe("getInfoContent", () => {
       expect(texto).toMatch(/Importar via API/)
       expect(texto).toMatch(/já (selecionada|escolhida)/)
     }
+  })
+
+  it("o cadastro de status e o kanban de oportunidades explicam a configuração de colunas", () => {
+    const cadastro = getInfoContent("/admin/configuracoes/status")
+    const lista = getInfoContent("/comercial/crm/oportunidades")
+    const kanban = getInfoContent("/comercial/crm/oportunidades/kanban")
+
+    expect(cadastro).not.toBeNull()
+    expect(lista).not.toBeNull()
+    expect(kanban).not.toBeNull()
+
+    const textoCadastro = [
+      cadastro?.description ?? "",
+      ...(cadastro?.rules ?? []),
+      ...(cadastro?.fields ?? []).map((f) => `${f.name}: ${f.desc}`),
+    ].join("\n")
+
+    // A flag que decide se o status vira coluna do quadro.
+    expect(textoCadastro).toContain("Exibir no Kanban")
+    // A cor e a ordem definem a coluna.
+    expect(textoCadastro).toMatch(/Cor/)
+    expect(textoCadastro).toMatch(/Ordem/)
+
+    const textoKanban = [lista, kanban]
+      .flatMap((item) => [...(item?.rules ?? []), ...(item?.fields ?? []).map((f) => f.desc)])
+      .join("\n")
+
+    // As colunas vêm do cadastro de status.
+    expect(textoKanban).toMatch(/cadastro de Status/i)
+    expect(textoKanban).toMatch(/Exibir no Kanban/)
   })
 })

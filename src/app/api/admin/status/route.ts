@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
     }
 
-    const { nome, rotulo, tipo, cor, ordem, ativo } = await req.json()
+    const { nome, rotulo, tipo, cor, ordem, ativo, exibirKanban } = await req.json()
     if (!nome || !tipo) {
       return NextResponse.json({ error: "nome e tipo são obrigatórios" }, { status: 400 })
     }
@@ -45,6 +45,7 @@ export async function POST(req: NextRequest) {
         cor: cor || null,
         ordem: ordem ?? 0,
         ativo: ativo !== undefined ? ativo : true,
+        exibirKanban: exibirKanban !== undefined ? exibirKanban : true,
       })
       .returning()
 
@@ -68,7 +69,7 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
     }
 
-    const { id, nome, rotulo, tipo, cor, ordem, ativo } = await req.json()
+    const { id, nome, rotulo, tipo, cor, ordem, ativo, exibirKanban } = await req.json()
     if (!id) {
       return NextResponse.json({ error: "id é obrigatório" }, { status: 400 })
     }
@@ -82,6 +83,7 @@ export async function PUT(req: NextRequest) {
         ...(cor !== undefined && { cor }),
         ...(ordem !== undefined && { ordem }),
         ...(ativo !== undefined && { ativo }),
+        ...(exibirKanban !== undefined && { exibirKanban }),
         updatedAt: new Date(),
       })
       .where(eq(status.id, id))

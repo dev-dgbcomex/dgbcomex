@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query"
 import { InfoButton } from "@/components/ui/info-button"
 import { getInfoContent } from "@/lib/info-content"
 import Link from "next/link"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import {
   PlusCircle,
@@ -22,30 +22,14 @@ import { FloatableKanban } from "@/components/crm/floatable-kanban"
 import OportunidadesKanban from "@/components/crm/oportunidades-kanban"
 import ListFilters, { useListFilters } from "@/components/ui/list-filters"
 import { ConfirmModal } from "@/components/ui/confirm-modal"
+import { useStatuses, hexToRgba } from "@/hooks/use-statuses"
+import { STATUS_OPORTUNIDADE_PADRAO } from "@/lib/crm/status-oportunidade"
 import type { Oportunidade } from "./types"
 
 async function fetchOportunidades(mine: boolean): Promise<Oportunidade[]> {
   const res = await fetch(`/api/crm/oportunidades${mine ? "?mine=true" : ""}`)
   if (!res.ok) throw new Error("Falha ao carregar")
   return res.json()
-}
-
-const STATUS_CORES: Record<string, string> = {
-  NOVO: "text-blue-600 bg-blue-50 dark:bg-blue-950/50 dark:text-blue-400",
-  QUALIFICACAO: "text-purple-600 bg-purple-50 dark:bg-purple-950/50 dark:text-purple-400",
-  PROPOSTA: "text-yellow-600 bg-yellow-50 dark:bg-yellow-950/50 dark:text-yellow-400",
-  NEGOCIACAO: "text-orange-600 bg-orange-50 dark:bg-orange-950/50 dark:text-orange-400",
-  FECHADO_GANHO: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/50 dark:text-emerald-400",
-  FECHADO_PERDIDO: "text-red-600 bg-red-50 dark:bg-red-950/50 dark:text-red-400",
-}
-
-const STATUS_LABELS: Record<string, string> = {
-  NOVO: "Novo",
-  QUALIFICACAO: "Qualificação",
-  PROPOSTA: "Proposta",
-  NEGOCIACAO: "Negociação",
-  FECHADO_GANHO: "Ganho",
-  FECHADO_PERDIDO: "Perdido",
 }
 
 export default function OportunidadesPage() {
@@ -58,6 +42,22 @@ export default function OportunidadesPage() {
   const [deleteTarget, setDeleteTarget] = useState<Oportunidade | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [deleteBlocked, setDeleteBlocked] = useState(false)
+
+  const { statuses } = useStatuses("OPORTUNIDADE")
+
+  const statusLookup = useMemo(
+    () => (statuses.length > 0 ? statuses : STATUS_OPORTUNIDADE_PADRAO),
+    [statuses]
+  )
+
+  const statusOptions = useMemo(
+    () => statusLookup.map((s) => ({ value: s.nome, label: s.rotulo || s.nome })),
+    [statusLookup]
+  )
+
+  const labelDoStatus = (nome: string) => statusLookup.find((s) => s.nome === nome)?.rotulo || nome
+
+  const corDoStatus = (nome: string) => statusLookup.find((s) => s.nome === nome)?.cor || "#94a3b8"
 
   const {
     data: oportunidades,
@@ -91,14 +91,7 @@ export default function OportunidadesPage() {
   const filterState = useListFilters(
     {
       searchFields: ["titulo", "empresaNome", "clienteNome", "responsavelNome"],
-      statusOptions: [
-        { value: "NOVO", label: "Novo" },
-        { value: "QUALIFICACAO", label: "Qualificação" },
-        { value: "PROPOSTA", label: "Proposta" },
-        { value: "NEGOCIACAO", label: "Negociação" },
-        { value: "FECHADO_GANHO", label: "Fechado Ganho" },
-        { value: "FECHADO_PERDIDO", label: "Fechado Perdido" },
-      ],
+      statusOptions,
       dateField: "createdAt",
     },
     oportunidades || []
@@ -189,14 +182,7 @@ export default function OportunidadesPage() {
           <ListFilters
             config={{
               searchFields: ["titulo", "empresaNome", "clienteNome", "responsavelNome"],
-              statusOptions: [
-                { value: "NOVO", label: "Novo" },
-                { value: "QUALIFICACAO", label: "Qualificação" },
-                { value: "PROPOSTA", label: "Proposta" },
-                { value: "NEGOCIACAO", label: "Negociação" },
-                { value: "FECHADO_GANHO", label: "Fechado Ganho" },
-                { value: "FECHADO_PERDIDO", label: "Fechado Perdido" },
-              ],
+              statusOptions,
               dateField: "createdAt",
             }}
             data={oportunidades || []}
@@ -265,11 +251,21 @@ export default function OportunidadesPage() {
                           {formatarMoeda(op.valorEstimado)}
                         </td>
                         <td className="px-2 py-2 md:px-4 md:py-3">
-                          <span
-                            className={`inline-flex text-[10px] px-1.5 md:px-2 py-0.5 rounded-full font-medium ${STATUS_CORES[op.status] || ""}`}
-                          >
-                            {STATUS_LABELS[op.status] || op.status}
-                          </span>
+                          {(() => {
+                            const cor = corDoStatus(op.status)
+                            return (
+                              <span
+                                className="inline-flex text-[10px] px-1.5 md:px-2 py-0.5 rounded-full font-medium border"
+                                style={{
+                                  backgroundColor: hexToRgba(cor, 0.12),
+                                  borderColor: hexToRgba(cor, 0.35),
+                                  color: cor,
+                                }}
+                              >
+                                {labelDoStatus(op.status)}
+                              </span>
+                            )
+                          })()}
                         </td>
                         <td className="px-2 py-2 md:px-4 md:py-3 text-xs md:text-sm text-slate-500 hidden md:table-cell">
                           {op.responsavelNome || "—"}

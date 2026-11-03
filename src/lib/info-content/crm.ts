@@ -222,6 +222,7 @@ export const crmContent: Record<string, InfoContent> = {
       "Lista de oportunidades comerciais em andamento. Cada oportunidade representa uma negociação em potencial com uma pessoa, com valor estimado e estágio no pipeline.",
     rules: [
       "O pipeline segue o fluxo: Novo → Qualificação → Proposta → Negociação → Fechado Ganho/Perdido.",
+      "Os estágios e rótulos vêm do cadastro de Status (Admin → Configurações → Status, tipo Oportunidade): um novo status ativo já aparece aqui e vira coluna no Kanban.",
       "Use o Kanban para arrastar oportunidades entre estágios do pipeline.",
       "Oportunidades FECHADO_PERDIDO podem ser reativadas pela IA após 90 dias.",
       "Ao fechar como GANHO, a pessoa é automaticamente sincronizada como Cliente no PDM.",
@@ -290,6 +291,7 @@ export const crmContent: Record<string, InfoContent> = {
       "Quadro visual com drag-and-drop para gerenciar o pipeline comercial. Arraste oportunidades entre colunas para atualizar o status automaticamente.",
     rules: [
       "Arraste um card para outra coluna para mudar o estágio da oportunidade.",
+      "As colunas vêm do cadastro de Status (Admin → Configurações → Status, tipo Oportunidade): cada status ativo com 'Exibir no Kanban' marcado vira uma coluna, na ordem configurada.",
       "Ao arrastar para FECHADO_PERDIDO, um modal solicitará o motivo da perda.",
       "Apenas usuários com permissão podem mover cards entre estágios.",
       "Cada card mostra o título, pessoa, valor e probabilidade da oportunidade.",
@@ -298,7 +300,7 @@ export const crmContent: Record<string, InfoContent> = {
     fields: [
       {
         name: "Colunas",
-        desc: "Pipeline: Novo → Qualificação → Proposta → Negociação → Ganho/Perdido",
+        desc: "Estágios do pipeline definidos no cadastro de Status (Novo → Qualificação → Proposta → Negociação → Ganho/Perdido)",
       },
       { name: "Card", desc: "Cada card = uma oportunidade com valor e probabilidade" },
       {

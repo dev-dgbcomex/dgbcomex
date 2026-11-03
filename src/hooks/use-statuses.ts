@@ -10,6 +10,7 @@ export type StatusConfig = {
   cor: string | null
   ordem: number | null
   ativo: boolean | null
+  exibirKanban: boolean | null
 }
 
 const cache = new Map<string, StatusConfig[]>()
@@ -19,22 +20,24 @@ export function useStatuses(tipo: string) {
   const [loading, setLoading] = useState(!cache.has(tipo))
 
   useEffect(() => {
-    if (cache.has(tipo)) {
-      setStatuses(cache.get(tipo)!)
-      setLoading(false)
-      return
-    }
+    let cancelado = false
 
     fetch(`/api/admin/status?tipo=${encodeURIComponent(tipo)}`)
       .then((r: any) => r.json())
       .then((data: any) => {
-        if (Array.isArray(data)) {
+        if (Array.isArray(data) && !cancelado) {
           cache.set(tipo, data)
           setStatuses(data)
         }
       })
       .catch(console.error)
-      .finally(() => setLoading(false))
+      .finally(() => {
+        if (!cancelado) setLoading(false)
+      })
+
+    return () => {
+      cancelado = true
+    }
   }, [tipo])
 
   const getStatus = (nome: string): StatusConfig | undefined =>
@@ -45,6 +48,25 @@ export function useStatuses(tipo: string) {
   const getColor = (nome: string): string => getStatus(nome)?.cor || "#94a3b8"
 
   return { statuses, loading, getStatus, getLabel, getColor }
+}
+
+/** Status utilizáveis nas listas de seleção (desativados ficam ocultos). */
+export function statusAtivos(statuses: StatusConfig[]): StatusConfig[] {
+  return statuses.filter((s) => s.ativo !== false)
+}
+
+/** Colunas do kanban: status ativo e com exibicao habilitada. */
+export function statusExibidosNoKanban(statuses: StatusConfig[]): StatusConfig[] {
+  return statuses.filter((s) => s.ativo !== false && s.exibirKanban !== false)
+}
+
+/** Limpa o cache de status (usar apos criar/editar/excluir no cadastro). */
+export function invalidarCacheStatuses(tipo?: string) {
+  if (tipo) {
+    cache.delete(tipo)
+    return
+  }
+  cache.clear()
 }
 
 export function hexToRgba(hex: string, alpha: number): string {

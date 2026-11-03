@@ -13,8 +13,28 @@ const statuses = [
     cor: "#f59e0b",
     ordem: 1,
     ativo: true,
+    exibirKanban: true,
   },
-  { id: 2, nome: "CANCELADO", rotulo: "", tipo: "AMOSTRA", cor: null, ordem: 2, ativo: false },
+  {
+    id: 2,
+    nome: "CANCELADO",
+    rotulo: "",
+    tipo: "AMOSTRA",
+    cor: null,
+    ordem: 2,
+    ativo: false,
+    exibirKanban: true,
+  },
+  {
+    id: 3,
+    nome: "PROSPECCAO",
+    rotulo: "Prospecção",
+    tipo: "OPORTUNIDADE",
+    cor: "#8b5cf6",
+    ordem: 1,
+    ativo: true,
+    exibirKanban: false,
+  },
 ]
 
 function setup() {
@@ -42,6 +62,19 @@ describe("StatusPage", () => {
     expect(screen.getByText("CANCELADO")).toBeInTheDocument()
     const rowCancelado = screen.getByText("CANCELADO").closest("tr")!
     expect(within(rowCancelado).getByText("Amostra")).toBeInTheDocument()
+    expect(screen.getByRole("columnheader", { name: "Kanban" })).toBeInTheDocument()
+  })
+
+  it("mostra a flag de exibição no kanban apenas para oportunidades", async () => {
+    setup()
+    renderPage(<StatusPage />)
+    await screen.findByText("PENDENTE")
+
+    const rowOportunidade = screen.getByText("PROSPECCAO").closest("tr")!
+    expect(within(rowOportunidade).getByLabelText("Não exibe no Kanban")).toBeInTheDocument()
+
+    const rowAmostra = screen.getByText("CANCELADO").closest("tr")!
+    expect(within(rowAmostra).queryByLabelText("Exibe no Kanban")).not.toBeInTheDocument()
   })
 
   it("mostra estado vazio quando não há status", async () => {
@@ -72,6 +105,33 @@ describe("StatusPage", () => {
       expect(call?.body?.rotulo).toBe("Faturado")
       expect(call?.body?.tipo).toBe("SOLICITACAO_DESENVOLVIMENTO")
       expect(call?.body?.ativo).toBe(true)
+      expect(call?.body?.exibirKanban).toBe(true)
+    })
+    await waitFor(() => expect(toastMock.success).toHaveBeenCalledWith("Status criado"))
+  })
+
+  it("cria status de oportunidade sem coluna no kanban", async () => {
+    const fetchMock = setup()
+    renderPage(<StatusPage />)
+    await screen.findByText("PENDENTE")
+
+    fireEvent.click(screen.getByRole("button", { name: /Novo Status/ }))
+    fireEvent.change(screen.getByPlaceholderText("EX: PENDENTE"), {
+      target: { value: "PROSPECCAO" },
+    })
+    fireEvent.change(screen.getAllByRole("combobox")[0], { target: { value: "OPORTUNIDADE" } })
+
+    const flagKanban = await screen.findByLabelText("Exibir no Kanban")
+    expect(flagKanban).toBeChecked()
+    fireEvent.click(flagKanban)
+
+    fireEvent.click(screen.getByRole("button", { name: "Criar" }))
+
+    await waitFor(() => {
+      const call = findCall(fetchMock.calls, "/api/admin/status", "POST")
+      expect(call).toBeDefined()
+      expect(call?.body?.tipo).toBe("OPORTUNIDADE")
+      expect(call?.body?.exibirKanban).toBe(false)
     })
     await waitFor(() => expect(toastMock.success).toHaveBeenCalledWith("Status criado"))
   })

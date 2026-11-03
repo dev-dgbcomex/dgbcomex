@@ -6,6 +6,12 @@ const MIGRATION_SQL = `
 -- Sincronizar pdm_pro_textil, pdm_ibirapuera e neon com pdm_textil
 -- ============================================
 
+-- status: flag de exibicao no kanban (coluna do board)
+DO $$ BEGIN
+  ALTER TABLE status ADD COLUMN IF NOT EXISTS exibir_kanban boolean DEFAULT true;
+EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
+END $$;
+
 -- crm_contatos: adicionar cliente_id
 DO $$ BEGIN
   ALTER TABLE crm_contatos ADD COLUMN IF NOT EXISTS cliente_id integer REFERENCES clientes(id);

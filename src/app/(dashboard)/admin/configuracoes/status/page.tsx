@@ -11,6 +11,7 @@ import { usePathname } from "next/navigation"
 import { InfoButton } from "@/components/ui/info-button"
 import { getInfoContent } from "@/lib/info-content"
 import { TIPOS_STATUS } from "@/lib/tipos-status"
+import { invalidarCacheStatuses } from "@/hooks/use-statuses"
 
 interface StatusItem {
   id: number
@@ -20,10 +21,13 @@ interface StatusItem {
   cor: string | null
   ordem: number
   ativo: boolean
+  exibirKanban: boolean | null
 }
 
 const TIPO_CORES: Record<string, string> = {
   SOLICITACAO_DESENVOLVIMENTO: "text-blue-600 bg-blue-50 dark:bg-blue-950/50",
+  OPORTUNIDADE: "text-indigo-600 bg-indigo-50 dark:bg-indigo-950/50",
+  PROPOSTA: "text-cyan-600 bg-cyan-50 dark:bg-cyan-950/50",
   PRODUTO_CRU: "text-purple-600 bg-purple-50 dark:bg-purple-950/50",
   AMOSTRA: "text-amber-600 bg-amber-50 dark:bg-amber-950/50",
   REQUISICAO_CORTE: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/50",
@@ -31,6 +35,8 @@ const TIPO_CORES: Record<string, string> = {
 
 const TIPO_LABELS: Record<string, string> = {
   SOLICITACAO_DESENVOLVIMENTO: "Solic. Desenv.",
+  OPORTUNIDADE: "Oportunidade",
+  PROPOSTA: "Proposta",
   PRODUTO_CRU: "Produto",
   AMOSTRA: "Amostra",
   REQUISICAO_CORTE: "Req. Corte",
@@ -50,6 +56,7 @@ export default function StatusPage() {
     cor: "",
     ordem: 0,
     ativo: true,
+    exibirKanban: true,
   })
   const [saving, setSaving] = useState(false)
   const [filtroTipo, setFiltroTipo] = useState("")
@@ -80,6 +87,7 @@ export default function StatusPage() {
       cor: "",
       ordem: 0,
       ativo: true,
+      exibirKanban: true,
     })
     setEditId(null)
     setShowForm(false)
@@ -93,6 +101,7 @@ export default function StatusPage() {
       cor: item.cor || "",
       ordem: item.ordem,
       ativo: item.ativo,
+      exibirKanban: item.exibirKanban !== false,
     })
     setEditId(item.id)
     setShowForm(true)
@@ -117,6 +126,7 @@ export default function StatusPage() {
         throw new Error(err.error || "Erro ao salvar")
       }
       toast.success(editId ? "Status atualizado" : "Status criado")
+      invalidarCacheStatuses()
       resetForm()
       carregar()
     } catch (err: any) {
@@ -136,6 +146,7 @@ export default function StatusPage() {
       })
       if (!res.ok) throw new Error("Erro ao excluir")
       toast.success("Status excluído")
+      invalidarCacheStatuses()
       carregar()
     } catch {
       toast.error("Erro ao excluir status")
@@ -242,6 +253,19 @@ export default function StatusPage() {
                 Ativo
               </label>
             </div>
+            {form.tipo === "OPORTUNIDADE" && (
+              <div className="space-y-2 flex items-end pb-2">
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={form.exibirKanban}
+                    onChange={(e) => setForm({ ...form, exibirKanban: e.target.checked })}
+                    className="rounded"
+                  />
+                  Exibir no Kanban
+                </label>
+              </div>
+            )}
           </div>
           <div className="flex gap-2">
             <Button type="submit" disabled={saving}>
@@ -289,6 +313,7 @@ export default function StatusPage() {
                   <th className="text-left px-4 py-3 font-medium text-slate-500">Cor</th>
                   <th className="text-center px-4 py-3 font-medium text-slate-500">Ordem</th>
                   <th className="text-center px-4 py-3 font-medium text-slate-500">Ativo</th>
+                  <th className="text-center px-4 py-3 font-medium text-slate-500">Kanban</th>
                   <th className="text-right px-4 py-3 font-medium text-slate-500">Ações</th>
                 </tr>
               </thead>
@@ -323,9 +348,28 @@ export default function StatusPage() {
                     <td className="px-4 py-3 text-center">{item.ordem}</td>
                     <td className="px-4 py-3 text-center">
                       {item.ativo ? (
-                        <Check size={16} className="text-green-500 inline" />
+                        <Check size={16} className="text-green-500 inline" aria-label="Ativo" />
                       ) : (
-                        <X size={16} className="text-red-400 inline" />
+                        <X size={16} className="text-red-400 inline" aria-label="Inativo" />
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      {item.tipo === "OPORTUNIDADE" ? (
+                        item.exibirKanban !== false ? (
+                          <Check
+                            size={16}
+                            className="text-green-500 inline"
+                            aria-label="Exibe no Kanban"
+                          />
+                        ) : (
+                          <X
+                            size={16}
+                            className="text-red-400 inline"
+                            aria-label="Não exibe no Kanban"
+                          />
+                        )
+                      ) : (
+                        "—"
                       )}
                     </td>
                     <td className="px-4 py-3 text-right">

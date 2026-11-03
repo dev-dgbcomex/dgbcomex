@@ -18,7 +18,7 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 import { ConfirmModal } from "@/components/ui/confirm-modal"
-import { useStatuses } from "@/hooks/use-statuses"
+import { useStatuses, statusAtivos } from "@/hooks/use-statuses"
 import {
   STATUS_FATURAMENTO_LABELS,
   STATUS_FATURAMENTO_CORES,
@@ -167,9 +167,9 @@ export default function DetalheOportunidadePage() {
                   className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                   autoFocus
                 >
-                  {statuses.map((s) => (
+                  {statusAtivos(statuses).map((s) => (
                     <option key={s.id} value={s.nome}>
-                      {s.nome}
+                      {s.rotulo || s.nome}
                     </option>
                   ))}
                 </select>

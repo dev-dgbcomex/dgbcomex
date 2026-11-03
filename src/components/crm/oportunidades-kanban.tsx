@@ -12,7 +12,8 @@ import {
   useSensors,
 } from "@dnd-kit/core"
 import { X } from "lucide-react"
-import { useStatuses, type StatusConfig } from "@/hooks/use-statuses"
+import { useStatuses, statusExibidosNoKanban, type StatusConfig } from "@/hooks/use-statuses"
+import { STATUS_OPORTUNIDADE_PADRAO } from "@/lib/crm/status-oportunidade"
 import { DroppableColumn, KanbanSkeleton } from "./kanban-column"
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
 
@@ -26,22 +27,7 @@ interface OportunidadeCard {
   status: string
 }
 
-type KanbanStatus =
-  StatusConfig | { nome: string; rotulo: string | null; cor: string | null; ativo: boolean }
-
-const DEFAULT_STATUSES: Array<{
-  nome: string
-  rotulo: string | null
-  cor: string | null
-  ativo: boolean
-}> = [
-  { nome: "NOVO", rotulo: "Novo", cor: "#3b82f6", ativo: true },
-  { nome: "QUALIFICACAO", rotulo: "Qualificação", cor: "#a855f7", ativo: true },
-  { nome: "PROPOSTA", rotulo: "Proposta", cor: "#eab308", ativo: true },
-  { nome: "NEGOCIACAO", rotulo: "Negociação", cor: "#f97316", ativo: true },
-  { nome: "FECHADO_GANHO", rotulo: "Ganho", cor: "#10b981", ativo: true },
-  { nome: "FECHADO_PERDIDO", rotulo: "Perdido", cor: "#ef4444", ativo: true },
-]
+type KanbanStatus = StatusConfig
 
 const valorFormatter = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" })
 
@@ -122,7 +108,7 @@ export default function OportunidadesKanban({
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
   const hasStatuses = statuses.length > 0
-  const effectiveStatuses = hasStatuses ? statuses : DEFAULT_STATUSES
+  const effectiveStatuses: KanbanStatus[] = hasStatuses ? statuses : STATUS_OPORTUNIDADE_PADRAO
   const effectiveLoading = statusLoading && !hasStatuses
 
   const getLabelSafe = (nome: string) => {
@@ -130,17 +116,15 @@ export default function OportunidadesKanban({
       const s = statuses.find((s: StatusConfig) => s.nome === nome)
       return s?.rotulo || nome
     }
-    return DEFAULT_STATUSES.find((s) => s.nome === nome)?.rotulo || nome
+    return STATUS_OPORTUNIDADE_PADRAO.find((s) => s.nome === nome)?.rotulo || nome
   }
 
-  const colunas = effectiveStatuses
-    .filter((s: KanbanStatus) => s.ativo !== false)
-    .map((col: KanbanStatus) => ({
-      ...col,
-      cards: (data.length > 0 ? data : oportunidades).filter(
-        (o: OportunidadeCard) => o.status === col.nome
-      ),
-    }))
+  const colunas = statusExibidosNoKanban(effectiveStatuses).map((col: KanbanStatus) => ({
+    ...col,
+    cards: (data.length > 0 ? data : oportunidades).filter(
+      (o: OportunidadeCard) => o.status === col.nome
+    ),
+  }))
 
   const handleDragStart = (event: any) => {
     const card = event.active.data.current?.oportunidade

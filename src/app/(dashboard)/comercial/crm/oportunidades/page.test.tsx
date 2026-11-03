@@ -74,6 +74,39 @@ describe("OportunidadesPage kanban", () => {
   })
 })
 
+describe("OportunidadesPage status do cadastro", () => {
+  it("usa rótulo e cor do cadastro de status", async () => {
+    const handler = ({ method, url }: { method: string; url: string }) => {
+      if (method === "GET" && url === "/api/crm/oportunidades?mine=true")
+        return { json: [{ ...oportunidades[0], status: "PROSPECCAO" }] }
+      if (method === "GET" && url === "/api/admin/status?tipo=OPORTUNIDADE")
+        return {
+          json: [
+            {
+              id: 10,
+              nome: "PROSPECCAO",
+              rotulo: "Prospecção",
+              tipo: "OPORTUNIDADE",
+              cor: "#8b5cf6",
+              ordem: 1,
+              ativo: true,
+              exibirKanban: true,
+            },
+          ],
+        }
+      return { json: null }
+    }
+    const fetchMock = createFetchMock(handler)
+    vi.stubGlobal("fetch", fetchMock.fn)
+
+    renderPage(<OportunidadesPage />)
+
+    expect(await screen.findByText("Prospecção")).toBeInTheDocument()
+    expect(screen.queryByText("PROSPECCAO")).not.toBeInTheDocument()
+    expect(screen.getByLabelText("Filtrar por status")).toBeInTheDocument()
+  })
+})
+
 describe("OportunidadesPage exclusão", () => {
   let fetchMock: ReturnType<typeof createFetchMock>
 

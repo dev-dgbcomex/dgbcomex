@@ -12,7 +12,7 @@ import { QuickCreatePessoa } from "@/components/crm/quick-create-pessoa"
 import { QuickCreateCliente } from "@/components/crm/quick-create-cliente"
 import { QuickCreateLead } from "@/components/crm/quick-create-lead"
 import { SelectCliente } from "@/components/crm/select-cliente"
-import { useStatuses } from "@/hooks/use-statuses"
+import { useStatuses, statusAtivos } from "@/hooks/use-statuses"
 import { TipoEntidadeSelector } from "@/app/(dashboard)/comercial/crm/visitas/novo/components/tipo-entidade-selector"
 import type { EmpresaResumo, LeadResumo, UsuarioResumo, OportunidadeForm } from "../types"
 
@@ -100,8 +100,9 @@ export default function NovaOportunidadePage() {
   }, [])
 
   useEffect(() => {
-    if (statuses.length > 0 && !form.status) {
-      setField("status", statuses[0].nome)
+    const disponiveis = statusAtivos(statuses)
+    if (disponiveis.length > 0 && !form.status) {
+      setField("status", disponiveis[0].nome)
     }
   }, [statuses])
 
@@ -379,9 +380,9 @@ export default function NovaOportunidadePage() {
                 onChange={(e) => setField("status", e.target.value)}
                 className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                {statuses.map((s) => (
+                {statusAtivos(statuses).map((s) => (
                   <option key={s.id} value={s.nome}>
-                    {s.nome}
+                    {s.rotulo || s.nome}
                   </option>
                 ))}
               </select>

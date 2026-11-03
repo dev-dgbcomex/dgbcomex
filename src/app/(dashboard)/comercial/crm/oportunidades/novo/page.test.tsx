@@ -105,7 +105,8 @@ describe("NovaOportunidadePage", () => {
     await waitFor(() =>
       expect(screen.getByRole("option", { name: "Ana Vendas" })).toBeInTheDocument()
     )
-    await waitFor(() => expect(screen.getByRole("option", { name: "NOVO" })).toBeInTheDocument())
+    // O status usa o rótulo do cadastro de status.
+    await waitFor(() => expect(screen.getByRole("option", { name: "Novo" })).toBeInTheDocument())
 
     const selects = screen.getAllByRole("combobox")
     fireEvent.change(selects[0], { target: { value: "1" } })

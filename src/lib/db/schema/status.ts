@@ -10,6 +10,7 @@ export const status = pgTable(
     cor: varchar("cor", { length: 7 }),
     ordem: integer("ordem").default(0),
     ativo: boolean("ativo").default(true),
+    exibirKanban: boolean("exibir_kanban").default(true),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
   },
