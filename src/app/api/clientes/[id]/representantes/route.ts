@@ -4,6 +4,7 @@ import { db } from "@/lib/db"
 import { clientesRepresentantes } from "@/lib/db/schema/clientes-representantes"
 import { representantes } from "@/lib/db/schema/representantes"
 import { eq, and, desc } from "drizzle-orm"
+import { registrarLog } from "@/lib/notificar"
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -77,6 +78,21 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       })
       .returning()
 
+    const [representante] = await db
+      .select({ nome: representantes.nome })
+      .from(representantes)
+      .where(eq(representantes.id, representanteId))
+      .limit(1)
+
+    await registrarLog({
+      tipo: "ATUALIZACAO",
+      acao: "vincular_representante",
+      descricao: `Representante vinculado ao cliente: ${representante?.nome || `representante ${representanteId}`}`,
+      entidade: "CrmCliente",
+      entidadeId: parseInt(id),
+      usuarioNome: auth.session.user?.name,
+    })
+
     return NextResponse.json(novo, { status: 201 })
   } catch (error) {
     console.error("[POST /api/clientes/[id]/representantes]", error)
@@ -93,6 +109,22 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     const { searchParams } = new URL(req.url)
     const vinculoId = searchParams.get("vinculoId")
 
+    let nomeRepresentante = ""
+    if (vinculoId) {
+      const [vinculo] = await db
+        .select({ nome: representantes.nome })
+        .from(clientesRepresentantes)
+        .innerJoin(representantes, eq(clientesRepresentantes.representanteId, representantes.id))
+        .where(
+          and(
+            eq(clientesRepresentantes.id, parseInt(vinculoId)),
+            eq(clientesRepresentantes.clienteId, parseInt(id))
+          )
+        )
+        .limit(1)
+      nomeRepresentante = vinculo?.nome || ""
+    }
+
     if (vinculoId) {
       await db
         .delete(clientesRepresentantes)
@@ -104,6 +136,19 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
         )
     } else {
       const body = await req.json()
+      const [vinculo] = await db
+        .select({ nome: representantes.nome })
+        .from(clientesRepresentantes)
+        .innerJoin(representantes, eq(clientesRepresentantes.representanteId, representantes.id))
+        .where(
+          and(
+            eq(clientesRepresentantes.clienteId, parseInt(id)),
+            eq(clientesRepresentantes.representanteId, body.representanteId)
+          )
+        )
+        .limit(1)
+      nomeRepresentante = vinculo?.nome || ""
+
       await db
         .delete(clientesRepresentantes)
         .where(
@@ -113,6 +158,15 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
           )
         )
     }
+
+    await registrarLog({
+      tipo: "ATUALIZACAO",
+      acao: "remover_representante",
+      descricao: `Representante removido do cliente: ${nomeRepresentante || "representante"}`,
+      entidade: "CrmCliente",
+      entidadeId: parseInt(id),
+      usuarioNome: auth.session.user?.name,
+    })
 
     return NextResponse.json({ success: true })
   } catch (error) {

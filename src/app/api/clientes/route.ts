@@ -3,6 +3,7 @@ import { requireAuth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { clientes } from "@/lib/db/schema/clientes"
 import { ilike, or, desc, eq } from "drizzle-orm"
+import { registrarLog } from "@/lib/notificar"
 
 export async function GET(req: NextRequest) {
   try {
@@ -100,6 +101,15 @@ export async function POST(req: NextRequest) {
         idIntegracao: idIntegracao || null,
       })
       .returning()
+
+    await registrarLog({
+      tipo: "CADASTRO",
+      acao: "criar",
+      descricao: `Cliente criado: ${novoCliente.nome}`,
+      entidade: "CrmCliente",
+      entidadeId: novoCliente.id,
+      usuarioNome: auth.session.user?.name,
+    })
 
     return NextResponse.json(novoCliente, { status: 201 })
   } catch (error: any) {

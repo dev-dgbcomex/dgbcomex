@@ -74,6 +74,34 @@ describe("EditarClientePage", () => {
       }
       if (method === "PUT" && url === `/api/clientes/${id}`) return { json: { ok: true } }
       if (method === "DELETE" && url === `/api/clientes/${id}`) return { json: { success: true } }
+      if (method === "GET" && url === `/api/crm/oportunidades?clienteId=${id}`) {
+        return {
+          json: [
+            {
+              id: 31,
+              titulo: "Pedido 500meters",
+              status: "FECHADO_GANHO",
+              valorEstimado: "8000",
+            },
+          ],
+        }
+      }
+      if (method === "GET" && url === `/api/crm/propostas?clienteId=${id}`) {
+        return { json: [{ id: 41, titulo: "Propostatec", status: "ACEITA", valor: "5000" }] }
+      }
+      if (method === "GET" && url === `/api/crm/timeline?clienteId=${id}`) {
+        return {
+          json: [
+            {
+              id: 51,
+              tipo: "CONVERSAO_CLIENTE",
+              descricao: "Transformada em cliente por Tiago",
+              dataEvento: "2026-11-02T14:00:00Z",
+            },
+          ],
+        }
+      }
+      if (method === "GET" && url === `/api/crm/whatsapp?clienteId=${id}`) return { json: [] }
       return { status: 404, json: { error: "Rota não mockada" } }
     }
     fetchMock = createFetchMock(handler)
@@ -177,6 +205,30 @@ describe("EditarClientePage", () => {
       "/comercial/crm/pessoas/7"
     )
     expect(screen.getByText("Por Tiago")).toBeInTheDocument()
-    expect(screen.getByText("R$ 5.000,00")).toBeInTheDocument()
+    expect(screen.getAllByText("R$ 5.000,00").length).toBeGreaterThan(0)
+  })
+
+  it("mostra os relacionamentos do CRM do cliente", async () => {
+    renderPage(<EditarClientePage params={Promise.resolve({ id })} />)
+
+    expect(await screen.findByText("Relacionamentos do CRM")).toBeInTheDocument()
+
+    // Oportunidades e propostas do cliente (inclusive o negócio herdado das
+    // pessoas promovidas)
+    expect(await screen.findByText("Pedido 500meters")).toBeInTheDocument()
+    expect(await screen.findByText("Propostatec")).toBeInTheDocument()
+    expect(screen.getAllByText("R$ 8.000,00").length).toBeGreaterThan(0)
+    expect(screen.getAllByText("R$ 5.000,00").length).toBeGreaterThan(0)
+
+    // Timeline e WhatsApp do cliente
+    expect(await screen.findByText("Transformada em cliente por Tiago")).toBeInTheDocument()
+    expect(screen.getByRole("heading", { name: "WhatsApp" })).toBeInTheDocument()
+
+    await waitFor(() => {
+      expect(findCall(fetchMock.calls, `/api/crm/oportunidades?clienteId=${id}`)).toBeDefined()
+      expect(findCall(fetchMock.calls, `/api/crm/propostas?clienteId=${id}`)).toBeDefined()
+      expect(findCall(fetchMock.calls, `/api/crm/timeline?clienteId=${id}`)).toBeDefined()
+      expect(findCall(fetchMock.calls, `/api/crm/whatsapp?clienteId=${id}`)).toBeDefined()
+    })
   })
 })

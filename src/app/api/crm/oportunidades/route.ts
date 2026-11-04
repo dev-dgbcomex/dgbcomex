@@ -7,10 +7,11 @@ import { crmLeads } from "@/lib/db/schema/crm-leads"
 import { crmContatos } from "@/lib/db/schema/crm-contatos"
 import { clientes } from "@/lib/db/schema/clientes"
 import { usuarios } from "@/lib/db/schema/usuarios"
-import { eq, desc, like, or, sql } from "drizzle-orm"
+import { eq, desc, like, or, sql, inArray } from "drizzle-orm"
 import { registrarLog, notificar } from "@/lib/notificar"
 import { notificarAtividadeComercial } from "@/lib/crm/notificar-atividade"
 import { inserirTimelineEvento } from "@/lib/crm-timeline"
+import { idsPessoasDoCliente, clienteIdDaPessoa } from "@/lib/crm/cliente-relacionamentos"
 
 export async function GET(req: NextRequest) {
   try {
@@ -26,7 +27,15 @@ export async function GET(req: NextRequest) {
     let conditions = []
     if (status) conditions.push(eq(crmOportunidades.status, status))
     if (empresaId) conditions.push(eq(crmOportunidades.empresaId, parseInt(empresaId)))
-    if (clienteId) conditions.push(eq(crmOportunidades.clienteId, parseInt(clienteId)))
+    if (clienteId) {
+      // Negocio do cliente: o que foi lancado direto no cliente + o que veio
+      // das pessoas do CRM que viraram este cliente.
+      const cliente = parseInt(clienteId)
+      const pessoas = await idsPessoasDoCliente(cliente)
+      const partes: any[] = [eq(crmOportunidades.clienteId, cliente)]
+      if (pessoas.length > 0) partes.push(inArray(crmOportunidades.empresaId, pessoas))
+      conditions.push(or(...partes))
+    }
     if (
       mine === "true" &&
       (auth.session.user?.role ?? "") !== "ADMIN" &&
@@ -93,6 +102,9 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json()
 
+    // Negocio lancado em uma pessoa ja promovida fica vinculado ao cliente.
+    const clienteId = body.clienteId || (await clienteIdDaPessoa(body.empresaId))
+
     const [nova] = await db
       .insert(crmOportunidades)
       .values({
@@ -101,7 +113,7 @@ export async function POST(req: NextRequest) {
         valorEstimado: body.valorEstimado || null,
         leadId: body.leadId || null,
         empresaId: body.empresaId || null,
-        clienteId: body.clienteId || null,
+        clienteId: clienteId || null,
         contatoId: body.contatoId || null,
         responsavelId: body.responsavelId || userId,
         dataFechamentoPrevista: body.dataFechamentoPrevista || null,
@@ -119,9 +131,10 @@ export async function POST(req: NextRequest) {
       usuarioNome: session.user.name,
     })
 
-    if (nova.empresaId) {
+    if (nova.empresaId || nova.clienteId) {
       await inserirTimelineEvento({
         empresaId: nova.empresaId,
+        clienteId: nova.clienteId,
         tipo: "OPORTUNIDADE",
         descricao: `Oportunidade "${nova.titulo}" criada`,
         metadados: { oportunidadeId: nova.id },

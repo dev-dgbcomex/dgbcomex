@@ -216,6 +216,7 @@ describe("getInfoContent", () => {
       "/comercial/crm/relatorios/propostas",
       "/comercial/crm/relatorios/visitas",
       "/comercial/crm/relatorios/conversoes",
+      "/comercial/crm/relatorios/clientes",
     ]
 
     for (const caminho of telas) {
@@ -268,6 +269,41 @@ describe("getInfoContent", () => {
     expect(texto).toMatch(/Histórico de conversão/)
     expect(texto).toMatch(/pessoa/i)
     expect(texto).toMatch(/oportunidades/i)
+  })
+
+  it("a tela do cliente explica os relacionamentos do CRM", () => {
+    const cliente = getInfoContent("/comercial/clientes/[id]")
+
+    const texto = [
+      cliente?.description ?? "",
+      ...(cliente?.rules ?? []),
+      ...(cliente?.fields ?? []).map((f) => `${f.name}: ${f.desc}`),
+    ].join("\n")
+
+    expect(texto).toMatch(/Relacionamentos do CRM/)
+    expect(texto).toMatch(/Oportunidades/)
+    expect(texto).toMatch(/Propostas/)
+    expect(texto).toMatch(/Timeline/)
+    expect(texto).toMatch(/WhatsApp/)
+    expect(texto).toMatch(/promovid/i)
+  })
+
+  it("o relatório de clientes explica o negócio herdado das pessoas promovidas", () => {
+    const clientes = getInfoContent("/comercial/crm/relatorios/clientes")
+
+    expect(clientes).not.toBeNull()
+
+    const texto = [
+      clientes?.description ?? "",
+      ...(clientes?.rules ?? []),
+      ...(clientes?.fields ?? []).map((f) => `${f.name}: ${f.desc}`),
+    ].join("\n")
+
+    expect(texto).toMatch(/promovid/i)
+    expect(texto).toMatch(/oportunidades/i)
+    expect(texto).toMatch(/propostas/i)
+    expect(texto).toMatch(/visitas/i)
+    expect(texto).toMatch(/Segmento/i)
   })
 
   it("os relatórios de pessoas e conversões explicam a tarja de cliente", () => {

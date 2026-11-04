@@ -66,6 +66,13 @@ const RELATORIOS = [
     icon: Handshake,
     cor: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/50",
   },
+  {
+    href: "/comercial/crm/relatorios/clientes",
+    label: "Clientes",
+    desc: "Negócio de cada cliente, direto ou herdado das pessoas promovidas",
+    icon: Building2,
+    cor: "text-slate-600 bg-slate-100 dark:bg-slate-800",
+  },
 ]
 
 async function fetchRelatorios() {

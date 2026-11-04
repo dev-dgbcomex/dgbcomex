@@ -404,6 +404,32 @@ async function migrate() {
     `
     console.log("✓ Tarja de promocao para cliente em crm_pessoas")
 
+    // Relacionamentos do cliente no CRM: timeline e WhatsApp tambem do cliente,
+    // e o negocio da pessoa promovida passa a apontar para o cliente.
+    await sql`ALTER TABLE crm_timeline_eventos ADD COLUMN IF NOT EXISTS cliente_id integer REFERENCES clientes(id) ON DELETE SET NULL`
+    await sql`ALTER TABLE crm_timeline_eventos ALTER COLUMN empresa_id DROP NOT NULL`
+    await sql`CREATE INDEX IF NOT EXISTS idx_crm_timeline_eventos_cliente_id ON crm_timeline_eventos (cliente_id)`
+    await sql`ALTER TABLE crm_whatsapp_mensagens ADD COLUMN IF NOT EXISTS cliente_id integer REFERENCES clientes(id) ON DELETE SET NULL`
+    await sql`CREATE INDEX IF NOT EXISTS idx_crm_whatsapp_mensagens_cliente_id ON crm_whatsapp_mensagens (cliente_id)`
+    await sql`
+      UPDATE crm_oportunidades o SET cliente_id = p.cliente_id
+      FROM crm_pessoas p
+      WHERE o.empresa_id = p.id AND p.cliente_id IS NOT NULL AND o.cliente_id IS NULL
+    `
+    await sql`
+      UPDATE crm_propostas pr SET cliente_id = p.cliente_id
+      FROM crm_pessoas p
+      WHERE pr.empresa_id = p.id AND p.cliente_id IS NOT NULL AND pr.cliente_id IS NULL
+    `
+    await sql`
+      UPDATE crm_visitas v SET cliente_id = p.cliente_id
+      FROM crm_pessoas p
+      WHERE v.empresa_id = p.id AND p.cliente_id IS NOT NULL AND v.cliente_id IS NULL
+    `
+    console.log(
+      "✓ Relacionamentos do cliente no CRM (timeline, WhatsApp e negocio da pessoa promovida)"
+    )
+
     await sql`
       CREATE TABLE IF NOT EXISTS bancos_dados (
         id SERIAL PRIMARY KEY,

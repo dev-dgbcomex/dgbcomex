@@ -6,10 +6,11 @@ import { crmPessoas } from "@/lib/db/schema/crm-pessoas"
 import { crmOportunidades } from "@/lib/db/schema/crm-oportunidades"
 import { clientes } from "@/lib/db/schema/clientes"
 import { usuarios } from "@/lib/db/schema/usuarios"
-import { eq, desc, sql, like, and } from "drizzle-orm"
+import { eq, desc, sql, like, and, or, inArray } from "drizzle-orm"
 import { registrarLog, notificar } from "@/lib/notificar"
 import { notificarAtividadeComercial } from "@/lib/crm/notificar-atividade"
 import { inserirTimelineEvento } from "@/lib/crm-timeline"
+import { idsPessoasDoCliente, clienteIdDaPessoa } from "@/lib/crm/cliente-relacionamentos"
 
 export async function GET(req: NextRequest) {
   try {
@@ -26,7 +27,15 @@ export async function GET(req: NextRequest) {
 
     const conditions = []
     if (empresaId) conditions.push(eq(crmPropostas.empresaId, parseInt(empresaId)))
-    if (clienteId) conditions.push(eq(crmPropostas.clienteId, parseInt(clienteId)))
+    if (clienteId) {
+      // Negocio do cliente: propostas do proprio cliente + das pessoas do CRM
+      // que viraram este cliente.
+      const cliente = parseInt(clienteId)
+      const pessoas = await idsPessoasDoCliente(cliente)
+      const partes: any[] = [eq(crmPropostas.clienteId, cliente)]
+      if (pessoas.length > 0) partes.push(inArray(crmPropostas.empresaId, pessoas))
+      conditions.push(or(...partes))
+    }
     if (status) conditions.push(eq(crmPropostas.status, status))
     if (oportunidadeId) conditions.push(eq(crmPropostas.oportunidadeId, parseInt(oportunidadeId)))
     if (
@@ -93,11 +102,14 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json()
 
+    // Proposta lancada em uma pessoa ja promovida fica vinculada ao cliente.
+    const clienteId = body.clienteId || (await clienteIdDaPessoa(body.empresaId))
+
     const [nova] = await db
       .insert(crmPropostas)
       .values({
         empresaId: body.empresaId || null,
-        clienteId: body.clienteId || null,
+        clienteId: clienteId || null,
         oportunidadeId: body.oportunidadeId || null,
         titulo: body.titulo,
         valor: body.valor || null,
@@ -120,9 +132,10 @@ export async function POST(req: NextRequest) {
       usuarioNome: session.user.name,
     })
 
-    if (nova.empresaId) {
+    if (nova.empresaId || nova.clienteId) {
       await inserirTimelineEvento({
         empresaId: nova.empresaId,
+        clienteId: nova.clienteId,
         tipo: "PROPOSTA",
         descricao: `Proposta "${nova.titulo}" enviada${nova.valor ? ` — valor: R$ ${Number(nova.valor).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : ""}`,
         metadados: { propostaId: nova.id },

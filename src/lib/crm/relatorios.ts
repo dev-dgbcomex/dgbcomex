@@ -10,7 +10,7 @@ import { crmLeads } from "@/lib/db/schema/crm-leads"
 import { clientes } from "@/lib/db/schema/clientes"
 import { usuarios } from "@/lib/db/schema/usuarios"
 import { listarConversoes } from "@/lib/crm/historico-promocao"
-import { and, asc, desc, eq, gte, inArray, lte } from "drizzle-orm"
+import { and, asc, desc, eq, gte, inArray, lte, sql } from "drizzle-orm"
 
 export type PeriodoKey = "dia" | "semana" | "mes" | "periodo"
 
@@ -29,6 +29,7 @@ export const PERIODOS: { value: PeriodoKey; label: string }[] = [
 
 export const CATEGORIAS_CRM = [
   { value: "pessoas", label: "Pessoas", entidade: "CrmPessoa" },
+  { value: "clientes", label: "Clientes", entidade: "CrmCliente" },
   { value: "oportunidades", label: "Oportunidades", entidade: "CrmOportunidade" },
   { value: "propostas", label: "Propostas", entidade: "CrmProposta" },
   { value: "visitas", label: "Visitas", entidade: "CrmVisita" },
@@ -122,6 +123,7 @@ function categoriaDaEntidade(entidade: string | null): CategoriaCrm | null {
 
 export type ContagemAtividades = {
   pessoas: number
+  clientes: number
   oportunidades: number
   propostas: number
   visitas: number
@@ -146,6 +148,7 @@ export type LinhaAtividade = {
 function contagemVazia(): ContagemAtividades {
   return {
     pessoas: 0,
+    clientes: 0,
     oportunidades: 0,
     propostas: 0,
     visitas: 0,
@@ -311,6 +314,20 @@ async function enriquecerEntidades(registros: any[]) {
     }
   }
 
+  const idsCliente = ids("CrmCliente")
+  if (idsCliente.length > 0) {
+    const listaClientes: any[] = await db
+      .select({ id: clientes.id, nome: clientes.nome })
+      .from(clientes)
+      .where(inArray(clientes.id, idsCliente))
+    for (const cliente of listaClientes) {
+      mapa.set(`CrmCliente:${cliente.id}`, {
+        pessoa: null,
+        cliente: (cliente.nome || "Cliente") as string,
+      })
+    }
+  }
+
   const idsOportunidade = ids("CrmOportunidade")
   if (idsOportunidade.length > 0) {
     const oportunidades: any[] = await db
@@ -327,9 +344,11 @@ async function enriquecerEntidades(registros: any[]) {
       oportunidades.map((o) => o.clienteId)
     )
     for (const oportunidade of oportunidades) {
+      const clienteId =
+        oportunidade.clienteId || nomes.clientesPorPessoa.get(oportunidade.empresaId || 0) || null
       mapa.set(`CrmOportunidade:${oportunidade.id}`, {
         pessoa: nomes.pessoas.get(oportunidade.empresaId || 0) || oportunidade.titulo,
-        cliente: nomes.clientes.get(oportunidade.clienteId || 0) || null,
+        cliente: clienteId ? nomes.clientes.get(clienteId) || null : null,
       })
     }
   }
@@ -350,9 +369,11 @@ async function enriquecerEntidades(registros: any[]) {
       propostas.map((p) => p.clienteId)
     )
     for (const proposta of propostas) {
+      const clienteId =
+        proposta.clienteId || nomes.clientesPorPessoa.get(proposta.empresaId || 0) || null
       mapa.set(`CrmProposta:${proposta.id}`, {
         pessoa: nomes.pessoas.get(proposta.empresaId || 0) || proposta.titulo,
-        cliente: nomes.clientes.get(proposta.clienteId || 0) || null,
+        cliente: clienteId ? nomes.clientes.get(clienteId) || null : null,
       })
     }
   }
@@ -373,9 +394,11 @@ async function enriquecerEntidades(registros: any[]) {
       visitas.map((v) => v.clienteId)
     )
     for (const visita of visitas) {
+      const clienteId =
+        visita.clienteId || nomes.clientesPorPessoa.get(visita.empresaId || 0) || null
       mapa.set(`CrmVisita:${visita.id}`, {
         pessoa: nomes.pessoas.get(visita.empresaId || 0) || visita.nomeAvulso || "Visita avulsa",
-        cliente: nomes.clientes.get(visita.clienteId || 0) || null,
+        cliente: clienteId ? nomes.clientes.get(clienteId) || null : null,
       })
     }
   }
@@ -462,6 +485,7 @@ async function nomesPessoasEClientes(empresaIds: (number | null)[], clienteIds: 
           nome: crmPessoas.nome,
           razaoSocial: crmPessoas.razaoSocial,
           nomeFantasia: crmPessoas.nomeFantasia,
+          clienteId: crmPessoas.clienteId,
         })
         .from(crmPessoas)
         .where(inArray(crmPessoas.id, idsPessoa))
@@ -474,11 +498,32 @@ async function nomesPessoasEClientes(empresaIds: (number | null)[], clienteIds: 
         .where(inArray(clientes.id, idsCliente))
     : []
 
+  // Cliente de cada pessoa (usado quando o negócio foi lançado na pessoa e a
+  // pessoa depois virou cliente).
+  const clientesPorPessoa = new Map<number, number>()
+  for (const pessoa of pessoas) {
+    if (pessoa.clienteId) clientesPorPessoa.set(pessoa.id, pessoa.clienteId)
+  }
+
+  const idsClienteDasPessoas = Array.from(clientesPorPessoa.values()).filter(
+    (id) => !idsCliente.includes(id)
+  )
+  const clientesFaltantes: any[] = idsClienteDasPessoas.length
+    ? await db
+        .select({ id: clientes.id, nome: clientes.nome })
+        .from(clientes)
+        .where(inArray(clientes.id, idsClienteDasPessoas))
+    : []
+  for (const cliente of clientesFaltantes) {
+    listaClientes.push(cliente)
+  }
+
   return {
     pessoas: new Map<number, string>(
       pessoas.map((p) => [p.id, (p.nome || p.nomeFantasia || p.razaoSocial || "Pessoa") as string])
     ),
     clientes: new Map<number, string>(listaClientes.map((c) => [c.id, c.nome as string])),
+    clientesPorPessoa,
   }
 }
 
@@ -518,17 +563,20 @@ export async function consultarOportunidades(filtros: FiltrosRelatorio) {
     linhas.map((l) => l.clienteId)
   )
 
-  const dados = linhas.map((l: any) => ({
-    id: l.id,
-    dataHora: new Date(l.createdAt).toISOString(),
-    titulo: l.titulo,
-    pessoa: nomes.pessoas.get(l.empresaId || 0) || null,
-    cliente: nomes.clientes.get(l.clienteId || 0) || null,
-    responsavel: l.responsavelNome || null,
-    status: l.status,
-    valor: l.valorEstimado ? Number(l.valorEstimado) : 0,
-    probabilidade: l.probabilidade || 0,
-  }))
+  const dados = linhas.map((l: any) => {
+    const clienteId = l.clienteId || nomes.clientesPorPessoa.get(l.empresaId || 0) || null
+    return {
+      id: l.id,
+      dataHora: new Date(l.createdAt).toISOString(),
+      titulo: l.titulo,
+      pessoa: nomes.pessoas.get(l.empresaId || 0) || null,
+      cliente: clienteId ? nomes.clientes.get(clienteId) || null : null,
+      responsavel: l.responsavelNome || null,
+      status: l.status,
+      valor: l.valorEstimado ? Number(l.valorEstimado) : 0,
+      probabilidade: l.probabilidade || 0,
+    }
+  })
 
   const total = dados.length
   const ganhas = dados.filter((d) => d.status === "FECHADO_GANHO")
@@ -594,17 +642,20 @@ export async function consultarPropostas(filtros: FiltrosRelatorio) {
     linhas.map((l) => l.clienteId)
   )
 
-  const dados = linhas.map((l: any) => ({
-    id: l.id,
-    dataHora: new Date(l.createdAt).toISOString(),
-    titulo: l.titulo,
-    pessoa: nomes.pessoas.get(l.empresaId || 0) || null,
-    cliente: nomes.clientes.get(l.clienteId || 0) || null,
-    responsavel: l.responsavelNome || null,
-    status: l.status,
-    valor: l.valor ? Number(l.valor) : 0,
-    dataResposta: l.dataResposta ? new Date(l.dataResposta).toISOString() : null,
-  }))
+  const dados = linhas.map((l: any) => {
+    const clienteId = l.clienteId || nomes.clientesPorPessoa.get(l.empresaId || 0) || null
+    return {
+      id: l.id,
+      dataHora: new Date(l.createdAt).toISOString(),
+      titulo: l.titulo,
+      pessoa: nomes.pessoas.get(l.empresaId || 0) || null,
+      cliente: clienteId ? nomes.clientes.get(clienteId) || null : null,
+      responsavel: l.responsavelNome || null,
+      status: l.status,
+      valor: l.valor ? Number(l.valor) : 0,
+      dataResposta: l.dataResposta ? new Date(l.dataResposta).toISOString() : null,
+    }
+  })
 
   const total = dados.length
   const aceitas = dados.filter((d) => d.status === "ACEITA")
@@ -670,17 +721,20 @@ export async function consultarVisitas(filtros: FiltrosRelatorio) {
     linhas.map((l) => l.clienteId)
   )
 
-  const dados = linhas.map((l: any) => ({
-    id: l.id,
-    dataHora: `${l.dataVisita}${l.hora ? ` ${l.hora}` : ""}`,
-    dataHoraIso: new Date(l.createdAt).toISOString(),
-    tipo: l.tipo,
-    status: l.status,
-    pessoa: nomes.pessoas.get(l.empresaId || 0) || l.nomeAvulso || null,
-    cliente: nomes.clientes.get(l.clienteId || 0) || null,
-    responsavel: l.responsavelNome || null,
-    local: l.cidade ? `${l.cidade}${l.uf ? `/${l.uf}` : ""}` : null,
-  }))
+  const dados = linhas.map((l: any) => {
+    const clienteId = l.clienteId || nomes.clientesPorPessoa.get(l.empresaId || 0) || null
+    return {
+      id: l.id,
+      dataHora: `${l.dataVisita}${l.hora ? ` ${l.hora}` : ""}`,
+      dataHoraIso: new Date(l.createdAt).toISOString(),
+      tipo: l.tipo,
+      status: l.status,
+      pessoa: nomes.pessoas.get(l.empresaId || 0) || l.nomeAvulso || null,
+      cliente: clienteId ? nomes.clientes.get(clienteId) || null : null,
+      responsavel: l.responsavelNome || null,
+      local: l.cidade ? `${l.cidade}${l.uf ? `/${l.uf}` : ""}` : null,
+    }
+  })
 
   const total = dados.length
   const porTipo = (tipo: string) => dados.filter((d) => d.tipo === tipo).length
@@ -817,6 +871,158 @@ export async function consultarConversoes(filtros: FiltrosRelatorio) {
       mediaValorPropostas: total > 0 ? Number((somaPropostas / total).toFixed(2)) : 0,
     },
     linhas,
+  }
+}
+
+/**
+ * Relatório de clientes: o negócio de cada cliente (direto ou herdado das
+ * pessoas do CRM que viraram o cliente) no período.
+ */
+export async function consultarClientes(filtros: FiltrosRelatorio) {
+  const intervalo = resolverIntervalo(filtros.periodo, filtros.de, filtros.ate)
+
+  const condicoes = []
+  if (filtros.segmento) condicoes.push(eq(clientes.segmento, filtros.segmento))
+
+  const listaClientes: any[] = await db
+    .select({
+      id: clientes.id,
+      nome: clientes.nome,
+      cnpj: clientes.cnpj,
+      segmento: clientes.segmento,
+      cidade: clientes.cidade,
+      uf: clientes.uf,
+      createdAt: clientes.createdAt,
+    })
+    .from(clientes)
+    .where(condicoes.length > 0 ? and(...condicoes) : undefined)
+    .orderBy(desc(clientes.createdAt))
+    .limit(1000)
+
+  // Cliente do negócio: o vínculo direto ou, na falta dele, o cliente da
+  // pessoa em que o negócio foi lançado.
+  const clienteDaOportunidade = sql<
+    number | null
+  >`COALESCE(${crmOportunidades.clienteId}, ${crmPessoas.clienteId})`
+  const clienteDaProposta = sql<
+    number | null
+  >`COALESCE(${crmPropostas.clienteId}, ${crmPessoas.clienteId})`
+  const clienteDaVisita = sql<
+    number | null
+  >`COALESCE(${crmVisitas.clienteId}, ${crmPessoas.clienteId})`
+
+  const oportunidades: any[] = await db
+    .select({
+      clienteId: clienteDaOportunidade,
+      total: sql<number>`count(*)::int`,
+      emAberto: sql<number>`count(*) FILTER (WHERE ${crmOportunidades.status} NOT IN ('FECHADO_GANHO', 'FECHADO_PERDIDO'))::int`,
+      valor: sql<number>`COALESCE(sum(${crmOportunidades.valorEstimado}), 0)`,
+    })
+    .from(crmOportunidades)
+    .leftJoin(crmPessoas, eq(crmOportunidades.empresaId, crmPessoas.id))
+    .where(
+      and(
+        sql`${clienteDaOportunidade} IS NOT NULL`,
+        gte(crmOportunidades.createdAt, intervalo.de),
+        lte(crmOportunidades.createdAt, intervalo.ate)
+      )
+    )
+    .groupBy(clienteDaOportunidade)
+
+  const propostas: any[] = await db
+    .select({
+      clienteId: clienteDaProposta,
+      total: sql<number>`count(*)::int`,
+      aceitas: sql<number>`count(*) FILTER (WHERE ${crmPropostas.status} = 'ACEITA')::int`,
+      valor: sql<number>`COALESCE(sum(${crmPropostas.valor}), 0)`,
+    })
+    .from(crmPropostas)
+    .leftJoin(crmPessoas, eq(crmPropostas.empresaId, crmPessoas.id))
+    .where(
+      and(
+        sql`${clienteDaProposta} IS NOT NULL`,
+        gte(crmPropostas.createdAt, intervalo.de),
+        lte(crmPropostas.createdAt, intervalo.ate)
+      )
+    )
+    .groupBy(clienteDaProposta)
+
+  const visitas: any[] = await db
+    .select({
+      clienteId: clienteDaVisita,
+      total: sql<number>`count(*)::int`,
+      concluidas: sql<number>`count(*) FILTER (WHERE ${crmVisitas.status} IN ('CONCLUIDA', 'REALIZADA'))::int`,
+    })
+    .from(crmVisitas)
+    .leftJoin(crmPessoas, eq(crmVisitas.empresaId, crmPessoas.id))
+    .where(
+      and(
+        sql`${clienteDaVisita} IS NOT NULL`,
+        gte(crmVisitas.createdAt, intervalo.de),
+        lte(crmVisitas.createdAt, intervalo.ate)
+      )
+    )
+    .groupBy(clienteDaVisita)
+
+  const pessoas: any[] = await db
+    .select({
+      clienteId: crmPessoas.clienteId,
+      total: sql<number>`count(*)::int`,
+    })
+    .from(crmPessoas)
+    .where(sql`${crmPessoas.clienteId} IS NOT NULL`)
+    .groupBy(crmPessoas.clienteId)
+
+  const mapaOportunidades = new Map<number, any>(oportunidades.map((o) => [o.clienteId, o]))
+  const mapaPropostas = new Map<number, any>(propostas.map((p) => [p.clienteId, p]))
+  const mapaVisitas = new Map<number, any>(visitas.map((v) => [v.clienteId, v]))
+  const mapaPessoas = new Map<number, any>(pessoas.map((p) => [p.clienteId, p]))
+
+  const dados = listaClientes.map((c: any) => {
+    const opp = mapaOportunidades.get(c.id)
+    const prop = mapaPropostas.get(c.id)
+    const vis = mapaVisitas.get(c.id)
+    const pes = mapaPessoas.get(c.id)
+
+    return {
+      id: c.id,
+      nome: c.nome,
+      cnpj: c.cnpj,
+      segmento: c.segmento || null,
+      local: c.cidade ? `${c.cidade}${c.uf ? `/${c.uf}` : ""}` : null,
+      criadoEm: c.createdAt ? new Date(c.createdAt).toISOString() : null,
+      pessoas: pes?.total || 0,
+      oportunidades: opp?.total || 0,
+      oportunidadesEmAberto: opp?.emAberto || 0,
+      valorOportunidades: Number(opp?.valor || 0),
+      propostas: prop?.total || 0,
+      propostasAceitas: prop?.aceitas || 0,
+      valorPropostas: Number(prop?.valor || 0),
+      visitas: vis?.total || 0,
+      visitasConcluidas: vis?.concluidas || 0,
+    }
+  })
+
+  const comNegocio = dados.filter((d) => d.oportunidades > 0 || d.propostas > 0 || d.visitas > 0)
+
+  return {
+    periodo: {
+      de: intervalo.de.toISOString(),
+      ate: intervalo.ate.toISOString(),
+      rotulo: intervalo.rotulo,
+    },
+    cards: {
+      total: dados.length,
+      comNegocio: comNegocio.length,
+      semNegocio: dados.length - comNegocio.length,
+      pessoas: dados.reduce((acc, d) => acc + d.pessoas, 0),
+      oportunidades: dados.reduce((acc, d) => acc + d.oportunidades, 0),
+      valorOportunidades: dados.reduce((acc, d) => acc + d.valorOportunidades, 0),
+      propostas: dados.reduce((acc, d) => acc + d.propostas, 0),
+      valorPropostas: dados.reduce((acc, d) => acc + d.valorPropostas, 0),
+      visitas: dados.reduce((acc, d) => acc + d.visitas, 0),
+    },
+    linhas: dados,
   }
 }
 

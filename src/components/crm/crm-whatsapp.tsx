@@ -16,7 +16,8 @@ import { toast } from "sonner"
 
 type Mensagem = {
   id: number
-  empresaId: number
+  empresaId: number | null
+  clienteId: number | null
   contatoId: number | null
   mensagem: string
   tipo: "RECEBIDA" | "ENVIADA"
@@ -26,7 +27,17 @@ type Mensagem = {
   createdAt: string
 }
 
-export default function CrmPessoaWhatsapp({ pessoaId }: { pessoaId: string }) {
+/**
+ * Conversa de WhatsApp do CRM — da pessoa (`pessoaId`) ou do cliente
+ * (`clienteId`, que reúne as mensagens das pessoas que viraram o cliente).
+ */
+export default function CrmWhatsapp({
+  pessoaId,
+  clienteId,
+}: {
+  pessoaId?: string
+  clienteId?: string
+}) {
   const [mensagens, setMensagens] = useState<Mensagem[]>([])
   const [texto, setTexto] = useState("")
   const [enviando, setEnviando] = useState(false)
@@ -35,18 +46,23 @@ export default function CrmPessoaWhatsapp({ pessoaId }: { pessoaId: string }) {
   const [trocandoModo, setTrocandoModo] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
 
+  const queryKey = clienteId ? ["crm-whatsapp-cliente", clienteId] : ["crm-whatsapp", pessoaId]
+
   const {
     data: mensagensData,
     isLoading: loading,
     isError,
   } = useQuery<Mensagem[]>({
-    queryKey: ["crm-whatsapp", pessoaId],
+    queryKey,
     queryFn: async () => {
-      const res = await fetch(`/api/crm/whatsapp?empresaId=${pessoaId}`)
+      const url = clienteId
+        ? `/api/crm/whatsapp?clienteId=${clienteId}`
+        : `/api/crm/whatsapp?empresaId=${pessoaId}`
+      const res = await fetch(url)
       const data = await res.json()
       return Array.isArray(data) ? [...data].reverse() : []
     },
-    enabled: !!pessoaId,
+    enabled: !!pessoaId || !!clienteId,
   })
 
   const { data: chatData } = useQuery<any>({
@@ -95,7 +111,12 @@ export default function CrmPessoaWhatsapp({ pessoaId }: { pessoaId: string }) {
         const res = await fetch("/api/crm/whatsapp", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ empresaId: Number(pessoaId), mensagem: texto, tipo: "ENVIADA" }),
+          body: JSON.stringify({
+            empresaId: pessoaId ? Number(pessoaId) : null,
+            clienteId: clienteId ? Number(clienteId) : null,
+            mensagem: texto,
+            tipo: "ENVIADA",
+          }),
         })
         if (!res.ok) throw new Error()
         const nova = await res.json()

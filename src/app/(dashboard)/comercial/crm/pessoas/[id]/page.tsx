@@ -6,8 +6,8 @@ import { getInfoContent } from "@/lib/info-content"
 import { useRouter, useParams, usePathname, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Clock, MessageSquare } from "lucide-react"
-import CrmPessoaTimeline from "@/components/crm/crm-pessoa-timeline"
-import CrmPessoaWhatsapp from "@/components/crm/crm-pessoa-whatsapp"
+import CrmTimeline from "@/components/crm/crm-timeline"
+import CrmWhatsapp from "@/components/crm/crm-whatsapp"
 import { toast } from "sonner"
 import { ConfirmModal } from "@/components/ui/confirm-modal"
 import { PageSkeleton } from "@/components/ui/page-skeleton"
@@ -16,8 +16,8 @@ import { DadosPessoaCard } from "./components/dados-pessoa-card"
 import { ContatosCard } from "./components/contatos-card"
 import { RepresentantesCard } from "./components/representantes-card"
 import { LeadsCard } from "./components/leads-card"
-import { OportunidadesCard } from "./components/oportunidades-card"
-import { PropostasCard } from "./components/propostas-card"
+import { OportunidadesCard } from "@/components/crm/oportunidades-card"
+import { PropostasCard } from "@/components/crm/propostas-card"
 import { HistoricoConversaoCard } from "./components/historico-conversao-card"
 import type {
   Contato,
@@ -378,7 +378,7 @@ function PessoaDetailPageContent() {
             <Clock size={16} className="text-slate-400" />
             <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-50">Timeline</h2>
           </div>
-          <CrmPessoaTimeline pessoaId={params.id as string} />
+          <CrmTimeline pessoaId={params.id as string} />
         </div>
 
         <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
@@ -386,7 +386,7 @@ function PessoaDetailPageContent() {
             <MessageSquare size={16} className="text-emerald-500" />
             <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-50">WhatsApp</h2>
           </div>
-          <CrmPessoaWhatsapp pessoaId={params.id as string} />
+          <CrmWhatsapp pessoaId={params.id as string} />
         </div>
       </div>
 

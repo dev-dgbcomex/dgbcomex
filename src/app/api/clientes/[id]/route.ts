@@ -4,6 +4,7 @@ import { db } from "@/lib/db"
 import { clientes } from "@/lib/db/schema/clientes"
 import { eq } from "drizzle-orm"
 import { excluirClienteCascade } from "@/lib/cliente-cascade"
+import { registrarLog } from "@/lib/notificar"
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -106,6 +107,19 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       .where(eq(clientes.id, parseInt(id)))
       .returning()
 
+    if (!clienteAtualizado) {
+      return NextResponse.json({ error: "Cliente não encontrado" }, { status: 404 })
+    }
+
+    await registrarLog({
+      tipo: "ATUALIZACAO",
+      acao: "editar",
+      descricao: `Cliente atualizado: ${clienteAtualizado.nome}`,
+      entidade: "CrmCliente",
+      entidadeId: clienteAtualizado.id,
+      usuarioNome: auth.session.user?.name,
+    })
+
     return NextResponse.json(clienteAtualizado)
   } catch (error: any) {
     console.error("[PUT /api/clientes/[id]]", error)
@@ -129,7 +143,22 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
 
     const { id } = await params
 
+    const [cliente] = await db
+      .select({ nome: clientes.nome })
+      .from(clientes)
+      .where(eq(clientes.id, parseInt(id)))
+      .limit(1)
+
     await db.transaction((tx: any) => excluirClienteCascade(tx, parseInt(id)))
+
+    await registrarLog({
+      tipo: "ATUALIZACAO",
+      acao: "excluir",
+      descricao: `Cliente excluído: ${cliente?.nome || `cliente ${id}`}`,
+      entidade: "CrmCliente",
+      entidadeId: parseInt(id),
+      usuarioNome: auth.session.user?.name,
+    })
 
     return NextResponse.json({ success: true })
   } catch (error) {

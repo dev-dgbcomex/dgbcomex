@@ -3,10 +3,11 @@ import { requireAuth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { crmWhatsappMensagens } from "@/lib/db/schema/crm-whatsapp"
 import { crmContatos } from "@/lib/db/schema/crm-contatos"
-import { eq, desc, and, sql } from "drizzle-orm"
+import { eq, desc, and, or, inArray } from "drizzle-orm"
 import { inserirTimelineEvento } from "@/lib/crm-timeline"
 import { enviarMensagem, evolutionConfigurado } from "@/lib/evolution-api"
 import { handleApiError } from "@/lib/api-error"
+import { idsContatosDoCliente, idsPessoasDoCliente } from "@/lib/crm/cliente-relacionamentos"
 
 export async function GET(req: NextRequest) {
   try {
@@ -14,16 +15,27 @@ export async function GET(req: NextRequest) {
     if (auth instanceof NextResponse) return auth
     const { searchParams } = new URL(req.url)
     const empresaId = searchParams.get("empresaId")
+    const clienteId = searchParams.get("clienteId")
     const remoteJid = searchParams.get("remoteJid")
 
-    const conditions = []
+    const conditions: any[] = []
     if (empresaId) conditions.push(eq(crmWhatsappMensagens.empresaId, Number(empresaId)))
+    if (clienteId) {
+      // Conversa do cliente: mensagens do proprio cliente + das pessoas do CRM
+      // que viraram este cliente + dos contatos vinculados a ele.
+      const cliente = Number(clienteId)
+      const [pessoas, contatos] = await Promise.all([
+        idsPessoasDoCliente(cliente),
+        idsContatosDoCliente(cliente),
+      ])
+      const partes: any[] = [eq(crmWhatsappMensagens.clienteId, cliente)]
+      if (pessoas.length > 0) partes.push(inArray(crmWhatsappMensagens.empresaId, pessoas))
+      if (contatos.length > 0) partes.push(inArray(crmWhatsappMensagens.contatoId, contatos))
+      conditions.push(or(...partes))
+    }
     if (remoteJid) conditions.push(eq(crmWhatsappMensagens.remoteJid, remoteJid))
 
-    const where =
-      conditions.length > 0
-        ? sql`${conditions.reduce((a: any, b: any) => sql`${a} AND ${b}`)}`
-        : undefined
+    const where = conditions.length > 0 ? and(...conditions) : undefined
 
     const lista = await db
       .select()
@@ -47,6 +59,29 @@ export async function POST(req: NextRequest) {
 
     let remoteJid = body.remoteJid || null
     let contatoId = body.contatoId || null
+    let empresaId = body.empresaId || null
+    let clienteId = body.clienteId || null
+
+    if (body.clienteId && !remoteJid) {
+      // Cliente: usa o contato principal (ou o primeiro contato com WhatsApp).
+      const contatos = await db
+        .select()
+        .from(crmContatos)
+        .where(eq(crmContatos.clienteId, Number(body.clienteId)))
+        .orderBy(crmContatos.principal)
+        .limit(5)
+        .then((r: any) => r || [])
+
+      const contato =
+        contatos.find((c: any) => c.principal && c.whatsapp) ||
+        contatos.find((c: any) => c.whatsapp)
+
+      if (contato?.whatsapp) {
+        remoteJid = contato.whatsapp
+        contatoId = contato.id
+        empresaId = contato.empresaId || null
+      }
+    }
 
     if (!remoteJid && body.empresaId && evolutionConfigurado()) {
       const contato = await db
@@ -67,7 +102,8 @@ export async function POST(req: NextRequest) {
     const [nova] = await db
       .insert(crmWhatsappMensagens)
       .values({
-        empresaId: body.empresaId,
+        empresaId,
+        clienteId,
         contatoId: contatoId,
         mensagem: body.mensagem,
         tipo: "ENVIADA",
@@ -97,9 +133,10 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    if (nova.empresaId) {
+    if (nova.empresaId || nova.clienteId) {
       await inserirTimelineEvento({
         empresaId: nova.empresaId,
+        clienteId: nova.clienteId,
         tipo: "WHATSAPP",
         descricao: `Mensagem ${statusEnvio === "ENTREGUE" ? "enviada" : "tentativa de envio"}: "${nova.mensagem.substring(0, 100)}"`,
         metadados: { whatsappId: nova.id, status: statusEnvio },

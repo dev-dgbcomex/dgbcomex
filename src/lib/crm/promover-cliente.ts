@@ -127,6 +127,15 @@ export async function promoverPessoaParaCliente(params: {
     .where(eq(crmPessoas.id, pessoaId))
     .returning()
 
+  // O negócio da pessoa passa a ser do cliente (oportunidades, propostas e
+  // visitas), para aparecer na tela do cliente e nos relatórios do CRM.
+  await db
+    .update(crmOportunidades)
+    .set({ clienteId })
+    .where(eq(crmOportunidades.empresaId, pessoaId))
+  await db.update(crmPropostas).set({ clienteId }).where(eq(crmPropostas.empresaId, pessoaId))
+  await db.update(crmVisitas).set({ clienteId }).where(eq(crmVisitas.empresaId, pessoaId))
+
   const resumo: ResumoPromocao = {
     oportunidades: oportunidades?.total || 0,
     propostas: propostas?.total || 0,
@@ -155,6 +164,7 @@ export async function promoverPessoaParaCliente(params: {
 
   await inserirTimelineEvento({
     empresaId: pessoaId,
+    clienteId,
     tipo: "CONVERSAO_CLIENTE",
     descricao: `Transformada em cliente por ${params.usuarioNome || "usuário não identificado"}`,
     metadados: {
@@ -165,6 +175,18 @@ export async function promoverPessoaParaCliente(params: {
       propostas: resumo.propostas,
       visitas: resumo.visitas,
     },
+  })
+
+  await registrarLog({
+    tipo: "CADASTRO",
+    acao: "promover_cliente",
+    descricao: `Cliente "${
+      pessoa.nomeFantasia || pessoa.razaoSocial || pessoa.nome || "Cliente"
+    }" criado a partir da pessoa "${nomePessoa}"`,
+    entidade: "CrmCliente",
+    entidadeId: clienteId,
+    usuarioId: params.usuarioId ?? null,
+    usuarioNome: params.usuarioNome ?? null,
   })
 
   if (params.notificarEquipe !== false) {

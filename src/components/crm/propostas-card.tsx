@@ -18,15 +18,36 @@ type PropostaResumo = {
   valor?: string | null
 }
 
-export function PropostasCard({ empresaId }: { empresaId: string }) {
+/**
+ * Card de propostas do CRM — usado na tela da pessoa (`empresaId`) e na tela
+ * do cliente (`clienteId`, que inclui as propostas herdadas das pessoas que
+ * viraram o cliente).
+ */
+export function PropostasCard({
+  empresaId,
+  clienteId,
+  oportunidadeId,
+}: {
+  empresaId?: string
+  clienteId?: string
+  oportunidadeId?: string
+}) {
   const queryClient = useQueryClient()
+  const queryKey = clienteId
+    ? ["crm-cliente-propostas", clienteId]
+    : ["crm-pessoa-propostas", empresaId]
+
   const { data } = useQuery<PropostaResumo[]>({
-    queryKey: ["crm-pessoa-propostas", empresaId],
+    queryKey,
     queryFn: async () => {
-      const res = await fetch(`/api/crm/propostas?empresaId=${empresaId}`)
+      const url = clienteId
+        ? `/api/crm/propostas?clienteId=${clienteId}`
+        : `/api/crm/propostas?empresaId=${empresaId}`
+      const res = await fetch(url)
       if (!res.ok) return []
       return res.json()
     },
+    enabled: !!empresaId || !!clienteId,
   })
   const propostas = data ?? []
 
@@ -36,9 +57,9 @@ export function PropostasCard({ empresaId }: { empresaId: string }) {
         <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-50">Propostas</h2>
         <QuickCreateProposta
           empresaId={empresaId}
-          onCreated={() =>
-            queryClient.invalidateQueries({ queryKey: ["crm-pessoa-propostas", empresaId] })
-          }
+          clienteId={clienteId}
+          oportunidadeId={oportunidadeId}
+          onCreated={() => queryClient.invalidateQueries({ queryKey })}
         />
       </div>
       {propostas.length === 0 ? (

@@ -1,5 +1,5 @@
-const { Pool } = require('pg')
-require('dotenv').config({ path: '.env.local' })
+const { Pool } = require("pg")
+require("dotenv").config({ path: ".env.local" })
 
 const MIGRATION_SQL = `
 -- ============================================
@@ -65,6 +65,35 @@ DO $$ BEGIN
   ALTER TABLE crm_contatos ADD COLUMN IF NOT EXISTS cliente_id integer REFERENCES clientes(id);
 EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
 END $$;
+
+-- crm_timeline_eventos: timeline tambem do cliente (empresa_id deixa de ser obrigatorio)
+DO $$ BEGIN
+  ALTER TABLE crm_timeline_eventos ADD COLUMN IF NOT EXISTS cliente_id integer REFERENCES clientes(id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
+END $$;
+DO $$ BEGIN
+  ALTER TABLE crm_timeline_eventos ALTER COLUMN empresa_id DROP NOT NULL;
+EXCEPTION WHEN undefined_table THEN NULL;
+END $$;
+CREATE INDEX IF NOT EXISTS idx_crm_timeline_eventos_cliente_id ON crm_timeline_eventos (cliente_id);
+
+-- crm_whatsapp_mensagens: conversa tambem do cliente
+DO $$ BEGIN
+  ALTER TABLE crm_whatsapp_mensagens ADD COLUMN IF NOT EXISTS cliente_id integer REFERENCES clientes(id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
+END $$;
+CREATE INDEX IF NOT EXISTS idx_crm_whatsapp_mensagens_cliente_id ON crm_whatsapp_mensagens (cliente_id);
+
+-- Negocio da pessoa promovida passa a apontar para o cliente
+UPDATE crm_oportunidades o SET cliente_id = p.cliente_id
+FROM crm_pessoas p
+WHERE o.empresa_id = p.id AND p.cliente_id IS NOT NULL AND o.cliente_id IS NULL;
+UPDATE crm_propostas pr SET cliente_id = p.cliente_id
+FROM crm_pessoas p
+WHERE pr.empresa_id = p.id AND p.cliente_id IS NOT NULL AND pr.cliente_id IS NULL;
+UPDATE crm_visitas v SET cliente_id = p.cliente_id
+FROM crm_pessoas p
+WHERE v.empresa_id = p.id AND p.cliente_id IS NOT NULL AND v.cliente_id IS NULL;
 
 -- usuarios: celular whatsapp do representante
 DO $$ BEGIN
@@ -1201,13 +1230,16 @@ async function main() {
   // Setup de 2 bancos: Neon (DATABASE_URL, principal) e warehouse local (DATABASE_URL_LOCAL).
   // O SQL abaixo e aplicado no warehouse local; no Neon ele e aplicado pelo
   // `scripts/sync-principal.js` (le o MESMO arquivo, entao os dois nunca divergem).
-  const targets = [{ name: 'warehouse_local', url: process.env.DATABASE_URL_LOCAL }]
+  const targets = [{ name: "warehouse_local", url: process.env.DATABASE_URL_LOCAL }]
 
   for (const t of targets) {
     if (t.url) await migrateDb(t.name, t.url)
     else console.log(`${t.name}: URL not set`)
   }
-  console.log('Done!')
+  console.log("Done!")
 }
 
-main().catch(e => { console.error(e); process.exit(1) })
+main().catch((e) => {
+  console.error(e)
+  process.exit(1)
+})

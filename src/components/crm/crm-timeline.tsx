@@ -32,16 +32,32 @@ const TIPO_LABEL: Record<string, string> = {
   SOLICITACAO: "Solicitação",
 }
 
-async function fetchTimeline(pessoaId: string) {
-  const res = await fetch(`/api/crm/timeline?pessoaId=${pessoaId}`)
+async function fetchTimeline(pessoaId?: string, clienteId?: string) {
+  const url = clienteId
+    ? `/api/crm/timeline?clienteId=${clienteId}`
+    : `/api/crm/timeline?pessoaId=${pessoaId}`
+  const res = await fetch(url)
   if (!res.ok) throw new Error("Falha ao carregar timeline")
   return res.json()
 }
 
-export default function CrmPessoaTimeline({ pessoaId }: { pessoaId: string }) {
+/**
+ * Timeline do CRM — da pessoa (`pessoaId`) ou do cliente (`clienteId`, que
+ * reúne os eventos do próprio cliente e das pessoas que viraram o cliente).
+ */
+export default function CrmTimeline({
+  pessoaId,
+  clienteId,
+}: {
+  pessoaId?: string
+  clienteId?: string
+}) {
+  const queryKey = clienteId ? ["crm-timeline-cliente", clienteId] : ["crm-timeline", pessoaId]
+
   const { data: eventos, isLoading } = useQuery({
-    queryKey: ["crm-timeline", pessoaId],
-    queryFn: () => fetchTimeline(pessoaId),
+    queryKey,
+    queryFn: () => fetchTimeline(pessoaId, clienteId),
+    enabled: !!pessoaId || !!clienteId,
     retry: 1,
   })
 

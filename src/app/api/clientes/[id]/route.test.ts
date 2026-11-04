@@ -3,12 +3,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { NextRequest, NextResponse } from "next/server"
 import { requireAuth } from "@/lib/auth"
 import { db } from "@/lib/db"
+import { registrarLog } from "@/lib/notificar"
 import { createQueryBuilder, resetDb } from "@/test/route-db-mock"
 import { DELETE } from "./route"
 
 vi.mock("@/lib/auth", () => ({ requireAuth: vi.fn() }))
+vi.mock("@/lib/notificar", () => ({ registrarLog: vi.fn() }))
 vi.mock("@/lib/db", () => ({
-  db: { transaction: vi.fn() },
+  db: { transaction: vi.fn(), select: vi.fn() },
 }))
 
 const sessionAdmin = { session: { user: { id: "1", role: "ADMIN", name: "Tiago" } }, userId: 1 }
@@ -30,8 +32,11 @@ function txMock() {
 describe("DELETE /api/clientes/[id]", () => {
   beforeEach(() => {
     vi.mocked(requireAuth).mockReset()
+    vi.mocked(registrarLog).mockReset()
     resetDb(db)
     vi.mocked(requireAuth).mockResolvedValue(sessionAdmin as any)
+    vi.mocked(registrarLog).mockResolvedValue(undefined as any)
+    db.select = vi.fn(() => createQueryBuilder([{ nome: "TecMais Ltda" }]))
     db.transaction = vi.fn((cb: any) => cb(txMock()))
   })
 
@@ -62,6 +67,13 @@ describe("DELETE /api/clientes/[id]", () => {
     expect(res.status).toBe(200)
     expect(await res.json()).toEqual({ success: true })
     expect(db.transaction).toHaveBeenCalled()
+    expect(registrarLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        entidade: "CrmCliente",
+        entidadeId: 5,
+        descricao: "Cliente excluído: TecMais Ltda",
+      })
+    )
   })
 
   it("propaga erro quando a exclusão falha", async () => {

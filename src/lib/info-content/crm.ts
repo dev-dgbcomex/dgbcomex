@@ -701,7 +701,7 @@ export const crmContent: Record<string, InfoContent> = {
       "Use os gráficos para identificar gargalos no pipeline.",
       "A taxa de conversão considera apenas oportunidades fechadas (ganhas vs perdidas).",
       "Os relatórios ajudam a IA Comercial a gerar previsões mais precisas.",
-      "Na parte inferior estão os relatórios detalhados: Atividades, Pessoas, Oportunidades, Propostas, Visitas e Conversões.",
+      "Na parte inferior estão os relatórios detalhados: Atividades, Pessoas, Oportunidades, Propostas, Visitas, Conversões e Clientes.",
       "Cada relatório detalhado tem filtros por período, cards de resumo, listagem completa e exportação em PDF, CSV e Markdown.",
     ],
     fields: [
@@ -719,13 +719,14 @@ export const crmContent: Record<string, InfoContent> = {
   "/comercial/crm/relatorios/atividades": {
     title: "Relatório de Atividades do CRM",
     description:
-      "Mostra tudo que as contas comerciais fizeram no CRM: registros criados por pessoa, oportunidade, proposta, visita, tarefa, lead e contato, com data, hora e pessoa ou cliente envolvida.",
+      "Mostra tudo que as contas comerciais fizeram no CRM: registros criados por pessoa, cliente, oportunidade, proposta, visita, tarefa, lead e contato, com data, hora e pessoa ou cliente envolvida.",
     rules: [
       "A base do relatório é a tabela de logs: cada ação registrada no CRM aparece aqui.",
       "Os cards comparam o período escolhido com hoje, últimos 7 dias e mês atual.",
       "A tabela 'Produção por usuário' mostra quantos registros cada usuário criou em cada intervalo.",
       "O filtro de período vale para os cards, para a tabela e para as exportações.",
       "Use o filtro Usuário para medir a produção de uma conta específica.",
+      "A categoria Clientes reúne as ações feitas no cadastro do cliente (criação, edição, exclusão, representantes e contatos vinculados).",
       "A exportação gera PDF, CSV e Markdown com os mesmos dados da tela.",
     ],
     fields: [
@@ -787,6 +788,34 @@ export const crmContent: Record<string, InfoContent> = {
       { name: "Propostas", desc: "Quantidade de propostas da pessoa" },
       { name: "Visitas", desc: "Quantidade de visitas da pessoa" },
       { name: "Valor das propostas", desc: "Soma do valor das propostas da pessoa" },
+    ],
+  },
+
+  "/comercial/crm/relatorios/clientes": {
+    title: "Relatório de Clientes do CRM",
+    description:
+      "Visão consolidada de cada cliente com o negócio do período: pessoas promovidas, oportunidades (em aberto e valor), propostas e visitas — incluindo o que foi feito nas pessoas do CRM que viraram o cliente.",
+    rules: [
+      "O período padrão é os últimos 7 dias; troque para Hoje, Mês ou um período personalizado.",
+      "O filtro Segmento separa os clientes por ramo de atividade.",
+      "O card 'Clientes com negócio' mostra quem teve oportunidade, proposta ou visita no período.",
+      "O negócio herdado das pessoas promovidas aparece junto do negócio lançado direto no cliente.",
+      "O nome do cliente é um link para a tela do cliente, com todos os relacionamentos do CRM.",
+      "A tabela rola na vertical e na horizontal, com o cabeçalho fixo durante a navegação.",
+      "A exportação gera PDF, CSV e Markdown com os mesmos dados da tela.",
+    ],
+    fields: [
+      { name: "Cliente", desc: "Nome do cliente (link para a tela do cliente)" },
+      { name: "CNPJ", desc: "CNPJ do cliente" },
+      { name: "Segmento", desc: "Segmento comercial do cliente" },
+      { name: "Cidade/UF", desc: "Local do cliente" },
+      { name: "Pessoas", desc: "Pessoas do CRM promovidas a este cliente" },
+      { name: "Oportunidades", desc: "Oportunidades do cliente no período" },
+      { name: "Em aberto", desc: "Oportunidades que ainda não foram fechadas" },
+      { name: "Valor das oportunidades", desc: "Soma do valor estimado das oportunidades" },
+      { name: "Propostas", desc: "Propostas do cliente no período" },
+      { name: "Valor das propostas", desc: "Soma do valor das propostas" },
+      { name: "Visitas", desc: "Visitas do cliente no período" },
     ],
   },
 

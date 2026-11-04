@@ -5,7 +5,7 @@ import { crmContatos } from "@/lib/db/schema/crm-contatos"
 import { crmPessoas } from "@/lib/db/schema/crm-pessoas"
 import { clientes } from "@/lib/db/schema/clientes"
 import { eq, desc, like, sql } from "drizzle-orm"
-import { notificar } from "@/lib/notificar"
+import { notificar, registrarLog } from "@/lib/notificar"
 import { notificarAtividadeComercial } from "@/lib/crm/notificar-atividade"
 
 export async function GET(req: NextRequest) {
@@ -122,6 +122,17 @@ export async function POST(req: NextRequest) {
       usuarioNome: session.user.name,
       usuarioId: auth.userId,
     })
+
+    if (novo.clienteId) {
+      await registrarLog({
+        tipo: "CADASTRO",
+        acao: "criar_contato",
+        descricao: `Contato cadastrado no cliente: ${novo.nome}`,
+        entidade: "CrmCliente",
+        entidadeId: novo.clienteId,
+        usuarioNome: session.user.name,
+      })
+    }
 
     return NextResponse.json(novo, { status: 201 })
   } catch (error) {

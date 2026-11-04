@@ -18,15 +18,34 @@ type OportunidadeResumo = {
   valorEstimado?: string | null
 }
 
-export function OportunidadesCard({ empresaId }: { empresaId: string }) {
+/**
+ * Card de oportunidades do CRM — usado na tela da pessoa (`empresaId`) e na
+ * tela do cliente (`clienteId`, que inclui o negócio herdado das pessoas que
+ * viraram o cliente).
+ */
+export function OportunidadesCard({
+  empresaId,
+  clienteId,
+}: {
+  empresaId?: string
+  clienteId?: string
+}) {
   const queryClient = useQueryClient()
+  const queryKey = clienteId
+    ? ["crm-cliente-oportunidades", clienteId]
+    : ["crm-pessoa-oportunidades", empresaId]
+
   const { data } = useQuery<OportunidadeResumo[]>({
-    queryKey: ["crm-pessoa-oportunidades", empresaId],
+    queryKey,
     queryFn: async () => {
-      const res = await fetch(`/api/crm/oportunidades?empresaId=${empresaId}`)
+      const url = clienteId
+        ? `/api/crm/oportunidades?clienteId=${clienteId}`
+        : `/api/crm/oportunidades?empresaId=${empresaId}`
+      const res = await fetch(url)
       if (!res.ok) return []
       return res.json()
     },
+    enabled: !!empresaId || !!clienteId,
   })
   const oportunidades = data ?? []
 
@@ -36,9 +55,8 @@ export function OportunidadesCard({ empresaId }: { empresaId: string }) {
         <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-50">Oportunidades</h2>
         <QuickCreateOportunidade
           empresaId={empresaId}
-          onCreated={() =>
-            queryClient.invalidateQueries({ queryKey: ["crm-pessoa-oportunidades", empresaId] })
-          }
+          clienteId={clienteId}
+          onCreated={() => queryClient.invalidateQueries({ queryKey })}
         />
       </div>
       {oportunidades.length === 0 ? (

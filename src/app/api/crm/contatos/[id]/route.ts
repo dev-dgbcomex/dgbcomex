@@ -6,7 +6,7 @@ import { crmOportunidades } from "@/lib/db/schema/crm-oportunidades"
 import { crmVisitas } from "@/lib/db/schema/crm-visitas"
 import { crmWhatsappMensagens } from "@/lib/db/schema/crm-whatsapp"
 import { eq } from "drizzle-orm"
-import { notificar } from "@/lib/notificar"
+import { notificar, registrarLog } from "@/lib/notificar"
 import { handleApiError } from "@/lib/api-error"
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -58,6 +58,29 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       `/comercial/crm/contatos/${id}`,
       session.user.name
     )
+
+    // Vínculo do contato com o cliente é registrado na atividade do cliente.
+    const clienteApos = atualizado.clienteId ?? null
+    const clienteAntes = existente.clienteId ?? null
+    if (clienteApos !== clienteAntes && clienteApos) {
+      await registrarLog({
+        tipo: "ATUALIZACAO",
+        acao: "vincular_contato",
+        descricao: `Contato vinculado ao cliente: ${atualizado.nome}`,
+        entidade: "CrmCliente",
+        entidadeId: clienteApos,
+        usuarioNome: session.user?.name,
+      })
+    } else if (clienteApos !== clienteAntes && clienteAntes) {
+      await registrarLog({
+        tipo: "ATUALIZACAO",
+        acao: "desvincular_contato",
+        descricao: `Contato desvinculado do cliente: ${atualizado.nome}`,
+        entidade: "CrmCliente",
+        entidadeId: clienteAntes,
+        usuarioNome: session.user?.name,
+      })
+    }
 
     return NextResponse.json(atualizado)
   } catch (error) {

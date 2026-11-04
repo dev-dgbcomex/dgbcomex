@@ -21,10 +21,16 @@ import {
   MapPin,
   Plus,
   Unlink,
+  Clock,
+  MessageSquare,
 } from "lucide-react"
 import { toast } from "sonner"
 import { ConfirmModal } from "@/components/ui/confirm-modal"
 import { SelectSegmento } from "@/components/crm/select-segmento"
+import { OportunidadesCard } from "@/components/crm/oportunidades-card"
+import { PropostasCard } from "@/components/crm/propostas-card"
+import CrmTimeline from "@/components/crm/crm-timeline"
+import CrmWhatsapp from "@/components/crm/crm-whatsapp"
 import { HistoricoConversaoCard } from "./components/historico-conversao-card"
 import type { HistoricoPromocao } from "@/lib/crm/historico-promocao"
 import type { Cliente, VinculoRepresentante, RepresentanteResumo } from "../types"
@@ -312,7 +318,7 @@ export default function EditarClientePage({ params }: { params: Promise<{ id: st
   if (!cliente) return null
 
   return (
-    <div className="max-w-2xl mx-auto py-8">
+    <div className="max-w-6xl mx-auto py-8 space-y-6">
       <div className="mb-6">
         <Link
           href="/comercial/clientes"
@@ -765,6 +771,42 @@ export default function EditarClientePage({ params }: { params: Promise<{ id: st
             </div>
           </div>
         </form>
+      </div>
+
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-50 flex items-center gap-2">
+            <Building2 size={18} className="text-blue-500" />
+            Relacionamentos do CRM
+          </h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+            Tudo o que foi feito com este cliente — inclusive o negócio herdado das pessoas do CRM
+            que viraram este cliente.
+          </p>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-2">
+          <OportunidadesCard clienteId={id} />
+          <PropostasCard clienteId={id} />
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-2">
+          <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
+            <div className="flex items-center gap-2 p-4 border-b border-slate-100 dark:border-slate-800">
+              <Clock size={16} className="text-slate-400" />
+              <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-50">Timeline</h2>
+            </div>
+            <CrmTimeline clienteId={id} />
+          </div>
+
+          <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
+            <div className="flex items-center gap-2 p-4 border-b border-slate-100 dark:border-slate-800">
+              <MessageSquare size={16} className="text-emerald-500" />
+              <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-50">WhatsApp</h2>
+            </div>
+            <CrmWhatsapp clienteId={id} />
+          </div>
+        </div>
       </div>
 
       <ConfirmModal

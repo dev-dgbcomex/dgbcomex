@@ -74,9 +74,10 @@ export async function POST(req: NextRequest) {
       .then((r: any) => r[0] || null)
 
     let empresaId = contato?.empresaId || null
+    let clienteId = contato?.clienteId || null
     let leadCriado = null
 
-    if (contato && !empresaId) {
+    if (contato && !empresaId && !clienteId) {
       return NextResponse.json({ error: "Contato sem empresa vinculada" }, { status: 400 })
     }
 
@@ -103,6 +104,7 @@ export async function POST(req: NextRequest) {
           leadCriado: false,
           leadId: null,
           empresaId,
+          clienteId,
           contatoId: contato?.id || null,
         })
       }
@@ -112,6 +114,7 @@ export async function POST(req: NextRequest) {
       .insert(crmWhatsappMensagens)
       .values({
         empresaId,
+        clienteId,
         contatoId: contato?.id || null,
         mensagem,
         tipo: "RECEBIDA",
@@ -121,9 +124,10 @@ export async function POST(req: NextRequest) {
       })
       .returning()
 
-    if (empresaId) {
+    if (empresaId || clienteId) {
       await inserirTimelineEvento({
         empresaId,
+        clienteId,
         tipo: "WHATSAPP",
         descricao: `Mensagem recebida via WhatsApp: "${mensagem.substring(0, 100)}"`,
         metadados: { whatsappId: nova.id, remoteJid },
@@ -137,6 +141,7 @@ export async function POST(req: NextRequest) {
         leadCriado: !!leadCriado,
         leadId: leadCriado?.id || null,
         empresaId,
+        clienteId,
         contatoId: contato?.id || null,
       },
       { status: 201 }
