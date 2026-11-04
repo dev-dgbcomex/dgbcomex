@@ -308,6 +308,10 @@ export const crmContent: Record<string, InfoContent> = {
       "A timeline da oportunidade mostra todas as interações relacionadas.",
       "Alterar o status registra automaticamente na timeline.",
       "Ao fechar como PERDIDO, informe o motivo para análise futura.",
+      "Os cards 'Faturamentos' e 'Pedidos de Venda' listam os documentos já vinculados à oportunidade; o botão 'Novo Faturamento'/'Novo Pedido' cria um documento manualmente no CRM.",
+      "O botão 'Vincular do ERP' abre a busca de documentos do ERP (api-microdata): pedidos de venda e notas fiscais são espelhados na oportunidade, com cabeçalho e itens, para ver o que já foi faturado.",
+      "No modal do ERP a busca é filtrada pelo CNPJ da pessoa da oportunidade (desmarque 'Só desta pessoa' para ver todos os documentos).",
+      "O mesmo documento do ERP não pode ser vinculado duas vezes: ao tentar, o sistema avisa que ele já está vinculado.",
     ],
     fields: [
       { name: "Valor Estimado", desc: "Valor potencial registrado para a oportunidade" },
@@ -315,6 +319,10 @@ export const crmContent: Record<string, InfoContent> = {
       {
         name: "Motivo da Perda",
         desc: "Preenchido quando a oportunidade é perdida — usado pela IA para análise",
+      },
+      {
+        name: "Vincular do ERP",
+        desc: "Espelha um pedido de venda ou faturamento do ERP na oportunidade (origem ERP)",
       },
     ],
   },

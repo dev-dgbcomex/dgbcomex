@@ -15,9 +15,12 @@ import {
   PlusCircle,
   Receipt,
   ShoppingCart,
+  Link2,
 } from "lucide-react"
 import { toast } from "sonner"
 import { ConfirmModal } from "@/components/ui/confirm-modal"
+import VincularDocumentoErpModal from "@/components/crm/vincular-documento-erp-modal"
+import type { TipoVinculoErp } from "@/lib/erp/tipos"
 import { useStatuses, statusAtivos } from "@/hooks/use-statuses"
 import {
   STATUS_FATURAMENTO_LABELS,
@@ -70,6 +73,17 @@ export default function DetalheOportunidadePage() {
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [editingStatus, setEditingStatus] = useState(false)
   const [statusValue, setStatusValue] = useState("")
+  const [vinculoErp, setVinculoErp] = useState<TipoVinculoErp | null>(null)
+
+  async function recarregar() {
+    try {
+      const res = await fetch(`/api/crm/oportunidades/${params.id}`)
+      const data: OportunidadeDetalhe = await res.json()
+      setOportunidade(data)
+    } catch {
+      toast.error("Erro ao carregar oportunidade")
+    }
+  }
 
   useEffect(() => {
     fetch(`/api/crm/oportunidades/${params.id}`)
@@ -371,7 +385,7 @@ export default function DetalheOportunidadePage() {
 
       <div className="grid gap-6 md:grid-cols-2">
         <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-4 gap-2">
             <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-50 flex items-center gap-2">
               <Receipt size={16} className="text-emerald-600" />
               Faturamentos
@@ -379,13 +393,23 @@ export default function DetalheOportunidadePage() {
                 ({(oportunidade.faturamentos || []).length})
               </span>
             </h2>
-            <Link
-              href={`/comercial/crm/faturamentos/novo?oportunidadeId=${oportunidade.id}`}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 transition-colors"
-            >
-              <PlusCircle size={14} />
-              Novo Faturamento
-            </Link>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setVinculoErp("FATURAMENTO")}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/30 px-3 py-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-950/50 transition-colors"
+              >
+                <Link2 size={14} />
+                Vincular do ERP
+              </button>
+              <Link
+                href={`/comercial/crm/faturamentos/novo?oportunidadeId=${oportunidade.id}`}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 transition-colors"
+              >
+                <PlusCircle size={14} />
+                Novo Faturamento
+              </Link>
+            </div>
           </div>
           <div className="flex items-center gap-2 mb-3">
             <span className="text-xs text-slate-500">Total:</span>
@@ -433,7 +457,7 @@ export default function DetalheOportunidadePage() {
         </div>
 
         <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-4 gap-2">
             <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-50 flex items-center gap-2">
               <ShoppingCart size={16} className="text-emerald-600" />
               Pedidos de Venda
@@ -441,13 +465,23 @@ export default function DetalheOportunidadePage() {
                 ({(oportunidade.pedidosVenda || []).length})
               </span>
             </h2>
-            <Link
-              href={`/comercial/crm/pedidos-venda/novo?oportunidadeId=${oportunidade.id}`}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 transition-colors"
-            >
-              <PlusCircle size={14} />
-              Novo Pedido
-            </Link>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setVinculoErp("PEDIDO")}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/30 px-3 py-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-950/50 transition-colors"
+              >
+                <Link2 size={14} />
+                Vincular do ERP
+              </button>
+              <Link
+                href={`/comercial/crm/pedidos-venda/novo?oportunidadeId=${oportunidade.id}`}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 transition-colors"
+              >
+                <PlusCircle size={14} />
+                Novo Pedido
+              </Link>
+            </div>
           </div>
           <div className="flex items-center gap-2 mb-3">
             <span className="text-xs text-slate-500">Total:</span>
@@ -505,6 +539,17 @@ export default function DetalheOportunidadePage() {
         onConfirm={handleDelete}
         onCancel={() => setShowDelete(false)}
       />
+
+      {vinculoErp && (
+        <VincularDocumentoErpModal
+          open={!!vinculoErp}
+          tipo={vinculoErp}
+          oportunidadeId={oportunidade.id}
+          cnpjPessoa={oportunidade.empresaCnpj}
+          onClose={() => setVinculoErp(null)}
+          onVinculado={recarregar}
+        />
+      )}
     </div>
   )
 }

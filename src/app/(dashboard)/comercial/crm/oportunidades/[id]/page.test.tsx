@@ -280,4 +280,81 @@ describe("DetalheOportunidadePage", () => {
       "/comercial/crm/pedidos-venda/20"
     )
   })
+
+  it("vincula um pedido do ERP na oportunidade", async () => {
+    const erpMock = createFetchMock(({ method, url }) => {
+      if (method === "GET" && url === "/api/admin/status?tipo=OPORTUNIDADE")
+        return { json: statuses }
+      if (method === "GET" && url === "/api/crm/oportunidades/1")
+        return { json: { ...oportunidade, empresaCnpj: "61.174.572/0001-81" } }
+      if (
+        method === "GET" &&
+        url === "/api/crm/erp/pedidos?cnpj=61.174.572%2F0001-81&porPagina=30"
+      ) {
+        return {
+          json: {
+            paginacao: { total: 1, pagina: 1, por_pagina: 30, total_paginas: 1 },
+            itens: [
+              {
+                empresa: "13",
+                pedido: "00006979",
+                cliente_cnpj: "61.174.572/0001-81",
+                cliente_nome: "LINOFORTE MOVEIS",
+                data_pedido: "2026-10-30",
+                total_itens: 2,
+                quantidade: 100,
+                valor_total: 5200,
+              },
+            ],
+          },
+        }
+      }
+      if (method === "POST" && url === "/api/crm/oportunidades/1/vinculos") {
+        return { status: 201, json: { id: 42, numero: "00006979" } }
+      }
+      return { json: null }
+    })
+    vi.stubGlobal("fetch", erpMock.fn)
+    navMock.setParams({ id: "1" })
+    navMock.setPathname("/comercial/crm/oportunidades/1")
+    renderPage(<DetalheOportunidadePage />)
+
+    const botoes = await screen.findAllByRole("button", { name: /Vincular do ERP/ })
+    fireEvent.click(botoes[botoes.length - 1])
+
+    const dialog = await screen.findByRole("dialog", { name: "Vincular pedido do ERP" })
+    expect(await within(dialog).findByText("Pedido 00006979")).toBeInTheDocument()
+    expect(within(dialog).getByText(/Só desta pessoa \(61.174.572\/0001-81\)/)).toBeInTheDocument()
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Vincular" }))
+
+    await waitFor(() => {
+      const call = findCall(erpMock.calls, "/api/crm/oportunidades/1/vinculos", "POST")
+      expect(call).toBeDefined()
+      expect(call!.body).toEqual({ tipo: "PEDIDO", empresa: "13", pedido: "00006979" })
+    })
+    await waitFor(() => expect(toastMock.success).toHaveBeenCalledWith("Pedido 00006979 vinculado"))
+  })
+
+  it("mostra erro do ERP ao listar documentos", async () => {
+    const erpMock = createFetchMock(({ method, url }) => {
+      if (method === "GET" && url === "/api/admin/status?tipo=OPORTUNIDADE")
+        return { json: statuses }
+      if (method === "GET" && url === "/api/crm/oportunidades/1") return { json: oportunidade }
+      if (method === "GET" && url.startsWith("/api/crm/erp/faturamentos")) {
+        return { status: 503, json: { error: "api-microdata indisponível." } }
+      }
+      return { json: null }
+    })
+    vi.stubGlobal("fetch", erpMock.fn)
+    navMock.setParams({ id: "1" })
+    navMock.setPathname("/comercial/crm/oportunidades/1")
+    renderPage(<DetalheOportunidadePage />)
+
+    const botoes = await screen.findAllByRole("button", { name: /Vincular do ERP/ })
+    fireEvent.click(botoes[0])
+
+    const dialog = await screen.findByRole("dialog", { name: "Vincular faturamento do ERP" })
+    expect(await within(dialog).findByText("api-microdata indisponível.")).toBeInTheDocument()
+  })
 })

@@ -33,6 +33,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         leadId: crmOportunidades.leadId,
         empresaId: crmOportunidades.empresaId,
         empresaNome: crmPessoas.razaoSocial,
+        empresaCnpj: crmPessoas.cnpj,
         clienteId: crmOportunidades.clienteId,
         clienteNome: clientes.nome,
         contatoId: crmOportunidades.contatoId,

@@ -7,6 +7,7 @@ export type Oportunidade = {
   leadId: number | null
   empresaId: number | null
   empresaNome: string | null
+  empresaCnpj?: string | null
   clienteId: number | null
   clienteNome: string | null
   contatoId: number | null

@@ -166,6 +166,24 @@ describe("getInfoContent", () => {
     expect(antigo?.rules?.join(" ")).toMatch(/statusTipo/)
   })
 
+  it("o detalhe da oportunidade explica o vínculo de documentos do ERP", () => {
+    const detalhe = getInfoContent("/comercial/crm/oportunidades/[id]")
+
+    expect(detalhe).not.toBeNull()
+
+    const texto = [
+      detalhe?.description ?? "",
+      ...(detalhe?.rules ?? []),
+      ...(detalhe?.fields ?? []).map((f) => `${f.name}: ${f.desc}`),
+    ].join("\n")
+
+    expect(texto).toMatch(/Vincular do ERP/)
+    expect(texto).toMatch(/api-microdata/)
+    expect(texto).toMatch(/pedido de venda|faturamento/)
+    expect(texto).toMatch(/CNPJ/)
+    expect(texto).toMatch(/já está vinculado/)
+  })
+
   it("os relatórios do CRM explicam filtros, cards e exportações", () => {
     const telas = [
       "/comercial/crm/relatorios",
