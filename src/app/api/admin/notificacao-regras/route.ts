@@ -44,6 +44,7 @@ const TIPOS_NOTIFICACAO = [
   "EQUIPE_ATUALIZADA",
   "REGIAO_CRIADA",
   "REGIAO_ATUALIZADA",
+  "ATIVIDADE_COMERCIAL",
 ] as const
 
 export async function GET() {

@@ -747,9 +747,9 @@ export default function AtivoFormPage() {
             </div>
 
             {reformas.length > 0 && (
-              <div className="overflow-x-auto">
+              <div className="overflow-auto max-h-[70vh]">
                 <table className="w-full text-xs">
-                  <thead>
+                  <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-slate-800">
                     <tr className="border-b border-slate-200 dark:border-slate-700">
                       <th className="text-left p-1.5 font-medium text-slate-500 dark:text-slate-400">
                         Data

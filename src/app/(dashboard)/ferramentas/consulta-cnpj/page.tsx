@@ -436,9 +436,9 @@ export default function ConsultaCnpjPage() {
                         {pessoa.status}
                       </span>
                     </div>
-                    <div className="overflow-x-auto">
+                    <div className="overflow-auto max-h-[70vh]">
                       <table className="w-full text-sm">
-                        <thead>
+                        <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-slate-800">
                           <tr className="border-b border-slate-100 dark:border-slate-800">
                             <th className="text-left text-[10px] font-medium text-slate-400 uppercase pb-1.5 pr-3">
                               Campo
@@ -518,9 +518,9 @@ export default function ConsultaCnpjPage() {
                         ID {cliente.id}
                       </span>
                     </div>
-                    <div className="overflow-x-auto">
+                    <div className="overflow-auto max-h-[70vh]">
                       <table className="w-full text-sm">
-                        <thead>
+                        <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-slate-800">
                           <tr className="border-b border-slate-100 dark:border-slate-800">
                             <th className="text-left text-[10px] font-medium text-slate-400 uppercase pb-1.5 pr-3">
                               Campo

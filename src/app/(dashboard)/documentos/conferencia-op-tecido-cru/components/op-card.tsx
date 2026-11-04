@@ -71,9 +71,9 @@ export function OpCard({ grupo, expanded, onToggleExpand }: OpCardProps) {
 
       {expanded && (
         <div className="border-t border-slate-200 dark:border-slate-700">
-          <div className="overflow-x-auto">
+          <div className="overflow-auto max-h-[70vh]">
             <table className="w-full text-sm">
-              <thead className="bg-slate-50 dark:bg-slate-800/50">
+              <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-slate-800/50">
                 <tr>
                   <th className="px-3 py-2.5 text-center text-[11px] font-medium text-slate-500 uppercase w-10">
                     #

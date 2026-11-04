@@ -3,7 +3,16 @@
 import { useMemo, useState } from "react"
 import { usePathname } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
-import { ChevronDown, ChevronRight, FileDown, FileText, RefreshCw, Search, TriangleAlert, X } from "lucide-react"
+import {
+  ChevronDown,
+  ChevronRight,
+  FileDown,
+  FileText,
+  RefreshCw,
+  Search,
+  TriangleAlert,
+  X,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -120,7 +129,8 @@ function LinhaDisponibilidade({
         <td className="px-3 py-2 text-right text-xs whitespace-nowrap text-slate-900 dark:text-slate-100">
           {FORMATAR.metros(linha.estoque_metros)}
           <span className="block text-[10px] text-slate-400">
-            {FORMATAR.inteiro(linha.estoque_pecas)} peças · {FORMATAR.inteiro(linha.estoque_rolos)} rolos
+            {FORMATAR.inteiro(linha.estoque_pecas)} peças · {FORMATAR.inteiro(linha.estoque_rolos)}{" "}
+            rolos
           </span>
         </td>
         <td className="px-3 py-2 text-right text-xs whitespace-nowrap text-slate-900 dark:text-slate-100">
@@ -134,9 +144,11 @@ function LinhaDisponibilidade({
         </td>
         <td className="px-3 py-2 text-right text-xs whitespace-nowrap text-slate-900 dark:text-slate-100">
           {FORMATAR.metros(linha.prometido_metros)}
-          <span className="block text-[10px] text-slate-400">{FORMATAR.valor(linha.prometido_valor)}</span>
+          <span className="block text-[10px] text-slate-400">
+            {FORMATAR.valor(linha.prometido_valor)}
+          </span>
         </td>
-{/*
+        {/*
           O número É o botão: clicar aqui abre o modal com os pedidos linha a linha.
           Antes era um <span> e o modal só abria pelo botão dentro da linha expandida —
           quem clica no número (que é o gesto natural) não acontecia nada.
@@ -162,7 +174,9 @@ function LinhaDisponibilidade({
         </td>
         <td
           className={`px-3 py-2 text-right text-xs font-semibold whitespace-nowrap ${
-            linha.cobertura_metros < 0 ? "text-red-600 dark:text-red-400" : "text-emerald-700 dark:text-emerald-400"
+            linha.cobertura_metros < 0
+              ? "text-red-600 dark:text-red-400"
+              : "text-emerald-700 dark:text-emerald-400"
           }`}
         >
           {FORMATAR.metros(linha.cobertura_metros)}
@@ -172,9 +186,7 @@ function LinhaDisponibilidade({
         <tr className="border-b border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/40">
           <td colSpan={8} className="px-3 py-3">
             {linha.por_representante.length === 0 ? (
-              <p className="text-xs text-slate-500">
-                Nenhum pedido em aberto para esta cor.
-              </p>
+              <p className="text-xs text-slate-500">Nenhum pedido em aberto para esta cor.</p>
             ) : (
               <div className="flex flex-wrap gap-2">
                 {linha.por_representante.map((rep) => (
@@ -182,8 +194,9 @@ function LinhaDisponibilidade({
                     key={rep.vendedor}
                     className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
                   >
-                    <strong>{rep.vendedor_nome || rep.vendedor}</strong> · {FORMATAR.metros(rep.saldo)} ·{" "}
-                    {FORMATAR.valor(rep.valor)} · {rep.pedidos} pedidos
+                    <strong>{rep.vendedor_nome || rep.vendedor}</strong> ·{" "}
+                    {FORMATAR.metros(rep.saldo)} · {FORMATAR.valor(rep.valor)} · {rep.pedidos}{" "}
+                    pedidos
                   </span>
                 ))}
               </div>
@@ -406,9 +419,7 @@ export default function DisponibilidadeComercialPage() {
             <input
               type="checkbox"
               checked={filtros.soComFalta}
-              onChange={(e) =>
-                setFiltros((atual) => ({ ...atual, soComFalta: e.target.checked }))
-              }
+              onChange={(e) => setFiltros((atual) => ({ ...atual, soComFalta: e.target.checked }))}
             />
             Só o que falta
           </label>
@@ -416,9 +427,7 @@ export default function DisponibilidadeComercialPage() {
             <input
               type="checkbox"
               checked={filtros.soChegando}
-              onChange={(e) =>
-                setFiltros((atual) => ({ ...atual, soChegando: e.target.checked }))
-              }
+              onChange={(e) => setFiltros((atual) => ({ ...atual, soChegando: e.target.checked }))}
             />
             Só o que está chegando
           </label>
@@ -471,9 +480,9 @@ export default function DisponibilidadeComercialPage() {
           aria-label="Disponibilidade por produto e cor"
           className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
         >
-          <div className="overflow-x-auto">
+          <div className="overflow-auto max-h-[70vh]">
             <table className="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-800">
-              <thead className="bg-slate-50 dark:bg-slate-900/50">
+              <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-slate-900/50">
                 <tr>
                   {COLUNAS.map(({ chave, titulo, numero }) => {
                     const ativa = ordem.chave === chave
@@ -522,8 +531,8 @@ export default function DisponibilidadeComercialPage() {
           </div>
           <p className="border-t border-slate-200 px-4 py-2 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
             <strong className="font-medium text-slate-600 dark:text-slate-300">Livre</strong> é o
-            que sobra do estoque depois do que já foi prometido: negativo quando a carteira
-            pediu mais do que existe.{" "}
+            que sobra do estoque depois do que já foi prometido: negativo quando a carteira pediu
+            mais do que existe.{" "}
             <strong className="font-medium text-slate-600 dark:text-slate-300">
               Depois da compra
             </strong>{" "}

@@ -157,9 +157,9 @@ export default function EstadosConfigPage() {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-auto max-h-[70vh]">
             <table className="w-full text-sm">
-              <thead>
+              <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-slate-800">
                 <tr className="border-b border-slate-100 dark:border-slate-800">
                   <th className="text-left px-4 py-3 font-medium text-slate-500 text-xs uppercase">
                     UF

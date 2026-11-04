@@ -32,6 +32,10 @@ INSERT INTO status (nome, rotulo, tipo, cor, ordem, ativo, exibir_kanban) VALUES
   ('REVISAO', 'Em Revisão', 'PROPOSTA', '#f59e0b', 4, true, true)
 ON CONFLICT DO NOTHING;
 
+-- notificacao_regras: atividade comercial entre contas (in-app + e-mail)
+INSERT INTO notificacao_regras (tipo, roles) VALUES ('ATIVIDADE_COMERCIAL', '["COMERCIAL","CRM"]'::jsonb)
+ON CONFLICT (tipo) DO NOTHING;
+
 -- crm_contatos: adicionar cliente_id
 DO $$ BEGIN
   ALTER TABLE crm_contatos ADD COLUMN IF NOT EXISTS cliente_id integer REFERENCES clientes(id);

@@ -6,6 +6,7 @@ import { crmPessoas } from "@/lib/db/schema/crm-pessoas"
 import { clientes } from "@/lib/db/schema/clientes"
 import { eq } from "drizzle-orm"
 import { registrarLog, notificar, notificarDelecao } from "@/lib/notificar"
+import { notificarAtividadeComercial } from "@/lib/crm/notificar-atividade"
 import { inserirTimelineEvento, excluirTimelineEventosEntidade } from "@/lib/crm-timeline"
 import { handleApiError } from "@/lib/api-error"
 import { executarGatilhos } from "@/lib/crm/status-gatilhos"
@@ -124,6 +125,17 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       `/comercial/crm/propostas/${atualizada.id}`,
       session.user.name
     )
+
+    if (body.status && body.status !== existente.status) {
+      await notificarAtividadeComercial({
+        acao: `moveu a proposta para ${body.status}`,
+        entidade: "Proposta",
+        registro: existente.titulo,
+        link: `/comercial/crm/propostas/${atualizada.id}`,
+        usuarioNome: session.user.name,
+        usuarioId: auth.userId,
+      })
+    }
 
     let gatilhos = { executadas: [] as string[], erros: [] as string[] }
     if (body.status && body.status !== existente.status) {

@@ -43,9 +43,9 @@ export function TabelaGruposCusto({
         <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300">{titulo}</h2>
         <p className="text-xs text-slate-500 dark:text-slate-400">{descricao}</p>
       </div>
-      <div className="overflow-x-auto">
+      <div className="overflow-auto max-h-[70vh]">
         <table className="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-800">
-          <thead className="bg-slate-50 dark:bg-slate-900/50">
+          <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-slate-900/50">
             <tr>
               <th className="px-3 py-2 text-left text-xs font-medium tracking-wider text-slate-500 uppercase">
                 {rotuloColuna}

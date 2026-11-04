@@ -11,11 +11,7 @@ import { Button } from "@/components/ui/button"
 import { InfoButton } from "@/components/ui/info-button"
 import { getInfoContent } from "@/lib/info-content"
 import { podeColetarWms } from "@/lib/wms/permissoes"
-import {
-  obterDashboardColetor,
-  listarSeparacoesColetor,
-  sincronizarColetor,
-} from "@/lib/wms/repo"
+import { obterDashboardColetor, listarSeparacoesColetor, sincronizarColetor } from "@/lib/wms/repo"
 import type { WmsColetorSeparacao } from "@/lib/wms/tipos"
 import { BotaoVoltar } from "../components/botao-voltar"
 
@@ -42,9 +38,7 @@ export default function ColetorPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["wms/coletor/separacoes", offset],
     queryFn: async () => {
-      const res = await fetch(
-        `/api/wms/coletor/separacoes?limite=${PAGINA}&offset=${offset}`
-      )
+      const res = await fetch(`/api/wms/coletor/separacoes?limite=${PAGINA}&offset=${offset}`)
       if (!res.ok) throw new Error("Falha ao carregar as ordens de separação")
       return res.json()
     },
@@ -105,8 +99,8 @@ export default function ColetorPage() {
             {info && <InfoButton content={info} />}
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Ordens de separação prontas para coleta. Selecione uma ordem para
-            adicionar peças e gerar o romaneio.
+            Ordens de separação prontas para coleta. Selecione uma ordem para adicionar peças e
+            gerar o romaneio.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -127,7 +121,12 @@ export default function ColetorPage() {
               </>
             )}
           </Button>
-          <Button variant="outline" size="sm" onClick={() => toast.info("Exportação CSV não implementada")} className="gap-1.5">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => toast.info("Exportação CSV não implementada")}
+            className="gap-1.5"
+          >
             <Download size={14} /> CSV
           </Button>
         </div>
@@ -135,25 +134,19 @@ export default function ColetorPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
-          <p className="text-xs text-slate-500 dark:text-slate-400 uppercase">
-            Pendentes
-          </p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 uppercase">Pendentes</p>
           <p className="text-2xl font-semibold text-slate-900 dark:text-slate-50">
             {dashboard.data?.pendentes ?? 0}
           </p>
         </div>
         <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
-          <p className="text-xs text-slate-500 dark:text-slate-400 uppercase">
-            Em andamento
-          </p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 uppercase">Em andamento</p>
           <p className="text-2xl font-semibold text-slate-900 dark:text-slate-50">
             {dashboard.data?.emAndamento ?? 0}
           </p>
         </div>
         <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
-          <p className="text-xs text-slate-500 dark:text-slate-400 uppercase">
-            Concluídas hoje
-          </p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 uppercase">Concluídas hoje</p>
           <p className="text-2xl font-semibold text-slate-900 dark:text-slate-50">
             {dashboard.data?.concluidasHoje ?? 0}
           </p>
@@ -169,9 +162,9 @@ export default function ColetorPage() {
           Nenhuma ordem de separação disponível para coleta.
         </p>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="overflow-auto max-h-[70vh]">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 dark:bg-slate-800/50 text-left text-slate-600 dark:text-slate-300">
+            <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-slate-800/50 text-left text-slate-600 dark:text-slate-300">
               <tr>
                 <th className="px-3 py-2 font-medium">Ordem</th>
                 <th className="px-3 py-2 font-medium">Pedido</th>
@@ -193,16 +186,14 @@ export default function ColetorPage() {
                   <td className="px-3 py-2">
                     <span
                       className="inline-flex items-center gap-1 text-xs font-medium"
-                      style={
-                        {
-                          color:
-                            ordem.status === "LIBERADO"
-                              ? "#f59e0b"
-                              : ordem.status === "EM_SEPARACAO"
+                      style={{
+                        color:
+                          ordem.status === "LIBERADO"
+                            ? "#f59e0b"
+                            : ordem.status === "EM_SEPARACAO"
                               ? "#2563eb"
                               : "#94a3b8",
-                        }
-                      }
+                      }}
                     >
                       {ordem.status === "LIBERADO" ? "Liberado" : "Em separação"}
                     </span>

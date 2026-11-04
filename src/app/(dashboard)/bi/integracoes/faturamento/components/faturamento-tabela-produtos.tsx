@@ -33,9 +33,9 @@ export function FaturamentoTabelaProdutos({ grupos, limite = 50 }: Props) {
         </p>
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="overflow-auto max-h-[70vh]">
         <table className="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-800">
-          <thead className="bg-slate-50 dark:bg-slate-900/50">
+          <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-slate-900/50">
             <tr>
               <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
                 Produto

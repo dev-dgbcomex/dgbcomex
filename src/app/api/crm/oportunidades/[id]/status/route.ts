@@ -4,6 +4,7 @@ import { db } from "@/lib/db"
 import { crmOportunidades } from "@/lib/db/schema/crm-oportunidades"
 import { eq } from "drizzle-orm"
 import { registrarLog, notificar } from "@/lib/notificar"
+import { notificarAtividadeComercial } from "@/lib/crm/notificar-atividade"
 import { inserirTimelineEvento } from "@/lib/crm-timeline"
 import { executarGatilhos, vincularEmpresaComoCliente } from "@/lib/crm/status-gatilhos"
 
@@ -90,6 +91,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       `/comercial/crm/oportunidades/${atualizada.id}`,
       session.user.name
     )
+
+    await notificarAtividadeComercial({
+      acao: `moveu a oportunidade para ${status}`,
+      entidade: "Oportunidade",
+      registro: existente.titulo,
+      link: `/comercial/crm/oportunidades/${atualizada.id}`,
+      usuarioNome: session.user.name,
+      usuarioId: auth.userId,
+    })
 
     return NextResponse.json({ ...atualizada, gatilhos })
   } catch (error) {

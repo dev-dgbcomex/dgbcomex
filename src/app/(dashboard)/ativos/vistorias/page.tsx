@@ -289,9 +289,9 @@ export default function AtivosVistoriasPage() {
         ) : filtered.length === 0 ? (
           <div className="p-8 text-center text-slate-500">Nenhum registro encontrado</div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-auto max-h-[70vh]">
             <table className="w-full">
-              <thead className="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+              <thead className="sticky top-0 z-10 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
                 <tr>
                   <th className="text-left text-xs font-medium text-slate-500 dark:text-slate-400 p-4">
                     Data Programada

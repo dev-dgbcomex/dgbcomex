@@ -26,6 +26,53 @@ export function exportCSV(
   URL.revokeObjectURL(url)
 }
 
+export function exportMarkdown(options: {
+  filename: string
+  title: string
+  headers: string[]
+  rows: (string | number | null | undefined)[][]
+  stats?: Record<string, string | number>
+  period?: string
+}) {
+  const sanitizar = (valor: string | number | null | undefined) =>
+    String(valor ?? "")
+      .replace(/\r?\n/g, " ")
+      .replace(/\|/g, "\\|")
+
+  const partes: string[] = [`# ${options.title}`, ""]
+
+  if (options.period) {
+    partes.push(`_${options.period}_`, "")
+  }
+
+  if (options.stats && Object.keys(options.stats).length > 0) {
+    partes.push("## Resumo", "")
+    for (const [label, value] of Object.entries(options.stats)) {
+      partes.push(`- **${label}:** ${value}`)
+    }
+    partes.push("")
+  }
+
+  partes.push("## Dados", "")
+  partes.push(`| ${options.headers.map(sanitizar).join(" | ")} |`)
+  partes.push(`| ${options.headers.map(() => "---").join(" | ")} |`)
+  for (const row of options.rows) {
+    partes.push(`| ${row.map(sanitizar).join(" | ")} |`)
+  }
+  partes.push("")
+  partes.push(`_Exportado em ${new Date().toLocaleString("pt-BR")}_`)
+
+  const blob = new Blob(["\uFEFF" + partes.join("\n")], {
+    type: "text/markdown;charset=utf-8;",
+  })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement("a")
+  a.href = url
+  a.download = `${options.filename}.md`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 function escapeHtml(str: string): string {
   return str
     .replace(/&/g, "&amp;")

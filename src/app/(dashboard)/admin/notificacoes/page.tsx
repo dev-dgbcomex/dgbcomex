@@ -64,6 +64,7 @@ const TIPO_LABEL: Record<string, string> = {
   EQUIPE_ATUALIZADA: "Equipe Atualizada",
   REGIAO_CRIADA: "Região Criada",
   REGIAO_ATUALIZADA: "Região Atualizada",
+  ATIVIDADE_COMERCIAL: "Atividade Comercial (outras contas)",
 }
 
 export default function NotificacoesAdminPage() {

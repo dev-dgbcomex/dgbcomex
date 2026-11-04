@@ -19,9 +19,9 @@ function ClienteCurvaTable({ clientes }: { clientes: any[] }) {
   if (!clientes.length)
     return <p className="text-sm text-slate-500 py-4 text-center">Nenhum cliente encontrado.</p>
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-auto max-h-[70vh]">
       <table className="w-full text-xs">
-        <thead className="border-b border-slate-200 dark:border-slate-700">
+        <thead className="sticky top-0 z-10 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
           <tr>
             <th className="text-left py-2 px-2 font-medium text-slate-500">Cliente</th>
             <th className="text-left py-2 px-2 font-medium text-slate-500">Cidade/UF</th>

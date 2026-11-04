@@ -36,9 +36,9 @@ export function ModelosTab({
             Nenhum modelo cadastrado. Clique em &ldquo;Novo Modelo&rdquo; para criar.
           </p>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-auto max-h-[70vh]">
             <table className="w-full text-sm">
-              <thead>
+              <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-slate-800">
                 <tr className="border-b border-slate-200 dark:border-slate-700">
                   <th className="text-left font-medium p-2">Nome</th>
                   <th className="text-left font-medium p-2">Assunto</th>

@@ -53,10 +53,14 @@ function formatarDataHora(data?: string | null): string {
   if (!data) return "—"
   const d = new Date(data)
   if (isNaN(d.getTime())) return "—"
-  return d.toLocaleDateString("pt-BR") + " " + d.toLocaleTimeString("pt-BR", {
-    hour: "2-digit",
-    minute: "2-digit",
-  })
+  return (
+    d.toLocaleDateString("pt-BR") +
+    " " +
+    d.toLocaleTimeString("pt-BR", {
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+  )
 }
 
 const badgeClass = (classes: string) =>
@@ -75,9 +79,7 @@ export default function ChamadosPage() {
   const { data: chamados = [], isLoading } = useQuery<Chamado[]>({
     queryKey: ["chamados", minhasFilas],
     queryFn: async () => {
-      const res = await fetch(
-        minhasFilas ? "/api/chamados?minhasFilas=true" : "/api/chamados"
-      )
+      const res = await fetch(minhasFilas ? "/api/chamados?minhasFilas=true" : "/api/chamados")
       if (!res.ok) throw new Error("Falha ao carregar chamados")
       return res.json()
     },
@@ -197,12 +199,14 @@ export default function ChamadosPage() {
           </div>
         ) : filtered.length === 0 ? (
           <div className="p-8 text-center text-slate-500">
-            {chamados.length === 0 ? "Nenhum chamado encontrado" : "Nenhum chamado com esses filtros"}
+            {chamados.length === 0
+              ? "Nenhum chamado encontrado"
+              : "Nenhum chamado com esses filtros"}
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-auto max-h-[70vh]">
             <table className="w-full">
-              <thead className="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+              <thead className="sticky top-0 z-10 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
                 <tr>
                   <th className="text-left text-xs font-medium text-slate-500 dark:text-slate-400 p-4">
                     Chamado
@@ -243,9 +247,7 @@ export default function ChamadosPage() {
                     </td>
                     <td className="p-4">
                       <span
-                        className={badgeClass(
-                          CHAMADO_CATEGORIA_COLORS[c.categoria] || fallback
-                        )}
+                        className={badgeClass(CHAMADO_CATEGORIA_COLORS[c.categoria] || fallback)}
                       >
                         {chamadoCategoriaLabel(c.categoria)}
                       </span>
@@ -253,26 +255,18 @@ export default function ChamadosPage() {
                     <td className="p-4 text-sm text-slate-500">{c.areaNome || "—"}</td>
                     <td className="p-4">
                       <span
-                        className={badgeClass(
-                          CHAMADO_PRIORIDADE_COLORS[c.prioridade] || fallback
-                        )}
+                        className={badgeClass(CHAMADO_PRIORIDADE_COLORS[c.prioridade] || fallback)}
                       >
                         {chamadoPrioridadeLabel(c.prioridade)}
                       </span>
                     </td>
                     <td className="p-4">
-                      <span
-                        className={badgeClass(CHAMADO_STATUS_COLORS[c.status] || fallback)}
-                      >
+                      <span className={badgeClass(CHAMADO_STATUS_COLORS[c.status] || fallback)}>
                         {chamadoStatusLabel(c.status)}
                       </span>
                     </td>
-                    <td className="p-4 text-sm text-slate-500">
-                      {c.responsavelNome || "—"}
-                    </td>
-                    <td className="p-4 text-sm text-slate-500">
-                      {formatarDataHora(c.createdAt)}
-                    </td>
+                    <td className="p-4 text-sm text-slate-500">{c.responsavelNome || "—"}</td>
+                    <td className="p-4 text-sm text-slate-500">{formatarDataHora(c.createdAt)}</td>
                   </tr>
                 ))}
               </tbody>

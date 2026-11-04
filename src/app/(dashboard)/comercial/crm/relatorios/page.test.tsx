@@ -28,14 +28,28 @@ describe("CrmRelatoriosPage", () => {
     expect(screen.getByRole("heading", { name: "Relatórios CRM" })).toBeInTheDocument()
     expect(await screen.findByText("Negócios")).toBeInTheDocument()
     expect(screen.getByText("Leads")).toBeInTheDocument()
-    expect(screen.getByText("Oportunidades")).toBeInTheDocument()
-    expect(screen.getByText("Visitas")).toBeInTheDocument()
+    expect(screen.getAllByText("Oportunidades").length).toBeGreaterThan(0)
+    expect(screen.getAllByText("Visitas").length).toBeGreaterThan(0)
     expect(screen.getByText("Campanhas")).toBeInTheDocument()
     expect(screen.getByText("120")).toBeInTheDocument()
     expect(screen.getByText("340")).toBeInTheDocument()
     expect(screen.getByText("85")).toBeInTheDocument()
     expect(screen.getByText("200")).toBeInTheDocument()
     expect(screen.getByText("12")).toBeInTheDocument()
+
+    // Relatórios detalhados (cards com link para cada relatório).
+    expect(screen.getByText("Relatórios detalhados")).toBeInTheDocument()
+    expect(screen.getByText("Atividades")).toBeInTheDocument()
+    expect(screen.getByText("Pessoas")).toBeInTheDocument()
+    expect(screen.getByText("Propostas")).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: /Atividades/ })).toHaveAttribute(
+      "href",
+      "/comercial/crm/relatorios/atividades"
+    )
+    expect(screen.getByRole("link", { name: /Pessoas/ })).toHaveAttribute(
+      "href",
+      "/comercial/crm/relatorios/pessoas"
+    )
 
     expect(await screen.findByText("Leads por Origem", {}, { timeout: 5000 })).toBeInTheDocument()
     expect(screen.getByText("Pipeline (Oportunidades por Status)")).toBeInTheDocument()

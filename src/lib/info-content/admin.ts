@@ -167,6 +167,9 @@ export const adminContent: Record<string, InfoContent> = {
       "Cada tipo de notificação pode ser atribuído a um ou mais perfis.",
       "As notificações são exibidas no ícone de sino no cabeçalho.",
       "Alterações são aplicadas imediatamente após salvar.",
+      "O tipo ATIVIDADE_COMERCIAL avisa as outras contas comerciais sobre cada atividade do CRM (pessoa, oportunidade, proposta, visita, lead, contato e tarefa), no sistema e por e-mail.",
+      "Quem executou a ação não recebe a própria notificação.",
+      "As notificações de atividade comercial também são enviadas por e-mail para os perfis configurados.",
     ],
     fields: [
       { name: "Tipo", desc: "Categoria do evento que gera a notificação" },

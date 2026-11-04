@@ -6,6 +6,7 @@ import { crmPessoas } from "@/lib/db/schema/crm-pessoas"
 import { clientes } from "@/lib/db/schema/clientes"
 import { eq, desc, like, sql } from "drizzle-orm"
 import { notificar } from "@/lib/notificar"
+import { notificarAtividadeComercial } from "@/lib/crm/notificar-atividade"
 
 export async function GET(req: NextRequest) {
   try {
@@ -112,6 +113,15 @@ export async function POST(req: NextRequest) {
       linkDestino,
       session.user.name
     )
+
+    await notificarAtividadeComercial({
+      acao: "cadastrou o contato",
+      entidade: "Contato",
+      registro: novo.nome,
+      link: linkDestino,
+      usuarioNome: session.user.name,
+      usuarioId: auth.userId,
+    })
 
     return NextResponse.json(novo, { status: 201 })
   } catch (error) {

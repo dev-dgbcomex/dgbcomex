@@ -6,6 +6,7 @@ import { crmPessoas } from "@/lib/db/schema/crm-pessoas"
 import { usuarios } from "@/lib/db/schema/usuarios"
 import { eq, desc, like, or, sql } from "drizzle-orm"
 import { registrarLog, notificar } from "@/lib/notificar"
+import { notificarAtividadeComercial } from "@/lib/crm/notificar-atividade"
 import { inserirTimelineEvento } from "@/lib/crm-timeline"
 
 export async function GET(req: NextRequest) {
@@ -133,6 +134,15 @@ export async function POST(req: NextRequest) {
       `/comercial/crm/leads/${novo.id}`,
       session.user.name
     )
+
+    await notificarAtividadeComercial({
+      acao: "cadastrou o lead",
+      entidade: "Lead",
+      registro: novo.nome,
+      link: `/comercial/crm/leads/${novo.id}`,
+      usuarioNome: session.user.name,
+      usuarioId: userId,
+    })
 
     return NextResponse.json(novo, { status: 201 })
   } catch (error) {

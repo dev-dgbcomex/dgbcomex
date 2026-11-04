@@ -18,7 +18,8 @@ export async function notificar(
   mensagem: string,
   link?: string,
   usuarioNome?: string | null,
-  roles?: string[]
+  roles?: string[],
+  opcoes?: { excluirUsuarioId?: number | null }
 ) {
   let rolesFiltro: string[]
 
@@ -46,11 +47,17 @@ export async function notificar(
     .from(usuarios)
     .where(and(eq(usuarios.ativo, true), inArray(usuarios.role, rolesFiltro)))
 
-  if (usuariosFiltrados.length === 0) {
+  // Atividade do próprio usuário não é enviada para ele (ex.: notificar as outras contas).
+  const usuariosNotificados =
+    opcoes?.excluirUsuarioId != null
+      ? usuariosFiltrados.filter((u: any) => u.id !== opcoes.excluirUsuarioId)
+      : usuariosFiltrados
+
+  if (usuariosNotificados.length === 0) {
     return { usuariosNotificados: 0 }
   }
 
-  const notificacoesData: NewNotificacao[] = usuariosFiltrados.map((u: any) => ({
+  const notificacoesData: NewNotificacao[] = usuariosNotificados.map((u: any) => ({
     tipo,
     mensagem,
     usuarioId: u.id,
@@ -60,7 +67,7 @@ export async function notificar(
 
   await db.insert(notificacoes).values(notificacoesData)
 
-  const emailsValidos = usuariosFiltrados
+  const emailsValidos = usuariosNotificados
     .map((u: any) => u.email)
     .filter((e: any): e is string => !!e && e.includes("@"))
   if (emailsValidos.length > 0) {
@@ -84,7 +91,7 @@ ${link ? `<p><a href="${SITE_URL}${link}" style="background:#1e3a5f;color:#fff;p
     }
   }
 
-  return { usuariosNotificados: usuariosFiltrados.length }
+  return { usuariosNotificados: usuariosNotificados.length }
 }
 
 export async function notificarErro(contexto: string, erro: unknown, usuarioNome?: string | null) {

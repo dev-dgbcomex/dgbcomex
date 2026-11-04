@@ -103,7 +103,7 @@ export default function CidadesConfigPage() {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto" style={{ maxHeight: "calc(100vh - 280px)" }}>
+          <div className="overflow-auto" style={{ maxHeight: "calc(100vh - 280px)" }}>
             <table className="w-full text-sm">
               <thead className="sticky top-0 bg-white dark:bg-slate-900 z-10">
                 <tr className="border-b border-slate-100 dark:border-slate-800">

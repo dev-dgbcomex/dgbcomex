@@ -8,7 +8,7 @@ const sql = postgres(process.env.DATABASE_URL, { prepare: false })
 
 async function migrate() {
   console.log("Criando tabelas no banco de dados...")
-  
+
   try {
     // Fios
     await sql`
@@ -35,7 +35,7 @@ async function migrate() {
       )
     `
     console.log("✓ Tabela fios criada")
-    
+
     // Cores Sólidas
     await sql`
       CREATE TABLE IF NOT EXISTS cores_solidas (
@@ -48,7 +48,7 @@ async function migrate() {
       )
     `
     console.log("✓ Tabela cores_solidas criada")
-    
+
     // Cores Fundo
     await sql`
       CREATE TABLE IF NOT EXISTS cores_fundo (
@@ -60,7 +60,7 @@ async function migrate() {
       )
     `
     console.log("✓ Tabela cores_fundo criada")
-    
+
     // Acabamentos
     await sql`
       CREATE TABLE IF NOT EXISTS acabamentos (
@@ -72,7 +72,7 @@ async function migrate() {
       )
     `
     console.log("✓ Tabela acabamentos criada")
-    
+
     // Máquinas
     await sql`
       CREATE TABLE IF NOT EXISTS maquinas (
@@ -87,7 +87,7 @@ async function migrate() {
       )
     `
     console.log("✓ Tabela maquinas criada")
-    
+
     // Operações
     await sql`
       CREATE TABLE IF NOT EXISTS operacoes (
@@ -151,7 +151,7 @@ async function migrate() {
       )
     `
     console.log("✓ Tabela produtos_cru criada")
-    
+
     await sql`
       CREATE TABLE IF NOT EXISTS produto_cru_composicao (
         id serial PRIMARY KEY,
@@ -161,7 +161,7 @@ async function migrate() {
       )
     `
     console.log("✓ Tabela produto_cru_composicao criada")
-    
+
     await sql`
       CREATE TABLE IF NOT EXISTS produto_cru_estrutura (
         id serial PRIMARY KEY,
@@ -173,7 +173,7 @@ async function migrate() {
       )
     `
     console.log("✓ Tabela produto_cru_estrutura criada")
-    
+
     await sql`
       CREATE TABLE IF NOT EXISTS produto_cru_amostra (
         id serial PRIMARY KEY,
@@ -187,7 +187,7 @@ async function migrate() {
       )
     `
     console.log("✓ Tabela produto_cru_amostra criada")
-    
+
     await sql`
       CREATE TABLE IF NOT EXISTS produto_cru_acabamento (
         id serial PRIMARY KEY,
@@ -199,7 +199,7 @@ async function migrate() {
       )
     `
     console.log("✓ Tabela produto_cru_acabamento criada")
-    
+
     await sql`
       CREATE TABLE IF NOT EXISTS produto_cru_acabamento_amostra (
         id serial PRIMARY KEY,
@@ -213,7 +213,7 @@ async function migrate() {
       )
     `
     console.log("✓ Tabela produto_cru_acabamento_amostra criada")
-    
+
     await sql`
       CREATE TABLE IF NOT EXISTS produto_cru_acabamento_receita (
         id serial PRIMARY KEY,
@@ -223,12 +223,12 @@ async function migrate() {
       )
     `
     console.log("✓ Tabela produto_cru_acabamento_receita criada")
-    
+
     await sql`ALTER TABLE produto_cru_amostra ADD COLUMN IF NOT EXISTS motivo_aprovacao TEXT`
     console.log("✓ Coluna motivo_aprovacao em produto_cru_amostra")
     await sql`ALTER TABLE produto_cru_acabamento_amostra ADD COLUMN IF NOT EXISTS motivo_aprovacao TEXT`
     console.log("✓ Coluna motivo_aprovacao em produto_cru_acabamento_amostra")
-    
+
     await sql`
       CREATE TABLE IF NOT EXISTS email_config (
         id SERIAL PRIMARY KEY,
@@ -243,7 +243,7 @@ async function migrate() {
       )
     `
     console.log("✓ Tabela email_config criada")
-    
+
     await sql`
       CREATE TABLE IF NOT EXISTS notificacoes (
         id SERIAL PRIMARY KEY,
@@ -258,7 +258,7 @@ async function migrate() {
       )
     `
     console.log("✓ Tabela notificacoes criada")
-    
+
     await sql`
       CREATE TABLE IF NOT EXISTS roles (
         id SERIAL PRIMARY KEY,
@@ -272,7 +272,7 @@ async function migrate() {
       )
     `
     console.log("✓ Tabela roles criada")
-    
+
     const existingRoles = await sql`SELECT count(*) FROM roles`
     if (existingRoles[0].count === "0") {
       await sql`INSERT INTO roles (name, label, description, permissions) VALUES
@@ -286,7 +286,7 @@ async function migrate() {
       `
     }
     console.log("✓ Roles padrão inseridas")
-    
+
     await sql`
       CREATE TABLE IF NOT EXISTS produtos_quimicos (
         id SERIAL PRIMARY KEY,
@@ -309,7 +309,7 @@ async function migrate() {
       )
     `
     console.log("✓ Tabela produtos_quimicos criada")
-    
+
     await sql`
       CREATE TABLE IF NOT EXISTS produto_cru_receita (
         id SERIAL PRIMARY KEY,
@@ -325,7 +325,7 @@ async function migrate() {
     console.log("✓ Tabela produto_cru_receita criada")
     await sql`ALTER TABLE produto_cru_receita ADD COLUMN IF NOT EXISTS versao INTEGER NOT NULL DEFAULT 1`
     await sql`ALTER TABLE produto_cru_receita ADD COLUMN IF NOT EXISTS receita_original_id INTEGER`
-    
+
     await sql`
       CREATE TABLE IF NOT EXISTS produto_cru_receita_item (
         id SERIAL PRIMARY KEY,
@@ -363,16 +363,30 @@ async function migrate() {
     const regrasExistentes = await sql`SELECT count(*) FROM notificacao_regras`
     if (regrasExistentes[0].count === "0") {
       const tipos = [
-        'SOLICITACAO_CRIADA', 'SOLICITACAO_APROVADA', 'SOLICITACAO_REPROVADA', 'SOLICITACAO_ATUALIZADA',
-        'PRODUTO_CRU_CRIADO', 'PRODUTO_CRU_ATUALIZADO', 'PRODUTO_CRU_EXCLUIDO',
-        'AMOSTRA_CRIADA', 'AMOSTRA_APROVADA', 'AMOSTRA_REPROVADA', 'AMOSTRA_ATUALIZADA', 'AMOSTRA_EXCLUIDA',
-        'ACABAMENTO_CRIADO', 'ACABAMENTO_EXCLUIDO',
+        "SOLICITACAO_CRIADA",
+        "SOLICITACAO_APROVADA",
+        "SOLICITACAO_REPROVADA",
+        "SOLICITACAO_ATUALIZADA",
+        "PRODUTO_CRU_CRIADO",
+        "PRODUTO_CRU_ATUALIZADO",
+        "PRODUTO_CRU_EXCLUIDO",
+        "AMOSTRA_CRIADA",
+        "AMOSTRA_APROVADA",
+        "AMOSTRA_REPROVADA",
+        "AMOSTRA_ATUALIZADA",
+        "AMOSTRA_EXCLUIDA",
+        "ACABAMENTO_CRIADO",
+        "ACABAMENTO_EXCLUIDO",
       ]
       for (const tipo of tipos) {
         await sql`INSERT INTO notificacao_regras (tipo, roles) VALUES (${tipo}, '["COMERCIAL","DESENVOLVIMENTO","ADMIN","SUDO","QUALIDADE","TECELAGEM","BENEFICIAMENTO","PCP"]'::jsonb)`
       }
     }
     console.log("✓ Regras de notificação padrão inseridas")
+
+    // Atividade comercial entre contas (in-app + e-mail), configurável em Admin › Notificações
+    await sql`INSERT INTO notificacao_regras (tipo, roles) VALUES ('ATIVIDADE_COMERCIAL', '["COMERCIAL","CRM"]'::jsonb) ON CONFLICT (tipo) DO NOTHING`
+    console.log("✓ Regra ATIVIDADE_COMERCIAL verificada")
 
     await sql`
       CREATE TABLE IF NOT EXISTS bancos_dados (
@@ -387,7 +401,8 @@ async function migrate() {
     console.log("✓ Tabela bancos_dados criada")
 
     // Atualiza regras existentes que ficaram com array vazio (da seed anterior)
-    const defaultRoles = '["COMERCIAL","DESENVOLVIMENTO","ADMIN","SUDO","QUALIDADE","TECELAGEM","BENEFICIAMENTO","PCP"]'
+    const defaultRoles =
+      '["COMERCIAL","DESENVOLVIMENTO","ADMIN","SUDO","QUALIDADE","TECELAGEM","BENEFICIAMENTO","PCP"]'
     await sql`UPDATE notificacao_regras SET roles = ${defaultRoles}::jsonb WHERE roles = '[]'::jsonb`
     const atualizadas = await sql`SELECT count(*) FROM notificacao_regras`
     console.log(`✓ ${atualizadas[0].count} regras de notificação no total`)
@@ -452,9 +467,11 @@ async function migrate() {
     console.log("✓ Tabela requisicoes_amostra_comercial criada")
 
     // Insere regras de notificação para amostra comercial caso não existam
-    const amostraComercialRegras = await sql`SELECT count(*) FROM notificacao_regras WHERE tipo = 'AMOSTRA_COMERCIAL_CRIADA'`
+    const amostraComercialRegras =
+      await sql`SELECT count(*) FROM notificacao_regras WHERE tipo = 'AMOSTRA_COMERCIAL_CRIADA'`
     if (amostraComercialRegras[0].count === "0") {
-      const rolesDefault = '["COMERCIAL","DESENVOLVIMENTO","ADMIN","SUDO","QUALIDADE","TECELAGEM","PCP"]'
+      const rolesDefault =
+        '["COMERCIAL","DESENVOLVIMENTO","ADMIN","SUDO","QUALIDADE","TECELAGEM","PCP"]'
       await sql`INSERT INTO notificacao_regras (tipo, roles) VALUES
         ('AMOSTRA_COMERCIAL_CRIADA', ${rolesDefault}::jsonb),
         ('AMOSTRA_COMERCIAL_STATUS', ${rolesDefault}::jsonb)`
@@ -462,7 +479,8 @@ async function migrate() {
     }
 
     // Insere regras de notificação para requisições de corte caso não existam
-    const reqCorteExistentes = await sql`SELECT count(*) FROM notificacao_regras WHERE tipo = 'REQUISICAO_CORTE'`
+    const reqCorteExistentes =
+      await sql`SELECT count(*) FROM notificacao_regras WHERE tipo = 'REQUISICAO_CORTE'`
     if (reqCorteExistentes[0].count === "0") {
       await sql`INSERT INTO notificacao_regras (tipo, roles) VALUES ('REQUISICAO_CORTE', '["COMERCIAL","DESENVOLVIMENTO","ADMIN","SUDO","QUALIDADE","TECELAGEM","BENEFICIAMENTO","PCP"]'::jsonb)`
       await sql`INSERT INTO notificacao_regras (tipo, roles) VALUES ('REQUISICAO_CORTE_STATUS', '["COMERCIAL","DESENVOLVIMENTO","ADMIN","SUDO","QUALIDADE","TECELAGEM","BENEFICIAMENTO","PCP"]'::jsonb)`
@@ -698,13 +716,14 @@ async function migrate() {
         ('REALIZADA', 'Realizada', 'VISITA', '#22c55e', 2),
         ('CANCELADA', 'Cancelada', 'VISITA', '#ef4444', 3)
       `
-    console.log("✓ Status padrão inseridos")
+      console.log("✓ Status padrão inseridos")
     } else {
       console.log("✓ Status já existem — pulando inserção")
     }
 
     // Insere status TAREFA (idempotente)
-    const tarefaPendente = await sql`SELECT id FROM status WHERE nome = 'PENDENTE' AND tipo = 'TAREFA'`
+    const tarefaPendente =
+      await sql`SELECT id FROM status WHERE nome = 'PENDENTE' AND tipo = 'TAREFA'`
     if (tarefaPendente.length === 0) {
       await sql`INSERT INTO status (nome, rotulo, tipo, cor, ordem) VALUES
         ('PENDENTE', 'Pendente', 'TAREFA', '#f59e0b', 1),
@@ -716,7 +735,8 @@ async function migrate() {
     }
 
     // Insere status PROPOSTA (idempotente)
-    const propostaEnviada = await sql`SELECT id FROM status WHERE nome = 'ENVIADA' AND tipo = 'PROPOSTA'`
+    const propostaEnviada =
+      await sql`SELECT id FROM status WHERE nome = 'ENVIADA' AND tipo = 'PROPOSTA'`
     if (propostaEnviada.length === 0) {
       await sql`INSERT INTO status (nome, rotulo, tipo, cor, ordem) VALUES
         ('ENVIADA', 'Enviada', 'PROPOSTA', '#3b82f6', 1),
@@ -1161,7 +1181,7 @@ async function migrate() {
     console.log("✓ URL do menu Contatos corrigida")
 
     // 2. Adiciona Contatos em menus CRM de todos os papéis (role-based) se ainda não existir
-    const roles = ['CRM', 'COMERCIAL', 'ADMIN', 'SUDO']
+    const roles = ["CRM", "COMERCIAL", "ADMIN", "SUDO"]
     for (const role of roles) {
       await sql`
         INSERT INTO user_menu_itens (user_menu_id, titulo, url, ordem)
@@ -1215,7 +1235,7 @@ async function migrate() {
     console.log("✓ Coluna cliente_id adicionada em crm_oportunidades")
 
     // ==================== Viagens no menu CRM (role-based + user-specific) ====================
-    const viagemRoles = ['CRM', 'COMERCIAL', 'ADMIN', 'SUDO']
+    const viagemRoles = ["CRM", "COMERCIAL", "ADMIN", "SUDO"]
     for (const role of viagemRoles) {
       await sql`
         INSERT INTO user_menu_itens (user_menu_id, titulo, url, ordem)
@@ -1246,7 +1266,7 @@ async function migrate() {
     console.log("✓ Viagens adicionado em menus de usuários específicos")
 
     // ==================== Faturamentos no menu CRM (role-based + user-specific) ====================
-    const faturamentoRoles = ['CRM', 'COMERCIAL', 'ADMIN', 'SUDO']
+    const faturamentoRoles = ["CRM", "COMERCIAL", "ADMIN", "SUDO"]
     for (const role of faturamentoRoles) {
       await sql`
         INSERT INTO user_menu_itens (user_menu_id, titulo, url, ordem)
@@ -1277,7 +1297,7 @@ async function migrate() {
     console.log("✓ Faturamentos adicionado em menus de usuários específicos")
 
     // ==================== Pedidos de Venda no menu CRM (role-based + user-specific) ====================
-    const pedidoRoles = ['CRM', 'COMERCIAL', 'ADMIN', 'SUDO']
+    const pedidoRoles = ["CRM", "COMERCIAL", "ADMIN", "SUDO"]
     for (const role of pedidoRoles) {
       await sql`
         INSERT INTO user_menu_itens (user_menu_id, titulo, url, ordem)
@@ -1390,7 +1410,9 @@ async function migrate() {
     await sql`ALTER TABLE proc_processos ADD COLUMN IF NOT EXISTS links JSONB DEFAULT '[]'::jsonb`
     await sql`ALTER TABLE proc_subprocessos ADD COLUMN IF NOT EXISTS links JSONB DEFAULT '[]'::jsonb`
     await sql`ALTER TABLE proc_atividades ADD COLUMN IF NOT EXISTS links JSONB DEFAULT '[]'::jsonb`
-    console.log("✓ Links (URL + descrição) adicionados em proc_processos, proc_subprocessos e proc_atividades")
+    console.log(
+      "✓ Links (URL + descrição) adicionados em proc_processos, proc_subprocessos e proc_atividades"
+    )
 
     // ==================== Ativos e Vistorias ====================
     await sql`
@@ -1593,20 +1615,20 @@ async function migrate() {
 
     // ===== bi_ordem_graficos: ordem dos gráficos do detalhe de faturamento por usuário =====
     await sql`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS bi_ordem_graficos JSONB DEFAULT '[]'::jsonb`
-    console.log("✓ Coluna bi_ordem_graficos adicionada em usuarios (ordem dos gráficos do faturamento)")
+    console.log(
+      "✓ Coluna bi_ordem_graficos adicionada em usuarios (ordem dos gráficos do faturamento)"
+    )
     // Tabelas que faltavam no banco: mesmo SQL do criar-tabelas-faltantes.js, que e
     // quem tem a lista commentada. A comparacao das 123 tabelas do schema com o
     // information_schema mostrou 8 ausentes: o banco so tinha o que o migrate.js criou.
     await criarTabelas(process.env.DATABASE_URL)
 
-
     console.log("\n✅ Migration concluída com sucesso!")
-    
   } catch (error) {
     console.error("❌ Erro na migration:", error.message)
     process.exit(1)
   }
-  
+
   process.exit(0)
 }
 

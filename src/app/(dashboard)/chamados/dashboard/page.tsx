@@ -1,15 +1,7 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
-import {
-  AlertTriangle,
-  ClipboardList,
-  Inbox,
-  InboxIcon,
-  UserX,
-  Clock,
-  Loader2,
-} from "lucide-react"
+import { AlertTriangle, ClipboardList, Inbox, InboxIcon, UserX, Clock, Loader2 } from "lucide-react"
 import { usePathname } from "next/navigation"
 import { InfoButton } from "@/components/ui/info-button"
 import { getInfoContent } from "@/lib/info-content"
@@ -93,7 +85,12 @@ export default function ChamadosDashboardPage() {
 
   const cards = [
     { label: "Abertos", value: totais.abertos, icon: Inbox },
-    { label: "Sem responsável", value: totais.semResponsavel, icon: UserX, destaque: totais.semResponsavel > 0 },
+    {
+      label: "Sem responsável",
+      value: totais.semResponsavel,
+      icon: UserX,
+      destaque: totais.semResponsavel > 0,
+    },
     {
       label: "Vencidos 1ª resposta",
       value: totais.vencidosPrimeiraResposta,
@@ -138,7 +135,11 @@ export default function ChamadosDashboardPage() {
               >
                 <Icon
                   size={20}
-                  className={destaque ? "text-red-600 dark:text-red-400" : "text-slate-600 dark:text-slate-300"}
+                  className={
+                    destaque
+                      ? "text-red-600 dark:text-red-400"
+                      : "text-slate-600 dark:text-slate-300"
+                  }
                 />
               </div>
               <span className="text-sm text-slate-600 dark:text-slate-300">{label}</span>
@@ -171,9 +172,7 @@ export default function ChamadosDashboardPage() {
                 </div>
               ))}
             {Object.keys(totais.ativosPorStatus).length === 0 && (
-              <div className="text-center text-sm text-slate-500 py-4">
-                Nenhum chamado aberto
-              </div>
+              <div className="text-center text-sm text-slate-500 py-4">Nenhum chamado aberto</div>
             )}
           </div>
         </div>
@@ -194,9 +193,7 @@ export default function ChamadosDashboardPage() {
                 </div>
               ))}
             {Object.keys(totais.porPrioridade).length === 0 && (
-              <div className="text-center text-sm text-slate-500 py-4">
-                Nenhum chamado aberto
-              </div>
+              <div className="text-center text-sm text-slate-500 py-4">Nenhum chamado aberto</div>
             )}
           </div>
         </div>
@@ -209,9 +206,9 @@ export default function ChamadosDashboardPage() {
         {porFila.length === 0 ? (
           <div className="p-8 text-center text-slate-500">Nenhum chamado aberto</div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-auto max-h-[70vh]">
             <table className="w-full">
-              <thead className="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+              <thead className="sticky top-0 z-10 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
                 <tr>
                   <th className="text-left text-xs font-medium text-slate-500 dark:text-slate-400 p-4">
                     Fila
@@ -226,7 +223,10 @@ export default function ChamadosDashboardPage() {
               </thead>
               <tbody>
                 {porFila.map((f) => (
-                  <tr key={f.areaId ?? "sem"} className="border-b border-slate-100 dark:border-slate-800">
+                  <tr
+                    key={f.areaId ?? "sem"}
+                    className="border-b border-slate-100 dark:border-slate-800"
+                  >
                     <td className="p-4 text-sm font-medium text-slate-900 dark:text-slate-50">
                       {f.areaNome}
                     </td>
@@ -253,9 +253,9 @@ export default function ChamadosDashboardPage() {
         {recentes.length === 0 ? (
           <div className="p-8 text-center text-slate-500">Nenhum chamado ainda</div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-auto max-h-[70vh]">
             <table className="w-full">
-              <thead className="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+              <thead className="sticky top-0 z-10 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
                 <tr>
                   <th className="text-left text-xs font-medium text-slate-500 dark:text-slate-400 p-4">
                     Chamado

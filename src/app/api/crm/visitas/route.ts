@@ -10,6 +10,7 @@ import { crmPropostas } from "@/lib/db/schema/crm-propostas"
 import { usuarios } from "@/lib/db/schema/usuarios"
 import { eq, desc, like, or, and, count, gte, lte, inArray } from "drizzle-orm"
 import { registrarLog, notificar } from "@/lib/notificar"
+import { notificarAtividadeComercial } from "@/lib/crm/notificar-atividade"
 import { inserirTimelineEvento } from "@/lib/crm-timeline"
 import { temEndereco, type EnderecoCampos } from "@/lib/crm/endereco"
 import { geocodificarCamposEndereco } from "@/lib/crm/geocode"
@@ -231,6 +232,15 @@ export async function POST(req: NextRequest) {
       `/comercial/crm/visitas/${primeira.id}`,
       session.user.name
     )
+
+    await notificarAtividadeComercial({
+      acao: `agendou uma visita ${primeira.tipo.toLowerCase()}`,
+      entidade: "Visita",
+      registro: new Date(primeira.dataVisita + "T12:00:00").toLocaleDateString("pt-BR"),
+      link: `/comercial/crm/visitas/${primeira.id}`,
+      usuarioNome: session.user.name,
+      usuarioId: userId,
+    })
 
     return NextResponse.json({ visita: primeira, total: inserted.length }, { status: 201 })
   } catch (error) {

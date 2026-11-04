@@ -645,6 +645,8 @@ export const crmContent: Record<string, InfoContent> = {
       "Use os gráficos para identificar gargalos no pipeline.",
       "A taxa de conversão considera apenas oportunidades fechadas (ganhas vs perdidas).",
       "Os relatórios ajudam a IA Comercial a gerar previsões mais precisas.",
+      "Na parte inferior estão os relatórios detalhados: Atividades, Pessoas, Oportunidades, Propostas e Visitas.",
+      "Cada relatório detalhado tem filtros por período, cards de resumo, listagem completa e exportação em PDF, CSV e Markdown.",
     ],
     fields: [
       { name: "Leads por Origem", desc: "Distribuição dos leads pelo canal de captação" },
@@ -655,6 +657,117 @@ export const crmContent: Record<string, InfoContent> = {
         desc: "Distribuição das propostas: enviadas, aceitas, recusadas",
       },
       { name: "Conversão", desc: "Taxa de conversão geral do funil comercial" },
+    ],
+  },
+
+  "/comercial/crm/relatorios/atividades": {
+    title: "Relatório de Atividades do CRM",
+    description:
+      "Mostra tudo que as contas comerciais fizeram no CRM: registros criados por pessoa, oportunidade, proposta, visita, tarefa, lead e contato, com data, hora e pessoa ou cliente envolvida.",
+    rules: [
+      "A base do relatório é a tabela de logs: cada ação registrada no CRM aparece aqui.",
+      "Os cards comparam o período escolhido com hoje, últimos 7 dias e mês atual.",
+      "A tabela 'Produção por usuário' mostra quantos registros cada usuário criou em cada intervalo.",
+      "O filtro de período vale para os cards, para a tabela e para as exportações.",
+      "Use o filtro Usuário para medir a produção de uma conta específica.",
+      "A exportação gera PDF, CSV e Markdown com os mesmos dados da tela.",
+    ],
+    fields: [
+      { name: "Data e hora", desc: "Momento da atividade registrada" },
+      { name: "Usuário", desc: "Conta comercial que realizou a ação" },
+      { name: "Ação", desc: "O que foi feito (criar, mover, atualizar, excluir)" },
+      { name: "Entidade", desc: "Registro do CRM afetado" },
+      { name: "Pessoa", desc: "Pessoa ou empresa envolvida na atividade" },
+      { name: "Cliente", desc: "Cliente vinculado, quando existir" },
+    ],
+  },
+
+  "/comercial/crm/relatorios/pessoas": {
+    title: "Relatório de Pessoas do CRM",
+    description:
+      "Relatório do cadastro de pessoas do CRM criado no período, com tipo de pessoa, documento, segmento, cidade, responsável e se já foi convertido em cliente.",
+    rules: [
+      "O período padrão é os últimos 7 dias; troque para Hoje, Mês ou um período personalizado.",
+      "PF e PJ são separados nos cards de resumo.",
+      "Pessoas convertidas em cliente são as que já possuem vínculo na tabela de Clientes.",
+      "A tabela rola na vertical e na horizontal, com o cabeçalho fixo durante a navegação.",
+      "A exportação gera PDF, CSV e Markdown com os mesmos dados da tela.",
+    ],
+    fields: [
+      { name: "Data e hora", desc: "Momento do cadastro da pessoa" },
+      { name: "Nome", desc: "Nome da pessoa física ou razão social" },
+      { name: "Tipo", desc: "PF (pessoa física) ou PJ (pessoa jurídica)" },
+      { name: "Documento", desc: "CPF ou CNPJ" },
+      { name: "Segmento", desc: "Segmento comercial da pessoa" },
+      { name: "Responsável", desc: "Conta comercial responsável pelo cadastro" },
+      { name: "Cliente", desc: "Sim quando a pessoa já está convertida em cliente" },
+    ],
+  },
+
+  "/comercial/crm/relatorios/oportunidades": {
+    title: "Relatório de Oportunidades do CRM",
+    description:
+      "Oportunidades criadas no período com status, valor estimado, probabilidade, responsável e a pessoa ou cliente relacionada.",
+    rules: [
+      "Os cards mostram o total, as em aberto, as ganhas, as perdidas e a taxa de conversão.",
+      "A taxa de conversão considera apenas as oportunidades do período selecionado.",
+      "O valor ponderado soma o valor estimado multiplicado pela probabilidade de cada oportunidade.",
+      "A tabela rola na vertical e na horizontal, com o cabeçalho fixo durante a navegação.",
+      "A exportação gera PDF, CSV e Markdown com os mesmos dados da tela.",
+    ],
+    fields: [
+      { name: "Data e hora", desc: "Momento da criação da oportunidade" },
+      { name: "Título", desc: "Nome da oportunidade" },
+      { name: "Pessoa", desc: "Pessoa ou empresa da oportunidade" },
+      { name: "Cliente", desc: "Cliente vinculado, quando existir" },
+      { name: "Responsável", desc: "Conta comercial responsável" },
+      { name: "Status", desc: "Estágio atual da oportunidade" },
+      { name: "Valor", desc: "Valor estimado da oportunidade" },
+      { name: "Probabilidade", desc: "Percentual de fechamento" },
+    ],
+  },
+
+  "/comercial/crm/relatorios/propostas": {
+    title: "Relatório de Propostas do CRM",
+    description:
+      "Propostas do CRM criadas no período, com valor, status (enviada, aceita, recusada ou em revisão), responsável e a pessoa ou cliente atendida.",
+    rules: [
+      "A taxa de aceitação considera as propostas aceitas sobre o total do período.",
+      "O valor aceito soma apenas as propostas com status ACEITA.",
+      "O filtro Status permite separar enviadas, aceitas, recusadas e em revisão.",
+      "A tabela rola na vertical e na horizontal, com o cabeçalho fixo durante a navegação.",
+      "A exportação gera PDF, CSV e Markdown com os mesmos dados da tela.",
+    ],
+    fields: [
+      { name: "Data e hora", desc: "Momento da criação da proposta" },
+      { name: "Título", desc: "Título da proposta" },
+      { name: "Pessoa", desc: "Pessoa ou empresa atendida" },
+      { name: "Cliente", desc: "Cliente vinculado, quando existir" },
+      { name: "Responsável", desc: "Usuário que criou a proposta" },
+      { name: "Status", desc: "ENVIADA, ACEITA, RECUSADA ou REVISAO" },
+      { name: "Valor", desc: "Valor da proposta" },
+    ],
+  },
+
+  "/comercial/crm/relatorios/visitas": {
+    title: "Relatório de Visitas do CRM",
+    description:
+      "Visitas do CRM realizadas ou agendadas no período, separando o tipo presencial, por vídeo e por telefone, com cidade, responsável e pessoa ou cliente atendido.",
+    rules: [
+      "O relatório considera o registro da visita, não o relatório de campo preenchido depois.",
+      "A taxa de comparecimento compara as visitas concluídas com o total do período.",
+      "O filtro Tipo separa visitas presenciais, por vídeo e por telefone.",
+      "A tabela rola na vertical e na horizontal, com o cabeçalho fixo durante a navegação.",
+      "A exportação gera PDF, CSV e Markdown com os mesmos dados da tela.",
+    ],
+    fields: [
+      { name: "Data e hora", desc: "Data e hora da visita" },
+      { name: "Tipo", desc: "PRESENCIAL, VIDEO ou TELEFONE" },
+      { name: "Pessoa", desc: "Pessoa, empresa ou visita avulsa" },
+      { name: "Cliente", desc: "Cliente vinculado, quando existir" },
+      { name: "Responsável", desc: "Usuário que agendou a visita" },
+      { name: "Status", desc: "Situação da visita" },
+      { name: "Local", desc: "Cidade e UF da visita" },
     ],
   },
 

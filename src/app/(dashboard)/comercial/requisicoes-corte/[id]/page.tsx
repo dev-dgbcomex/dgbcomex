@@ -342,9 +342,9 @@ export default function DetalheRequisicaoCortePage() {
       <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 space-y-4">
         <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-50">Itens de Corte</h2>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-auto max-h-[70vh]">
           <table className="w-full">
-            <thead>
+            <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-slate-800">
               <tr className="border-b border-slate-200 dark:border-slate-700">
                 <th className="px-3 py-2 w-8"></th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-slate-500 uppercase">

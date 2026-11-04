@@ -9,6 +9,7 @@ import { clientes } from "@/lib/db/schema/clientes"
 import { usuarios } from "@/lib/db/schema/usuarios"
 import { eq, desc, like, or, sql } from "drizzle-orm"
 import { registrarLog, notificar } from "@/lib/notificar"
+import { notificarAtividadeComercial } from "@/lib/crm/notificar-atividade"
 import { inserirTimelineEvento } from "@/lib/crm-timeline"
 
 export async function GET(req: NextRequest) {
@@ -133,6 +134,15 @@ export async function POST(req: NextRequest) {
       `/comercial/crm/oportunidades/${nova.id}`,
       session.user.name
     )
+
+    await notificarAtividadeComercial({
+      acao: "criou a oportunidade",
+      entidade: "Oportunidade",
+      registro: nova.titulo,
+      link: `/comercial/crm/oportunidades/${nova.id}`,
+      usuarioNome: session.user.name,
+      usuarioId: userId,
+    })
 
     return NextResponse.json(nova, { status: 201 })
   } catch (error) {

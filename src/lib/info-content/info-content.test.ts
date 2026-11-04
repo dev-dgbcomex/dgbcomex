@@ -165,4 +165,64 @@ describe("getInfoContent", () => {
     expect(antigo?.description).toMatch(/Menu de Navegação/)
     expect(antigo?.rules?.join(" ")).toMatch(/statusTipo/)
   })
+
+  it("os relatórios do CRM explicam filtros, cards e exportações", () => {
+    const telas = [
+      "/comercial/crm/relatorios",
+      "/comercial/crm/relatorios/atividades",
+      "/comercial/crm/relatorios/pessoas",
+      "/comercial/crm/relatorios/oportunidades",
+      "/comercial/crm/relatorios/propostas",
+      "/comercial/crm/relatorios/visitas",
+    ]
+
+    for (const caminho of telas) {
+      const conteudo = getInfoContent(caminho)
+      expect(conteudo).not.toBeNull()
+
+      const texto = [
+        conteudo?.description ?? "",
+        ...(conteudo?.rules ?? []),
+        ...(conteudo?.fields ?? []).map((f) => `${f.name}: ${f.desc}`),
+      ].join("\n")
+
+      // Filtros por período, listagem e exportação.
+      expect(texto).toMatch(/período/i)
+      expect(texto).toMatch(/PDF/)
+      expect(texto).toMatch(/CSV/)
+      expect(texto).toMatch(/Markdown/)
+    }
+  })
+
+  it("as telas de relatório do CRM registram data/hora e pessoa ou cliente envolvida", () => {
+    const atividades = getInfoContent("/comercial/crm/relatorios/atividades")
+    const pessoas = getInfoContent("/comercial/crm/relatorios/pessoas")
+
+    const texto = [atividades, pessoas]
+      .flatMap((item) => [
+        item?.description ?? "",
+        ...(item?.rules ?? []),
+        ...(item?.fields ?? []).map((f) => `${f.name}: ${f.desc}`),
+      ])
+      .join("\n")
+
+    expect(texto).toMatch(/Data e hora/)
+    expect(texto).toMatch(/Pessoa/)
+    expect(texto).toMatch(/Cliente/)
+  })
+
+  it("a configuração de notificações explica a atividade comercial", () => {
+    const conteudo = getInfoContent("/admin/notificacoes")
+
+    expect(conteudo).not.toBeNull()
+    const texto = [
+      conteudo?.description ?? "",
+      ...(conteudo?.rules ?? []),
+      ...(conteudo?.fields ?? []).map((f) => `${f.name}: ${f.desc}`),
+    ].join("\n")
+
+    expect(texto).toMatch(/ATIVIDADE_COMERCIAL/)
+    expect(texto).toMatch(/e-mail/i)
+    expect(texto).toMatch(/não recebe a própria notificação/i)
+  })
 })
