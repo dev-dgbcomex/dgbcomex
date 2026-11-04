@@ -6,7 +6,7 @@ const { Pool } = pg;
 
 async function main() {
   const main = new Pool({ connectionString: process.env.DATABASE_URL, connectionTimeoutMillis: 20000 });
-  const neon = new Pool({ connectionString: process.env.DATABASE_URL_NEON, connectionTimeoutMillis: 20000 });
+  const neon = new Pool({ connectionString: process.env.DATABASE_URL, connectionTimeoutMillis: 20000 });
 
   console.log('=== conteudo de colunas "links" ===');
   for (const t of ['produtos_cru', 'fios', 'produto_cru_amostra', 'produto_cru_acabamento_amostra']) {

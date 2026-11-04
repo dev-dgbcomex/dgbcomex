@@ -2,8 +2,7 @@ const { Pool } = require('pg')
 require('dotenv').config({ path: '.env.local' })
 
 const DBS = [
-  { nome: 'pdm_textil', url: process.env.DATABASE_URL },
-  { nome: 'neon', url: process.env.DATABASE_URL_NEON },
+  { nome: 'neon', url: process.env.DATABASE_URL },
 ]
 
 async function main() {

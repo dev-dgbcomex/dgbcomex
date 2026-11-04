@@ -325,7 +325,7 @@ Regras:
 
 ## 8. Seed — `scripts/seed-vistorias.ts`
 
-Popula os 4 bancos (idempotente, `IF NOT EXISTS` por nome) com:
+Popula os 2 bancos (idempotente, `IF NOT EXISTS` por nome) com:
 
 1. **Categorias** (setor): Segurança Contra Incêndio (SEGURANCA), Mecânica (MECANICA),
    Elétrica/SPDA (ELETRICA), Ambiental (AMBIENTAL), Predial/Civil (PREDIAL),
@@ -341,18 +341,18 @@ O usuário cria **ativos** e **planos** a partir desses tipos, ou cria tipos pr�
 
 ## 9. Multi-banco e migrations
 
-Seguir o fluxo obrigatório do projeto (AGENTS.md):
+Seguir o fluxo obrigatório do projeto (AGENTS.md): Neon (principal) + warehouse local.
 
 ```
 npx drizzle-kit generate
-npm run db:migrate
-npm run db:migrate:all
-node scripts/sync-all-dbs.js
-node scripts/compare-schemas.js
+npm run db:migrate          # Neon (principal)
+npm run db:replicar-neon    # replica no warehouse local (idempotente)
+npm run db:verificar-local  # 0 divergências de linhas
+npm run db:comparar         # estrutura idêntica
 ```
 
-`scripts/sync-all-dbs.js` ganha as novas tabelas/colunas com `IF NOT EXISTS` para o banco
-Neon.
+O `scripts/sync-all-dbs.js` roda no **warehouse local**; o Neon recebe o mesmo SQL via
+`node scripts/sync-principal.js` (ou `npm run db:migrate`).
 
 ---
 

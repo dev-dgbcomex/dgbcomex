@@ -4,10 +4,8 @@ import postgres from "postgres"
 dotenv.config({ path: ".env.local" })
 
 const TARGETS = [
-  { name: "pdm_textil", url: process.env.DATABASE_URL },
-  { name: "pdm_pro_textil", url: process.env.DATABASE_URL_PDM_PRO_TEXTIL },
-  { name: "pdm_ibirapuera", url: process.env.DATABASE_URL_PDM_IBIRAPUERA },
-  { name: "neon", url: process.env.DATABASE_URL_NEON },
+  { name: 'neon', url: process.env.DATABASE_URL },
+  { name: 'warehouse_local', url: process.env.DATABASE_URL_LOCAL },
 ]
 
 const OLD = "conferencia-op-tecelagem"

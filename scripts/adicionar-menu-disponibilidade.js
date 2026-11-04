@@ -11,8 +11,7 @@ const ORDEM = 2 // antes de Pessoas, que e a leitura do dia do comercial
 
 const BANCOS = [
   ["principal", process.env.DATABASE_URL],
-  ["pdm_pro_textil", process.env.DATABASE_URL_PDM_PRO_TEXTIL],
-  ["pdm_ibirapuera", process.env.DATABASE_URL_PDM_IBIRAPUERA],
+  ['warehouse_local', process.env.DATABASE_URL_LOCAL],
 ]
 
 async function aplicar(pool) {

@@ -11,7 +11,7 @@ async function q(pool, text) {
 
 async function main() {
   const main = new Pool({ connectionString: process.env.DATABASE_URL, connectionTimeoutMillis: 20000 });
-  const neon = new Pool({ connectionString: process.env.DATABASE_URL_NEON, connectionTimeoutMillis: 20000 });
+  const neon = new Pool({ connectionString: process.env.DATABASE_URL, connectionTimeoutMillis: 20000 });
 
   console.log('=== PRODUTOS_CRU PRINCIPAL ===');
   const mp = await q(main, `SELECT id, codigo_pdm, descricao, solicitacao_desenvolvimento_id, status, criado_por, created_at FROM produtos_cru ORDER BY id`);

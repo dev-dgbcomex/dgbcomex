@@ -17,6 +17,7 @@
     "db:migrate:wms": "node scripts/migrar-wms-local.js",
     "db:replicar-neon": "node scripts/replicar-neon-local.js",
     "db:verificar-local": "node scripts/verify-neon-local.js",
+    "db:comparar": "node scripts/compare-schemas.js",
     "test": "vitest run",
     "test:watch": "vitest"
   },

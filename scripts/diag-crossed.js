@@ -2,7 +2,7 @@ require('dotenv').config({ path: require('path').join(__dirname, '..', '.env.loc
 const { Pool } = require('pg');
 
 const MAIN = process.env.DATABASE_URL;
-const NEON = process.env.DATABASE_URL_NEON;
+const NEON = process.env.DATABASE_URL;
 
 // (child, col, parent) — referencias de tabelas restauradas a pais renumerados,
 // extraidas do schema drizzle. Pais: tabelas do backup com ids renumerados.

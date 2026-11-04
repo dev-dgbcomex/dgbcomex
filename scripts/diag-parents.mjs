@@ -12,7 +12,7 @@ const PARENTS = [
 
 async function main() {
   const main = new Pool({ connectionString: process.env.DATABASE_URL, connectionTimeoutMillis: 20000 });
-  const neon = new Pool({ connectionString: process.env.DATABASE_URL_NEON, connectionTimeoutMillis: 20000 });
+  const neon = new Pool({ connectionString: process.env.DATABASE_URL, connectionTimeoutMillis: 20000 });
 
   for (const t of PARENTS) {
     console.log(`\n=== ${t} ===`);

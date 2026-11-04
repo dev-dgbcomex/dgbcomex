@@ -4,24 +4,21 @@
 // Problemas, Mudanças, Liberação, Ativos/CMDB, Backup, Segurança da Informação,
 // Infraestrutura, Acessos/IAM, Fornecedores e Projetos).
 //
-// Roda nos 4 bancos (pdm_textil, pdm_pro_textil, pdm_ibirapuera, neon).
+// Roda nos 2 bancos (neon, warehouse_local).
 //
 // Uso:
 //   node scripts/seed-processos-ti.js                 (todos os bancos)
-//   node scripts/seed-processos-ti.js --db=pdm_textil (só o principal)
+//   node scripts/seed-processos-ti.js --db=neon (só o principal)
 //   node scripts/seed-processos-ti.js --dry-run       (não grava, só reporta)
 //
-// Requer as env vars do .env.local (DATABASE_URL, DATABASE_URL_PDM_PRO_TEXTIL,
-// DATABASE_URL_PDM_IBIRAPUERA, DATABASE_URL_NEON).
+// Requer as env vars do .env.local (DATABASE_URL, DATABASE_URL_LOCAL).
 
 require("dotenv").config({ path: ".env.local" })
 const postgres = require("postgres")
 
 const DATABASES = [
-  { name: "pdm_textil", url: process.env.DATABASE_URL },
-  { name: "pdm_pro_textil", url: process.env.DATABASE_URL_PDM_PRO_TEXTIL },
-  { name: "pdm_ibirapuera", url: process.env.DATABASE_URL_PDM_IBIRAPUERA },
-  { name: "neon", url: process.env.DATABASE_URL_NEON },
+  { name: 'neon', url: process.env.DATABASE_URL },
+  { name: 'warehouse_local', url: process.env.DATABASE_URL_LOCAL },
 ]
 
 const args = process.argv.slice(2)

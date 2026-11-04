@@ -150,7 +150,7 @@ O campo `mapping` na tabela `integracoes` define como os campos da API Systêxti
 Ao criar uma migration que adicione `idIntegracao` em tabela nova, lembrar de:
 
 1. Adicionar coluna `idIntegracao varchar(100)` no schema Drizzle
-2. Rodar migration nos 4 bancos (pdm_textil, pdm_pro_textil, pdm_ibirapuera, neon)
+2. Rodar migration nos 2 bancos (Neon `DATABASE_URL` + warehouse local `DATABASE_URL_LOCAL`)
 3. Adicionar `idIntegracaoSchema` na validação Zod
 
 ## 10. Referências Externas

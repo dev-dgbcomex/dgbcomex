@@ -405,8 +405,11 @@ PDM_WEBHOOK_SECRET="seu-webhook-secret"
 | `npm run build` | Build de produção |
 | `npm run start` | Iniciar produção |
 | `npm run lint` | ESLint |
-| `npm run db:migrate` | Criar tabelas no banco |
-| `npm run db:migrate:all` | Aplicar migrations em todos os bancos |
+| `npm run db:migrate` | Criar tabelas no banco Neon (principal) |
+| `npm run db:migrate:all` | Aplicar migrations no Neon e no warehouse local |
+| `npm run db:replicar-neon` | Replicar o schema/dados do Neon no warehouse local |
+| `npm run db:verificar-local` | Comparar contagem de linhas Neon x warehouse local |
+| `npm run db:comparar` | Comparar colunas/tipos Neon x warehouse local |
 | `npm test` | Vitest |
 | `npm run test:watch` | Vitest watch |
 

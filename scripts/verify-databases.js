@@ -15,9 +15,8 @@ async function getTables(sql) {
 
 async function compareDatabases() {
   const databases = [
-    { name: "pdm_textil", url: process.env.DATABASE_URL },
-    { name: "pdm_pro_textil", url: process.env.DATABASE_URL_PDM_PRO_TEXTIL },
-    { name: "pdm_ibirapuera", url: process.env.DATABASE_URL_PDM_IBIRAPUERA },
+    { name: 'neon', url: process.env.DATABASE_URL },
+    { name: 'warehouse_local', url: process.env.DATABASE_URL_LOCAL },
   ]
 
   console.log("🔍 Comparando tabelas entre bancos de dados...\n")
@@ -39,7 +38,7 @@ async function compareDatabases() {
   }
   
   // Compare tables
-  const mainDb = "pdm_textil"
+  const mainDb = "neon"
   if (!dbTables[mainDb]) {
     console.error(`❌ Banco principal ${mainDb} não encontrado`)
     return

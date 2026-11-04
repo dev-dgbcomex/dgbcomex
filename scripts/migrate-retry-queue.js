@@ -6,10 +6,8 @@ require("dotenv").config({ path: ".env.local" })
 const sql = fs.readFileSync(path.join(__dirname, "../src/lib/db/migrations/0033_add_whatsapp_retry_queue.sql"), "utf8")
 
 const urls = [
-  { name: "pdm_textil", url: process.env.DATABASE_URL },
-  { name: "pdm_pro_textil", url: process.env.DATABASE_URL_PDM_PRO_TEXTIL },
-  { name: "pdm_ibirapuera", url: process.env.DATABASE_URL_PDM_IBIRAPUERA },
-  { name: "neon", url: process.env.DATABASE_URL_NEON },
+  { name: 'neon', url: process.env.DATABASE_URL },
+  { name: 'warehouse_local', url: process.env.DATABASE_URL_LOCAL },
 ]
 
 async function runMigration() {

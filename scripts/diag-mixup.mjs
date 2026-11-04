@@ -7,7 +7,7 @@ const { Pool } = pg;
 
 async function main() {
   const mainUrl = process.env.DATABASE_URL;
-  const neonUrl = process.env.DATABASE_URL_NEON;
+  const neonUrl = process.env.DATABASE_URL;
 
   console.log('=== BANCO PRINCIPAL (DATABASE_URL) ===');
   const main = new Pool({ connectionString: mainUrl, connectionTimeoutMillis: 20000 });

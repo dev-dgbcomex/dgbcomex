@@ -453,7 +453,7 @@ Todas as cores têm par **light/dark**.
 
 ## 12. Evolução no repositório atual (pdmtextil) — CRUD de projetos
 
-A implantação atual (Next.js + Drizzle + Postgres, **4 bancos sincronizados**)
+A implantação atual (Next.js + Drizzle + Postgres, **2 bancos sincronizados (Neon + warehouse local)**)
 substituiu o **enum `projeto`** das reuniões por uma **tabela
 `reunioes_projetos`** com FK em `reunioes.projeto_id`:
 
@@ -489,7 +489,7 @@ O projeto padrão é **id 1 (Interna)**.
 - Migration Drizzle: `src/lib/db/migrations/0050_reunioes_projetos.sql`
   (arquivo renomeado de 0031 por ordenação por nome; o journal do Drizzle não
   é usado pelo `migrate-all.js`, que rastreia por nome de arquivo).
-- `scripts/migrate.js` (principal) e `scripts/sync-all-dbs.js` (3 secundários)
+- `scripts/migrate.js` (Neon, principal) e `scripts/replicar-neon-local.js` (warehouse local)
   têm blocos **idempotentes equivalentes**; o backfill roda só enquanto a
   coluna legada existe (DO block checando `information_schema.columns`).
 

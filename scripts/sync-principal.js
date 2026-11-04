@@ -1,9 +1,9 @@
-// Aplica no DATABASE_URL principal o mesmo SQL de `sync-all-dbs.js`.
+// Aplica no DATABASE_URL (Neon, principal) o mesmo SQL de `sync-all-dbs.js`.
 //
-// O `sync-all-dbs.js` roda so nos bancos secundarios (pdm_pro_textil, pdm_ibirapuera,
-// neon): o principal ficou de fora por definicao. Quando um ALTER precisa ir no
-// principal, ele e replicado aqui — e este script le o MESMO arquivo, entao os dois
-// nunca divergem. Idempotente (tudo e `ADD COLUMN IF NOT EXISTS` dentro de DO $$).
+// O `sync-all-dbs.js` roda no warehouse local (DATABASE_URL_LOCAL): o Neon ficou
+// de fora por definicao. Quando um ALTER precisa ir no Neon, ele e replicado aqui —
+// e este script le o MESMO arquivo, entao os dois nunca divergem.
+// Idempotente (tudo e `ADD COLUMN IF NOT EXISTS` dentro de DO $$).
 require("dotenv").config({ path: require("path").join(__dirname, "..", ".env.local") })
 const fs = require("node:fs")
 const path = require("node:path")

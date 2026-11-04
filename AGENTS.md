@@ -12,31 +12,52 @@ Sempre consulte o grafo ANTES de responder perguntas sobre arquitetura, fluxos o
 
 # Multi-Database Setup
 
-O projeto utiliza **4 bancos de dados PostgreSQL**:
+O projeto utiliza **2 bancos de dados PostgreSQL**:
 
 | Banco | Uso | Variável |
 |---|---|---|
-| `pdm_textil` | Instância principal | `DATABASE_URL` |
-| `pdm_pro_textil` | PDM Pro Têxtil (produção) | `DATABASE_URL_PDM_PRO_TEXTIL` |
-| `pdm_ibirapuera` | PDM Ibirapuera (produção) | `DATABASE_URL_PDM_IBIRAPUERA` |
-| Neon | Banco auxiliar Neon (produção) | `DATABASE_URL_NEON` |
+| Neon `dgbcomex` | Banco principal do app (produção) + marts do BI | `DATABASE_URL` |
+| Warehouse local `dgbcomex_warehouse` | Réplica do Neon + carga do ERP + runtime do WMS | `DATABASE_URL_LOCAL` |
+
+**Arquitetura (local é SUPERSET do Neon)**:
+
+- **Neon**: só o que a aplicação usa em produção — CRM e módulos que **não** vêm do ERP. Fica rápido
+  e barato (sem a carga pesada do ERP).
+- **Local**: **tudo o que o Neon tem** + a carga do ERP (schemas `raw`/`core`, ~1M linhas) + os marts
+  publicados pelo ETL + o runtime do WMS (`wms_*`). A carga do ERP ficaria caro no Neon, então fica só aqui.
+- **Fallback**: se o Neon for perdido ou ficar ilegível, o local tem todos os dados do app — basta
+  apontar a conexão para o warehouse local. Por isso a réplica precisa rodar sempre e o local
+  **nunca pode ter menos** que o Neon (pode ter mais).
+
+**Os dois precisam ter o mesmo schema** (mesmas tabelas, colunas, tipos, constraints e índices nos
+schemas `public`/`marts`/`auth`/`etl`).
+O warehouse local ainda tem, por arquitetura, tabelas que só existem nele (runtime do WMS, schemas
+`raw`/`core` e o `alembic_version` da api-microdata) — ver `docs/wms-modulo.md`.
 
 ## IMPORTANTE: Replicação de Mudanças
 
-**TODA mudança no schema do banco `pdm_textil` DEVE ser replicada para TODOS os outros 3 bancos.**
+**TODA mudança no schema do Neon (principal) DEVE ser replicada para o warehouse local.**
 
 ### Procedimento obrigatório:
 
-1. Crie a migration: `npx drizzle-kit generate`
-2. Aplique no principal: `npm run db:migrate`
-3. **Replicate para os 3 secundários**: `npm run db:migrate:all`
-4. **Neon também**: rode `node scripts/sync-all-dbs.js` (cria colunas/tabelas faltantes com IF NOT EXISTS)
+1. Crie a migration: `npx drizzle-kit generate` (ou SQL numerado em `src/lib/db/migrations/`)
+2. Aplique no Neon (principal): `npm run db:migrate`
+3. **Replique no warehouse local**: `npm run db:replicar-neon` (`scripts/replicar-neon-local.js`)
+4. **Verifique**: `npm run db:verificar-local` (`scripts/verify-neon-local.js`) — precisa dar 0 divergências
 
-### ⚠️ O `sync-all-dbs.js` NÃO roda no banco principal
+O `replicar-neon-local.js` é idempotente: cria no local as tabelas que faltam, **alinha colunas e tipos**
+das que já existem, **replica PK/UNIQUE/CHECK/FK e índices**, copia os dados que faltam e reseta as sequências.
+Ele **nunca apaga** dado do local: o `--reset` só trunca o schema `public` (os schemas `marts`/`etl` são
+mantidos pelo ETL local e a carga ERP `raw`/`core` fica intacta).
 
-`scripts/sync-all-dbs.js` aplica a migration em `pdm_pro_textil`, `pdm_ibirapuera` e `neon` — **nunca no `DATABASE_URL`**, que é o banco que a aplicação usa. Já aconteceu: um `ALTER TABLE crm_pessoas ADD COLUMN tipo_pessoa` existia no sync e no schema, mas não no principal. Resultado: `column "tipo_pessoa" does not exist` e **qualquer consulta à tabela morria com 500** — derrubou a busca de CNPJ e, na prática, o CRM de pessoas inteiro.
+### ⚠️ O `sync-all-dbs.js` NÃO roda no Neon
 
-Quando o SQL estiver no `sync-all-dbs.js`, aplique também no principal:
+`scripts/sync-all-dbs.js` aplica o SQL no warehouse local — **nunca no `DATABASE_URL`**, que é o banco
+que a aplicação usa. Já aconteceu: um `ALTER TABLE crm_pessoas ADD COLUMN tipo_pessoa` existia no sync e
+no schema, mas não no principal. Resultado: `column "tipo_pessoa" does not exist` e **qualquer consulta
+à tabela morria com 500** — derrubou a busca de CNPJ e, na prática, o CRM de pessoas inteiro.
+
+Quando o SQL estiver no `sync-all-dbs.js`, aplique também no Neon:
 
 ```bash
 node scripts/sync-principal.js          # roda o MESMO SQL do sync-all-dbs.js no DATABASE_URL
@@ -45,24 +66,24 @@ node scripts/criar-tabelas-faltantes.js # tabelas inteiras que faltam (também c
 
 ### Para alterações manuais de schema (SQL direto):
 
-Se precisar rodar SQL manualmente (ALTER TABLE, CREATE TABLE, etc.), execute em TODOS:
-- `pdm_textil` (principal)
-- `pdm_pro_textil`
-- `pdm_ibirapuera`
-- Neon (`DATABASE_URL_NEON`)
+Se precisar rodar SQL manualmente (ALTER TABLE, CREATE TABLE, etc.), execute nos DOIS:
+- Neon (principal, `DATABASE_URL`)
+- Warehouse local (`DATABASE_URL_LOCAL`)
 
 ### Verificação de integridade:
 
 ```bash
-node scripts/compare-schemas.js
+npm run db:comparar      # node scripts/compare-schemas.js -> estrutura (colunas/tipos) public
+npm run db:verificar-local # node scripts/verify-neon-local.js -> contagem de linhas por tabela
 ```
 
-Compara colunas entre os 4 bancos e lista diferenças.
+Compara colunas/tipos entre o Neon e o warehouse local e lista diferenças.
+
 
 ## Sync de FKs de `clientes_representantes` (2026-08-14)
 
-- O schema (Drizzle) declara `clientes_representantes.cliente_id` e `.representante_id` com `onDelete: "cascade"`, mas o `pdm_textil` tinha as FKs como **NO ACTION** (os outros 3 bancos já estavam CASCADE).
-- **Fix aplicado**: `node scripts/sync-fk-clientes-representantes.js` — idempotente, percorre os 4 bancos, e onde a regra não é CASCADE faz DROP + ADD do constraint com `ON DELETE CASCADE` (transação por FK).
+- O schema (Drizzle) declara `clientes_representantes.cliente_id` e `.representante_id` com `onDelete: "cascade"`, mas o `pdm_textil` tinha as FKs como **NO ACTION** (o warehouse local já estava CASCADE).
+- **Fix aplicado**: `node scripts/sync-fk-clientes-representantes.js` — idempotente, percorre os 2 bancos (Neon e warehouse local), e onde a regra não é CASCADE faz DROP + ADD do constraint com `ON DELETE CASCADE` (transação por FK).
 - A partir daqui, deletar um `cliente` ou `representante` apaga os vínculos da tabela de junção automaticamente no banco (o código das rotas também já apaga explicitamente em transação).
 
 ## Backup/Restore e fix de FKs (2026-08-06)
@@ -71,7 +92,7 @@ Compara colunas entre os 4 bancos e lista diferenças.
 - **Fix aplicado**: `scripts/fix-remap.mjs` gera `backups/fix-fk-remap.sql` (33 seções, 8538 tuplas) aplicado por `scripts/apply-fix.mjs` (transação única + DROP/ADD do constraint `crm_cidades_nome_estado_id_key` + DELETE `user_email_config` id=1). Backup pré-fix: `backups/pre-fix-2026-08-06.sql`.
 - **Pós-fix**: 0 órfãos nas 49 FKs declaradas (`scripts/diag-orphans-final.js`). Decisões: `chat_participantes` id=96 `ultima_mensagem_lida_id`→NULL; `chat_leituras` id=325 `mensagem_id`→26 (sucessor real da neon 50 = main 26, chat 10). `user_menu_itens` id=713 (`user_menu_id`=19) deixado intacto — quebrado na origem (menu 19 não existe em nenhum banco).
 - **Diagnósticos auxiliares**: `scripts/diag-*.js` (mensagem 50, colisões de cidades, duplicatas, órfãos pós-fix, email config, etc.).
-- Se o fix for refeito (novo backup/restore), use o mesmo fluxo e SEMPRE re-sincronize os 4 bancos (`node scripts/sync-all-dbs.js`).
+- Se o fix for refeito (novo backup/restore), use o mesmo fluxo e SEMPRE re-sincronize os 2 bancos (`node scripts/replicar-neon-local.js`).
 
 # Geocodificação de endereço em visitas (cronograma da viagem)
 
@@ -82,7 +103,7 @@ Compara colunas entre os 4 bancos e lista diferenças.
 - **Estratégia de geocodificação**: **structured search** (parâmetros `street`/`city`/`state`/`country`) — o `q` livre do Nominatim é instável e retorna o centro da cidade quando o endereço completo falha. Cadeia: rua+número → rua → cidade+UF → fallback `q`. `geocodificarCamposEndereco(campos)` recebe `EnderecoCampos`; `geocodificarEndereco(texto)` é fallback/compat.
 - **Histórico**: backfill inicial (commit `fe4719c9`/`22c4df9f`) gravou 26/37 visitas no centro das cidades por flakiness do `q`; corrigido com `node scripts/geocode-visitas.js --precisar` (structured) que atualizou 19 visitas para nível de rua.
 - O mapa (`viagem-rota-mapa.tsx`) **agrupa pins coincidentes** via `src/lib/crm/agrupar-pontos.ts` (`agruparPontos` por `toFixed(3)`, popup lista as visitas do grupo).
-- **Backfill**: `node scripts/geocode-visitas.js` (opcional `--db=`, `--limit=`, `--dry-run`, `--precisar`) percorre os 4 bancos e preenche `endereco_lat/lng` de visitas sem coordenadas (idempotente/resumível). As colunas também estão no `scripts/sync-all-dbs.js`.
+- **Backfill**: `node scripts/geocode-visitas.js` (opcional `--db=`, `--limit=`, `--dry-run`, `--precisar`) percorre os 2 bancos (Neon e warehouse local) e preenche `endereco_lat/lng` de visitas sem coordenadas (idempotente/resumível). As colunas também estão no `scripts/sync-all-dbs.js`.
 
 # Email em Massa — Agendamento e Envio
 

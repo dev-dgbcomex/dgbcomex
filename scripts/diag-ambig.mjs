@@ -15,7 +15,7 @@ async function q(pool, text, params) {
 
 async function debug(child, col) {
   const main = new Pool({ connectionString: process.env.DATABASE_URL, connectionTimeoutMillis: 20000 });
-  const neon = new Pool({ connectionString: process.env.DATABASE_URL_NEON, connectionTimeoutMillis: 20000 });
+  const neon = new Pool({ connectionString: process.env.DATABASE_URL, connectionTimeoutMillis: 20000 });
 
   const cols = await q(main, `SELECT column_name, data_type FROM information_schema.columns WHERE table_schema='public' AND table_name=$1 ORDER BY ordinal_position`, [child]);
   const keyCols = cols.filter((c) => c.column_name !== 'id' && !TS_TYPES.has(c.data_type) && c.data_type !== 'jsonb' && c.data_type !== 'ARRAY');

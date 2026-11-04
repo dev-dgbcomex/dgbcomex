@@ -3,7 +3,7 @@ const { Pool } = require('pg');
 
 async function main() {
   const mp = new Pool({ connectionString: process.env.DATABASE_URL, options: '-c timezone=UTC' });
-  const np = new Pool({ connectionString: process.env.DATABASE_URL_NEON, options: '-c timezone=UTC' });
+  const np = new Pool({ connectionString: process.env.DATABASE_URL, options: '-c timezone=UTC' });
 
   console.log('== msg 50: procurar conteudo no main ==');
   const nm = (await np.query(`SELECT id, chat_id, remetente_id, mensagem, created_at FROM chat_mensagens WHERE id=50`)).rows[0];

@@ -10,15 +10,14 @@
 //
 // Uso:
 //   node scripts/geocode-visitas.js                  (todas as DBs, só visitas sem coords)
-//   node scripts/geocode-visitas.js --db=pdm_textil   (só a principal)
+//   node scripts/geocode-visitas.js --db=neon   (só a principal)
 //   node scripts/geocode-visitas.js --limit=50        (máx 50 por banco)
 //   node scripts/geocode-visitas.js --dry-run         (só conta, não consulta o Nominatim)
 //   node scripts/geocode-visitas.js --precisar        (re-geocodifica visitas JÁ com coords,
 //                                                      ignorando o cache do endereço completo;
 //                                                      atualiza quando melhorar a precisão)
 //
-// Requer as env vars do .env.local (DATABASE_URL, DATABASE_URL_PDM_PRO_TEXTIL,
-// DATABASE_URL_PDM_IBIRAPUERA, DATABASE_URL_NEON).
+// Requer as env vars do .env.local (DATABASE_URL, DATABASE_URL_LOCAL).
 
 require("dotenv").config({ path: ".env.local" })
 const postgres = require("postgres")
@@ -26,10 +25,8 @@ const fs = require("fs")
 const path = require("path")
 
 const DATABASES = [
-  { name: "pdm_textil", url: process.env.DATABASE_URL },
-  { name: "pdm_pro_textil", url: process.env.DATABASE_URL_PDM_PRO_TEXTIL },
-  { name: "pdm_ibirapuera", url: process.env.DATABASE_URL_PDM_IBIRAPUERA },
-  { name: "neon", url: process.env.DATABASE_URL_NEON },
+  { name: 'neon', url: process.env.DATABASE_URL },
+  { name: 'warehouse_local', url: process.env.DATABASE_URL_LOCAL },
 ]
 
 const args = process.argv.slice(2)

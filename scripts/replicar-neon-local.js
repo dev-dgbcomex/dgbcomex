@@ -234,16 +234,54 @@ async function copiarTabela(src, dst, schema, tabela) {
     [schema, tabela]
   )
 
+  if (exists.length) {
+    // No destino a "tabela" pode ser uma VIEW (ex.: marts publicados pelo ETL local).
+    // Nao se copia dado nem se mexe na definicao: quem mantem e o ETL.
+    const { rows: dstKind } = await dst.query(
+      `SELECT c.relkind FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname=$1 AND c.relname=$2`,
+      [schema, tabela]
+    )
+    if (dstKind.length && dstKind[0].relkind === 'v') {
+      console.log(`  [SKIP:VIEW] ${schema}.${tabela} (mantida pelo ETL local)`)
+      return
+    }
+  }
+
   if (!exists.length) {
     // Criar tabela no destino com mesma estrutura
     const ddl = await gerarDDL(src, schema, tabela)
     await dst.query(ddl)
     console.log(`  [CREATE] ${schema}.${tabela}`)
+  } else {
+    // Tabela ja existe: alinhar colunas (inclui as novas do Neon) e tipos
+    await alinharColunas(src, dst, schema, tabela)
   }
 
   if (RESET) {
-    try { await dst.query(`TRUNCATE TABLE ${ident} RESTART IDENTITY CASCADE`) } catch(e) { console.log(`  [TRUNC:ERR] ${schema}.${tabela}: ${e.message.split('\n')[0]}`) }
+    // O local e um SUPERSET: tem carga do ERP (raw/core/etl) e runtime do WMS que
+    // o Neon nao tem. Truncar `marts`/`etl` apagaria dado gerado pelo ETL local
+    // (watermark, historico de execucoes, marts publicados) — por isso o reset
+    // so vale para o schema `public` (espelho do app).
+    if (schema !== 'public') {
+      console.log(`  [RESET:SKIP] ${schema}.${tabela} (schema mantido pelo ETL local)`)
+    } else {
+      try { await dst.query(`TRUNCATE TABLE ${ident} RESTART IDENTITY CASCADE`) } catch(e) { console.log(`  [TRUNC:ERR] ${schema}.${tabela}: ${e.message.split('\n')[0]}`) }
+    }
   }
+
+  await copiarDados(src, dst, schema, tabela)
+
+  // Constraints (PK, UNIQUE, CHECK, FK) e índices: o warehouse local precisa
+  // ter as mesmas garantias do Neon (sem PK/UNIQUE o ON CONFLICT quebra, sem FK
+  // a integridade referencial diverge). Roda sempre, mesmo com tabela vazia.
+  try { await alinharConstraints(src, dst, schema, tabela) } catch (e) {
+    console.log(`  [CONSTRAINT:ERR] ${schema}.${tabela}: ${e.message.split('\n')[0]}`)
+  }
+}
+
+/** Copia os dados da tabela da origem para o destino (idempotente). */
+async function copiarDados(src, dst, schema, tabela) {
+  const ident = `"${schema}"."${tabela}"`
 
   // Pegar colunas
   const { rows: cols } = await src.query(
@@ -253,6 +291,15 @@ async function copiarTabela(src, dst, schema, tabela) {
   if (!cols.length) return
   const colList = cols.map(c => `"${c.column_name}"`).join(', ')
   const placeholders = cols.map((_, i) => `$${i + 1}`).join(', ')
+
+  // Colunas json/jsonb: o node-postgres manda array como literal de array do Postgres,
+  // entao o valor precisa ir como texto JSON para o Postgres aceitar.
+  const { rows: jsonCols } = await src.query(
+    `SELECT column_name FROM information_schema.columns
+      WHERE table_schema=$1 AND table_name=$2 AND data_type IN ('json','jsonb')`,
+    [schema, tabela]
+  )
+  const colunasJson = new Set(jsonCols.map(c => c.column_name))
 
   // Pegar dados da origem
   let rows
@@ -275,7 +322,13 @@ async function copiarTabela(src, dst, schema, tabela) {
     for (let i = 0; i < rows.length; i += batch) {
       const chunk = rows.slice(i, i + batch)
       for (const row of chunk) {
-        const vals = cols.map(c => row[c.column_name])
+        const vals = cols.map(c => {
+          const valor = row[c.column_name]
+          if (colunasJson.has(c.column_name) && valor !== null && valor !== undefined) {
+            return JSON.stringify(valor)
+          }
+          return valor
+        })
         await client.query(sql, vals)
       }
     }
@@ -292,8 +345,172 @@ async function copiarTabela(src, dst, schema, tabela) {
   try { await resetSequencias(dst, schema, tabela) } catch {}
 }
 
-async function gerarDDL(src, schema, tabela) {
-  // Usar pg_dump-like via informações do catálogo - simplificado mas funcional
+/**
+ * Replica constraints (PK/UNIQUE/CHECK/FK) e índices da origem para o destino.
+ * Tabelas criadas pela replica (CREATE TABLE sem constraints) ficavam sem PK,
+ * sem unique e sem FK — o que quebrava `ON CONFLICT` e a integridade referencial.
+ */
+async function alinharConstraints(src, dst, schema, tabela) {
+  const ident = `"${schema}"."${tabela}"`
+
+  const { rows: srcCons } = await src.query(
+    `SELECT con.conname AS nome,
+            con.contype AS tipo,
+            pg_get_constraintdef(con.oid) AS def
+       FROM pg_constraint con
+       JOIN pg_class rel ON rel.oid = con.conrelid
+       JOIN pg_namespace n ON n.oid = rel.relnamespace
+      WHERE n.nspname = $1 AND rel.relname = $2
+        AND con.contype IN ('p', 'u', 'c', 'f')
+      ORDER BY CASE con.contype
+                 WHEN 'p' THEN 1 WHEN 'u' THEN 2 WHEN 'c' THEN 3 WHEN 'f' THEN 4
+                 ELSE 5 END`,
+    [schema, tabela]
+  )
+
+  const { rows: dstCons } = await dst.query(
+    `SELECT con.conname AS nome,
+            con.contype AS tipo,
+            pg_get_constraintdef(con.oid) AS def
+       FROM pg_constraint con
+       JOIN pg_class rel ON rel.oid = con.conrelid
+       JOIN pg_namespace n ON n.oid = rel.relnamespace
+      WHERE n.nspname = $1 AND rel.relname = $2`,
+    [schema, tabela]
+  )
+  const { rows: dstIdx } = await dst.query(
+    `SELECT i.relname AS nome
+       FROM pg_class i
+       JOIN pg_namespace n ON n.oid = i.relnamespace
+      WHERE n.nspname = $1 AND i.relkind IN ('i','u')`,
+    [schema]
+  )
+  const dstConsNames = new Set(dstCons.map(c => c.nome))
+  const dstIdxNames = new Set(dstIdx.map(i => i.nome))
+  const dstHasPk = dstCons.some(c => c.tipo === 'p')
+  const dstDefs = new Set(dstCons.map(c => `${c.tipo}::${c.def}`))
+
+  for (const c of srcCons) {
+    if (dstConsNames.has(c.nome)) continue
+    // PK/UNIQUE: se ja existe um indice com o mesmo nome, a garantia ja existe
+    if ((c.tipo === 'p' || c.tipo === 'u') && dstIdxNames.has(c.nome)) continue
+    // A tabela ja tem PK (com outro nome): nao da para ter duas
+    if (c.tipo === 'p' && dstHasPk) continue
+    // Mesma definicao ja existe com outro nome
+    if (dstDefs.has(`${c.tipo}::${c.def}`)) continue
+    try {
+      await dst.query(`ALTER TABLE ${ident} ADD CONSTRAINT "${c.nome}" ${c.def}`)
+      console.log(`  [CONSTRAINT] ${schema}.${tabela}.${c.nome} (${c.tipo})`)
+    } catch (e) {
+      console.log(`  [CONSTRAINT:ERR] ${schema}.${tabela}.${c.nome}: ${e.message.split('\n')[0]}`)
+    }
+  }
+
+  // Indices "soltos" (nao backed por constraint): PK/UNIQUE ja criados acima
+  const { rows: srcIdx } = await src.query(
+    `SELECT i.relname AS nome, pg_get_indexdef(ix.indexrelid) AS def
+       FROM pg_index ix
+       JOIN pg_class i ON i.oid = ix.indexrelid
+       JOIN pg_class c ON c.oid = ix.indrelid
+       JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname = $1 AND c.relname = $2
+        AND NOT EXISTS (SELECT 1 FROM pg_constraint con WHERE con.conindid = ix.indexrelid)`,
+    [schema, tabela]
+  )
+  for (const idx of srcIdx) {
+    if (dstIdxNames.has(idx.nome)) continue
+    const def = idx.def.replace(/^CREATE (UNIQUE )?INDEX /, (m, u) => `CREATE ${u || ''}INDEX IF NOT EXISTS `)
+    try {
+      await dst.query(def)
+      console.log(`  [INDEX] ${schema}.${tabela}.${idx.nome}`)
+    } catch (e) {
+      console.log(`  [INDEX:ERR] ${schema}.${tabela}.${idx.nome}: ${e.message.split('\n')[0]}`)
+    }
+  }
+}
+
+/**
+ * Garante que a tabela do destino tenha as mesmas colunas (e tipos) da origem.
+ * Sem isso, uma coluna nova criada no Neon nunca chegaria ao warehouse local
+ * e a copia dos dados falharia ("column ... does not exist").
+ */
+async function alinharColunas(src, dst, schema, tabela) {
+  const ident = `"${schema}"."${tabela}"`
+  const { rows: srcCols } = await src.query(
+    `SELECT column_name, data_type, udt_name, is_nullable, column_default,
+            character_maximum_length, numeric_precision, numeric_scale
+       FROM information_schema.columns
+      WHERE table_schema=$1 AND table_name=$2
+      ORDER BY ordinal_position`,
+    [schema, tabela]
+  )
+  const { rows: dstCols } = await dst.query(
+    `SELECT column_name, data_type
+       FROM information_schema.columns
+      WHERE table_schema=$1 AND table_name=$2`,
+    [schema, tabela]
+  )
+  const dstMap = new Map(dstCols.map((c) => [c.column_name, c]))
+
+  for (const col of srcCols) {
+    const tipo = mapType(col)
+    const existente = dstMap.get(col.column_name)
+
+    if (!existente) {
+      try {
+        await dst.query(`ALTER TABLE ${ident} ADD COLUMN IF NOT EXISTS "${col.column_name}" ${tipo}`)
+        console.log(`  [ADD COLUMN] ${schema}.${tabela}.${col.column_name} ${tipo}`)
+      } catch (e) {
+        console.log(`  [ADD COLUMN:ERR] ${schema}.${tabela}.${col.column_name}: ${e.message.split('\n')[0]}`)
+        continue
+      }
+      // Coluna serial: recria a sequencia e o default nextval
+      const seq = col.column_default?.match(/nextval\('([^']+)'/)?.[1]
+      if (seq) {
+        try {
+          const partes = seq.split('.')
+          const seqSchema = partes.length > 1 ? partes.slice(0, -1).join('.') : schema
+          const seqOnly = partes.length > 1 ? partes[partes.length - 1] : seq
+          await dst.query(`CREATE SCHEMA IF NOT EXISTS "${seqSchema}"`)
+          await dst.query(`CREATE SEQUENCE IF NOT EXISTS "${seqSchema}"."${seqOnly}"`)
+          await dst.query(
+            `ALTER SEQUENCE "${seqSchema}"."${seqOnly}" OWNED BY "${schema}"."${tabela}"."${col.column_name}"`
+          )
+          await dst.query(
+            `ALTER TABLE ${ident} ALTER COLUMN "${col.column_name}" SET DEFAULT nextval('"${seqSchema}"."${seqOnly}"')`
+          )
+        } catch (e) {
+          console.log(`  [SEQ:ERR] ${schema}.${tabela}.${col.column_name}: ${e.message.split('\n')[0]}`)
+        }
+      }
+    } else if (existente.data_type !== col.data_type) {
+      try {
+        await dst.query(`ALTER TABLE ${ident} ALTER COLUMN "${col.column_name}" TYPE ${tipo}`)
+        console.log(`  [ALTER TYPE] ${schema}.${tabela}.${col.column_name}: ${existente.data_type} -> ${tipo}`)
+      } catch (e) {
+        console.log(`  [ALTER TYPE:ERR] ${schema}.${tabela}.${col.column_name}: ${e.message.split('\n')[0]}`)
+      }
+    }
+
+    // Default e NOT NULL: aplicados depois do ADD COLUMN (coluna nova pode ter linhas antigas)
+    if (col.column_default && !col.column_default.includes('nextval')) {
+      try {
+        await dst.query(`ALTER TABLE ${ident} ALTER COLUMN "${col.column_name}" SET DEFAULT ${col.column_default}`)
+      } catch (e) {
+        console.log(`  [DEFAULT:ERR] ${schema}.${tabela}.${col.column_name}: ${e.message.split('\n')[0]}`)
+      }
+    }
+    if (col.is_nullable === 'NO') {
+      try {
+        await dst.query(`ALTER TABLE ${ident} ALTER COLUMN "${col.column_name}" SET NOT NULL`)
+      } catch (e) {
+        console.log(`  [NOT NULL:ERR] ${schema}.${tabela}.${col.column_name}: ${e.message.split('\n')[0]}`)
+      }
+    }
+  }
+}
+
+async function gerarDDL(src, schema, tabela) {  // Usar pg_dump-like via informações do catálogo - simplificado mas funcional
   const { rows: cols } = await src.query(
     `
     SELECT 

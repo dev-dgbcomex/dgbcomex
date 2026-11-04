@@ -2,7 +2,7 @@ require('dotenv').config({ path: require('path').join(__dirname, '..', '.env.loc
 const { Pool } = require('pg');
 
 const MAIN = process.env.DATABASE_URL;
-const NEON = process.env.DATABASE_URL_NEON;
+const NEON = process.env.DATABASE_URL;
 
 async function main() {
   const mp = new Pool({ connectionString: MAIN, options: '-c timezone=UTC' });

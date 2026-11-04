@@ -1,7 +1,6 @@
 // Sync do campo setor -> area_id (FK proc_areas) nas tabelas de ativos.
 //
-// Idempotente e resumível. Roda nos 4 bancos (pdm_textil, pdm_pro_textil,
-// pdm_ibirapuera, neon).
+// Idempotente e resumível. Roda nos 2 bancos (neon, warehouse_local).
 //
 // O que faz por banco:
 //   1. Garante empresa "Pro Moda Têxtil" + site "Ativos e Vistorias" no módulo
@@ -16,7 +15,7 @@
 //
 // Uso:
 //   node scripts/sync-ativos-areas.js                    (todos os bancos)
-//   node scripts/sync-ativos-areas.js --db=pdm_textil    (só um)
+//   node scripts/sync-ativos-areas.js --db=neon    (só um)
 //
 // Requer as env vars do .env.local.
 
@@ -24,10 +23,8 @@ require("dotenv").config({ path: ".env.local" })
 const postgres = require("postgres")
 
 const DATABASES = [
-  { name: "pdm_textil", url: process.env.DATABASE_URL },
-  { name: "pdm_pro_textil", url: process.env.DATABASE_URL_PDM_PRO_TEXTIL },
-  { name: "pdm_ibirapuera", url: process.env.DATABASE_URL_PDM_IBIRAPUERA },
-  { name: "neon", url: process.env.DATABASE_URL_NEON },
+  { name: 'neon', url: process.env.DATABASE_URL },
+  { name: 'warehouse_local', url: process.env.DATABASE_URL_LOCAL },
 ]
 
 const args = process.argv.slice(2)

@@ -117,10 +117,8 @@ async function migrateDb(name, url) {
 
 async function main() {
   const targets = [
-    { name: 'pdm_textil (principal)', url: process.env.DATABASE_URL },
-    { name: 'pdm_pro_textil', url: process.env.DATABASE_URL_PDM_PRO_TEXTIL },
-    { name: 'pdm_ibirapuera', url: process.env.DATABASE_URL_PDM_IBIRAPUERA },
-    { name: 'neon', url: process.env.DATABASE_URL_NEON },
+    { name: 'neon (principal)', url: process.env.DATABASE_URL },
+    { name: 'warehouse_local', url: process.env.DATABASE_URL_LOCAL },
   ]
 
   for (const t of targets) {

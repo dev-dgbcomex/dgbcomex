@@ -3,7 +3,7 @@ const { Pool } = require('pg');
 
 async function main() {
   const mp = new Pool({ connectionString: process.env.DATABASE_URL, options: '-c timezone=UTC' });
-  const np = new Pool({ connectionString: process.env.DATABASE_URL_NEON, options: '-c timezone=UTC' });
+  const np = new Pool({ connectionString: process.env.DATABASE_URL, options: '-c timezone=UTC' });
 
   // 1) chat: message 50
   console.log('== message 50 ==');

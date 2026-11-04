@@ -160,12 +160,12 @@ export async function GET(req: NextRequest) {
 
 - Schema por domínio em `src/lib/db/schema/<dominio>.ts`; exporte tudo no barrel `schema/index.ts`. `db` vem de `@/lib/db`.
 - Tabelas nomeadas em snake_case; colunas mapeadas com `column: "nome_coluna"` quando necessário (padrão dos schemas existentes).
-- **CRÍTICO — Multi-Database**: o projeto tem 4 Postgres (`pdm_textil`, `pdm_pro_textil`, `pdm_ibirapuera`, Neon). **Toda mudança de schema do `pdm_textil` DEVE ser replicada aos outros 3.** Procedimento:
-  1. `npx drizzle-kit generate` → migration em `src/lib/db/migrations/`.
-  2. `npm run db:migrate` (principal).
-  3. `npm run db:migrate:all` (3 secundários).
-  4. `node scripts/sync-all-dbs.js` (Neon, cria tabelas/colunas faltantes com `IF NOT EXISTS`).
-  5. Verificação: `node scripts/compare-schemas.js`.
+- **CRÍTICO — Multi-Database**: o projeto tem **2 Postgres** — Neon `dgbcomex` (`DATABASE_URL`, principal) e warehouse local `dgbcomex_warehouse` (`DATABASE_URL_LOCAL`, réplica + runtime WMS/ERP). **Toda mudança de schema do Neon DEVE ser replicada para o warehouse local.** Procedimento:
+  1. `npx drizzle-kit generate` → migration em `src/lib/db/migrations/` (ou SQL numerado manual).
+  2. `npm run db:migrate` (Neon, principal).
+  3. `npm run db:replicar-neon` (`scripts/replicar-neon-local.js` — idempotente: cria tabelas, alinha colunas/tipos, replica PK/UNIQUE/CHECK/FK e índices, copia dados, reseta sequências).
+  4. Verificação: `npm run db:verificar-local` (0 divergências de linhas) e `npm run db:comparar` (estrutura).
+  5. O warehouse local tem tabelas exclusivas (`wms_*`, `alembic_version`) — são legítimas, não replicar nem remover.
 - Migrations de dados (seed/backfill) em `scripts/*` conforme o padrão existente.
 
 ## 10. Registro de Telas e Menus
@@ -218,7 +218,7 @@ O PowerShell do ambiente bloqueia `npm`/`npx` direto (ExecutionPolicy). Use `cmd
 
 Nova entidade/tela completa:
 1. Schema Drizzle em `src/lib/db/schema/<dominio>.ts` + barrel em `schema/index.ts`.
-2. Migration + replicação nos 4 bancos (§9).
+2. Migration + replicação nos 2 bancos (Neon + warehouse local) (§9).
 3. Schemas zod em `src/lib/validation.ts` (nome + `Schema`).
 4. API: `route.ts` (GET list/POST) + `[id]/route.ts` (GET/PUT/DELETE) com `force-dynamic`, auth, `validateRequest`, `handleApiError`, paginação.
 5. Telas: lista (com `matchesSearch`/`useListFilters`), formulário (`/novo`, `/[id]/editar`), detalhe (`/[id]`).

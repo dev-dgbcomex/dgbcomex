@@ -85,7 +85,7 @@ function aplicar(pool, baseUrl, host) {
 }
 
 async function main() {
-  for (const url of [process.env.DATABASE_URL, process.env.DATABASE_URL_PDM_PRO_TEXTIL]) {
+  for (const url of [process.env.DATABASE_URL, process.env.DATABASE_URL_LOCAL]) {
     if (!url) continue
     const pool = new Pool({ connectionString: url })
     try {

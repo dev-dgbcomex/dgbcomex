@@ -2,11 +2,8 @@ const { Client } = require("pg")
 
 require("dotenv").config({ path: ".env.local" })
 
-const DATABASES = {
-  pdm_textil: process.env.DATABASE_URL,
-  pdm_pro_textil: process.env.DATABASE_URL_PDM_PRO_TEXTIL,
-  pdm_ibirapuera: process.env.DATABASE_URL_PDM_IBIRAPUERA,
-  neon: process.env.DATABASE_URL_NEON,
+const DATABASES = {  neon: process.env.DATABASE_URL,
+  warehouse_local: process.env.DATABASE_URL_LOCAL,
 }
 
 const DELETE_ORDER = [

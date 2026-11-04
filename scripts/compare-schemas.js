@@ -1,29 +1,69 @@
 const { Pool } = require('pg')
 require('dotenv').config({ path: '.env.local' })
 
+const SCHEMA = 'public'
+
+// Tabelas que existem SO no warehouse local e nao no Neon, por arquitetura:
+// - `alembic_version`: controle de migracao da api-microdata (roda no local).
+// - `wms_*`: dados de runtime do WMS (escrita local, via api-microdata).
+// Ver docs/wms-modulo.md.
+const TABELAS_SO_NO_LOCAL = new Set([
+  'alembic_version',
+  'wms_carga_pedidos_estado',
+  'wms_coletor_config',
+  'wms_coletor_sincronizacao',
+  'wms_kanban_ordem',
+  'wms_pedido_eventos',
+  'wms_pedidos_arquivados',
+  'wms_pedidos_situacao',
+  'wms_separacao_eventos',
+  'wms_separacao_pecas',
+  'wms_separacoes',
+  'wms_situacoes_pedido',
+])
+
 async function getSchemas(pool) {
   const tables = await pool.query(`
     SELECT table_name FROM information_schema.tables 
-    WHERE table_schema = 'public' ORDER BY table_name
-  `)
+    WHERE table_schema = $1 ORDER BY table_name
+  `, [SCHEMA])
   const result = {}
   for (const { table_name } of tables.rows) {
     const cols = await pool.query(`
       SELECT column_name, data_type, is_nullable, column_default
       FROM information_schema.columns 
-      WHERE table_name = $1 ORDER BY ordinal_position
-    `, [table_name])
-    result[table_name] = cols.rows
+      WHERE table_schema = $1 AND table_name = $2 ORDER BY ordinal_position
+    `, [SCHEMA, table_name])
+    const cons = await pool.query(`
+      SELECT con.contype AS tipo,
+             pg_get_constraintdef(con.oid) AS def
+      FROM pg_constraint con
+      JOIN pg_class rel ON rel.oid = con.conrelid
+      JOIN pg_namespace n ON n.oid = rel.relnamespace
+      WHERE n.nspname = $1 AND rel.relname = $2 AND con.contype IN ('p','u','c','f')
+    `, [SCHEMA, table_name])
+    const idx = await pool.query(`
+      SELECT i.relname AS nome, pg_get_indexdef(ix.indexrelid) AS def
+      FROM pg_index ix
+      JOIN pg_class i ON i.oid = ix.indexrelid
+      JOIN pg_class c ON c.oid = ix.indrelid
+      JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname = $1 AND c.relname = $2
+        AND NOT EXISTS (SELECT 1 FROM pg_constraint con WHERE con.conindid = ix.indexrelid)
+    `, [SCHEMA, table_name])
+    result[table_name] = {
+      cols: cols.rows,
+      cons: cons.rows.map(c => `${c.tipo}::${c.def}`),
+      idx: idx.rows.map(i => ({ nome: i.nome, def: i.def })),
+    }
   }
   return result
 }
 
 async function main() {
   const databases = [
-    { name: 'pdm_textil', url: process.env.DATABASE_URL },
-    { name: 'pdm_pro_textil', url: process.env.DATABASE_URL_PDM_PRO_TEXTIL },
-    { name: 'pdm_ibirapuera', url: process.env.DATABASE_URL_PDM_IBIRAPUERA },
-    { name: 'neon', url: process.env.DATABASE_URL_NEON },
+    { name: 'neon', url: process.env.DATABASE_URL },
+    { name: 'warehouse_local', url: process.env.DATABASE_URL_LOCAL },
   ]
 
   const allSchemas = {}
@@ -50,25 +90,27 @@ async function main() {
   }
 
   const diffs = []
+  const avisos = []
   for (const table of [...allTables].sort()) {
     const refCols = reference[table]
     for (const dbName of dbNames.slice(1)) {
       const otherCols = allSchemas[dbName][table]
       if (!refCols && otherCols) {
-        diffs.push(`${dbName}: table ${table} MISSING`)
+        if (dbName === 'warehouse_local' && TABELAS_SO_NO_LOCAL.has(table)) continue
+        diffs.push(`${dbName}: EXTRA table ${table}`)
         continue
       }
       if (refCols && !otherCols) {
-        diffs.push(`${dbName}: EXTRA table ${table}`)
+        diffs.push(`${dbName}: MISSING table ${table}`)
         continue
       }
       if (!refCols || !otherCols) continue
       
       // Compare columns
       const refMap = {}
-      for (const c of refCols) refMap[c.column_name] = c
+      for (const c of refCols.cols) refMap[c.column_name] = c
       const otherMap = {}
-      for (const c of otherCols) otherMap[c.column_name] = c
+      for (const c of otherCols.cols) otherMap[c.column_name] = c
 
       for (const col of Object.keys(refMap)) {
         if (!otherMap[col]) {
@@ -82,6 +124,31 @@ async function main() {
           diffs.push(`${dbName}: table ${table} EXTRA column ${col}`)
         }
       }
+
+      // Compare constraints (PK/UNIQUE/CHECK/FK) e índices
+      const refCons = new Set(refCols.cons)
+      const otherCons = new Set(otherCols.cons)
+      for (const c of refCons) {
+        if (!otherCons.has(c)) diffs.push(`${dbName}: table ${table} MISSING constraint ${c}`)
+      }
+      for (const c of otherCons) {
+        if (!refCons.has(c)) diffs.push(`${dbName}: table ${table} EXTRA constraint ${c}`)
+      }
+
+      // Indices: comparados pelo nome (a definicao textual pode diferir em
+      // detalhes de cast sem mudar a semantica do indice)
+      const refIdx = new Map(refCols.idx.map(i => [i.nome, i.def]))
+      const otherIdx = new Map(otherCols.idx.map(i => [i.nome, i.def]))
+      for (const [nome, def] of refIdx) {
+        if (!otherIdx.has(nome)) {
+          diffs.push(`${dbName}: table ${table} MISSING index ${nome}`)
+        } else if (otherIdx.get(nome) !== def) {
+          avisos.push(`${dbName}: table ${table} index ${nome} com definicao diferente (mesmos nomes/colunas)`)
+        }
+      }
+      for (const nome of otherIdx.keys()) {
+        if (!refIdx.has(nome)) diffs.push(`${dbName}: table ${table} EXTRA index ${nome}`)
+      }
     }
   }
 
@@ -90,6 +157,10 @@ async function main() {
   } else {
     console.log('DIFFERENCES FOUND:')
     diffs.forEach(d => console.log('  - ' + d))
+  }
+  if (avisos.length) {
+    console.log('\nAVISOS (sem impacto estrutural):')
+    avisos.forEach(a => console.log('  ~ ' + a))
   }
   
   // Also output table counts

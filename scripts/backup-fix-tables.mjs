@@ -42,7 +42,7 @@ async function dumpTable(pool, t) {
 (async () => {
   const p = new Pool({ connectionString: process.env.DATABASE_URL, connectionTimeoutMillis: 20000 });
   const stamp = new Date().toISOString().slice(0, 10);
-  const out = [`-- Backup de seguranca pre-fix (${stamp})`, '-- Gerado por scripts/backup-fix-tables.mjs', '-- Banco: pdm_textil (principal)', 'BEGIN;', ''];
+  const out = [`-- Backup de seguranca pre-fix (${stamp})`, '-- Gerado por scripts/backup-fix-tables.mjs', '-- Banco: neon (principal)', 'BEGIN;', ''];
   for (const t of TABLES) {
     try {
       out.push(`-- ===== ${t} =====`);

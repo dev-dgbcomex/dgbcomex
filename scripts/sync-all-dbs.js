@@ -3,7 +3,7 @@ require('dotenv').config({ path: '.env.local' })
 
 const MIGRATION_SQL = `
 -- ============================================
--- Sincronizar pdm_pro_textil, pdm_ibirapuera e neon com pdm_textil
+-- Sincronizar o warehouse local com o Neon (principal)
 -- ============================================
 
 -- status: flag de exibicao no kanban (coluna do board)
@@ -198,7 +198,7 @@ EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
 END $$;
 
 -- Tabelas que o schema declara e o banco nao tinha. Mesmo SQL do
--- `criar-tabelas-faltantes.js`, que aplicou no banco principal.
+-- criar-tabelas-faltantes.js, que aplicou no banco principal.
 DO $$ BEGIN
   CREATE TABLE IF NOT EXISTS email_agendados (
     id serial PRIMARY KEY, nome varchar(255) NOT NULL DEFAULT '', para varchar(50) NOT NULL,
@@ -1174,14 +1174,14 @@ async function migrateDb(name, url) {
 }
 
 async function main() {
-  const targets = [
-    { name: 'pdm_pro_textil', url: process.env.DATABASE_URL_PDM_PRO_TEXTIL },
-    { name: 'pdm_ibirapuera', url: process.env.DATABASE_URL_PDM_IBIRAPUERA },
-    { name: 'neon', url: process.env.DATABASE_URL_NEON },
-  ]
+  // Setup de 2 bancos: Neon (DATABASE_URL, principal) e warehouse local (DATABASE_URL_LOCAL).
+  // O SQL abaixo e aplicado no warehouse local; no Neon ele e aplicado pelo
+  // `scripts/sync-principal.js` (le o MESMO arquivo, entao os dois nunca divergem).
+  const targets = [{ name: 'warehouse_local', url: process.env.DATABASE_URL_LOCAL }]
 
   for (const t of targets) {
     if (t.url) await migrateDb(t.name, t.url)
+    else console.log(`${t.name}: URL not set`)
   }
   console.log('Done!')
 }

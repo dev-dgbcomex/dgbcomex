@@ -11,7 +11,7 @@ async function q(pool, text) {
 
 async function main() {
   const main = new Pool({ connectionString: process.env.DATABASE_URL, connectionTimeoutMillis: 20000 });
-  const neon = new Pool({ connectionString: process.env.DATABASE_URL_NEON, connectionTimeoutMillis: 20000 });
+  const neon = new Pool({ connectionString: process.env.DATABASE_URL, connectionTimeoutMillis: 20000 });
 
   const cols = `id, tipo, status, cliente, cnpj, projeto, created_at, id_integracao`;
 

@@ -15,7 +15,7 @@ Trate **todo input externo como hostil**, todo segredo como sagrado e toda checa
 
 - Next.js `^15.5.22` (>= `15.5.18` exigido pelo release de segurança de maio/2026). **Não permita downgrade.**
 - Auth: NextAuth v4, estratégia **JWT**, cookie de sessão `httpOnly` + `sameSite=lax` (padrão NextAuth) — baseline de CSRF ok. Senhas com **bcryptjs** (`src/lib/auth.ts`).
-- Segredos: `.env*` está no `.gitignore`; 4 bancos via `DATABASE_URL*`. Nunca commitar `.env.local` nem prefixar segredo com `NEXT_PUBLIC_`.
+- Segredos: `.env*` está no `.gitignore`; 2 bancos via `DATABASE_URL` / `DATABASE_URL_LOCAL`. Nunca commitar `.env.local` nem prefixar segredo com `NEXT_PUBLIC_`.
 - Erros: `src/lib/api-error.ts` — `handleApiError` devolve **mensagem genérica** ao cliente (sem stack), loga e notifica a equipe via `notificarErro`. FK devolve 409 com `fkError: true`. Continue usando SEMPRE nos route handlers.
 - Validação: `src/lib/validation.ts` (zod) + `validateRequest` na borda de toda API. Obrigatório.
 - Sanitização: `src/lib/sanitize.ts` (DOMPurify allowlist). **Atenção — gap conhecido:** `sanitizeHtml` só sanitiza no cliente (`typeof window === "undefined"` retorna raw). HTML vindo de rich text deve ser **sanitizado ao gravar no servidor**, não só na exibição.

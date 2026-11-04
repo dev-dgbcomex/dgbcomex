@@ -16,9 +16,9 @@ import { config } from 'dotenv';
 
 config({ path: '.env.local' });
 
-const URL_ALVO = process.argv.includes('--pro') ? process.env.DATABASE_URL_PDM_PRO_TEXTIL
-  : process.argv.includes('--ibirapuera') ? process.env.DATABASE_URL_PDM_IBIRAPUERA
-  : process.argv.includes('--neon') ? process.env.DATABASE_URL_NEON
+const URL_ALVO = process.argv.includes('--pro') ? process.env.DATABASE_URL_LOCAL
+  : process.argv.includes('--ibirapuera') ? process.env.DATABASE_URL_LOCAL
+  : process.argv.includes('--neon') ? process.env.DATABASE_URL
   : process.env.DATABASE_URL;
 
 if (!URL_ALVO) {
@@ -45,7 +45,7 @@ const [[conv], [msg], [notif]] = await Promise.all([
   sql`SELECT COUNT(*)::int AS total FROM crm_notificacoes WHERE tipo IN ${sql(TIPOS_BOT)}`,
 ]);
 
-console.log(`Banco alvo: ${process.argv.includes('--pro') ? 'PDM Pro Têxtil' : process.argv.includes('--ibirapuera') ? 'PDM Ibirapuera' : process.argv.includes('--neon') ? 'Neon' : 'Principal (pdm_textil)'}`);
+console.log(`Banco alvo: ${process.argv.includes('--pro') ? 'PDM Pro Têxtil' : process.argv.includes('--ibirapuera') ? 'PDM Ibirapuera' : process.argv.includes('--neon') ? 'Neon' : 'Principal (neon)'}`);
 console.log(`Modo: ${apagar ? 'APAGAR' : 'dry-run (nenhuma alteração)'}`);
 console.log('----------------------------------------');
 console.log(`crm_whatsapp_conversas   : ${conv.total}`);

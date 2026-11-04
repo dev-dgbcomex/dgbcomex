@@ -1,7 +1,7 @@
 // Adiciona o menu pessoal "Chamados" (todas as telas) ao usuário Tiago de Abreu nos 4 bancos.
 // Idempotente: casa o menu por (usuario_id, titulo) e os itens por url.
 //
-// Uso: node scripts/adicionar-menu-chamados-tiago.js [--db=pdm_textil]
+// Uso: node scripts/adicionar-menu-chamados-tiago.js [--db=neon]
 
 require("dotenv").config({ path: ".env.local" })
 const postgres = require("postgres")
@@ -17,10 +17,8 @@ const ITENS = [
 ]
 
 const DATABASES = [
-  { name: "pdm_textil", url: process.env.DATABASE_URL },
-  { name: "pdm_pro_textil", url: process.env.DATABASE_URL_PDM_PRO_TEXTIL },
-  { name: "pdm_ibirapuera", url: process.env.DATABASE_URL_PDM_IBIRAPUERA },
-  { name: "neon", url: process.env.DATABASE_URL_NEON },
+  { name: 'neon', url: process.env.DATABASE_URL },
+  { name: 'warehouse_local', url: process.env.DATABASE_URL_LOCAL },
 ]
 const onlyDb = process.argv.includes("--db") ? process.argv[process.argv.indexOf("--db") + 1] || (() => { const a = process.argv.find(x => x.startsWith("--db=")); return a ? a.split("=")[1] : null })() : null
 

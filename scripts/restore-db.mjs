@@ -8,7 +8,7 @@ const HOST = process.env.DB_HOST || 'host';
 const PORT = process.env.DB_PORT || 5432;
 const USER = process.env.DB_USER || 'usuario';
 const PASS = process.env.DB_PASS || 'senha';
-const DB_NAME = 'pdm_textil';
+const DB_NAME = 'dgbcomex';
 const ADMIN_URL = `postgresql://${USER}:${PASS}@${HOST}:${PORT}/postgres`;
 const PDM_URL = `postgresql://${USER}:${PASS}@${HOST}:${PORT}/${DB_NAME}`;
 const NEON_URL = process.env.DATABASE_URL;
@@ -17,7 +17,7 @@ const BACKUP_FILE = 'backups/backup-2026-07-20.sql';
 const log = (tag, msg) => console.log(`${tag} ${msg}`);
 
 // STEP 1: Create database
-log('═══ STEP 1:', 'Criando banco pdm_textil ═══');
+log('═══ STEP 1:', 'Criando banco dgbcomex ═══');
 const admin = postgres(ADMIN_URL, { max: 1, connect_timeout: 30 });
 try {
   const exists = await admin`SELECT 1 FROM pg_database WHERE datname = ${DB_NAME}`;

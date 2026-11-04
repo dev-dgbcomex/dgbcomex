@@ -327,7 +327,7 @@ async function buildRemaps(main, neon, maps, fks) {
 
 async function main() {
   const main = new Pool({ connectionString: process.env.DATABASE_URL, connectionTimeoutMillis: 20000, options: '-c timezone=UTC' });
-  const neon = new Pool({ connectionString: process.env.DATABASE_URL_NEON, connectionTimeoutMillis: 20000, options: '-c timezone=UTC' });
+  const neon = new Pool({ connectionString: process.env.DATABASE_URL, connectionTimeoutMillis: 20000, options: '-c timezone=UTC' });
 
   const maps = await buildParentMaps(main, neon);
 
@@ -365,7 +365,7 @@ async function main() {
 
   console.log('\n=== REMAP GERADO ===');
   let totalRows = 0;
-  const sqlParts = ['-- Fix FKs: remap de ids antigos (Neon) para novos (pdm_textil)', '-- Gerado automaticamente por scripts/fix-remap.mjs', '', 'BEGIN;'];
+  const sqlParts = ['-- Fix FKs: remap de ids antigos (antigo) para novos (neon)', '-- Gerado automaticamente por scripts/fix-remap.mjs', '', 'BEGIN;'];
   const report = ['RELATÓRIO DE REMAP', '', '=== MAPAS ==='];
   for (const [t, info] of Object.entries(maps)) {
     report.push(`${t}: ${info.map.size} renumerados`);

@@ -2,7 +2,7 @@ require('dotenv').config({ path: require('path').join(__dirname, '..', '.env.loc
 const { Pool } = require('pg');
 
 const MAIN = process.env.DATABASE_URL;
-const NEON = process.env.DATABASE_URL_NEON;
+const NEON = process.env.DATABASE_URL;
 
 const QUERIES = {
   anexos: `SELECT id, solicitacao_id, tipo, titulo, url, criado_por FROM anexos ORDER BY id`,
@@ -37,7 +37,7 @@ async function dump(pool, label) {
   const mp = new Pool({ connectionString: MAIN });
   const np = new Pool({ connectionString: NEON });
   await dump(np, 'NEON (origem íntegra)');
-  await dump(mp, 'PRINCIPAL (pdm_textil)');
+  await dump(mp, 'PRINCIPAL (neon)');
   await np.end();
   await mp.end();
 })();

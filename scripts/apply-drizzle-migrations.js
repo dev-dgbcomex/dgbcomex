@@ -9,6 +9,10 @@ const MIGRATIONS_DIR = path.join(__dirname, "..", "src", "lib", "db", "migration
 
 async function applyDrizzleMigrations(url, dbName) {
   console.log(`\n📦 Aplicando Drizzle migrations em: ${dbName}`)
+  if (!url) {
+    console.log(`  ⚠️  URL não configurada para ${dbName}, pulando...`)
+    return
+  }
   const sql = postgres(url, { prepare: false })
 
   try {
@@ -79,9 +83,8 @@ async function applyDrizzleMigrations(url, dbName) {
 async function main() {
   console.log("🚀 Aplicando Drizzle migrations...\n")
 
-  await applyDrizzleMigrations(process.env.DATABASE_URL, "pdm_textil")
-  await applyDrizzleMigrations(process.env.DATABASE_URL_PDM_PRO_TEXTIL, "pdm_pro_textil")
-  await applyDrizzleMigrations(process.env.DATABASE_URL_PDM_IBIRAPUERA, "pdm_ibirapuera")
+  await applyDrizzleMigrations(process.env.DATABASE_URL, "neon")
+  await applyDrizzleMigrations(process.env.DATABASE_URL_LOCAL, "warehouse_local")
 
   console.log("\n✅ Drizzle migrations concluídas!")
 }

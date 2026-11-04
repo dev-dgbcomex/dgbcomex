@@ -3,24 +3,34 @@ import postgres from 'postgres';
 import { config } from "dotenv"
 config({ path: ".env.local" })
 
-const BASE_URL = process.env.DATABASE_URL || "postgresql://usuario:senha@host:5432/postgres";
-const DATABASES = ["pdm_pro_textil", "pdm_ibirapuera"];
+// Setup de 2 bancos: Neon (DATABASE_URL, principal) e warehouse local (DATABASE_URL_LOCAL).
+// Este script garante que o banco do warehouse local existe no servidor local.
+const LOCAL_URL = process.env.DATABASE_URL_LOCAL;
+
+function adminUrl(dbUrl) {
+    const url = new URL(dbUrl);
+    url.pathname = '/postgres';
+    return url.toString();
+}
 
 async function createDatabases() {
-    // Connect to default postgres database
-    const sql = postgres(BASE_URL, { prepare: false });
-    
+    if (!LOCAL_URL) {
+        console.error('DATABASE_URL_LOCAL nao configurada no .env.local');
+        return;
+    }
+
+    const targetDb = new URL(LOCAL_URL).pathname.replace(/^\//, '');
+    const sql = postgres(adminUrl(LOCAL_URL), { prepare: false });
+
     try {
-        for (const dbName of DATABASES) {
-            console.log(`Creating database: ${dbName}`);
-            await sql.unsafe(`CREATE DATABASE "${dbName}"`);
-            console.log(`✓ Database ${dbName} created successfully`);
-        }
+        console.log(`Creating database: ${targetDb}`);
+        await sql.unsafe(`CREATE DATABASE "${targetDb}"`);
+        console.log(`✓ Database ${targetDb} created successfully`);
     } catch (error) {
         if (error.message.includes('already exists')) {
-            console.log('Databases already exist, skipping creation');
+            console.log('Database already exists, skipping creation');
         } else {
-            console.error('Error creating databases:', error.message);
+            console.error('Error creating database:', error.message);
         }
     } finally {
         await sql.end();

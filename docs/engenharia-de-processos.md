@@ -54,7 +54,7 @@ Todas as tabelas seguem o mesmo padrão de schema:
   `created_at`/`updated_at` timestamps com `defaultNow()`.
 - FK para o nível pai com `onDelete: "cascade"` (excluir pai apaga os filhos),
   declarada **no Drizzle**. As FKs reais do banco foram sincronizadas para `CASCADE`
-  nos 4 bancos via `scripts/sync-fk-*`.
+   nos 2 bancos (Neon + warehouse local) via `scripts/sync-fk-*`.
 
 ### 2.1 Empresas — `proc_empresas`
 
@@ -485,8 +485,8 @@ Conteúdo atual inclui, no **Módulo Diagramas**, lições sobre: conceitos da E
 Processos, hierarquia e cadastros, e especificamente do editor BPMN (5.3 estilos de formas
 e texto, 5.4 fundo claro/escuro, 5.5 modelo semântico e texto Mermaid na prática). A
 população inicial é feita por seed SQL idempotente
-(`scripts/seed-treinamento-bpmn-processos.sql` + runners `.cjs`), aplicada nos 4 bancos
-(main `pdm_textil`, `pdm_pro_textil`, `pdm_ibirapuera` e Neon), com re-execução sem
+(`scripts/seed-treinamento-bpmn-processos.sql` + runners `.cjs`), aplicada nos 2 bancos
+(Neon `DATABASE_URL` e warehouse local `DATABASE_URL_LOCAL`), com re-execução sem
 duplicação (chave por título no módulo de ordem 5).
 
 ---
@@ -500,9 +500,9 @@ duplicação (chave por título no módulo de ordem 5).
 - **zod** (schemas de validação das rotas) + `validateRequest` + `handleApiError`.
 - **TanStack Query** (listas; `retry: false` em testes), `sonner` (toasts),
   `lucide-react` (ícones), Tailwind.
-- **Drizzle ORM / PostgreSQL** — 4 bancos com schema replicado (`pdm_textil`,
-  `pdm_pro_textil`, `pdm_ibirapuera`, Neon). Qualquer mudança de schema do módulo deve ser
-  replicada nos 4 (ver `AGENTS.md`).
+- **Drizzle ORM / PostgreSQL** — 2 bancos com schema replicado (Neon `dgbcomex` via
+  `DATABASE_URL` e warehouse local `dgbcomex_warehouse` via `DATABASE_URL_LOCAL`). Qualquer
+  mudança de schema do módulo deve ser replicada nos 2 (ver `AGENTS.md`).
 
 ---
 

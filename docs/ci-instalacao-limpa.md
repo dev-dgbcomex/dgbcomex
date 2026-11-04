@@ -34,10 +34,9 @@ npm run test           # Vitest — 282 arquivos / 1.524 testes
 npm run build          # build de produção (Next.js)
 ```
 
-> Atenção: as variáveis de banco (`DATABASE_URL`, `DATABASE_URL_PDM_PRO_TEXTIL`,
-> `DATABASE_URL_PDM_IBIRAPUERA`, `DATABASE_URL_NEON`) e as chaves (secret, OAuth,
-> Evolution, Groq, `CRON_SECRET`) não devem ser commitadas — vivem em `.env.local`
-> (ignorado pelo git) e nos secrets do deploy/CI.
+> Atenção: as variáveis de banco (`DATABASE_URL` do Neon e `DATABASE_URL_LOCAL` do warehouse
+> local) e as chaves (secret, OAuth, Evolution, Groq, `CRON_SECRET`) não devem ser commitadas —
+> vivem em `.env.local` (ignorado pelo git) e nos secrets do deploy/CI.
 
 ## CI automatizado (`.github/workflows/ci.yml`)
 
