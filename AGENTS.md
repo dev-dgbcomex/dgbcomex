@@ -45,6 +45,10 @@ O warehouse local ainda tem, por arquitetura, tabelas que só existem nele (runt
 3. **Replique no warehouse local**: `npm run db:replicar-neon` (`scripts/replicar-neon-local.js`)
 4. **Verifique**: `npm run db:verificar-local` (`scripts/verify-neon-local.js`) — precisa dar 0 divergências
 
+A réplica também roda **sozinha a cada 4h** (Agendador de Tarefas do Windows:
+`DGBComex - Replicar Neon para Warehouse Local` → `scripts/agendar-replicacao.cmd`, log em
+`logs/replicar-neon-local.log`), para o fallback do local nunca ficar defasado.
+
 O `replicar-neon-local.js` é idempotente: cria no local as tabelas que faltam, **alinha colunas e tipos**
 das que já existem, **replica PK/UNIQUE/CHECK/FK e índices**, copia os dados que faltam e reseta as sequências.
 Ele **nunca apaga** dado do local: o `--reset` só trunca o schema `public` (os schemas `marts`/`etl` são

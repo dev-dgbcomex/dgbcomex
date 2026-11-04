@@ -75,11 +75,14 @@ Levantamento (feito), decisões (feitas) e plano de execução. **Entrega: este 
      quando possível e resetando sequências;
    - relatório de contagens Neon × local por tabela ao final (como o `compare-schemas.js`).
 3. **Validação**: `scripts/verify-neon-local.js` — compara `count(*)` por tabela e lista
-   divergências. Critério de aceite: 0 divergência nas tabelas copiadas. **Feito: 137
-   tabelas verificadas, 0 divergentes** (`auth` 1, `etl` 6, `marts` 2, `public` 127 + 13
-   views).
+   divergências. Critério de aceite: 0 divergência nas tabelas copiadas. **Feito: 140
+   tabelas verificadas, 0 divergentes** (`public` 129, `marts` 9, `auth` 1, `etl` 1) + inventário
+   do "a mais" do local (runtime WMS e carga ERP `raw`/`core`).
 4. **ETL para o local**: `src/etl/publicar.py` da microdata grava os marts no Neon **e**
    no local (best-effort). **Feito.**
+5. **Réplica automática**: Agendador de Tarefas do Windows (`DGBComex - Replicar Neon para
+   Warehouse Local`, `scripts/agendar-replicacao.cmd`) roda a réplica a cada 4h, para o fallback
+   nunca ficar defasado.
 
 Comandos: `npm run db:migrate:wms`, `npm run db:replicar-neon`, `npm run db:verificar-local`.
 

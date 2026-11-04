@@ -128,6 +128,7 @@ pdmtextil/
 │   ├── migrate-all.js             # Migra Neon + warehouse local (Drizzle + custom)
 │   ├── migrate.js                 # Migra apenas o Neon (principal)
 │   ├── replicate-neon-local.js     # Replica Neon -> warehouse local (idempotente)
+│   ├── agendar-replicacao.cmd     # Wrapper da réplica (Agendador de Tarefas do Windows)
 │   ├── verify-neon-local.js       # Compara contagem de linhas Neon x local (+ inventário do "a mais")
 │   ├── compare-schemas.js         # Compara colunas/tipos/constraints/índices Neon x local
 │   ├── sync-all-dbs.js            # SQL idempotente no warehouse local
@@ -183,6 +184,35 @@ O warehouse local tem **todo** o dado do app (é superset do Neon). Para operar 
 1. Rode `npm run db:replicar-neon` antes (para o local estar o mais atualizado possível)
 2. Aponte `DATABASE_URL` para a URL do warehouse local (`DATABASE_URL_LOCAL`)
 3. Ao voltar o Neon, reverta a configuração e rode `npm run db:replicar-neon` para repor o Neon
+
+## Réplica automática (Agendador de Tarefas do Windows)
+
+A réplica roda sozinha a cada **4 horas** (00:15, 04:15, 08:15, 12:15, 16:15, 20:15) para o fallback
+nunca ficar defasado:
+
+| Item | Valor |
+|---|---|
+| Tarefa | `DGBComex - Replicar Neon para Warehouse Local` |
+| Script | `scripts/agendar-replicacao.cmd` (chama `scripts/replicar-neon-local.js`) |
+| Log | `logs/replicar-neon-local.log` (rotaciona em `*.log.1`) |
+| Conta | usuário logado no Windows (`InteractiveToken` — roda com a sessão ativa) |
+
+Comandos:
+
+```powershell
+# estado / última execução / próxima
+Get-ScheduledTask  -TaskName "DGBComex - Replicar Neon para Warehouse Local"
+Get-ScheduledTaskInfo -TaskName "DGBComex - Replicar Neon para Warehouse Local"
+
+# rodar agora
+Start-ScheduledTask -TaskName "DGBComex - Replicar Neon para Warehouse Local"
+
+# remover
+Unregister-ScheduledTask -TaskName "DGBComex - Replicar Neon para Warehouse Local" -Confirm:$false
+```
+
+> A tarefa roda com a sessão do Windows logada (sem senha de serviço). Se a máquina ficar desligada,
+> o `StartWhenAvailable` dispara a réplica assim que ela voltar.
 
 ## Notas Importantes
 
