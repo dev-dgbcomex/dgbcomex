@@ -1,9 +1,9 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { InfoButton } from "@/components/ui/info-button"
 import { getInfoContent } from "@/lib/info-content"
-import { useRouter, useParams, usePathname } from "next/navigation"
+import { useRouter, useParams, usePathname, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import {
   ArrowLeft,
@@ -28,7 +28,8 @@ import {
   STATUS_PEDIDO_VENDA_LABELS,
   STATUS_PEDIDO_VENDA_CORES,
 } from "@/lib/crm/documento-venda"
-import type { OportunidadeDetalhe, DocumentoVendaResumo } from "../types"
+import EdicaoOportunidade, { type OportunidadeUpdate } from "./components/edicao-card"
+import type { OportunidadeDetalhe, DocumentoVendaResumo, UsuarioResumo } from "../types"
 
 const PROPOSTA_STATUS: Record<string, { label: string; cor: string }> = {
   ENVIADA: {
@@ -62,10 +63,19 @@ function formatarValorTotal(lista: DocumentoVendaResumo[]) {
 }
 
 export default function DetalheOportunidadePage() {
+  return (
+    <Suspense fallback={null}>
+      <DetalheOportunidadePageContent />
+    </Suspense>
+  )
+}
+
+function DetalheOportunidadePageContent() {
   const router = useRouter()
   const pathname = usePathname()
   const info = getInfoContent(pathname)
   const params = useParams()
+  const searchParams = useSearchParams()
   const { statuses } = useStatuses("OPORTUNIDADE")
   const [oportunidade, setOportunidade] = useState<OportunidadeDetalhe | null>(null)
   const [loading, setLoading] = useState(true)
@@ -74,6 +84,9 @@ export default function DetalheOportunidadePage() {
   const [editingStatus, setEditingStatus] = useState(false)
   const [statusValue, setStatusValue] = useState("")
   const [vinculoErp, setVinculoErp] = useState<TipoVinculoErp | null>(null)
+  const [editing, setEditing] = useState(searchParams.get("edit") === "true")
+  const [saving, setSaving] = useState(false)
+  const [usuarios, setUsuarios] = useState<UsuarioResumo[]>([])
 
   async function recarregar() {
     try {
@@ -95,6 +108,37 @@ export default function DetalheOportunidadePage() {
       .catch(() => toast.error("Erro ao carregar oportunidade"))
       .finally(() => setLoading(false))
   }, [params.id])
+
+  useEffect(() => {
+    fetch("/api/usuarios/ativos?role=COMERCIAL,ADMIN,SUDO")
+      .then((r) => r.json())
+      .then((data: UsuarioResumo[]) => {
+        if (Array.isArray(data)) setUsuarios(data)
+      })
+      .catch(() => {})
+  }, [])
+
+  async function handleSave(body: OportunidadeUpdate) {
+    setSaving(true)
+    try {
+      const res = await fetch(`/api/crm/oportunidades/${params.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => null)
+        throw new Error(err?.error || "Erro ao atualizar oportunidade")
+      }
+      await recarregar()
+      setEditing(false)
+      toast.success("Oportunidade atualizada")
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Erro ao atualizar oportunidade")
+    } finally {
+      setSaving(false)
+    }
+  }
 
   async function handleDelete() {
     setDeleteLoading(true)
@@ -233,60 +277,90 @@ export default function DetalheOportunidadePage() {
             </p>
           ) : null}
         </div>
-        <button
-          onClick={() => setShowDelete(true)}
-          className="flex items-center gap-1 text-xs font-medium text-red-600 hover:underline"
-        >
-          <Trash2 size={14} /> Excluir
-        </button>
+        <div className="flex items-center gap-3">
+          {!editing && (
+            <button
+              onClick={() => setEditing(true)}
+              className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:underline"
+            >
+              <Pencil size={14} /> Editar
+            </button>
+          )}
+          <button
+            onClick={() => setShowDelete(true)}
+            className="flex items-center gap-1 text-xs font-medium text-red-600 hover:underline"
+          >
+            <Trash2 size={14} /> Excluir
+          </button>
+        </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
-          <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-50 mb-4">Detalhes</h2>
-          <div className="space-y-3 text-sm">
-            <Field label="Valor Estimado" value={formatarMoeda(oportunidade.valorEstimado)} />
-            <Field
-              label="Probabilidade"
-              value={oportunidade.probabilidade != null ? `${oportunidade.probabilidade}%` : "—"}
-            />
-            <Field
-              label="Previsão"
-              value={
-                oportunidade.dataFechamentoPrevista
-                  ? new Date(oportunidade.dataFechamentoPrevista).toLocaleDateString("pt-BR")
-                  : "—"
-              }
-            />
-            <Field label="Responsável" value={oportunidade.responsavelNome || "—"} />
-            <Field
-              label="Pessoa / Cliente"
-              value={oportunidade.empresaNome || oportunidade.clienteNome || "—"}
-            />
-            <Field
-              label="Criado em"
-              value={
-                oportunidade.createdAt
-                  ? new Date(oportunidade.createdAt).toLocaleDateString("pt-BR")
-                  : "—"
-              }
+        {editing && oportunidade ? (
+          <div className="md:col-span-2">
+            <EdicaoOportunidade
+              oportunidade={oportunidade}
+              usuarios={usuarios}
+              saving={saving}
+              onCancel={() => setEditing(false)}
+              onSave={handleSave}
             />
           </div>
-        </div>
-
-        <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
-          <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-50 mb-4">Contato</h2>
-          {oportunidade.contato ? (
-            <div className="space-y-3 text-sm">
-              <Field label="Nome" value={oportunidade.contato.nome} />
-              <Field label="Cargo" value={oportunidade.contato.cargo} />
-              <Field label="Email" value={oportunidade.contato.email} />
-              <Field label="Telefone" value={oportunidade.contato.telefone} />
+        ) : (
+          <>
+            <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
+              <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-50 mb-4">
+                Detalhes
+              </h2>
+              <div className="space-y-3 text-sm">
+                <Field label="Valor Estimado" value={formatarMoeda(oportunidade.valorEstimado)} />
+                <Field
+                  label="Probabilidade"
+                  value={
+                    oportunidade.probabilidade != null ? `${oportunidade.probabilidade}%` : "—"
+                  }
+                />
+                <Field
+                  label="Previsão"
+                  value={
+                    oportunidade.dataFechamentoPrevista
+                      ? new Date(oportunidade.dataFechamentoPrevista).toLocaleDateString("pt-BR")
+                      : "—"
+                  }
+                />
+                <Field label="Responsável" value={oportunidade.responsavelNome || "—"} />
+                <Field
+                  label="Pessoa / Cliente"
+                  value={oportunidade.empresaNome || oportunidade.clienteNome || "—"}
+                />
+                <Field
+                  label="Criado em"
+                  value={
+                    oportunidade.createdAt
+                      ? new Date(oportunidade.createdAt).toLocaleDateString("pt-BR")
+                      : "—"
+                  }
+                />
+              </div>
             </div>
-          ) : (
-            <p className="text-sm text-slate-400 text-center py-6">Nenhum contato vinculado</p>
-          )}
-        </div>
+
+            <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
+              <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-50 mb-4">
+                Contato
+              </h2>
+              {oportunidade.contato ? (
+                <div className="space-y-3 text-sm">
+                  <Field label="Nome" value={oportunidade.contato.nome} />
+                  <Field label="Cargo" value={oportunidade.contato.cargo} />
+                  <Field label="Email" value={oportunidade.contato.email} />
+                  <Field label="Telefone" value={oportunidade.contato.telefone} />
+                </div>
+              ) : (
+                <p className="text-sm text-slate-400 text-center py-6">Nenhum contato vinculado</p>
+              )}
+            </div>
+          </>
+        )}
       </div>
 
       {oportunidade.descricao && (

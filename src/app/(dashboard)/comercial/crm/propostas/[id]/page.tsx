@@ -3,7 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { InfoButton } from "@/components/ui/info-button"
 import { getInfoContent } from "@/lib/info-content"
-import { useParams, usePathname, useRouter } from "next/navigation"
+import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useSession } from "next-auth/react"
 import {
   ArrowLeft,
@@ -19,7 +19,7 @@ import {
   X,
 } from "lucide-react"
 import Link from "next/link"
-import { useState } from "react"
+import { useState, Suspense } from "react"
 import { ConfirmModal } from "@/components/ui/confirm-modal"
 import { toast } from "sonner"
 import { useStatuses, statusAtivos, hexToRgba } from "@/hooks/use-statuses"
@@ -33,9 +33,18 @@ async function fetchProposta(id: string) {
 }
 
 export default function DetalhePropostaPage() {
+  return (
+    <Suspense fallback={null}>
+      <DetalhePropostaPageContent />
+    </Suspense>
+  )
+}
+
+function DetalhePropostaPageContent() {
   const params = useParams()
   const pathname = usePathname()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const info = getInfoContent(pathname)
   const queryClient = useQueryClient()
   const { data: session } = useSession()
@@ -44,7 +53,7 @@ export default function DetalhePropostaPage() {
   const statusOpcoes = statusAtivos(statusLookup)
   const id = params.id as string
   const [statusToConfirm, setStatusToConfirm] = useState<string | null>(null)
-  const [editing, setEditing] = useState(false)
+  const [editing, setEditing] = useState(searchParams.get("edit") === "true")
   const [showDelete, setShowDelete] = useState(false)
 
   const { data: proposta, isLoading } = useQuery<Proposta>({

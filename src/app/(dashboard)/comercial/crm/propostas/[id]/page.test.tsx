@@ -127,6 +127,14 @@ describe("PropostaDetailPage", () => {
     expect(screen.queryByRole("button", { name: /Excluir/ })).not.toBeInTheDocument()
   })
 
+  it("abre em modo de edição quando vem com ?edit=true", async () => {
+    navMock.setSearchParams(new URLSearchParams("edit=true"))
+    renderPage(<PropostaDetailPage />)
+
+    expect(await screen.findByText("Editar Proposta")).toBeInTheDocument()
+    expect(screen.getByDisplayValue("Proposta Comercial - Tecido X")).toBeInTheDocument()
+  })
+
   it("inclui a proposta via DELETE (admin) com confirmação", async () => {
     renderPage(<PropostaDetailPage />)
 

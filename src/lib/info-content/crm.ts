@@ -259,6 +259,7 @@ export const crmContent: Record<string, InfoContent> = {
       "Use o Kanban para arrastar oportunidades entre estágios do pipeline.",
       "Oportunidades FECHADO_PERDIDO podem ser reativadas pela IA após 90 dias.",
       "Ao fechar como GANHO, a pessoa é automaticamente sincronizada como Cliente no PDM.",
+      "O lápis da linha abre a oportunidade já em modo de edição (o mesmo que o botão 'Editar' do detalhe).",
       'Oportunidade (crm_oportunidades): é a negociação em si, o "deal" no pipeline de vendas. Avança por etapas (Novo → Qualificação → Proposta → Negociação → Ganho/Perdido) e guarda valorEstimado, probabilidade, responsável, previsão de fechamento, motivo da perda. É usada na previsão de vendas.',
       "Proposta (crm_propostas): é o documento comercial formal enviado ao cliente (o orçamento/PDF). Vinculada a uma oportunidade (oportunidadeId), guarda valor, condições de pagamento, prazo de entrega, link do PDF e status (Enviada → Aceita/Recusada/Em revisão).",
       "Por que ambas têm valor? São números de naturezas diferentes: a oportunidade guarda o valor estimado do negócio (projeção/previsão), e a proposta guarda o valor efetivamente cotado/oferecido ao cliente. Os dois são legítimos e complementares para acompanhar o funil.",
@@ -308,6 +309,9 @@ export const crmContent: Record<string, InfoContent> = {
       "A timeline da oportunidade mostra todas as interações relacionadas.",
       "Alterar o status registra automaticamente na timeline.",
       "Ao fechar como PERDIDO, informe o motivo para análise futura.",
+      "O botão 'Editar' abre o formulário da oportunidade (título, descrição, valor estimado, probabilidade, previsão de fechamento e responsável); ao salvar, as alterações são gravadas na mesma oportunidade e ficam registradas na timeline.",
+      "O lápis da lista abre a oportunidade já em modo de edição (é o mesmo formulário do botão 'Editar').",
+      "Se a oportunidade estiver como FECHADO_PERDIDO, o formulário de edição também permite corrigir o motivo da perda.",
       "Os cards 'Faturamentos' e 'Pedidos de Venda' listam os documentos já vinculados à oportunidade; o botão 'Novo Faturamento'/'Novo Pedido' cria um documento manualmente no CRM.",
       "O botão 'Vincular do ERP' abre a busca de documentos do ERP (api-microdata): pedidos de venda e notas fiscais são espelhados na oportunidade, com cabeçalho e itens, para ver o que já foi faturado.",
       "No modal do ERP a busca é filtrada pelo CNPJ da pessoa da oportunidade (desmarque 'Só desta pessoa' para ver todos os documentos).",
@@ -319,6 +323,10 @@ export const crmContent: Record<string, InfoContent> = {
       {
         name: "Motivo da Perda",
         desc: "Preenchido quando a oportunidade é perdida — usado pela IA para análise",
+      },
+      {
+        name: "Editar",
+        desc: "Edita título, descrição, valor, probabilidade, previsão, responsável e motivo da perda",
       },
       {
         name: "Vincular do ERP",
@@ -434,6 +442,7 @@ export const crmContent: Record<string, InfoContent> = {
       "Cada proposta está vinculada a uma pessoa e opcionalmente a uma oportunidade.",
       "Ao ACEITAR uma proposta, a oportunidade vinculada avança no pipeline.",
       "Propostas podem ser impressas em PDF diretamente do sistema.",
+      "O lápis da linha abre a proposta já em modo de edição (o mesmo que o botão 'Editar' do detalhe).",
       "O valor total e as condições são registrados para controle histórico.",
       'Oportunidade (crm_oportunidades): é a negociação em si, o "deal" no pipeline de vendas. Avança por etapas (Novo → Qualificação → Proposta → Negociação → Ganho/Perdido) e guarda valorEstimado, probabilidade, responsável, previsão de fechamento, motivo da perda. É usada na previsão de vendas.',
       "Proposta (crm_propostas): é o documento comercial formal enviado ao cliente (o orçamento/PDF). Vinculada a uma oportunidade (oportunidadeId), guarda valor, condições de pagamento, prazo de entrega, link do PDF e status (Enviada → Aceita/Recusada/Em revisão).",
@@ -481,11 +490,17 @@ export const crmContent: Record<string, InfoContent> = {
       "Clique em Imprimir para gerar o PDF da proposta.",
       "Altere o status conforme o retorno do cliente.",
       "Propostas ACEITAS podem gerar automaticamente um pedido.",
+      "O botão 'Editar' abre o formulário dos campos comerciais (título, valor, prazo de entrega, condições de pagamento, descrição e link do PDF); salvar grava na própria proposta.",
+      "O lápis da lista abre a proposta já em modo de edição.",
     ],
     fields: [
       { name: "Status", desc: "Enviada, Aceita, Recusada ou Em Revisão" },
       { name: "Valor Total", desc: "Valor registrado na proposta" },
       { name: "Condições", desc: "Forma de pagamento e condições comerciais" },
+      {
+        name: "Editar",
+        desc: "Edita título, valor, prazo de entrega, condições, descrição e link do PDF",
+      },
     ],
   },
 

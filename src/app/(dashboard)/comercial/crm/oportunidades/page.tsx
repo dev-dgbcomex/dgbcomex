@@ -287,7 +287,7 @@ export default function OportunidadesPage() {
                         <td className="px-2 py-2 md:px-4 md:py-3 text-right">
                           <div className="flex items-center justify-end gap-1">
                             <Link
-                              href={`/comercial/crm/oportunidades/${op.id}`}
+                              href={`/comercial/crm/oportunidades/${op.id}?edit=true`}
                               className="p-1 text-slate-400 hover:text-blue-600 rounded transition-colors"
                               title="Editar oportunidade"
                             >

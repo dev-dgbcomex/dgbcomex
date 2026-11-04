@@ -155,11 +155,11 @@ describe("PropostasPage exclusão", () => {
     )
   })
 
-  it("link de edição aponta para o detalhe", async () => {
+  it("link de edição abre a proposta em modo de edição", async () => {
     renderPage(<PropostasPage />)
     await screen.findByText("Proposta Comercial - Tecido X")
     const edit = screen.getAllByTitle("Editar proposta")[0].closest("a")
-    expect(edit).toHaveAttribute("href", "/comercial/crm/propostas/1")
+    expect(edit).toHaveAttribute("href", "/comercial/crm/propostas/1?edit=true")
   })
 
   it("botão Status leva para o cadastro filtrado no Perfil", async () => {

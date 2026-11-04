@@ -163,11 +163,11 @@ describe("OportunidadesPage exclusão", () => {
     )
   })
 
-  it("link de edição aponta para o detalhe", async () => {
+  it("link de edição abre a oportunidade em modo de edição", async () => {
     renderPage(<OportunidadesPage />)
     await screen.findByText("Venda de malha 100% algodão")
     const edit = screen.getAllByTitle("Editar oportunidade")[0].closest("a")
-    expect(edit).toHaveAttribute("href", "/comercial/crm/oportunidades/1")
+    expect(edit).toHaveAttribute("href", "/comercial/crm/oportunidades/1?edit=true")
   })
 
   it("botão Status leva para o cadastro filtrado no Perfil", async () => {

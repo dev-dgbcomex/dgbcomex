@@ -274,7 +274,7 @@ function PropostasPageContent() {
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center justify-end gap-1">
                             <Link
-                              href={`/comercial/crm/propostas/${p.id}`}
+                              href={`/comercial/crm/propostas/${p.id}?edit=true`}
                               className="p-1 text-slate-400 hover:text-blue-600 rounded transition-colors"
                               title="Editar proposta"
                             >

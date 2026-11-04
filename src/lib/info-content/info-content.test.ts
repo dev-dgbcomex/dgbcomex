@@ -184,6 +184,29 @@ describe("getInfoContent", () => {
     expect(texto).toMatch(/já está vinculado/)
   })
 
+  it("as telas de oportunidade e proposta explicam a edição dos campos", () => {
+    const telas = [
+      "/comercial/crm/oportunidades",
+      "/comercial/crm/oportunidades/[id]",
+      "/comercial/crm/propostas",
+      "/comercial/crm/propostas/[id]",
+    ]
+
+    for (const caminho of telas) {
+      const conteudo = getInfoContent(caminho)
+      expect(conteudo).not.toBeNull()
+
+      const texto = [
+        conteudo?.description ?? "",
+        ...(conteudo?.rules ?? []),
+        ...(conteudo?.fields ?? []).map((f) => `${f.name}: ${f.desc}`),
+      ].join("\n")
+
+      expect(texto).toMatch(/Editar/)
+      expect(texto).toMatch(/modo de edição|lápis/i)
+    }
+  })
+
   it("os relatórios do CRM explicam filtros, cards e exportações", () => {
     const telas = [
       "/comercial/crm/relatorios",

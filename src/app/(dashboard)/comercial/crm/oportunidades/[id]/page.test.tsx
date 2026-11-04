@@ -357,4 +357,84 @@ describe("DetalheOportunidadePage", () => {
     const dialog = await screen.findByRole("dialog", { name: "Vincular faturamento do ERP" })
     expect(await within(dialog).findByText("api-microdata indisponível.")).toBeInTheDocument()
   })
+
+  it("edita os campos da oportunidade e salva via PUT", async () => {
+    const editMock = createFetchMock(({ method, url }) => {
+      if (method === "GET" && url === "/api/admin/status?tipo=OPORTUNIDADE")
+        return { json: statuses }
+      if (method === "GET" && url === "/api/crm/oportunidades/1") return { json: oportunidade }
+      if (method === "GET" && url === "/api/usuarios/ativos?role=COMERCIAL,ADMIN,SUDO")
+        return { json: [{ id: 3, name: "Tiago" }] }
+      if (method === "PUT" && url === "/api/crm/oportunidades/1")
+        return { json: { ...oportunidade, titulo: "Venda de malha revisada" } }
+      return { json: null }
+    })
+    vi.stubGlobal("fetch", editMock.fn)
+    navMock.setParams({ id: "1" })
+    navMock.setPathname("/comercial/crm/oportunidades/1")
+    renderPage(<DetalheOportunidadePage />)
+
+    fireEvent.click(await screen.findByRole("button", { name: "Editar" }))
+
+    const titulo = screen.getByLabelText("Título *")
+    fireEvent.change(titulo, { target: { value: "Venda de malha revisada" } })
+    fireEvent.change(screen.getByLabelText("Valor Estimado (R$)"), {
+      target: { value: "7500" },
+    })
+    fireEvent.change(screen.getByLabelText("Probabilidade (%)"), { target: { value: "70" } })
+
+    fireEvent.click(screen.getByRole("button", { name: "Salvar Alterações" }))
+
+    await waitFor(() => {
+      const call = findCall(editMock.calls, "/api/crm/oportunidades/1", "PUT")
+      expect(call).toBeDefined()
+      expect(call!.body).toMatchObject({
+        titulo: "Venda de malha revisada",
+        valorEstimado: "7500",
+        probabilidade: 70,
+      })
+    })
+    await waitFor(() => expect(toastMock.success).toHaveBeenCalledWith("Oportunidade atualizada"))
+  })
+
+  it("abre em modo de edição quando vem com ?edit=true", async () => {
+    const editMock = createFetchMock(({ method, url }) => {
+      if (method === "GET" && url === "/api/admin/status?tipo=OPORTUNIDADE")
+        return { json: statuses }
+      if (method === "GET" && url === "/api/crm/oportunidades/1") return { json: oportunidade }
+      if (method === "GET" && url === "/api/usuarios/ativos?role=COMERCIAL,ADMIN,SUDO")
+        return { json: [] }
+      return { json: null }
+    })
+    vi.stubGlobal("fetch", editMock.fn)
+    navMock.setParams({ id: "1" })
+    navMock.setPathname("/comercial/crm/oportunidades/1")
+    navMock.setSearchParams(new URLSearchParams("edit=true"))
+    renderPage(<DetalheOportunidadePage />)
+
+    expect(await screen.findByText("Editar Oportunidade")).toBeInTheDocument()
+    expect(screen.getByLabelText("Título *")).toHaveValue("Venda de malha 100% algodão")
+  })
+
+  it("valida o título obrigatório na edição", async () => {
+    const editMock = createFetchMock(({ method, url }) => {
+      if (method === "GET" && url === "/api/admin/status?tipo=OPORTUNIDADE")
+        return { json: statuses }
+      if (method === "GET" && url === "/api/crm/oportunidades/1") return { json: oportunidade }
+      if (method === "GET" && url === "/api/usuarios/ativos?role=COMERCIAL,ADMIN,SUDO")
+        return { json: [] }
+      return { json: null }
+    })
+    vi.stubGlobal("fetch", editMock.fn)
+    navMock.setParams({ id: "1" })
+    navMock.setPathname("/comercial/crm/oportunidades/1")
+    renderPage(<DetalheOportunidadePage />)
+
+    fireEvent.click(await screen.findByRole("button", { name: "Editar" }))
+    fireEvent.change(screen.getByLabelText("Título *"), { target: { value: "   " } })
+    fireEvent.click(screen.getByRole("button", { name: "Salvar Alterações" }))
+
+    expect(toastMock.error).toHaveBeenCalledWith("O título é obrigatório")
+    expect(findCall(editMock.calls, "/api/crm/oportunidades/1", "PUT")).toBeUndefined()
+  })
 })
