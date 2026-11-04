@@ -36,6 +36,30 @@ ON CONFLICT DO NOTHING;
 INSERT INTO notificacao_regras (tipo, roles) VALUES ('ATIVIDADE_COMERCIAL', '["COMERCIAL","CRM"]'::jsonb)
 ON CONFLICT (tipo) DO NOTHING;
 
+-- crm_pessoas: tarja de promocao para cliente
+DO $$ BEGIN
+  ALTER TABLE crm_pessoas ADD COLUMN IF NOT EXISTS promovida_cliente boolean NOT NULL DEFAULT false;
+EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
+END $$;
+DO $$ BEGIN
+  ALTER TABLE crm_pessoas ADD COLUMN IF NOT EXISTS promovido_em timestamp;
+EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
+END $$;
+DO $$ BEGIN
+  ALTER TABLE crm_pessoas ADD COLUMN IF NOT EXISTS promovido_por integer REFERENCES usuarios(id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
+END $$;
+DO $$ BEGIN
+  ALTER TABLE crm_pessoas ADD COLUMN IF NOT EXISTS promovido_por_nome varchar(255);
+EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
+END $$;
+CREATE INDEX IF NOT EXISTS idx_crm_pessoas_promovida_cliente ON crm_pessoas (promovida_cliente);
+UPDATE crm_pessoas p
+SET promovida_cliente = true,
+    promovido_em = COALESCE(c.created_at, p.updated_at, p.created_at)
+FROM clientes c
+WHERE p.cliente_id = c.id AND p.promovida_cliente = false;
+
 -- crm_contatos: adicionar cliente_id
 DO $$ BEGIN
   ALTER TABLE crm_contatos ADD COLUMN IF NOT EXISTS cliente_id integer REFERENCES clientes(id);

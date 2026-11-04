@@ -3,7 +3,14 @@ import { db } from "@/lib/db"
 import { crmTimelineEventos } from "@/lib/db/schema/crm-timeline-eventos"
 
 type TipoEvento =
-  "LEAD" | "OPORTUNIDADE" | "VISITA" | "TAREFA" | "PROPOSTA" | "WHATSAPP" | "SOLICITACAO"
+  | "LEAD"
+  | "OPORTUNIDADE"
+  | "VISITA"
+  | "TAREFA"
+  | "PROPOSTA"
+  | "WHATSAPP"
+  | "SOLICITACAO"
+  | "CONVERSAO_CLIENTE"
 
 export async function inserirTimelineEvento(params: {
   empresaId: number | null

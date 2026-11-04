@@ -2,9 +2,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { NextRequest, NextResponse } from "next/server"
 import { requireAuth } from "@/lib/auth"
-import { db } from "@/lib/db"
-import { notificarDelecao } from "@/lib/notificar"
-import { createQueryBuilder, resetDb } from "@/test/route-db-mock"
 import { DELETE } from "./route"
 
 vi.mock("@/lib/auth", () => ({ requireAuth: vi.fn() }))
@@ -15,7 +12,7 @@ vi.mock("@/lib/notificar", () => ({
   notificarDelecao: vi.fn(),
 }))
 vi.mock("@/lib/db", () => ({
-  db: { transaction: vi.fn() },
+  db: { transaction: vi.fn(), select: vi.fn(), insert: vi.fn(), update: vi.fn() },
 }))
 
 const sessionAdmin = { session: { user: { id: "1", role: "ADMIN", name: "Tiago" } }, userId: 1 }
@@ -26,19 +23,10 @@ function del(id: string) {
   })
 }
 
-function txMock() {
-  return {
-    select: vi.fn(() => createQueryBuilder([])),
-    delete: vi.fn(() => createQueryBuilder(undefined)),
-  }
-}
-
 describe("DELETE /api/crm/pessoas/[id]", () => {
   beforeEach(() => {
     vi.mocked(requireAuth).mockReset()
-    resetDb(db)
     vi.mocked(requireAuth).mockResolvedValue(sessionAdmin as any)
-    db.transaction = vi.fn((cb: any) => cb(txMock()))
   })
 
   afterEach(() => {
@@ -53,29 +41,21 @@ describe("DELETE /api/crm/pessoas/[id]", () => {
     expect(res.status).toBe(401)
   })
 
-  it("retorna 403 para usuário não administrador", async () => {
+  it("bloqueia a exclusão e orienta a transformar a pessoa em cliente", async () => {
+    const res = await del("7")
+    expect(res.status).toBe(403)
+    const corpo = await res.json()
+    expect(corpo.fkError).toBe(true)
+    expect(corpo.error).toContain("não podem ser excluídas")
+    expect(corpo.error).toContain("transforme a pessoa em cliente")
+  })
+
+  it("bloqueia a exclusão para qualquer perfil autenticado", async () => {
     vi.mocked(requireAuth).mockResolvedValue({
       session: { user: { id: "2", role: "CRM" } },
       userId: 2,
     } as any)
-    const res = await del("1")
+    const res = await del("7")
     expect(res.status).toBe(403)
-    expect(await res.json()).toEqual({ error: "Apenas administradores podem excluir" })
-  })
-
-  it("exclui a pessoa e tudo vinculado em transação", async () => {
-    const res = await del("7")
-    expect(res.status).toBe(200)
-    expect(await res.json()).toEqual({ success: true })
-    expect(db.transaction).toHaveBeenCalled()
-    expect(notificarDelecao).toHaveBeenCalledWith("Pessoa CRM", "7", "Tiago")
-  })
-
-  it("propaga erro quando a exclusão falha", async () => {
-    db.transaction = vi.fn(() => {
-      throw new Error("fk violation")
-    })
-    const res = await del("7")
-    expect(res.status).toBe(500)
   })
 })

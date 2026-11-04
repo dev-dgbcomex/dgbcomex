@@ -211,6 +211,26 @@ describe("getInfoContent", () => {
     expect(texto).toMatch(/Cliente/)
   })
 
+  it("as telas de pessoas explicam a tarja de cliente e a promoção", () => {
+    const listagem = getInfoContent("/comercial/crm/pessoas")
+    const detalhe = getInfoContent("/comercial/crm/pessoas/[id]")
+
+    for (const conteudo of [listagem, detalhe]) {
+      expect(conteudo).not.toBeNull()
+      const texto = [
+        conteudo?.description ?? "",
+        ...(conteudo?.rules ?? []),
+        ...(conteudo?.fields ?? []).map((f) => `${f.name}: ${f.desc}`),
+        ...(conteudo?.columns ?? []).map((c) => `${c.name}: ${c.desc}`),
+      ].join("\n")
+
+      expect(texto).toMatch(/Tornar cliente/)
+      expect(texto).toMatch(/tarja/i)
+      expect(texto).toMatch(/histórico/i)
+      expect(texto).toMatch(/não podem ser excluídas|não há exclusão/i)
+    }
+  })
+
   it("a configuração de notificações explica a atividade comercial", () => {
     const conteudo = getInfoContent("/admin/notificacoes")
 

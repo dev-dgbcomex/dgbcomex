@@ -4,20 +4,12 @@ import { db } from "@/lib/db"
 import { crmPessoas } from "@/lib/db/schema/crm-pessoas"
 import { clientes } from "@/lib/db/schema/clientes"
 import { crmContatos } from "@/lib/db/schema/crm-contatos"
-import { crmLeads } from "@/lib/db/schema/crm-leads"
 import { crmOportunidades } from "@/lib/db/schema/crm-oportunidades"
 import { crmPropostas } from "@/lib/db/schema/crm-propostas"
-import { crmTarefas } from "@/lib/db/schema/crm-tarefas"
-import { crmTimelineEventos } from "@/lib/db/schema/crm-timeline-eventos"
 import { crmVisitas } from "@/lib/db/schema/crm-visitas"
-import { crmVisitasLocalizacoes } from "@/lib/db/schema/crm-visitas-localizacoes"
-import { crmPesquisasSatisfacao } from "@/lib/db/schema/crm-pesquisas-satisfacao"
-import { crmPesquisasRespostas } from "@/lib/db/schema/crm-pesquisas-respostas"
-import { crmWhatsappMensagens } from "@/lib/db/schema/crm-whatsapp"
-import { pessoasRepresentantes } from "@/lib/db/schema/pessoas-representantes"
-import { usuarios } from "@/lib/db/schema/usuarios"
-import { eq, and, ne, or, inArray } from "drizzle-orm"
-import { registrarLog, notificar, notificarDelecao } from "@/lib/notificar"
+import { eq, and, ne, sql } from "drizzle-orm"
+import { registrarLog, notificar } from "@/lib/notificar"
+import { promoverPessoaParaCliente } from "@/lib/crm/promover-cliente"
 import { handleApiError } from "@/lib/api-error"
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -41,7 +33,47 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       .from(crmContatos)
       .where(eq(crmContatos.empresaId, empresa.id))
 
-    return NextResponse.json({ ...empresa, contatos })
+    const [cliente] = empresa.clienteId
+      ? await db
+          .select({ id: clientes.id, nome: clientes.nome, cnpj: clientes.cnpj })
+          .from(clientes)
+          .where(eq(clientes.id, empresa.clienteId))
+          .limit(1)
+      : []
+
+    const [oportunidades] = await db
+      .select({
+        total: sql<number>`count(*)::int`,
+        valor: sql<number>`coalesce(sum(${crmOportunidades.valorEstimado}), 0)`,
+      })
+      .from(crmOportunidades)
+      .where(eq(crmOportunidades.empresaId, empresa.id))
+
+    const [propostas] = await db
+      .select({
+        total: sql<number>`count(*)::int`,
+        valor: sql<number>`coalesce(sum(${crmPropostas.valor}), 0)`,
+      })
+      .from(crmPropostas)
+      .where(eq(crmPropostas.empresaId, empresa.id))
+
+    const [visitas] = await db
+      .select({ total: sql<number>`count(*)::int` })
+      .from(crmVisitas)
+      .where(eq(crmVisitas.empresaId, empresa.id))
+
+    return NextResponse.json({
+      ...empresa,
+      contatos,
+      cliente: cliente || null,
+      resumo: {
+        oportunidades: oportunidades?.total || 0,
+        valorOportunidades: Number(oportunidades?.valor || 0),
+        propostas: propostas?.total || 0,
+        valorPropostas: Number(propostas?.valor || 0),
+        visitas: visitas?.total || 0,
+      },
+    })
   } catch (error) {
     return handleApiError(error, "GET /api/crm/pessoas/[id]")
   }
@@ -117,41 +149,15 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     if (
       body.status === "CONVERTIDO_CLIENTE" &&
       existente.status !== "CONVERTIDO_CLIENTE" &&
-      atualizada.cnpj
+      !atualizada.promovidaCliente
     ) {
       try {
-        if (!atualizada.clienteId) {
-          const [existenteCliente] = await db
-            .select()
-            .from(clientes)
-            .where(eq(clientes.cnpj, atualizada.cnpj))
-            .limit(1)
-
-          if (existenteCliente) {
-            await db
-              .update(crmPessoas)
-              .set({ clienteId: existenteCliente.id })
-              .where(eq(crmPessoas.id, atualizada.id))
-            atualizada.clienteId = existenteCliente.id
-          } else {
-            const [novoCliente] = await db
-              .insert(clientes)
-              .values({
-                nome: atualizada.nomeFantasia || atualizada.razaoSocial || "",
-                cnpj: atualizada.cnpj,
-                razaoSocial: atualizada.razaoSocial || "",
-                endereco: atualizada.endereco || null,
-                cidade: atualizada.cidade || null,
-                uf: atualizada.uf || null,
-              })
-              .returning()
-            await db
-              .update(crmPessoas)
-              .set({ clienteId: novoCliente.id })
-              .where(eq(crmPessoas.id, atualizada.id))
-            atualizada.clienteId = novoCliente.id
-          }
-        }
+        await promoverPessoaParaCliente({
+          pessoaId: atualizada.id,
+          usuarioId: auth.userId,
+          usuarioNome: session.user.name,
+          notificarEquipe: false,
+        })
       } catch (err) {
         console.error("[sync-cliente]", err)
       }
@@ -183,124 +189,15 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   try {
     const auth = await requireAuth()
     if (auth instanceof NextResponse) return auth
-    if ((auth.session.user?.role ?? "") !== "ADMIN" && (auth.session.user?.role ?? "") !== "SUDO") {
-      return NextResponse.json({ error: "Apenas administradores podem excluir" }, { status: 403 })
-    }
 
-    const { id } = await params
-    const empresaId = parseInt(id)
-
-    await db.transaction(async (tx: any) => {
-      const contatosIds = (
-        await tx
-          .select({ id: crmContatos.id })
-          .from(crmContatos)
-          .where(eq(crmContatos.empresaId, empresaId))
-      ).map((r: any) => r.id)
-
-      const leadsIds = (
-        await tx.select({ id: crmLeads.id }).from(crmLeads).where(eq(crmLeads.pessoaId, empresaId))
-      ).map((r: any) => r.id)
-
-      const oportunidadesIds = (
-        await tx
-          .select({ id: crmOportunidades.id })
-          .from(crmOportunidades)
-          .where(
-            or(
-              eq(crmOportunidades.empresaId, empresaId),
-              leadsIds.length ? inArray(crmOportunidades.leadId, leadsIds) : undefined,
-              contatosIds.length ? inArray(crmOportunidades.contatoId, contatosIds) : undefined
-            )
-          )
-      ).map((r: any) => r.id)
-
-      const visitasIds = (
-        await tx
-          .select({ id: crmVisitas.id })
-          .from(crmVisitas)
-          .where(
-            or(
-              eq(crmVisitas.empresaId, empresaId),
-              oportunidadesIds.length
-                ? inArray(crmVisitas.oportunidadeId, oportunidadesIds)
-                : undefined,
-              contatosIds.length ? inArray(crmVisitas.contatoId, contatosIds) : undefined
-            )
-          )
-      ).map((r: any) => r.id)
-
-      if (visitasIds.length) {
-        const pesquisasIds = (
-          await tx
-            .select({ id: crmPesquisasSatisfacao.id })
-            .from(crmPesquisasSatisfacao)
-            .where(inArray(crmPesquisasSatisfacao.visitaId, visitasIds))
-        ).map((r: any) => r.id)
-
-        if (pesquisasIds.length) {
-          await tx
-            .delete(crmPesquisasRespostas)
-            .where(inArray(crmPesquisasRespostas.pesquisaId, pesquisasIds))
-          await tx
-            .delete(crmPesquisasSatisfacao)
-            .where(inArray(crmPesquisasSatisfacao.id, pesquisasIds))
-        }
-
-        await tx
-          .delete(crmVisitasLocalizacoes)
-          .where(inArray(crmVisitasLocalizacoes.visitaId, visitasIds))
-        await tx.delete(crmVisitas).where(inArray(crmVisitas.id, visitasIds))
-      }
-
-      if (oportunidadesIds.length) {
-        await tx
-          .delete(crmTarefas)
-          .where(
-            or(
-              eq(crmTarefas.empresaId, empresaId),
-              inArray(crmTarefas.oportunidadeId, oportunidadesIds)
-            )
-          )
-        await tx
-          .delete(crmPropostas)
-          .where(
-            or(
-              eq(crmPropostas.empresaId, empresaId),
-              inArray(crmPropostas.oportunidadeId, oportunidadesIds)
-            )
-          )
-        await tx.delete(crmOportunidades).where(inArray(crmOportunidades.id, oportunidadesIds))
-      } else {
-        await tx.delete(crmTarefas).where(eq(crmTarefas.empresaId, empresaId))
-        await tx.delete(crmPropostas).where(eq(crmPropostas.empresaId, empresaId))
-      }
-
-      if (leadsIds.length) {
-        await tx.delete(crmLeads).where(inArray(crmLeads.id, leadsIds))
-      }
-
-      await tx
-        .delete(crmWhatsappMensagens)
-        .where(
-          or(
-            eq(crmWhatsappMensagens.empresaId, empresaId),
-            contatosIds.length ? inArray(crmWhatsappMensagens.contatoId, contatosIds) : undefined
-          )
-        )
-      await tx.delete(crmTimelineEventos).where(eq(crmTimelineEventos.empresaId, empresaId))
-
-      if (contatosIds.length) {
-        await tx.delete(crmContatos).where(inArray(crmContatos.id, contatosIds))
-      }
-
-      await tx.delete(pessoasRepresentantes).where(eq(pessoasRepresentantes.pessoaId, empresaId))
-      await tx.delete(crmPessoas).where(eq(crmPessoas.id, empresaId))
-    })
-
-    await notificarDelecao("Pessoa CRM", id, auth.session.user.name)
-
-    return NextResponse.json({ success: true })
+    return NextResponse.json(
+      {
+        error:
+          "Pessoas não podem ser excluídas: o cadastro é referenciado por veículos, oportunidades, propostas e visitas. Para arquivar, transforme a pessoa em cliente.",
+        fkError: true,
+      },
+      { status: 403 }
+    )
   } catch (error) {
     return handleApiError(error, "DELETE /api/crm/pessoas/[id]")
   }

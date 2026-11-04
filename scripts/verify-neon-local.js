@@ -13,30 +13,31 @@
  * Por isso o local pode TER MAIS tabelas/linhas: o que não pode é ter MENOS.
  */
 
-const { Pool } = require('pg')
-require('dotenv').config({ path: '.env.local' })
+const { Pool } = require("pg")
+require("dotenv").config({ path: ".env.local" })
 
-const SCHEMAS = ['public', 'marts', 'auth', 'etl']
-const SCHEMAS_ERP_LOCAL = ['raw', 'core']
+const SCHEMAS = ["public", "marts", "auth", "etl"]
+const SCHEMAS_ERP_LOCAL = ["raw", "core"]
 
 async function main() {
   const srcUrl = process.env.DATABASE_URL
   const dstUrl = process.env.DATABASE_URL_LOCAL
 
-  if (!srcUrl) throw new Error('DATABASE_URL (Neon) não configurada')
-  if (!dstUrl) throw new Error('DATABASE_URL_LOCAL não configurada')
+  if (!srcUrl) throw new Error("DATABASE_URL (Neon) não configurada")
+  if (!dstUrl) throw new Error("DATABASE_URL_LOCAL não configurada")
 
   const src = new Pool({ connectionString: srcUrl })
   const dst = new Pool({ connectionString: dstUrl })
 
   try {
-    console.log('=== Verificação Neon x local ===')
-    console.log('')
+    console.log("=== Verificação Neon x local ===")
+    console.log("")
 
     let total = 0
     let iguais = 0
     let divergentes = 0
     const divs = []
+    const extras = []
 
     for (const schema of SCHEMAS) {
       const { rows: tables } = await src.query(
@@ -48,11 +49,25 @@ async function main() {
         total++
         const q = `SELECT COUNT(*)::int AS c FROM "${schema}"."${t.table_name}"`
         let c1, c2
-        try { const a = await src.query(q); c1 = a.rows[0].c } catch (e) { c1 = 'ERR' }
-        try { const b = await dst.query(q); c2 = b.rows[0].c } catch (e) { c2 = 'ERR' }
+        try {
+          const a = await src.query(q)
+          c1 = a.rows[0].c
+        } catch (e) {
+          c1 = "ERR"
+        }
+        try {
+          const b = await dst.query(q)
+          c2 = b.rows[0].c
+        } catch (e) {
+          c2 = "ERR"
+        }
 
         if (c1 === c2) {
           iguais++
+        } else if (typeof c1 === "number" && typeof c2 === "number" && c2 > c1) {
+          // Superset: o local tem MAIS linhas do que o Neon (permitido pela arquitetura).
+          extras.push({ schema, tabela: t.table_name, src: c1, dst: c2 })
+          console.log(`OK (local ⊇ Neon): ${schema}.${t.table_name} | Neon=${c1} | Local=${c2}`)
         } else {
           divergentes++
           divs.push({ schema, tabela: t.table_name, src: c1, dst: c2 })
@@ -61,35 +76,43 @@ async function main() {
       }
     }
 
-    console.log('')
-    console.log('=== Resultado ===')
+    console.log("")
+    console.log("=== Resultado ===")
     console.log(`Tabelas verificadas: ${total}`)
     console.log(`Iguais: ${iguais}`)
-    console.log(`Divergentes: ${divergentes}`)
+    console.log(`Local com linhas a mais (permitido): ${extras.length}`)
+    console.log(`Divergentes (local com MENOS dados): ${divergentes}`)
 
     // Superset: o que o local tem a mais (ERP + WMS) — esperado, não é divergência
-    const extras = await extrasLocal(dst, src)
-    if (extras.tabelas.length) {
-      console.log('')
-      console.log(`Local tem ${extras.tabelas.length} tabela(s) a mais (carga ERP / runtime WMS):`)
-      for (const t of extras.tabelas) console.log(`  - ${t}`)
+    const extrasTabelas = await extrasLocal(dst, src)
+    if (extrasTabelas.tabelas.length) {
+      console.log("")
+      console.log(
+        `Local tem ${extrasTabelas.tabelas.length} tabela(s) a mais (carga ERP / runtime WMS):`
+      )
+      for (const t of extrasTabelas.tabelas) console.log(`  - ${t}`)
     }
 
     // Carga do ERP (raw/core): existe só no local e é o motivo de ele existir
     const erp = await cargaErp(dst)
-    console.log('')
+    console.log("")
     console.log(`Carga ERP no local (raw/core): ${erp.tabelas} tabelas, ${erp.linhas} linhas`)
     if (erp.linhas === 0) {
-      console.log('⚠️  ATENÇÃO: carga ERP vazia no local — o fallback perde os dados do ERP')
+      console.log("⚠️  ATENÇÃO: carga ERP vazia no local — o fallback perde os dados do ERP")
     }
 
     if (divergentes === 0) {
-      console.log('')
-      console.log('✓ CRITÉRIO DE ACEITE ATINGIDO: 0 divergências (local ⊇ Neon)')
+      console.log("")
+      console.log("✓ CRITÉRIO DE ACEITE ATINGIDO: 0 divergências (local ⊇ Neon)")
+      if (extras.length) {
+        console.log(
+          `  Nota: ${extras.length} tabela(s) com linhas a mais no local (permitido pelo superset).`
+        )
+      }
       process.exit(0)
     } else {
-      console.log('')
-      console.log('✗ DIVERGÊNCIAS ENCONTRADAS')
+      console.log("")
+      console.log("✗ DIVERGÊNCIAS ENCONTRADAS: o local está com MENOS dados que o Neon")
       process.exit(1)
     }
   } finally {
@@ -110,7 +133,7 @@ async function extrasLocal(dst, src) {
       `SELECT table_name FROM information_schema.tables WHERE table_schema=$1 AND table_type='BASE TABLE'`,
       [schema]
     )
-    const doNeon = new Set(a.rows.map(r => r.table_name))
+    const doNeon = new Set(a.rows.map((r) => r.table_name))
     for (const { table_name } of b.rows) {
       if (!doNeon.has(table_name)) tabelas.push(`${schema}.${table_name}`)
     }
@@ -140,7 +163,7 @@ async function cargaErp(dst) {
   return { tabelas, linhas }
 }
 
-main().catch(e => {
-  console.error('ERRO:', e.message)
+main().catch((e) => {
+  console.error("ERRO:", e.message)
   process.exit(1)
 })

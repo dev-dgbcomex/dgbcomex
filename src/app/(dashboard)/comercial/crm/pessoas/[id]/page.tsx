@@ -18,6 +18,7 @@ import { RepresentantesCard } from "./components/representantes-card"
 import { LeadsCard } from "./components/leads-card"
 import { OportunidadesCard } from "./components/oportunidades-card"
 import { PropostasCard } from "./components/propostas-card"
+import { HistoricoConversaoCard } from "./components/historico-conversao-card"
 import type {
   Contato,
   Pessoa,
@@ -37,9 +38,9 @@ function PessoaDetailPageContent() {
   const [editing, setEditing] = useState(searchParams.get("edit") === "true")
   const [form, setForm] = useState<PessoaForm>({})
   const [tipoPessoa, setTipoPessoa] = useState<"PF" | "PJ">("PJ")
-  const [showDelete, setShowDelete] = useState(false)
-  const [deleteLoading, setDeleteLoading] = useState(false)
   const [estadoId, setEstadoId] = useState<number | null>(null)
+  const [showPromover, setShowPromover] = useState(false)
+  const [promoverLoading, setPromoverLoading] = useState(false)
   const { data: estados = [] } = useQuery<{ id: number; uf: string }[]>({
     queryKey: ["crm-estados"],
     queryFn: async () => {
@@ -176,18 +177,25 @@ function PessoaDetailPageContent() {
     }
   }
 
-  async function handleDelete() {
-    setDeleteLoading(true)
+  async function promoverCliente() {
+    setPromoverLoading(true)
     try {
-      const res = await fetch(`/api/crm/pessoas/${params.id}`, { method: "DELETE" })
-      if (!res.ok) throw new Error("Erro ao excluir")
-      toast.success("Pessoa excluída")
-      router.push("/comercial/crm/pessoas")
-    } catch {
-      toast.error("Erro ao excluir pessoa")
+      const res = await fetch(`/api/crm/pessoas/${params.id}/promover-cliente`, {
+        method: "POST",
+      })
+      const data = await res.json().catch(() => null)
+      if (!res.ok) throw new Error(data?.error || "Erro ao transformar em cliente")
+      toast.success("Pessoa transformada em cliente", {
+        description: "O histórico continua disponível nos relatórios.",
+      })
+      setShowPromover(false)
+      const atualizado: Pessoa = await fetch(`/api/crm/pessoas/${params.id}`).then((r) => r.json())
+      setPessoa(atualizado)
+      setForm(atualizado)
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Erro ao transformar em cliente")
     } finally {
-      setDeleteLoading(false)
-      setShowDelete(false)
+      setPromoverLoading(false)
     }
   }
 
@@ -281,7 +289,7 @@ function PessoaDetailPageContent() {
           setForm(pessoa ?? {})
         }}
         onEdit={() => setEditing(true)}
-        onDelete={() => setShowDelete(true)}
+        onPromover={() => setShowPromover(true)}
       />
 
       <div className="grid gap-6 md:grid-cols-2">
@@ -356,6 +364,8 @@ function PessoaDetailPageContent() {
         onRemoveClick={setRepToRemove}
       />
 
+      <HistoricoConversaoCard pessoa={pessoa} />
+
       <div className="grid gap-6 md:grid-cols-3">
         <LeadsCard empresaId={params.id as string} />
         <OportunidadesCard empresaId={params.id as string} />
@@ -390,14 +400,16 @@ function PessoaDetailPageContent() {
         onCancel={() => setRepToRemove(null)}
       />
       <ConfirmModal
-        open={showDelete}
-        title="Excluir pessoa?"
-        message={`Tem certeza que deseja excluir "${pessoa.razaoSocial}"? Todos os registros vinculados (contatos, visitas, tarefas, propostas, timeline e conversas WhatsApp) também serão removidos. Esta ação não pode ser desfeita.`}
-        confirmLabel="Excluir"
-        variant="danger"
-        loading={deleteLoading}
-        onConfirm={handleDelete}
-        onCancel={() => setShowDelete(false)}
+        open={showPromover}
+        title="Transformar em cliente?"
+        message={`Ao transformar "${pessoa.nome || pessoa.razaoSocial}" em cliente, a pessoa será arquivada e não aparecerá mais na listagem de pessoas.`}
+        subMessage="Tudo o que foi feito no cadastro (oportunidades, propostas e visitas) continua disponível nos relatórios e no histórico do cliente. Esta ação não pode ser desfeita."
+        confirmLabel="Transformar em cliente"
+        cancelLabel="Cancelar"
+        variant="warning"
+        loading={promoverLoading}
+        onConfirm={promoverCliente}
+        onCancel={() => setShowPromover(false)}
       />
     </div>
   )

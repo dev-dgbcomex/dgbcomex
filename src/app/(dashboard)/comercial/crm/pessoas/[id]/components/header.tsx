@@ -1,4 +1,4 @@
-import { ArrowLeft, Check, X, Pencil, Trash2 } from "lucide-react"
+import { ArrowLeft, Check, X, Pencil, Archive, Building2 } from "lucide-react"
 import { InfoButton } from "@/components/ui/info-button"
 import type { InfoContent } from "@/lib/info-content"
 import { STATUS_CORES } from "./constants"
@@ -12,7 +12,7 @@ interface PessoaHeaderProps {
   onSave: () => void
   onCancel: () => void
   onEdit: () => void
-  onDelete: () => void
+  onPromover?: () => void
 }
 
 export function PessoaHeader({
@@ -23,7 +23,7 @@ export function PessoaHeader({
   onSave,
   onCancel,
   onEdit,
-  onDelete,
+  onPromover,
 }: PessoaHeaderProps) {
   return (
     <div className="flex items-center gap-3">
@@ -55,6 +55,20 @@ export function PessoaHeader({
           >
             {pessoa.status}
           </span>
+          {pessoa.promovidaCliente && (
+            <span
+              className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-medium text-emerald-700 bg-emerald-50 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900"
+              title={
+                pessoa.promovidoEm
+                  ? `Transformada em cliente em ${new Date(pessoa.promovidoEm).toLocaleString("pt-BR")}${
+                      pessoa.promovidoPorNome ? ` por ${pessoa.promovidoPorNome}` : ""
+                    }`
+                  : "Transformada em cliente"
+              }
+            >
+              <Archive size={11} /> Cliente
+            </span>
+          )}
         </div>
         {pessoa.tipoPessoa === "PJ" && pessoa.nomeFantasia && (
           <p className="text-sm text-slate-500">{pessoa.nomeFantasia}</p>
@@ -84,12 +98,14 @@ export function PessoaHeader({
             >
               <Pencil size={14} /> Editar
             </button>
-            <button
-              onClick={onDelete}
-              className="flex items-center gap-1 text-xs font-medium text-red-600 hover:underline"
-            >
-              <Trash2 size={14} /> Excluir
-            </button>
+            {!pessoa.promovidaCliente && onPromover && (
+              <button
+                onClick={onPromover}
+                className="flex items-center gap-1 text-xs font-medium text-emerald-600 hover:underline"
+              >
+                <Building2 size={14} /> Tornar cliente
+              </button>
+            )}
           </>
         )}
       </div>

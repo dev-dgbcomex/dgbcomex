@@ -388,6 +388,22 @@ async function migrate() {
     await sql`INSERT INTO notificacao_regras (tipo, roles) VALUES ('ATIVIDADE_COMERCIAL', '["COMERCIAL","CRM"]'::jsonb) ON CONFLICT (tipo) DO NOTHING`
     console.log("✓ Regra ATIVIDADE_COMERCIAL verificada")
 
+    // crm_pessoas: tarja de promocao para cliente (a pessoa sai da listagem, mas
+    // continua nos relatorios com todo o historico)
+    await sql`ALTER TABLE crm_pessoas ADD COLUMN IF NOT EXISTS promovida_cliente boolean NOT NULL DEFAULT false`
+    await sql`ALTER TABLE crm_pessoas ADD COLUMN IF NOT EXISTS promovido_em timestamp`
+    await sql`ALTER TABLE crm_pessoas ADD COLUMN IF NOT EXISTS promovido_por integer REFERENCES usuarios(id) ON DELETE SET NULL`
+    await sql`ALTER TABLE crm_pessoas ADD COLUMN IF NOT EXISTS promovido_por_nome varchar(255)`
+    await sql`CREATE INDEX IF NOT EXISTS idx_crm_pessoas_promovida_cliente ON crm_pessoas (promovida_cliente)`
+    await sql`
+      UPDATE crm_pessoas p
+      SET promovida_cliente = true,
+          promovido_em = COALESCE(c.created_at, p.updated_at, p.created_at)
+      FROM clientes c
+      WHERE p.cliente_id = c.id AND p.promovida_cliente = false
+    `
+    console.log("✓ Tarja de promocao para cliente em crm_pessoas")
+
     await sql`
       CREATE TABLE IF NOT EXISTS bancos_dados (
         id SERIAL PRIMARY KEY,

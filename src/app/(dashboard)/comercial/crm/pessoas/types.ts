@@ -42,6 +42,19 @@ export type Pessoa = PessoaForm & {
   resumoIa?: string | null
   sugestaoIa?: string | null
   dataResumoIa?: string | null
+  clienteId?: number | null
+  promovidaCliente?: boolean
+  promovidoEm?: string | null
+  promovidoPor?: number | null
+  promovidoPorNome?: string | null
+  cliente?: { id: number; nome: string; cnpj?: string | null } | null
+  resumo?: {
+    oportunidades: number
+    valorOportunidades: number
+    propostas: number
+    valorPropostas: number
+    visitas: number
+  }
   createdAt?: string
   error?: string
 }

@@ -2,22 +2,21 @@
 
 import { useQuery } from "@tanstack/react-query"
 import Link from "next/link"
-import { Suspense, useState } from "react"
-import { useRouter, usePathname, useSearchParams } from "next/navigation"
+import { Suspense, useMemo, useState } from "react"
+import { usePathname, useSearchParams } from "next/navigation"
 import { InfoButton } from "@/components/ui/info-button"
 import { getInfoContent } from "@/lib/info-content"
 import {
   PlusCircle,
   UserCircle,
-  Search,
   Table,
   Columns,
   Database,
   Building2,
   Eye,
   Pencil,
-  Trash2,
   ExternalLink,
+  Archive,
 } from "lucide-react"
 import PessoasKanban from "@/components/crm/pessoas-kanban"
 import { FloatableKanban } from "@/components/crm/floatable-kanban"
@@ -25,9 +24,9 @@ import ImportarApiModal from "@/components/integracao/ImportarApiModal"
 import BuscarCnpjModal from "@/components/crm/buscar-cnpj-modal"
 import { Button } from "@/components/ui/button"
 import ListFilters, { useListFilters } from "@/components/ui/list-filters"
-import { ConfirmModal } from "@/components/ui/confirm-modal"
-import { toast } from "sonner"
 import { PageSkeleton } from "@/components/ui/page-skeleton"
+import { ExportarRelatorio } from "@/components/crm/relatorios/exportar-relatorio"
+import { PromoverClienteBotao } from "@/components/crm/promover-cliente-botao"
 import type { Pessoa } from "./types"
 
 async function fetchEmpresas(): Promise<Pessoa[]> {
@@ -44,8 +43,9 @@ const STATUS_CORES: Record<string, string> = {
   INATIVO: "text-slate-400 bg-slate-100 dark:bg-slate-800 dark:text-slate-500",
 }
 
+type TarjaFiltro = "sem" | "com" | "todos"
+
 function CrmPessoasPageContent() {
-  const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const info = getInfoContent(pathname)
@@ -54,8 +54,7 @@ function CrmPessoasPageContent() {
   )
   const [showApiImport, setShowApiImport] = useState(false)
   const [showCnpjSearch, setShowCnpjSearch] = useState(false)
-  const [deleteTarget, setDeleteTarget] = useState<Pessoa | null>(null)
-  const [deleteLoading, setDeleteLoading] = useState(false)
+  const [tarjaFiltro, setTarjaFiltro] = useState<TarjaFiltro>("sem")
 
   const {
     data: empresas,
@@ -81,7 +80,14 @@ function CrmPessoasPageContent() {
     },
     empresas || []
   )
-  const filteredData = filterState.filtered
+
+  const filtradasPorTarja = useMemo(() => {
+    const lista = filterState.filtered
+    if (tarjaFiltro === "todos") return lista
+    return lista.filter((p) => Boolean(p.promovidaCliente) === (tarjaFiltro === "com"))
+  }, [filterState.filtered, tarjaFiltro])
+
+  const filteredData = filtradasPorTarja
 
   function nomeExibicao(p: Pessoa) {
     if (p.tipoPessoa === "PF") return p.nome || "—"
@@ -99,21 +105,31 @@ function CrmPessoasPageContent() {
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(parts.join(", "))}`
   }
 
-  async function handleDelete() {
-    if (!deleteTarget) return
-    setDeleteLoading(true)
-    try {
-      const res = await fetch(`/api/crm/pessoas/${deleteTarget.id}`, { method: "DELETE" })
-      if (!res.ok) throw new Error("Erro ao excluir")
-      toast.success("Pessoa excluída")
-      refetch()
-    } catch {
-      toast.error("Erro ao excluir pessoa")
-    } finally {
-      setDeleteLoading(false)
-      setDeleteTarget(null)
-    }
-  }
+  const dadosExportacao = useMemo(
+    () => ({
+      filename: "pessoas-crm",
+      title: "Relatório de Pessoas (Negócios)",
+      period: `${filtradasPorTarja.length} registro(s)${
+        tarjaFiltro === "com" ? " com tarja de cliente" : tarjaFiltro === "sem" ? " sem tarja" : ""
+      }`,
+      headers: ["Nome", "Documento", "Tipo", "Segmento", "Status", "Tarja", "Data"],
+      rows: filtradasPorTarja.map((p) => [
+        nomeExibicao(p),
+        documento(p),
+        p.tipoPessoa || "—",
+        p.segmento || "—",
+        p.status || "—",
+        p.promovidaCliente ? "Sim" : "Não",
+        p.createdAt ? new Date(p.createdAt).toLocaleDateString("pt-BR") : "—",
+      ]),
+      stats: {
+        Total: filtradasPorTarja.length,
+        "Com tarja": filtradasPorTarja.filter((p) => p.promovidaCliente).length,
+        "Sem tarja": filtradasPorTarja.filter((p) => !p.promovidaCliente).length,
+      },
+    }),
+    [filtradasPorTarja, tarjaFiltro]
+  )
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -129,6 +145,42 @@ function CrmPessoasPageContent() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <div className="flex rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-0.5 shadow-sm">
+            <button
+              onClick={() => setTarjaFiltro("sem")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                tarjaFiltro === "sem"
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
+              }`}
+              title="Mostrar apenas pessoas que ainda não viraram cliente"
+            >
+              Sem tarja
+            </button>
+            <button
+              onClick={() => setTarjaFiltro("com")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                tarjaFiltro === "com"
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
+              }`}
+              title="Mostrar apenas pessoas que já viraram cliente"
+            >
+              <Archive size={14} />
+              Com tarja
+            </button>
+            <button
+              onClick={() => setTarjaFiltro("todos")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                tarjaFiltro === "todos"
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
+              }`}
+              title="Mostrar todas as pessoas"
+            >
+              Todos
+            </button>
+          </div>
           <div className="flex rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-0.5 shadow-sm">
             <button
               onClick={() => setModo("tabela")}
@@ -178,6 +230,7 @@ function CrmPessoasPageContent() {
             <PlusCircle size={14} />
             Nova Pessoa
           </Link>
+          <ExportarRelatorio dados={dadosExportacao} disabled={isLoading} />
         </div>
       </div>
 
@@ -323,13 +376,21 @@ function CrmPessoasPageContent() {
                                 <ExternalLink size={14} />
                               </a>
                             )}
-                            <button
-                              onClick={() => setDeleteTarget(emp)}
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/50 transition-colors"
-                              title="Excluir"
-                            >
-                              <Trash2 size={14} />
-                            </button>
+                            {emp.promovidaCliente ? (
+                              <span
+                                className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-medium text-emerald-700 bg-emerald-50 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900"
+                                title={`Virou cliente${emp.promovidoEm ? ` em ${new Date(emp.promovidoEm).toLocaleDateString("pt-BR")}` : ""}`}
+                              >
+                                <Archive size={12} />
+                                Cliente
+                              </span>
+                            ) : (
+                              <PromoverClienteBotao
+                                pessoa={emp}
+                                compact
+                                onPromovido={() => refetch()}
+                              />
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -370,17 +431,6 @@ function CrmPessoasPageContent() {
           onClose={() => setShowCnpjSearch(false)}
         />
       )}
-
-      <ConfirmModal
-        open={!!deleteTarget}
-        title="Excluir pessoa?"
-        message={`Tem certeza que deseja excluir "${deleteTarget?.razaoSocial || deleteTarget?.nome || "esta pessoa"}"? Esta ação não pode ser desfeita.`}
-        confirmLabel="Excluir"
-        variant="danger"
-        loading={deleteLoading}
-        onConfirm={handleDelete}
-        onCancel={() => setDeleteTarget(null)}
-      />
     </div>
   )
 }

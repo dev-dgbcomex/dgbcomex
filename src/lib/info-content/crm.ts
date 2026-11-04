@@ -171,7 +171,10 @@ export const crmContent: Record<string, InfoContent> = {
     rules: [
       "O CNPJ é único — não é possível cadastrar duas pessoas com o mesmo CNPJ.",
       "Pessoas podem ser criadas manualmente ou convertidas de leads qualificados.",
-      "Uma pessoa CONVERTIDO_CLIENTE é automaticamente sincronizada com o cadastro de Clientes do PDM.",
+      "Pessoas não podem ser excluídas: o cadastro é referenciado por contatos, oportunidades, propostas, visitas e timeline. Use 'Tornar cliente' para arquivar.",
+      "O botão 'Tornar cliente' cria (ou reaproveita) o cadastro de Clientes pelo CNPJ, marca a pessoa com tarja de cliente e preserva todo o histórico (oportunidades, propostas e visitas) nos relatórios. A ação não pode ser desfeita.",
+      "A listagem esconde por padrão as pessoas com tarja. Use o filtro 'Sem tarja / Com tarja / Todos' para alternar a visibilidade.",
+      "Pessoas com tarja continuam acessíveis pelo detalhe (link direto) e pelo relatório de Conversões.",
       "Ao clicar no nome da pessoa, você abre o detalhe completo com timeline, WhatsApp e resumo IA.",
     ],
     fields: [
@@ -179,6 +182,29 @@ export const crmContent: Record<string, InfoContent> = {
       { name: "CNPJ", desc: "Formato XX.XXX.XXX/XXXX-XX — valida duplicidade" },
       { name: "Segmento", desc: "Ramo de atuação da pessoa" },
       { name: "Status", desc: "Novo, Qualificado, Convertido Cliente, Perdido, Inativo" },
+      {
+        name: "Tarja de cliente",
+        desc: "Marca as pessoas já transformadas em cliente (arquivadas)",
+      },
+    ],
+    columns: [
+      { name: "Tipo", desc: "PF (pessoa física) ou PJ (pessoa jurídica)" },
+      { name: "Nome", desc: "Razão social ou nome da pessoa física" },
+      { name: "Documento", desc: "CNPJ ou CPF" },
+      { name: "Segmento", desc: "Ramo de atuação" },
+      { name: "Responsável", desc: "Quem cuida da conta" },
+      { name: "Status", desc: "Etapa atual no funil" },
+      { name: "Ações", desc: "Ver, editar, abrir no mapa, transformar em cliente e exportar" },
+    ],
+    examples: [
+      {
+        title: "Promoção",
+        desc: "Clica em 'Tornar cliente', confirma o aviso e a pessoa passa a ter tarja",
+      },
+      {
+        title: "Exportação",
+        desc: "Os botões PDF, CSV e MD exportam exatamente o que está filtrado na tela",
+      },
     ],
   },
   "/comercial/crm/pessoas/novo": {
@@ -200,18 +226,25 @@ export const crmContent: Record<string, InfoContent> = {
   "/comercial/crm/pessoas/[id]": {
     title: "Detalhe da Pessoa",
     description:
-      "Visão completa de uma pessoa no CRM: dados cadastrais, contatos, timeline, WhatsApp e resumo gerado por IA. Tudo que você precisa saber sobre a conta.",
+      "Visão completa de uma pessoa no CRM: dados cadastrais, contatos, timeline, WhatsApp, histórico de conversão em cliente e resumo gerado por IA. Tudo que você precisa saber sobre a conta.",
     rules: [
       "A Timeline mostra todo o histórico de interações: leads, oportunidades, visitas, tarefas, propostas e mensagens WhatsApp.",
       "O WhatsApp permite enviar e receber mensagens diretamente pelo sistema (integrado com Evolution API + n8n).",
       "O Resumo IA é gerado automaticamente, consolidando as informações mais relevantes da pessoa.",
       "Para editar os dados, clique em Editar no topo da página.",
+      "Não há exclusão de pessoa: o cadastro é referenciado por veículos, oportunidades, propostas e visitas. O botão 'Tornar cliente' faz a promoção (cria ou reaproveita o cliente pelo CNPJ) e preserva o histórico.",
+      "Promovida, a pessoa recebe a tarja 'Cliente' no topo e some da listagem padrão — o histórico continua aqui e nos relatórios.",
+      "O card 'Histórico de conversão em cliente' mostra quando a pessoa virou cliente, quem promoveu, o cliente vinculado e o total de oportunidades, propostas e visitas acumulados.",
     ],
     fields: [
       { name: "Timeline", desc: "Histórico completo de eventos da pessoa em ordem cronológica" },
       { name: "WhatsApp", desc: "Painel de conversas WhatsApp vinculadas à pessoa" },
       { name: "Resumo IA", desc: "Resumo inteligente com sugestões geradas pela IA Comercial" },
       { name: "Contatos", desc: "Pessoas de contato da pessoa com cargo, e-mail e telefone" },
+      {
+        name: "Histórico de conversão",
+        desc: "Data, responsável, cliente vinculado e indicadores do período",
+      },
     ],
   },
 

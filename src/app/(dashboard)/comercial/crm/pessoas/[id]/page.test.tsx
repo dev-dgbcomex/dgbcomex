@@ -92,7 +92,22 @@ describe("PessoaDetailPage", () => {
       if (method === "GET" && url === "/api/crm/timeline?pessoaId=1") return { json: [] }
       if (method === "GET" && url === "/api/crm/whatsapp?empresaId=1") return { json: [] }
       if (method === "PUT" && url === "/api/crm/pessoas/1") return { json: { ...pessoa } }
-      if (method === "DELETE" && url === "/api/crm/pessoas/1") return { json: { ok: true } }
+      if (method === "POST" && url === "/api/crm/pessoas/1/promover-cliente") {
+        return {
+          json: {
+            pessoa: { ...pessoa, promovidaCliente: true, status: "CONVERTIDO_CLIENTE" },
+            clienteId: 5,
+            clienteCriado: true,
+            resumo: {
+              oportunidades: 1,
+              propostas: 1,
+              visitas: 0,
+              valorPropostas: 0,
+              valorOportunidades: 0,
+            },
+          },
+        }
+      }
       if (method === "GET" && url === "/api/crm/contatos?orfao=true") return { json: orfaos }
       if (method === "PUT" && url === "/api/crm/contatos/9")
         return {
@@ -185,22 +200,31 @@ describe("PessoaDetailPage", () => {
     await waitFor(() => expect(toastMock.success).toHaveBeenCalledWith("Pessoa atualizada"))
   })
 
-  it("exclui a pessoa após confirmação", async () => {
+  it("transforma a pessoa em cliente após confirmar o aviso", async () => {
     navMock.setParams({ id: "1" })
     navMock.setPathname("/comercial/crm/pessoas/1")
     renderPage(<PessoaDetailPage />)
 
-    fireEvent.click(await screen.findByRole("button", { name: "Excluir" }))
+    fireEvent.click(await screen.findByRole("button", { name: "Tornar cliente" }))
 
-    const dialog = screen.getByRole("dialog", { name: "Excluir pessoa?" })
-    fireEvent.click(within(dialog).getByRole("button", { name: "Excluir" }))
+    const dialog = screen.getByRole("dialog", { name: "Transformar em cliente?" })
+    expect(dialog).toHaveTextContent("será arquivada")
+    fireEvent.click(within(dialog).getByRole("button", { name: "Transformar em cliente" }))
 
     await waitFor(() => {
-      const call = findCall(fetchMock.calls, "/api/crm/pessoas/1", "DELETE")
+      const call = findCall(fetchMock.calls, "/api/crm/pessoas/1/promover-cliente", "POST")
       expect(call).toBeDefined()
     })
-    await waitFor(() => expect(toastMock.success).toHaveBeenCalledWith("Pessoa excluída"))
-    expect(navMock.router.push).toHaveBeenCalledWith("/comercial/crm/pessoas")
+    await waitFor(() => expect(toastMock.success).toHaveBeenCalled())
+  })
+
+  it("não oferece exclusão da pessoa", async () => {
+    navMock.setParams({ id: "1" })
+    navMock.setPathname("/comercial/crm/pessoas/1")
+    renderPage(<PessoaDetailPage />)
+
+    await screen.findByRole("heading", { name: /Tecelagem Alpha/ })
+    expect(screen.queryByRole("button", { name: "Excluir" })).not.toBeInTheDocument()
   })
 
   it("vincular um contato órfão à pessoa", async () => {

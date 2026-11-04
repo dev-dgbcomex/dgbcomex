@@ -2,12 +2,12 @@ import { db } from "@/lib/db"
 import { status, statusAcoes } from "@/lib/db/schema"
 import { crmPedidosVenda } from "@/lib/db/schema/crm-pedidos-venda"
 import { crmPessoas } from "@/lib/db/schema/crm-pessoas"
-import { clientes } from "@/lib/db/schema/clientes"
 import { notificacoes } from "@/lib/db/schema/notificacoes"
 import { crmTimelineEventos } from "@/lib/db/schema/crm-timeline-eventos"
 import { and, eq } from "drizzle-orm"
 import { registrarLog } from "@/lib/log"
 import { acaoPorValor } from "./status-acoes"
+import { promoverPessoaParaCliente } from "./promover-cliente"
 
 export type ContextoGatilho = {
   tipo: "OPORTUNIDADE" | "PROPOSTA"
@@ -26,41 +26,26 @@ export type ResultadoGatilhos = {
   erros: string[]
 }
 
-export async function vincularEmpresaComoCliente(empresaId: number): Promise<boolean> {
+export async function vincularEmpresaComoCliente(
+  empresaId: number,
+  contexto?: { usuarioId?: number | null; usuarioNome?: string | null }
+): Promise<boolean> {
   const [empresa] = await db.select().from(crmPessoas).where(eq(crmPessoas.id, empresaId)).limit(1)
 
   if (!empresa || !empresa.cnpj) return false
-  if (empresa.clienteId) return true
+  if (empresa.promovidaCliente) return true
 
-  const [existente] = await db
-    .select()
-    .from(clientes)
-    .where(eq(clientes.cnpj, empresa.cnpj))
-    .limit(1)
-
-  if (existente) {
-    await db
-      .update(crmPessoas)
-      .set({ clienteId: existente.id, updatedAt: new Date() })
-      .where(eq(crmPessoas.id, empresaId))
-    return true
-  }
-
-  const [novoCliente] = await db
-    .insert(clientes)
-    .values({
-      nome: empresa.nomeFantasia || empresa.razaoSocial || "",
-      cnpj: empresa.cnpj!,
-      razaoSocial: empresa.razaoSocial || "",
+  try {
+    await promoverPessoaParaCliente({
+      pessoaId: empresaId,
+      usuarioId: contexto?.usuarioId ?? null,
+      usuarioNome: contexto?.usuarioNome ?? null,
+      notificarEquipe: false,
     })
-    .returning()
-
-  await db
-    .update(crmPessoas)
-    .set({ clienteId: novoCliente.id, updatedAt: new Date() })
-    .where(eq(crmPessoas.id, empresaId))
-
-  return true
+    return true
+  } catch {
+    return false
+  }
 }
 
 async function criarPedidoVenda(contexto: ContextoGatilho, parametros: Record<string, any>) {
@@ -141,7 +126,12 @@ async function executarAcao(
 ) {
   switch (acao) {
     case "VIRAR_CLIENTE":
-      return contexto.empresaId ? vincularEmpresaComoCliente(contexto.empresaId) : false
+      return contexto.empresaId
+        ? vincularEmpresaComoCliente(contexto.empresaId, {
+            usuarioId: contexto.responsavelId,
+            usuarioNome: contexto.usuarioNome,
+          })
+        : false
     case "CRIAR_PEDIDO_VENDA":
       return criarPedidoVenda(contexto, parametros)
     case "NOTIFICAR_RESPONSAVEL":

@@ -45,6 +45,9 @@ O warehouse local ainda tem, por arquitetura, tabelas que só existem nele (runt
 3. **Replique no warehouse local**: `npm run db:replicar-neon` (`scripts/replicar-neon-local.js`)
 4. **Verifique**: `npm run db:verificar-local` (`scripts/verify-neon-local.js`) — precisa dar 0 divergências
 
+> A verificação trata o **local como superset**: linhas a mais no local são permitidas (saída `OK (local ⊇ Neon)`).
+> Divergência de verdade é o local ter **menos** dados que o Neon — aí o script sai com erro.
+
 A réplica também roda **sozinha a cada 4h** (Agendador de Tarefas do Windows:
 `DGBComex - Replicar Neon para Warehouse Local` → `scripts/agendar-replicacao.cmd`, log em
 `logs/replicar-neon-local.log`), para o fallback do local nunca ficar defasado.

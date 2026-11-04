@@ -14,10 +14,13 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const search = searchParams.get("search")
     const status = searchParams.get("status")
+    const tarja = searchParams.get("tarja")
 
     let conditions = []
 
     if (status) conditions.push(eq(crmPessoas.status, status))
+    if (tarja === "com") conditions.push(eq(crmPessoas.promovidaCliente, true))
+    if (tarja === "sem") conditions.push(eq(crmPessoas.promovidaCliente, false))
     if (search) {
       conditions.push(
         or(
@@ -49,6 +52,11 @@ export async function GET(req: NextRequest) {
         status: crmPessoas.status,
         responsavelId: crmPessoas.responsavelId,
         responsavelNome: usuarios.name,
+        clienteId: crmPessoas.clienteId,
+        promovidaCliente: crmPessoas.promovidaCliente,
+        promovidoEm: crmPessoas.promovidoEm,
+        promovidoPor: crmPessoas.promovidoPor,
+        promovidoPorNome: crmPessoas.promovidoPorNome,
         endereco: crmPessoas.endereco,
         numero: crmPessoas.numero,
         bairro: crmPessoas.bairro,
