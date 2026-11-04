@@ -215,6 +215,7 @@ describe("getInfoContent", () => {
       "/comercial/crm/relatorios/oportunidades",
       "/comercial/crm/relatorios/propostas",
       "/comercial/crm/relatorios/visitas",
+      "/comercial/crm/relatorios/conversoes",
     ]
 
     for (const caminho of telas) {
@@ -238,8 +239,9 @@ describe("getInfoContent", () => {
   it("as telas de relatório do CRM registram data/hora e pessoa ou cliente envolvida", () => {
     const atividades = getInfoContent("/comercial/crm/relatorios/atividades")
     const pessoas = getInfoContent("/comercial/crm/relatorios/pessoas")
+    const conversoes = getInfoContent("/comercial/crm/relatorios/conversoes")
 
-    const texto = [atividades, pessoas]
+    const texto = [atividades, pessoas, conversoes]
       .flatMap((item) => [
         item?.description ?? "",
         ...(item?.rules ?? []),
@@ -250,6 +252,39 @@ describe("getInfoContent", () => {
     expect(texto).toMatch(/Data e hora/)
     expect(texto).toMatch(/Pessoa/)
     expect(texto).toMatch(/Cliente/)
+  })
+
+  it("a tela do cliente explica o histórico de conversão", () => {
+    const cliente = getInfoContent("/comercial/clientes/[id]")
+
+    expect(cliente).not.toBeNull()
+
+    const texto = [
+      cliente?.description ?? "",
+      ...(cliente?.rules ?? []),
+      ...(cliente?.fields ?? []).map((f) => `${f.name}: ${f.desc}`),
+    ].join("\n")
+
+    expect(texto).toMatch(/Histórico de conversão/)
+    expect(texto).toMatch(/pessoa/i)
+    expect(texto).toMatch(/oportunidades/i)
+  })
+
+  it("os relatórios de pessoas e conversões explicam a tarja de cliente", () => {
+    const pessoas = getInfoContent("/comercial/crm/relatorios/pessoas")
+    const conversoes = getInfoContent("/comercial/crm/relatorios/conversoes")
+
+    const texto = [pessoas, conversoes]
+      .flatMap((item) => [
+        item?.description ?? "",
+        ...(item?.rules ?? []),
+        ...(item?.fields ?? []).map((f) => `${f.name}: ${f.desc}`),
+      ])
+      .join("\n")
+
+    expect(texto).toMatch(/[Tt]arja/)
+    expect(texto).toMatch(/Tornar cliente|promoç|promovido/i)
+    expect(texto).toMatch(/Promovido por|Virou cliente em/)
   })
 
   it("as telas de pessoas explicam a tarja de cliente e a promoção", () => {

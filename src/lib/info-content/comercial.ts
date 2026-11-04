@@ -52,6 +52,29 @@ export const comercialContent: Record<string, InfoContent> = {
       { name: "Contato", desc: "Nome e telefone do contato comercial" },
     ],
   },
+  "/comercial/clientes/[id]": {
+    title: "Editar Cliente",
+    description:
+      "Tela de cadastro do cliente: dados da empresa, representantes e contatos vinculados, além do histórico de conversão em cliente.",
+    rules: [
+      "Campos marcados com * são obrigatórios: Nome / Fantasia e CNPJ.",
+      "O botão Salvar grava as alterações via PUT e atualiza o cadastro do cliente.",
+      "A exclusão é restrita a ADMIN e SUDO e remove também os vínculos de representantes e contatos.",
+      "O card 'Histórico de conversão em cliente' mostra de qual pessoa do CRM o cliente veio, quando virou cliente, quem promoveu e o negócio acumulado (oportunidades, propostas e visitas).",
+      "Clientes cadastrados manualmente (sem origem no CRM) aparece no histórico com a mensagem de que não vieram de uma pessoa do CRM.",
+    ],
+    fields: [
+      { name: "Nome / Fantasia", desc: "Nome do cliente (obrigatório)" },
+      { name: "CNPJ", desc: "Cadastro Nacional de Pessoa Jurídica (obrigatório)" },
+      { name: "Segmento", desc: "Segmento comercial do cliente" },
+      { name: "Representantes", desc: "Representantes comerciais vinculados ao cliente" },
+      { name: "Contatos", desc: "Contatos vinculados ou sem vínculo no CRM" },
+      {
+        name: "Histórico de conversão",
+        desc: "Pessoa de origem, data da conversão, quem promovou e números do funil",
+      },
+    ],
+  },
   "/comercial/requisicoes-amostra-comercial": {
     title: "Requisições de Amostra Comercial",
     description:

@@ -26,7 +26,13 @@ describe("/api/crm/relatorios/pessoas", () => {
     } as any)
     vi.mocked(consultarPessoas).mockResolvedValue({
       periodo: { de: "2026-11-01", ate: "2026-11-04", rotulo: "Últimos 7 dias" },
-      cards: { total: 1, pessoasFisicas: 1, pessoasJuridicas: 0, convertidasEmCliente: 0, comSegmento: 0 },
+      cards: {
+        total: 1,
+        pessoasFisicas: 1,
+        pessoasJuridicas: 0,
+        convertidasEmCliente: 0,
+        comSegmento: 0,
+      },
       linhas: [{ id: 1, nome: "Maria Souza" }],
     } as any)
     vi.mocked(listarUsuariosAtividade).mockResolvedValue([{ id: 1, nome: "Tiago" }])
@@ -50,13 +56,18 @@ describe("/api/crm/relatorios/pessoas", () => {
   })
 
   it("repassa os filtros da query string", async () => {
-    await GET(req("/api/crm/relatorios/pessoas?periodo=periodo&de=2026-11-01&ate=2026-11-03&segmento=T%C3%AAxtil&usuario=7"))
+    await GET(
+      req(
+        "/api/crm/relatorios/pessoas?periodo=periodo&de=2026-11-01&ate=2026-11-03&segmento=T%C3%AAxtil&usuario=7&tarja=com"
+      )
+    )
     expect(consultarPessoas).toHaveBeenCalledWith({
       periodo: "periodo",
       de: "2026-11-01",
       ate: "2026-11-03",
       segmento: "Têxtil",
       usuario: "7",
+      tarja: "com",
     })
   })
 })

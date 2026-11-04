@@ -13,6 +13,7 @@ import {
   FileText,
   MapPin,
   Users,
+  Handshake,
 } from "lucide-react"
 import { getInfoContent } from "@/lib/info-content"
 import { usePathname } from "next/navigation"
@@ -57,6 +58,13 @@ const RELATORIOS = [
     desc: "Visitas presenciais, por vídeo e por telefone",
     icon: MapPin,
     cor: "text-amber-600 bg-amber-50 dark:bg-amber-950/50",
+  },
+  {
+    href: "/comercial/crm/relatorios/conversoes",
+    label: "Conversões",
+    desc: "Pessoas que viraram cliente, com quem promoveu e o negócio gerado",
+    icon: Handshake,
+    cor: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/50",
   },
 ]
 
@@ -143,7 +151,7 @@ export default function CrmRelatoriosPage() {
               Cada relatório tem filtros por período, cards de resumo, listagem completa e
               exportação em PDF, CSV e Markdown.
             </p>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
               {RELATORIOS.map((relatorio) => {
                 const Icon = relatorio.icon
                 return (

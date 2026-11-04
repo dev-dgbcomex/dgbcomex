@@ -9,6 +9,7 @@ import { crmTarefas } from "@/lib/db/schema/crm-tarefas"
 import { crmLeads } from "@/lib/db/schema/crm-leads"
 import { clientes } from "@/lib/db/schema/clientes"
 import { usuarios } from "@/lib/db/schema/usuarios"
+import { listarConversoes } from "@/lib/crm/historico-promocao"
 import { and, asc, desc, eq, gte, inArray, lte } from "drizzle-orm"
 
 export type PeriodoKey = "dia" | "semana" | "mes" | "periodo"
@@ -46,6 +47,8 @@ export type FiltrosRelatorio = {
   status?: string | null
   tipo?: string | null
   segmento?: string | null
+  /** "com" = somente pessoas com tarja de cliente · "sem" = somente sem tarja. */
+  tarja?: string | null
 }
 
 function inicioDoDia(data: Date): Date {
@@ -299,9 +302,7 @@ async function enriquecerEntidades(registros: any[]) {
           .from(clientes)
           .where(inArray(clientes.id, clienteIds))
       : []
-    const mapaClientes = new Map<number, string>(
-      nomesClientes.map((c) => [c.id, c.nome as string])
-    )
+    const mapaClientes = new Map<number, string>(nomesClientes.map((c) => [c.id, c.nome as string]))
     for (const pessoa of pessoas) {
       mapa.set(`CrmPessoa:${pessoa.id}`, {
         pessoa: (pessoa.nome || pessoa.nomeFantasia || pessoa.razaoSocial || "Pessoa") as string,
@@ -373,8 +374,7 @@ async function enriquecerEntidades(registros: any[]) {
     )
     for (const visita of visitas) {
       mapa.set(`CrmVisita:${visita.id}`, {
-        pessoa:
-          nomes.pessoas.get(visita.empresaId || 0) || visita.nomeAvulso || "Visita avulsa",
+        pessoa: nomes.pessoas.get(visita.empresaId || 0) || visita.nomeAvulso || "Visita avulsa",
         cliente: nomes.clientes.get(visita.clienteId || 0) || null,
       })
     }
@@ -451,10 +451,7 @@ async function enriquecerEntidades(registros: any[]) {
   return mapa
 }
 
-async function nomesPessoasEClientes(
-  empresaIds: (number | null)[],
-  clienteIds: (number | null)[]
-) {
+async function nomesPessoasEClientes(empresaIds: (number | null)[], clienteIds: (number | null)[]) {
   const idsPessoa = Array.from(new Set(empresaIds.filter((id): id is number => !!id)))
   const idsCliente = Array.from(new Set(clienteIds.filter((id): id is number => !!id)))
 
@@ -479,10 +476,7 @@ async function nomesPessoasEClientes(
 
   return {
     pessoas: new Map<number, string>(
-      pessoas.map((p) => [
-        p.id,
-        (p.nome || p.nomeFantasia || p.razaoSocial || "Pessoa") as string,
-      ])
+      pessoas.map((p) => [p.id, (p.nome || p.nomeFantasia || p.razaoSocial || "Pessoa") as string])
     ),
     clientes: new Map<number, string>(listaClientes.map((c) => [c.id, c.nome as string])),
   }
@@ -722,6 +716,8 @@ export async function consultarPessoas(filtros: FiltrosRelatorio) {
   ]
   if (filtros.segmento) condicoes.push(eq(crmPessoas.segmento, filtros.segmento))
   if (filtros.usuario) condicoes.push(eq(crmPessoas.responsavelId, Number(filtros.usuario)))
+  if (filtros.tarja === "com") condicoes.push(eq(crmPessoas.promovidaCliente, true))
+  if (filtros.tarja === "sem") condicoes.push(eq(crmPessoas.promovidaCliente, false))
 
   const linhas: any[] = await db
     .select({
@@ -740,6 +736,9 @@ export async function consultarPessoas(filtros: FiltrosRelatorio) {
       clienteId: crmPessoas.clienteId,
       responsavelId: crmPessoas.responsavelId,
       responsavelNome: usuarios.name,
+      promovidaCliente: crmPessoas.promovidaCliente,
+      promovidoEm: crmPessoas.promovidoEm,
+      promovidoPorNome: crmPessoas.promovidoPorNome,
     })
     .from(crmPessoas)
     .leftJoin(usuarios, eq(crmPessoas.responsavelId, usuarios.id))
@@ -758,6 +757,9 @@ export async function consultarPessoas(filtros: FiltrosRelatorio) {
     status: l.status,
     responsavel: l.responsavelNome || null,
     clienteVinculado: !!l.clienteId,
+    promovidaCliente: !!l.promovidaCliente,
+    promovidoEm: l.promovidoEm ? new Date(l.promovidoEm).toISOString() : null,
+    promovidoPorNome: l.promovidoPorNome || null,
   }))
 
   const total = dados.length
@@ -773,9 +775,48 @@ export async function consultarPessoas(filtros: FiltrosRelatorio) {
       pessoasFisicas: dados.filter((d) => d.tipoPessoa === "PF").length,
       pessoasJuridicas: dados.filter((d) => d.tipoPessoa === "PJ").length,
       convertidasEmCliente: dados.filter((d) => d.clienteVinculado).length,
+      comTarja: dados.filter((d) => d.promovidaCliente).length,
       comSegmento: dados.filter((d) => !!d.segmento).length,
     },
     linhas: dados,
+  }
+}
+
+/** Relatório de conversões: pessoas que viraram cliente (tarja) no período. */
+export async function consultarConversoes(filtros: FiltrosRelatorio) {
+  const intervalo = resolverIntervalo(filtros.periodo, filtros.de, filtros.ate)
+
+  const conversoes = await listarConversoes({
+    de: intervalo.de,
+    ate: intervalo.ate,
+    usuarioId: filtros.usuario ? Number(filtros.usuario) : null,
+  })
+
+  const linhas = conversoes.map((c) => ({
+    ...c,
+    dataHora: c.dataHora,
+  }))
+
+  const total = linhas.length
+  const somaPropostas = linhas.reduce((acc, l) => acc + Number(l.valorPropostas || 0), 0)
+  const somaOportunidades = linhas.reduce((acc, l) => acc + Number(l.valorOportunidades || 0), 0)
+
+  return {
+    periodo: {
+      de: intervalo.de.toISOString(),
+      ate: intervalo.ate.toISOString(),
+      rotulo: intervalo.rotulo,
+    },
+    cards: {
+      total,
+      oportunidades: linhas.reduce((acc, l) => acc + (l.oportunidades || 0), 0),
+      propostas: linhas.reduce((acc, l) => acc + (l.propostas || 0), 0),
+      visitas: linhas.reduce((acc, l) => acc + (l.visitas || 0), 0),
+      valorPropostas: somaPropostas,
+      valorOportunidades: somaOportunidades,
+      mediaValorPropostas: total > 0 ? Number((somaPropostas / total).toFixed(2)) : 0,
+    },
+    linhas,
   }
 }
 

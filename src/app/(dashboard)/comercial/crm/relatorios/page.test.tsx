@@ -46,10 +46,15 @@ describe("CrmRelatoriosPage", () => {
       "href",
       "/comercial/crm/relatorios/atividades"
     )
-    expect(screen.getByRole("link", { name: /Pessoas/ })).toHaveAttribute(
-      "href",
-      "/comercial/crm/relatorios/pessoas"
-    )
+    const linkPessoas = screen
+      .getAllByRole("link")
+      .find((a) => a.getAttribute("href") === "/comercial/crm/relatorios/pessoas")
+    expect(linkPessoas).toBeDefined()
+    expect(screen.getByText("Conversões")).toBeInTheDocument()
+    const linkConversoes = screen
+      .getAllByRole("link")
+      .find((a) => a.getAttribute("href") === "/comercial/crm/relatorios/conversoes")
+    expect(linkConversoes).toBeDefined()
 
     expect(await screen.findByText("Leads por Origem", {}, { timeout: 5000 })).toBeInTheDocument()
     expect(screen.getByText("Pipeline (Oportunidades por Status)")).toBeInTheDocument()

@@ -25,6 +25,27 @@ describe("EditarClientePage", () => {
         }
       }
       if (method === "GET" && url === `/api/clientes/${id}/representantes`) return { json: [] }
+      if (method === "GET" && url === `/api/clientes/${id}/historico`) {
+        return {
+          json: {
+            historico: {
+              pessoaId: 7,
+              nomePessoa: "TecMais Ltda",
+              dataPessoa: "2026-01-10T10:00:00Z",
+              clienteId: 5,
+              clienteNome: "Tecidos Silva",
+              virouClienteEm: "2026-11-02T14:00:00Z",
+              porUsuario: "Tiago",
+              origem: "promocao",
+              oportunidades: 2,
+              propostas: 1,
+              visitas: 3,
+              valorPropostas: 5000,
+              valorOportunidades: 8000,
+            },
+          },
+        }
+      }
       if (method === "GET" && url === `/api/crm/contatos?clienteId=${id}`) {
         return {
           json: [
@@ -143,5 +164,19 @@ describe("EditarClientePage", () => {
     await waitFor(() =>
       expect(toastMock.success).toHaveBeenCalledWith("Contato adicionado e vinculado ao cliente")
     )
+  })
+
+  it("mostra o histórico de conversão em cliente", async () => {
+    renderPage(<EditarClientePage params={Promise.resolve({ id })} />)
+
+    await screen.findByRole("heading", { name: "Editar Cliente" })
+    expect(await screen.findByText("Histórico de conversão em cliente")).toBeInTheDocument()
+    expect(screen.getByText("Transformada em cliente")).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "TecMais Ltda" })).toHaveAttribute(
+      "href",
+      "/comercial/crm/pessoas/7"
+    )
+    expect(screen.getByText("Por Tiago")).toBeInTheDocument()
+    expect(screen.getByText("R$ 5.000,00")).toBeInTheDocument()
   })
 })

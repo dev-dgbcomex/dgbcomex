@@ -1,5 +1,8 @@
 // @vitest-environment jsdom
+import { describe, expect, it, vi } from "vitest"
+import { screen, fireEvent, waitFor } from "@testing-library/react"
 import { specRelatorioCrm } from "@/test/relatorio-page-spec"
+import { createFetchMock, renderPage } from "@/test/harness"
 import RelatorioPessoasPage from "./page"
 
 const payload = {
@@ -27,6 +30,9 @@ const payload = {
       status: "ATIVO",
       responsavel: "Tiago",
       clienteVinculado: true,
+      promovidaCliente: true,
+      promovidoEm: "2026-11-03T14:00:00.000Z",
+      promovidoPorNome: "Tiago",
     },
     {
       id: 2,
@@ -39,6 +45,9 @@ const payload = {
       status: "ATIVO",
       responsavel: "Ana",
       clienteVinculado: false,
+      promovidaCliente: false,
+      promovidoEm: null,
+      promovidoPorNome: null,
     },
   ],
   usuarios: [{ id: 1, nome: "Tiago" }],
@@ -60,3 +69,39 @@ specRelatorioCrm(
   },
   RelatorioPessoasPage
 )
+
+describe("Relatório de Pessoas - tarja de cliente", () => {
+  it("mostra a tarja, a data da conversão e quem promovou", async () => {
+    const fetchMock = createFetchMock(({ url }) => {
+      if (url.startsWith("/api/crm/relatorios/pessoas")) return { status: 200, json: payload }
+      return { status: 404, json: { error: "Rota não mockada" } }
+    })
+    vi.stubGlobal("fetch", fetchMock.fn)
+
+    renderPage(<RelatorioPessoasPage />)
+
+    expect(await screen.findByText("Maria Souza")).toBeInTheDocument()
+    expect(screen.getByText("Tarja")).toBeInTheDocument()
+    expect(screen.getByText("Virou cliente em")).toBeInTheDocument()
+    expect(screen.getByText("Promovido por")).toBeInTheDocument()
+    expect(screen.getAllByText("Sim").length).toBeGreaterThan(0)
+  })
+
+  it("filtra por tarja de cliente", async () => {
+    const fetchMock = createFetchMock(({ url }) => {
+      if (url.startsWith("/api/crm/relatorios/pessoas")) return { status: 200, json: payload }
+      return { status: 404, json: { error: "Rota não mockada" } }
+    })
+    vi.stubGlobal("fetch", fetchMock.fn)
+
+    renderPage(<RelatorioPessoasPage />)
+
+    const select = await screen.findByLabelText("Tarja de cliente")
+    fireEvent.change(select, { target: { value: "com" } })
+
+    await waitFor(() => {
+      const chamada = fetchMock.calls.find((c) => c.url.includes("tarja=com"))
+      expect(chamada).toBeDefined()
+    })
+  })
+})

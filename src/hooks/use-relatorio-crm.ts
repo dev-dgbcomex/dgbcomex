@@ -11,6 +11,8 @@ export type FiltrosRelatorioCrm = {
   status: string
   tipo: string
   segmento: string
+  /** "com" = somente com tarja de cliente · "sem" = somente sem tarja. */
+  tarja: string
 }
 
 const FILTROS_INICIAIS: FiltrosRelatorioCrm = {
@@ -21,6 +23,7 @@ const FILTROS_INICIAIS: FiltrosRelatorioCrm = {
   status: "",
   tipo: "",
   segmento: "",
+  tarja: "",
 }
 
 /**
@@ -39,6 +42,7 @@ export function useRelatorioCrm(endpoint: string) {
     if (filtros.status) params.set("status", filtros.status)
     if (filtros.tipo) params.set("tipo", filtros.tipo)
     if (filtros.segmento) params.set("segmento", filtros.segmento)
+    if (filtros.tarja) params.set("tarja", filtros.tarja)
     return params.toString()
   }, [filtros])
 

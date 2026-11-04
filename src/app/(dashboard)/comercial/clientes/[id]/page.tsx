@@ -25,6 +25,8 @@ import {
 import { toast } from "sonner"
 import { ConfirmModal } from "@/components/ui/confirm-modal"
 import { SelectSegmento } from "@/components/crm/select-segmento"
+import { HistoricoConversaoCard } from "./components/historico-conversao-card"
+import type { HistoricoPromocao } from "@/lib/crm/historico-promocao"
 import type { Cliente, VinculoRepresentante, RepresentanteResumo } from "../types"
 import type { Contato } from "../../crm/contatos/types"
 
@@ -68,6 +70,9 @@ export default function EditarClientePage({ params }: { params: Promise<{ id: st
   const [orfaos, setOrfaos] = useState<Contato[]>([])
   const [contatoSelecionado, setContatoSelecionado] = useState("")
 
+  const [historico, setHistorico] = useState<HistoricoPromocao | null>(null)
+  const [loadingHistorico, setLoadingHistorico] = useState(false)
+
   useEffect(() => {
     async function loadCliente() {
       const { id: clientId } = await params
@@ -105,6 +110,25 @@ export default function EditarClientePage({ params }: { params: Promise<{ id: st
       })
       .catch(() => toast.error("Erro ao carregar contatos"))
       .finally(() => setLoadingContatos(false))
+    return () => {
+      ativo = false
+    }
+  }, [id])
+
+  useEffect(() => {
+    if (!id) return
+    let ativo = true
+    setLoadingHistorico(true)
+    fetch(`/api/clientes/${id}/historico`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!ativo) return
+        setHistorico(data?.historico ?? null)
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (ativo) setLoadingHistorico(false)
+      })
     return () => {
       ativo = false
     }
@@ -469,6 +493,10 @@ export default function EditarClientePage({ params }: { params: Promise<{ id: st
                 placeholder="Código do sistema externo"
               />
             </div>
+          </div>
+
+          <div className="border-t border-slate-200 dark:border-slate-700 pt-6 space-y-4">
+            <HistoricoConversaoCard historico={historico} carregando={loadingHistorico} />
           </div>
 
           <div className="border-t border-slate-200 dark:border-slate-700 pt-6 space-y-4">

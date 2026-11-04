@@ -34,6 +34,7 @@ export type LinhaConversao = {
   propostas: number
   visitas: number
   valorPropostas: number
+  valorOportunidades: number
   origem: OrigemPromocao
 }
 
@@ -41,6 +42,8 @@ export type FiltrosConversoes = {
   de?: Date
   ate?: Date
   usuario?: string | null
+  /** Id do usuário que promoveu (filtro dos relatórios). */
+  usuarioId?: number | null
 }
 
 function nomePessoa(p: {
@@ -124,6 +127,7 @@ export async function listarConversoes(filtros: FiltrosConversoes): Promise<Linh
   if (filtros.de) condicoes.push(gte(crmPessoas.promovidoEm, filtros.de))
   if (filtros.ate) condicoes.push(lte(crmPessoas.promovidoEm, filtros.ate))
   if (filtros.usuario) condicoes.push(eq(crmPessoas.promovidoPorNome, filtros.usuario))
+  if (filtros.usuarioId) condicoes.push(eq(crmPessoas.promovidoPor, filtros.usuarioId))
 
   const linhas = await db
     .select({
@@ -187,6 +191,7 @@ export async function listarConversoes(filtros: FiltrosConversoes): Promise<Linh
     propostas: propMap.get(l.id)?.total || 0,
     visitas: visitMap.get(l.id)?.total || 0,
     valorPropostas: Number(propMap.get(l.id)?.valor || 0),
+    valorOportunidades: Number(oppMap.get(l.id)?.valor || 0),
     origem: l.promovidoEm ? "promocao" : "vinculo_anterior",
   }))
 }

@@ -701,7 +701,7 @@ export const crmContent: Record<string, InfoContent> = {
       "Use os gráficos para identificar gargalos no pipeline.",
       "A taxa de conversão considera apenas oportunidades fechadas (ganhas vs perdidas).",
       "Os relatórios ajudam a IA Comercial a gerar previsões mais precisas.",
-      "Na parte inferior estão os relatórios detalhados: Atividades, Pessoas, Oportunidades, Propostas e Visitas.",
+      "Na parte inferior estão os relatórios detalhados: Atividades, Pessoas, Oportunidades, Propostas, Visitas e Conversões.",
       "Cada relatório detalhado tem filtros por período, cards de resumo, listagem completa e exportação em PDF, CSV e Markdown.",
     ],
     fields: [
@@ -741,11 +741,13 @@ export const crmContent: Record<string, InfoContent> = {
   "/comercial/crm/relatorios/pessoas": {
     title: "Relatório de Pessoas do CRM",
     description:
-      "Relatório do cadastro de pessoas do CRM criado no período, com tipo de pessoa, documento, segmento, cidade, responsável e se já foi convertido em cliente.",
+      "Relatório do cadastro de pessoas do CRM criado no período, com tipo de pessoa, documento, segmento, cidade, responsável, vínculo com cliente e a tarja de cliente (promoção).",
     rules: [
       "O período padrão é os últimos 7 dias; troque para Hoje, Mês ou um período personalizado.",
       "PF e PJ são separados nos cards de resumo.",
       "Pessoas convertidas em cliente são as que já possuem vínculo na tabela de Clientes.",
+      "A tarja de cliente marca quem foi promovido pelo botão 'Tornar cliente': o filtro 'Tarja de cliente' separa o que já virou cliente (Com tarja) do que ainda não virou (Sem tarja).",
+      "Quem tem tarja também mostra a data da conversão e quem promoveu.",
       "A tabela rola na vertical e na horizontal, com o cabeçalho fixo durante a navegação.",
       "A exportação gera PDF, CSV e Markdown com os mesmos dados da tela.",
     ],
@@ -757,6 +759,34 @@ export const crmContent: Record<string, InfoContent> = {
       { name: "Segmento", desc: "Segmento comercial da pessoa" },
       { name: "Responsável", desc: "Conta comercial responsável pelo cadastro" },
       { name: "Cliente", desc: "Sim quando a pessoa já está convertida em cliente" },
+      { name: "Tarja", desc: "Sim quando a pessoa foi promovida a cliente" },
+      { name: "Virou cliente em", desc: "Data e hora da promoção" },
+      { name: "Promovido por", desc: "Quem realizou a promoção" },
+    ],
+  },
+
+  "/comercial/crm/relatorios/conversoes": {
+    title: "Relatório de Conversões do CRM",
+    description:
+      "Pessoas que viraram cliente (tarja de cliente) no período, com o cliente vinculado, quem promoveu e o negócio gerado por cada uma (oportunidades, propostas e visitas).",
+    rules: [
+      "Só entram no relatório as pessoas promovidas a cliente com a ação 'Tornar cliente'.",
+      "O período padrão é os últimos 7 dias; troque para Hoje, Mês ou um período personalizado.",
+      "O filtro Usuário mostra quem fez cada promoção.",
+      "Os cards mostram o total de conversões e o negócio gerado (oportunidades, propostas, visitas e valores).",
+      "O ticket médio é o valor das propostas dividido pelo número de conversões do período.",
+      "A tabela rola na vertical e na horizontal, com o cabeçalho fixo durante a navegação.",
+      "A exportação gera PDF, CSV e Markdown com os mesmos dados da tela.",
+    ],
+    fields: [
+      { name: "Data da conversão", desc: "Data e hora da promoção a cliente" },
+      { name: "Pessoa", desc: "Pessoa que virou cliente" },
+      { name: "Cliente", desc: "Cliente vinculado pela promoção" },
+      { name: "Promovido por", desc: "Usuário que realizou a promoção" },
+      { name: "Oportunidades", desc: "Quantidade de oportunidades da pessoa" },
+      { name: "Propostas", desc: "Quantidade de propostas da pessoa" },
+      { name: "Visitas", desc: "Quantidade de visitas da pessoa" },
+      { name: "Valor das propostas", desc: "Soma do valor das propostas da pessoa" },
     ],
   },
 

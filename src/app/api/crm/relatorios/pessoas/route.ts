@@ -21,6 +21,7 @@ export async function GET(req: NextRequest) {
       ate: params.get("ate"),
       segmento: params.get("segmento"),
       usuario: params.get("usuario"),
+      tarja: params.get("tarja"),
     }
 
     const [relatorio, usuarios] = await Promise.all([

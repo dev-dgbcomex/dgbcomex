@@ -44,6 +44,9 @@ export default function RelatorioPessoasPage() {
       "Status",
       "Responsável",
       "Cliente vinculado",
+      "Tarja de cliente",
+      "Virou cliente em",
+      "Promovido por",
     ]
     const rows = linhas.map((l: any) => [
       new Date(l.dataHora).toLocaleString("pt-BR"),
@@ -55,6 +58,9 @@ export default function RelatorioPessoasPage() {
       l.status,
       l.responsavel || "—",
       l.clienteVinculado ? "Sim" : "Não",
+      l.promovidaCliente ? "Sim" : "Não",
+      l.promovidoEm ? new Date(l.promovidoEm).toLocaleDateString("pt-BR") : "—",
+      l.promovidoPorNome || "—",
     ])
     return {
       filename: "relatorio-crm-pessoas",
@@ -67,6 +73,7 @@ export default function RelatorioPessoasPage() {
         "Pessoas físicas": cards?.pessoasFisicas || 0,
         "Pessoas jurídicas": cards?.pessoasJuridicas || 0,
         "Convertidas em cliente": cards?.convertidasEmCliente || 0,
+        "Com tarja de cliente": cards?.comTarja || 0,
       },
       period: data?.periodo?.rotulo,
     }
@@ -140,6 +147,8 @@ export default function RelatorioPessoasPage() {
         segmento={filtros.segmento}
         onSegmentoChange={(segmento) => atualizar({ segmento })}
         segmentos={segmentos}
+        tarja={filtros.tarja}
+        onTarjaChange={(tarja) => atualizar({ tarja })}
         onLimpar={limpar}
       />
 
@@ -155,6 +164,9 @@ export default function RelatorioPessoasPage() {
             "Status",
             "Responsável",
             "Cliente",
+            "Tarja",
+            "Virou cliente em",
+            "Promovido por",
           ]}
           total={linhas.length}
           vazio="Nenhuma pessoa cadastrada no período"
@@ -177,6 +189,15 @@ export default function RelatorioPessoasPage() {
               </CelulaRelatorio>
               <CelulaRelatorio className="whitespace-nowrap">
                 {l.clienteVinculado ? "Sim" : "Não"}
+              </CelulaRelatorio>
+              <CelulaRelatorio className="whitespace-nowrap">
+                {l.promovidaCliente ? "Sim" : "Não"}
+              </CelulaRelatorio>
+              <CelulaRelatorio className="whitespace-nowrap">
+                {l.promovidoEm ? new Date(l.promovidoEm).toLocaleDateString("pt-BR") : "—"}
+              </CelulaRelatorio>
+              <CelulaRelatorio className="whitespace-nowrap">
+                {l.promovidoPorNome || "—"}
               </CelulaRelatorio>
             </LinhaRelatorio>
           ))}

@@ -25,6 +25,8 @@ export type FiltrosRelatorioProps = {
   segmentos?: OpcaoRelatorio[]
   segmento?: string
   onSegmentoChange?: (valor: string) => void
+  tarja?: string
+  onTarjaChange?: (valor: string) => void
   onLimpar?: () => void
 }
 
@@ -55,6 +57,8 @@ export function FiltrosRelatorio(props: FiltrosRelatorioProps) {
     segmentos = [],
     segmento = "",
     onSegmentoChange,
+    tarja = "",
+    onTarjaChange,
     onLimpar,
   } = props
 
@@ -202,6 +206,24 @@ export function FiltrosRelatorio(props: FiltrosRelatorioProps) {
                   {s.label}
                 </option>
               ))}
+            </select>
+          </div>
+        )}
+
+        {onTarjaChange && (
+          <div className="space-y-1">
+            <Label htmlFor="filtro-tarja" className="text-xs">
+              Tarja de cliente
+            </Label>
+            <select
+              id="filtro-tarja"
+              value={tarja}
+              onChange={(e) => onTarjaChange(e.target.value)}
+              className="w-full rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-3 py-2 text-sm"
+            >
+              <option value="">Todos</option>
+              <option value="com">Com tarja (virou cliente)</option>
+              <option value="sem">Sem tarja</option>
             </select>
           </div>
         )}
