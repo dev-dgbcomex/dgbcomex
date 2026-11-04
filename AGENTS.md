@@ -1,22 +1,38 @@
 # Graphify Knowledge Graph
 
-O projeto tem um grafo de conhecimento em `graphify-out/` com 5225 nós, 12865 arestas e 270 comunidades.
+O projeto tem um grafo de conhecimento em `graphify-out/` com 7234 nós, 24906 arestas e 401 comunidades.
 
 ## Como usar
 
-- **Consulta rápida**: carregue `graphify-out/GRAPH_REPORT.md` (1173 linhas) para visão geral das comunidades
+- **Consulta rápida**: carregue `graphify-out/GRAPH_REPORT.md` (1689 linhas) para visão geral das comunidades
 - **Consulta detalhada**: carregue `graphify-out/graph.json` e pesquise nós/arestas para entender dependências entre arquivos
 - **Perguntas específicas**: aponte o nome do nó (ex: `requireAuth`, `getInfoContent`, `prisma`) que eu encontro no grafo
 
 Sempre consulte o grafo ANTES de responder perguntas sobre arquitetura, fluxos ou dependências do código.
 
+### Como regenerar o grafo (Windows)
+
+O tool **não** está no PyPI como `graphify` — no PyPI ele se chama `graphifyy` (2 "y") ou
+instale direto do GitHub (`Graphify-Labs/graphify`, branch `v8`). Use um venv Python ≥ 3.10
+(venv fora do repositório) e a CLI `graphify`:
+
+```bash
+graphify extract <repo> --code-only --force   # AST + graph.json + manifest.json
+graphify cluster-only <repo> --no-label       # comunidades + GRAPH_REPORT.md
+graphify export html --node-limit 20000       # graph.html (na raiz do repo)
+```
+
+O `.graphifyignore` da raiz restringe a análise a `src/`. Sem `--no-label` o tool usa LLM para
+nomear as comunidades (exige API key); sem ele os rótulos ficam como `Community N`.
+`graphify-out/` é gitignored — o grafo nunca vai para o commit.
+
 # Multi-Database Setup
 
 O projeto utiliza **2 bancos de dados PostgreSQL**:
 
-| Banco | Uso | Variável |
-|---|---|---|
-| Neon `dgbcomex` | Banco principal do app (produção) + marts do BI | `DATABASE_URL` |
+| Banco                                | Uso                                             | Variável             |
+| ------------------------------------ | ----------------------------------------------- | -------------------- |
+| Neon `dgbcomex`                      | Banco principal do app (produção) + marts do BI | `DATABASE_URL`       |
 | Warehouse local `dgbcomex_warehouse` | Réplica do Neon + carga do ERP + runtime do WMS | `DATABASE_URL_LOCAL` |
 
 **Arquitetura (local é SUPERSET do Neon)**:
@@ -74,6 +90,7 @@ node scripts/criar-tabelas-faltantes.js # tabelas inteiras que faltam (também c
 ### Para alterações manuais de schema (SQL direto):
 
 Se precisar rodar SQL manualmente (ALTER TABLE, CREATE TABLE, etc.), execute nos DOIS:
+
 - Neon (principal, `DATABASE_URL`)
 - Warehouse local (`DATABASE_URL_LOCAL`)
 
@@ -85,7 +102,6 @@ npm run db:verificar-local # node scripts/verify-neon-local.js -> contagem de li
 ```
 
 Compara colunas/tipos entre o Neon e o warehouse local e lista diferenças.
-
 
 ## Sync de FKs de `clientes_representantes` (2026-08-14)
 
@@ -125,10 +141,10 @@ Compara colunas/tipos entre o Neon e o warehouse local e lista diferenças.
 
 ## Crons (2 camadas)
 
-| Fonte | Onde | Frequência | Obs |
-|---|---|---|---|
-| Vercel | `vercel.json` | 1x/dia (09:00Z `executar`, 09:30Z `processar`) | Plano Hobby limita a **1x/dia em UTC** (±59min de atraso) |
-| GitHub Actions | `.github/workflows/email-massa.yml` | **a cada 15 min** | Resolve a limitação do Hobby; dá para rodar manual via "Run workflow" |
+| Fonte          | Onde                                | Frequência                                     | Obs                                                                   |
+| -------------- | ----------------------------------- | ---------------------------------------------- | --------------------------------------------------------------------- |
+| Vercel         | `vercel.json`                       | 1x/dia (09:00Z `executar`, 09:30Z `processar`) | Plano Hobby limita a **1x/dia em UTC** (±59min de atraso)             |
+| GitHub Actions | `.github/workflows/email-massa.yml` | **a cada 15 min**                              | Resolve a limitação do Hobby; dá para rodar manual via "Run workflow" |
 
 ## CRON_SECRET (senha do cron)
 
@@ -138,6 +154,19 @@ Compara colunas/tipos entre o Neon e o warehouse local e lista diferenças.
 - Sem ela: o GitHub Actions recebe **401** e o agendamento automático a cada 15 min não roda; ainda funcionam o "Enviar agora" (sessão admin) e o cron diário do Vercel.
 - Os endpoints `executar`/`processar` aceitam **Bearer `CRON_SECRET`** **OU** sessão de admin (`ADMIN`/`SUDO`/`CRM`).
 - **Atenção (fuso)**: cron do Vercel roda em **UTC**. Um agendamento para 09:00 Brasília (12:00Z) só é pego por um cron que rode **depois** das 12:00Z — no Hobby, o 1x/dia é insuficiente para horários da tarde/noite.
+
+# CRM — Cliente, pessoa e relatórios
+
+**LEIA `docs/crm-cliente-e-relatorios.md`** — referência técnica (modelo de dados, endpoints, telas e regras).
+
+- **Regra central**: tudo o que foi feito com uma **pessoa** que virou **cliente** passa a ser do cliente (timeline, WhatsApp, oportunidades, propostas, visitas e relatórios).
+- Vínculo do cliente no funil: `crm_pessoas.cliente_id` + tarja (`promovida_cliente`, `promovido_em`, `promovido_por`, `promovido_por_nome` — migration `0064`).
+- Vínculos de timeline/WhatsApp: `cliente_id` em `crm_timeline_eventos` e `crm_whatsapp_mensagens` — migration `0065_crm_cliente_relacionamentos.sql` (Neon + local).
+- Helper de vínculos: `src/lib/crm/cliente-relacionamentos.ts` (`idsPessoasDoCliente`, `idsContatosDoCliente`, `clienteIdDaPessoa`).
+- Na tela do cliente (`/comercial/clientes/[id]`) os cards de Oportunidades, Propostas, Timeline e WhatsApp são os **compartilhados** em `src/components/crm/` (aceitam `pessoaId` **ou** `clienteId`) — ficam **fora** do `<form>`.
+- Qualquer negócio criado em pessoa promovida herda o cliente (`clienteIdDaPessoa`) e gera timeline para os dois lados.
+- Relatórios: todo negócio resolve o cliente por `COALESCE(reg.cliente_id, pessoa.cliente_id)`; existe o **Relatório de Clientes** (`consultarClientes`) e a categoria de log `CrmCliente`.
+- Histórico cronológico das sessões: `docs/Sessoes.md`.
 
 # Testes
 

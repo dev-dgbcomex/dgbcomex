@@ -4,7 +4,7 @@
   "references": {
     "grafo": {
       "path": "graphify-out",
-      "description": "Knowledge graph do codebase (2599 nodes, 6179 edges). Use for arquitetura, fluxos e dependências entre arquivos."
+      "description": "Knowledge graph do codebase (7234 nodes, 24906 edges). Use for arquitetura, fluxos e dependências entre arquivos."
     }
   }
 }
