@@ -1,6 +1,24 @@
 import type { InfoContent } from "./types"
 
 export const biContent: Record<string, InfoContent> = {
+  "/bi/integracoes": {
+    title: "BI Integrações — painel dos KPIs",
+    description:
+      "Um card por integração cadastrada na tela BI (api-microdata). Cada card mostra o resumo do KPI, a data de consulta e abre o modal 'i' com a explicação de cada número.",
+    rules: [
+      "Cada card tem uma cor do tema Dracula e um pequeno ícone representativo: os dois são derivados do título do card, então o mesmo título mantém sempre a mesma cor e o mesmo ícone, mesmo que a ordem dos cards mude.",
+      "A cor é apenas identificação visual: o valor exibido continua sendo o que a API devolveu.",
+      "O seletor 'Data dos KPIs' define o período consultando as integrações que recebem {data} na URL.",
+      "Cada card pode ser arrastado ou movido pelas setas, e a ordem fica salva por usuário (ela segue a pessoa entre máquinas).",
+      "O botão 'Atualizar tudo' reconsulta todos os cards de uma vez.",
+      "O 'i' do card abre o modal com a explicação de cada número, as regras de negócio e exemplos de leitura.",
+      "O botão de seta para fora abre a tela de detalhe do indicador (faturamento, contas pagas e custos administrativos).",
+    ],
+    fields: [
+      { name: "Título", desc: "Nome do indicador no card — define a cor e o ícone" },
+      { name: "Data dos KPIs", desc: "Período consultado nas integrações que recebem {data}" },
+    ],
+  },
   "/bi/integracoes/contas-pagas": {
     title: "Contas Pagas — as baixas que formam o valor",
     description:

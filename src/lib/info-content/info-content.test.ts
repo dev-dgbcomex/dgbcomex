@@ -99,6 +99,21 @@ describe("getInfoContent", () => {
     expect(texto).toMatch(/cancela a ordem, liberando as peças/i)
   })
 
+  it("o painel do BI explica a cor Dracula e o ícone dos cards", () => {
+    const conteudo = getInfoContent("/bi/integracoes")
+
+    expect(conteudo).not.toBeNull()
+    const texto = [
+      conteudo?.description ?? "",
+      ...(conteudo?.rules ?? []),
+      ...(conteudo?.fields ?? []).map((f) => `${f.name}: ${f.desc}`),
+    ].join("\n")
+
+    expect(texto).toMatch(/Dracula/i)
+    expect(texto).toMatch(/ícone/i)
+    expect(texto).toMatch(/derivad[oa]s? do título/i)
+  })
+
   it("as telas do BI e do WMS mostram a integração em uso e o Importar via API", () => {
     const telas = [
       "/bi/integracoes/faturamento",
