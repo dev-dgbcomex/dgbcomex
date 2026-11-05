@@ -5,7 +5,12 @@
  * fazia os cards divergirem no primeiro ajuste de estilo. O `periodo` e o
  * `statusLabel` são opcionais — o faturamento não usa nenhum dos dois, e a tela de
  * contas pagas usa os dois (a janela que o card mede e o rótulo do leitor de tela).
+ *
+ * A cor e o ícone saem do rótulo do card (tema Dracula), então o mesmo indicador
+ * tem sempre a mesma cara.
  */
+import { corPorTitulo, iconePorTitulo } from "@/lib/dracula"
+
 export function KpiCard({
   rotulo,
   valor,
@@ -24,9 +29,29 @@ export function KpiCard({
   /** Pinta o `detalhe` em vermelho — usado quando o indicador passa do limite. */
   detalheAlerta?: boolean
 }) {
+  const estilo = corPorTitulo(rotulo)
+  const Icone = iconePorTitulo(rotulo)
+
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow dark:border-slate-800 dark:bg-slate-900">
-      <p className="text-xs font-medium tracking-wider text-slate-500 uppercase dark:text-slate-400">
+    <div
+      style={
+        {
+          "--card-fundo": estilo.fundoClaro,
+          "--card-fundo-escuro": estilo.fundoEscuro,
+          "--card-borda": estilo.borda,
+          "--card-realce": estilo.cor,
+        } as React.CSSProperties
+      }
+      className="rounded-xl border border-[color:var(--card-borda)] bg-white dark:bg-slate-900 bg-[image:var(--card-fundo)] dark:bg-[image:var(--card-fundo-escuro)] p-4 shadow-sm transition-shadow"
+    >
+      <p className="text-xs font-medium tracking-wider text-slate-500 uppercase dark:text-slate-400 flex items-center gap-1.5">
+        <span
+          className="inline-flex items-center justify-center w-4 h-4 rounded shrink-0"
+          style={{ backgroundColor: estilo.fundoIcone, color: estilo.cor }}
+          aria-hidden="true"
+        >
+          <Icone size={11} />
+        </span>
         {rotulo}
       </p>
       {periodo && (

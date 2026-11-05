@@ -11,10 +11,8 @@ import { InfoButton } from "@/components/ui/info-button"
 import BotaoImportarApi from "@/components/integracao/BotaoImportarApi"
 import { getInfoContent } from "@/lib/info-content"
 import { resolverIntegracaoBi } from "@/lib/bi/integracao-bi"
-import {
-  FORMATAR,
-  type DetalheCustosAdministrativosAnual,
-} from "@/lib/bi/custo-detalhe"
+import { CartaoKpi } from "@/components/bi/cartao-kpi"
+import { FORMATAR, type DetalheCustosAdministrativosAnual } from "@/lib/bi/custo-detalhe"
 import { GraficoCustoMensal } from "./components/grafico-custo-mensal"
 import { TabelaMeses } from "./components/tabela-meses"
 import { exportarCsvAnual, itensFiltrados } from "./components/utils"
@@ -37,11 +35,9 @@ function Cartao({
   children: React.ReactNode
 }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-      <p className="text-[10px] font-medium tracking-wider text-slate-500 uppercase">{titulo}</p>
-      {descricao && <p className="mt-0.5 text-[10px] text-slate-400">{descricao}</p>}
-      <div className="mt-1">{children}</div>
-    </div>
+    <CartaoKpi titulo={titulo} descricao={descricao}>
+      {children}
+    </CartaoKpi>
   )
 }
 
@@ -88,23 +84,26 @@ export default function CustosAdministrativosAnualPage() {
     [integracoes]
   )
 
-  const { data: detalhe, isLoading, isFetching, error, refetch } =
-    useQuery<DetalheCustosAdministrativosAnual>({
-      queryKey: ["custos-administrativos-anual-detalhe", integracao?.id, aplicada],
-      enabled: Boolean(integracao?.id),
-      queryFn: async () => {
-        const res = await fetch(
-          `/api/integracao/${integracao!.id}/detalhe/custos-administrativos-anual-detalhe?data=${aplicada}`
-        )
-        if (!res.ok) {
-          const corpo = await res.json().catch(() => null)
-          throw new Error(
-            corpo?.detail ?? corpo?.error ?? `Falha na API (${res.status})`
-          )
-        }
-        return res.json()
-      },
-    })
+  const {
+    data: detalhe,
+    isLoading,
+    isFetching,
+    error,
+    refetch,
+  } = useQuery<DetalheCustosAdministrativosAnual>({
+    queryKey: ["custos-administrativos-anual-detalhe", integracao?.id, aplicada],
+    enabled: Boolean(integracao?.id),
+    queryFn: async () => {
+      const res = await fetch(
+        `/api/integracao/${integracao!.id}/detalhe/custos-administrativos-anual-detalhe?data=${aplicada}`
+      )
+      if (!res.ok) {
+        const corpo = await res.json().catch(() => null)
+        throw new Error(corpo?.detail ?? corpo?.error ?? `Falha na API (${res.status})`)
+      }
+      return res.json()
+    },
+  })
 
   /** "Importar via API" aqui é reler os 12 meses fechados direto do ERP. */
   async function importarDaApi() {
@@ -116,14 +115,8 @@ export default function CustosAdministrativosAnualPage() {
     () => (detalhe ? itensFiltrados(detalhe, busca, mes) : []),
     [detalhe, busca, mes]
   )
-  const mesEmFoco = useMemo(
-    () => detalhe?.meses.find((m) => m.mes === mes) ?? null,
-    [detalhe, mes]
-  )
-  const totalRecorte = useMemo(
-    () => itens.reduce((soma, i) => soma + i.valor, 0),
-    [itens]
-  )
+  const mesEmFoco = useMemo(() => detalhe?.meses.find((m) => m.mes === mes) ?? null, [detalhe, mes])
+  const totalRecorte = useMemo(() => itens.reduce((soma, i) => soma + i.valor, 0), [itens])
 
   return (
     <div className="flex flex-col gap-6 p-4 lg:p-6">
@@ -222,14 +215,20 @@ export default function CustosAdministrativosAnualPage() {
       {detalhe && (
         <>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <Cartao titulo="% do faturamento" descricao="Quanto de cada R$ 1 vendido vira administração">
+            <Cartao
+              titulo="% do faturamento"
+              descricao="Quanto de cada R$ 1 vendido vira administração"
+            >
               <ValorCartao rotulo="porcentagem do faturamento">
                 {detalhe.faturamento.porcentagem === null
                   ? "—"
                   : FORMATAR.porcentagem(detalhe.faturamento.porcentagem)}
               </ValorCartao>
             </Cartao>
-            <Cartao titulo="Custo administrativo total" descricao={`${detalhe.janela.meses} meses fechados`}>
+            <Cartao
+              titulo="Custo administrativo total"
+              descricao={`${detalhe.janela.meses} meses fechados`}
+            >
               <ValorCartao rotulo="custo administrativo total">
                 {FORMATAR.valor(detalhe.administrativo.total)}
               </ValorCartao>
@@ -242,7 +241,10 @@ export default function CustosAdministrativosAnualPage() {
                 {FORMATAR.valor(detalhe.administrativo.media)}
               </ValorCartao>
             </Cartao>
-            <Cartao titulo="Faturamento" descricao={`Total ${FORMATAR.valor(detalhe.faturamento.total)}`}>
+            <Cartao
+              titulo="Faturamento"
+              descricao={`Total ${FORMATAR.valor(detalhe.faturamento.total)}`}
+            >
               <ValorCartao rotulo="faturamento médio mensal">
                 {FORMATAR.valor(detalhe.faturamento.media)}
               </ValorCartao>

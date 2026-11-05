@@ -38,18 +38,25 @@ describe("KpiCard", () => {
   })
 
   it("com statusLabel o valor vira status com nome acessível", () => {
-    renderPage(
-      <KpiCard rotulo="Mês atual" valor="R$ 10,00" statusLabel="total do mês atual" />
-    )
+    renderPage(<KpiCard rotulo="Mês atual" valor="R$ 10,00" statusLabel="total do mês atual" />)
 
-    expect(screen.getByRole("status", { name: "total do mês atual" })).toHaveTextContent(
-      "R$ 10,00"
-    )
+    expect(screen.getByRole("status", { name: "total do mês atual" })).toHaveTextContent("R$ 10,00")
   })
 
   it("sem statusLabel o valor é texto comum", () => {
     renderPage(<KpiCard rotulo="Faturamento" valor="R$ 10,00" />)
 
     expect(screen.queryByRole("status")).not.toBeInTheDocument()
+  })
+
+  it("pinta o card com a cor do tema Dracula derivada do rótulo", () => {
+    const { container } = renderPage(<KpiCard rotulo="Faturamento" valor="R$ 1.000,00" />)
+
+    const cartao = screen.getByText("Faturamento").parentElement!
+    const estilo = cartao.getAttribute("style") ?? ""
+    expect(estilo).toContain("--card-fundo")
+    expect(estilo).toContain("--card-borda")
+    expect(cartao.className).toContain("bg-[image:var(--card-fundo)]")
+    expect(container.querySelector("svg.lucide-banknote")).not.toBeNull()
   })
 })

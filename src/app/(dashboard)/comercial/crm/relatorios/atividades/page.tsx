@@ -41,29 +41,21 @@ export default function RelatorioAtividadesPage() {
         label: "Atividades no período",
         value: resumo.periodo?.total || 0,
         icon: <Activity size={18} />,
-        cor: "text-blue-600",
-        fundo: "bg-blue-50 dark:bg-blue-950/50",
       },
       {
         label: "Criados hoje",
         value: resumo.dia?.total || 0,
         icon: <CalendarDays size={18} />,
-        cor: "text-emerald-600",
-        fundo: "bg-emerald-50 dark:bg-emerald-950/50",
       },
       {
         label: "Criados nos últimos 7 dias",
         value: resumo.semana?.total || 0,
         icon: <CalendarDays size={18} />,
-        cor: "text-amber-600",
-        fundo: "bg-amber-50 dark:bg-amber-950/50",
       },
       {
         label: "Criados no mês",
         value: resumo.mes?.total || 0,
         icon: <CheckCircle2 size={18} />,
-        cor: "text-purple-600",
-        fundo: "bg-purple-50 dark:bg-purple-950/50",
       },
     ]
   }, [resumo])

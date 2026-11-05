@@ -106,29 +106,21 @@ export default function RelatorioPessoasPage() {
               label: "Pessoas no período",
               value: cards?.total || 0,
               icon: <Users size={18} />,
-              cor: "text-blue-600",
-              fundo: "bg-blue-50 dark:bg-blue-950/50",
             },
             {
               label: "Pessoas físicas",
               value: cards?.pessoasFisicas || 0,
               icon: <UserRound size={18} />,
-              cor: "text-emerald-600",
-              fundo: "bg-emerald-50 dark:bg-emerald-950/50",
             },
             {
               label: "Pessoas jurídicas",
               value: cards?.pessoasJuridicas || 0,
               icon: <Building2 size={18} />,
-              cor: "text-purple-600",
-              fundo: "bg-purple-50 dark:bg-purple-950/50",
             },
             {
               label: "Convertidas em cliente",
               value: cards?.convertidasEmCliente || 0,
               icon: <UserCheck size={18} />,
-              cor: "text-amber-600",
-              fundo: "bg-amber-50 dark:bg-amber-950/50",
             },
           ]}
         />

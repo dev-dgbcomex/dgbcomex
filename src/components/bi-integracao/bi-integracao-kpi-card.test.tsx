@@ -4,7 +4,7 @@ import { screen } from "@testing-library/react"
 import { createFetchMock, renderPage } from "@/test/harness"
 import { BiIntegracaoKpiCard } from "./bi-integracao-kpi-card"
 import type { BiIntegracaoResumo } from "./bi-integracao-dashboard"
-import { corPorTitulo, PALETA_DRACULA } from "@/lib/bi/estilo-card"
+import { corPorTitulo, PALETA_DRACULA } from "@/lib/dracula"
 
 function integracao(over: Partial<BiIntegracaoResumo> = {}): BiIntegracaoResumo {
   return {

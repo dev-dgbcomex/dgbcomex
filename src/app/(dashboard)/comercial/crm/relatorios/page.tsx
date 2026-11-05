@@ -18,6 +18,8 @@ import {
 import { getInfoContent } from "@/lib/info-content"
 import { usePathname } from "next/navigation"
 import { InfoButton } from "@/components/ui/info-button"
+import { corPorTitulo, iconePorTitulo } from "@/lib/dracula"
+import type { CSSProperties } from "react"
 
 const CrmRelatoriosCharts = dynamic(() => import("./charts").then((m) => m.CrmRelatoriosCharts), {
   ssr: false,
@@ -29,49 +31,42 @@ const RELATORIOS = [
     label: "Atividades",
     desc: "O que cada usuário fez: registros criados por dia, semana e mês",
     icon: Activity,
-    cor: "text-blue-600 bg-blue-50 dark:bg-blue-950/50",
   },
   {
     href: "/comercial/crm/relatorios/pessoas",
     label: "Pessoas",
     desc: "Cadastro de pessoas do CRM por período, responsável e conversão",
     icon: Users,
-    cor: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/50",
   },
   {
     href: "/comercial/crm/relatorios/oportunidades",
     label: "Oportunidades",
     desc: "Pipeline, conversão, valores e pessoa envolvida",
     icon: Target,
-    cor: "text-purple-600 bg-purple-50 dark:bg-purple-950/50",
   },
   {
     href: "/comercial/crm/relatorios/propostas",
     label: "Propostas",
     desc: "Propostas enviadas, aceitas e recusadas com valores",
     icon: FileText,
-    cor: "text-cyan-600 bg-cyan-50 dark:bg-cyan-950/50",
   },
   {
     href: "/comercial/crm/relatorios/visitas",
     label: "Visitas",
     desc: "Visitas presenciais, por vídeo e por telefone",
     icon: MapPin,
-    cor: "text-amber-600 bg-amber-50 dark:bg-amber-950/50",
   },
   {
     href: "/comercial/crm/relatorios/conversoes",
     label: "Conversões",
     desc: "Pessoas que viraram cliente, com quem promoveu e o negócio gerado",
     icon: Handshake,
-    cor: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/50",
   },
   {
     href: "/comercial/crm/relatorios/clientes",
     label: "Clientes",
     desc: "Negócio de cada cliente, direto ou herdado das pessoas promovidas",
     icon: Building2,
-    cor: "text-slate-600 bg-slate-100 dark:bg-slate-800",
   },
 ]
 
@@ -115,36 +110,22 @@ export default function CrmRelatoriosPage() {
               icon={<Building2 size={18} />}
               value={data.totalEmpresas}
               label="Negócios"
-              color="text-blue-600"
-              bg="bg-blue-100 dark:bg-blue-950/50"
             />
-            <CardEstatistica
-              icon={<UserPlus size={18} />}
-              value={data.totalLeads}
-              label="Leads"
-              color="text-emerald-600"
-              bg="bg-emerald-100 dark:bg-emerald-950/50"
-            />
+            <CardEstatistica icon={<UserPlus size={18} />} value={data.totalLeads} label="Leads" />
             <CardEstatistica
               icon={<Target size={18} />}
               value={data.totalOportunidades}
               label="Oportunidades"
-              color="text-purple-600"
-              bg="bg-purple-100 dark:bg-purple-950/50"
             />
             <CardEstatistica
               icon={<Calendar size={18} />}
               value={data.totalVisitas}
               label="Visitas"
-              color="text-amber-600"
-              bg="bg-amber-100 dark:bg-amber-950/50"
             />
             <CardEstatistica
               icon={<TrendingUp size={18} />}
               value={data.totalCampanhas}
               label="Campanhas"
-              color="text-cyan-600"
-              bg="bg-cyan-100 dark:bg-cyan-950/50"
             />
           </div>
 
@@ -161,14 +142,24 @@ export default function CrmRelatoriosPage() {
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
               {RELATORIOS.map((relatorio) => {
                 const Icon = relatorio.icon
+                const estilo = corPorTitulo(relatorio.label)
                 return (
                   <Link
                     key={relatorio.href}
                     href={relatorio.href}
-                    className="group rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 hover:border-blue-300 dark:hover:border-blue-800 transition-colors"
+                    style={
+                      {
+                        "--card-fundo": estilo.fundoClaro,
+                        "--card-fundo-escuro": estilo.fundoEscuro,
+                        "--card-borda": estilo.borda,
+                        "--card-realce": estilo.cor,
+                      } as CSSProperties
+                    }
+                    className="group rounded-xl border border-[color:var(--card-borda)] bg-white dark:bg-slate-900 bg-[image:var(--card-fundo)] dark:bg-[image:var(--card-fundo-escuro)] p-4 hover:border-[color:var(--card-realce)] transition-colors"
                   >
                     <div
-                      className={`rounded-lg p-2 w-fit mb-2 ${relatorio.cor} group-hover:scale-105 transition-transform`}
+                      className="rounded-lg p-2 w-fit mb-2 group-hover:scale-105 transition-transform"
+                      style={{ backgroundColor: estilo.fundoIcone, color: estilo.cor }}
                     >
                       <Icon size={16} />
                     </div>
@@ -193,24 +184,40 @@ function CardEstatistica({
   icon,
   value,
   label,
-  color,
-  bg,
 }: {
   icon: React.ReactNode
   value: number
   label: string
-  color: string
-  bg: string
 }) {
+  const estilo = corPorTitulo(label)
+  const Icone = iconePorTitulo(label)
   return (
-    <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
+    <div
+      style={
+        {
+          "--card-fundo": estilo.fundoClaro,
+          "--card-fundo-escuro": estilo.fundoEscuro,
+          "--card-borda": estilo.borda,
+          "--card-realce": estilo.cor,
+        } as CSSProperties
+      }
+      className="rounded-xl border border-[color:var(--card-borda)] bg-white dark:bg-slate-900 bg-[image:var(--card-fundo)] dark:bg-[image:var(--card-fundo-escuro)] p-4"
+    >
       <div className="flex items-center gap-3">
-        <div className={`rounded-lg ${bg} p-2.5`}>
-          <span className={color}>{icon}</span>
+        <div
+          className="rounded-lg p-2.5"
+          style={{ backgroundColor: estilo.fundoIcone, color: estilo.cor }}
+        >
+          {icon}
         </div>
         <div>
           <p className="text-2xl font-bold text-slate-900 dark:text-slate-50">{value}</p>
-          <p className="text-xs text-slate-500 dark:text-slate-400">{label}</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
+            <span style={{ color: estilo.cor }} aria-hidden="true">
+              <Icone size={12} />
+            </span>
+            {label}
+          </p>
         </div>
       </div>
     </div>

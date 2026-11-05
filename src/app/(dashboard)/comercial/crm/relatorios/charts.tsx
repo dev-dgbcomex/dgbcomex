@@ -14,6 +14,8 @@ import {
 } from "recharts"
 import { UserPlus, Target, FileText, PieChart } from "lucide-react"
 import { ChartTooltip } from "@/components/ui/chart-tooltip"
+import { corPorTitulo } from "@/lib/dracula"
+import type { CSSProperties } from "react"
 
 const CHART_COLORS = [
   "#6366f1",
@@ -64,10 +66,21 @@ function GraficoCard({
   icone: React.ReactNode
   children: React.ReactNode
 }) {
+  const estilo = corPorTitulo(titulo)
   return (
-    <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
+    <div
+      style={
+        {
+          "--card-fundo": estilo.fundoClaro,
+          "--card-fundo-escuro": estilo.fundoEscuro,
+          "--card-borda": estilo.borda,
+          "--card-realce": estilo.cor,
+        } as CSSProperties
+      }
+      className="rounded-xl border border-[color:var(--card-borda)] bg-white dark:bg-slate-900 bg-[image:var(--card-fundo)] dark:bg-[image:var(--card-fundo-escuro)] p-5"
+    >
       <div className="flex items-center gap-2 mb-4">
-        <span className="text-slate-400">{icone}</span>
+        <span style={{ color: estilo.cor }}>{icone}</span>
         <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-50">{titulo}</h2>
       </div>
       {children}

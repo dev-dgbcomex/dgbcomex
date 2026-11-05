@@ -19,6 +19,7 @@ import { InfoButton } from "@/components/ui/info-button"
 import BotaoImportarApi from "@/components/integracao/BotaoImportarApi"
 import { getInfoContent } from "@/lib/info-content"
 import { resolverIntegracaoBi } from "@/lib/bi/integracao-bi"
+import { CartaoKpi } from "@/components/bi/cartao-kpi"
 import { TabelaGruposCusto } from "./components/tabela-grupos-custo"
 import { TabelaLancamentosCusto } from "./components/tabela-lancamentos-custo"
 import { exportarCsv, rotuloData, variacao } from "./components/utils"
@@ -38,20 +39,30 @@ function hojeAncorado(): string {
   return `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}-${String(dia).padStart(2, "0")}`
 }
 
-function Cartao({ titulo, children, descricao }: { titulo: string; descricao?: string; children: React.ReactNode }) {
+function Cartao({
+  titulo,
+  children,
+  descricao,
+}: {
+  titulo: string
+  descricao?: string
+  children: React.ReactNode
+}) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-      <p className="text-[10px] font-medium tracking-wider text-slate-500 uppercase">{titulo}</p>
-      {descricao && <p className="mt-0.5 text-[10px] text-slate-400">{descricao}</p>}
-      <div className="mt-1">{children}</div>
-    </div>
+    <CartaoKpi titulo={titulo} descricao={descricao}>
+      {children}
+    </CartaoKpi>
   )
 }
 
 /** Envolve o valor do cartão com um rótulo acessível, para o teste e para leitor de tela. */
 function ValorCartao({ rotulo, children }: { rotulo: string; children: React.ReactNode }) {
   return (
-    <p role="status" aria-label={rotulo} className="text-2xl font-semibold text-slate-900 dark:text-slate-100">
+    <p
+      role="status"
+      aria-label={rotulo}
+      className="text-2xl font-semibold text-slate-900 dark:text-slate-100"
+    >
       {children}
     </p>
   )
@@ -90,21 +101,26 @@ export default function CustosAdministrativosDetalhePage() {
     [integracoes]
   )
 
-  const { data: detalhe, isLoading, isFetching, error, refetch } =
-    useQuery<DetalheCustosAdministrativos>({
-      queryKey: ["custos-administrativos-detalhe", integracao?.id, aplicada],
-      enabled: Boolean(integracao?.id),
-      queryFn: async () => {
-        const res = await fetch(
-          `/api/integracao/${integracao!.id}/detalhe/custos-administrativos-detalhe?data=${aplicada}`
-        )
-        if (!res.ok) {
-          const corpo = await res.json().catch(() => null)
-          throw new Error(corpo?.detail ?? corpo?.error ?? `Falha na API (${res.status})`)
-        }
-        return res.json()
-      },
-    })
+  const {
+    data: detalhe,
+    isLoading,
+    isFetching,
+    error,
+    refetch,
+  } = useQuery<DetalheCustosAdministrativos>({
+    queryKey: ["custos-administrativos-detalhe", integracao?.id, aplicada],
+    enabled: Boolean(integracao?.id),
+    queryFn: async () => {
+      const res = await fetch(
+        `/api/integracao/${integracao!.id}/detalhe/custos-administrativos-detalhe?data=${aplicada}`
+      )
+      if (!res.ok) {
+        const corpo = await res.json().catch(() => null)
+        throw new Error(corpo?.detail ?? corpo?.error ?? `Falha na API (${res.status})`)
+      }
+      return res.json()
+    },
+  })
 
   /** "Importar via API" aqui é reler o mês direto do ERP. */
   async function importarDaApi() {
@@ -127,8 +143,9 @@ export default function CustosAdministrativosDetalhePage() {
             Custos Administrativos
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Lançamentos de contas pagas dos departamentos {detalhe?.departamentos.join(" e ") ?? "1.1.1.1 e 1.1.1.2"},
-            comparando o mês selecionado com o anterior.
+            Lançamentos de contas pagas dos departamentos{" "}
+            {detalhe?.departamentos.join(" e ") ?? "1.1.1.1 e 1.1.1.2"}, comparando o mês
+            selecionado com o anterior.
           </p>
         </div>
         <div className="flex flex-col items-start gap-2 sm:items-end">
@@ -179,8 +196,8 @@ export default function CustosAdministrativosDetalhePage() {
           </div>
         </div>
         <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
-          O mês corrente vai de 1º até o dia selecionado, igual ao card. Enquanto não houver
-          baixa de contas pagas no mês, o total aparece R$ 0,00 — não é erro de carga.
+          O mês corrente vai de 1º até o dia selecionado, igual ao card. Enquanto não houver baixa
+          de contas pagas no mês, o total aparece R$ 0,00 — não é erro de carga.
         </p>
       </div>
 
@@ -200,13 +217,17 @@ export default function CustosAdministrativosDetalhePage() {
         <>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <Cartao titulo="Mês selecionado" descricao={atual.periodo}>
-              <ValorCartao rotulo="total do mês selecionado">{FORMATAR.valor(atual.total)}</ValorCartao>
+              <ValorCartao rotulo="total do mês selecionado">
+                {FORMATAR.valor(atual.total)}
+              </ValorCartao>
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 {FORMATAR.numero(atual.lancamentos)} lançamentos
               </p>
             </Cartao>
             <Cartao titulo="Mês anterior" descricao={anterior.periodo}>
-              <ValorCartao rotulo="total do mês anterior">{FORMATAR.valor(anterior.total)}</ValorCartao>
+              <ValorCartao rotulo="total do mês anterior">
+                {FORMATAR.valor(anterior.total)}
+              </ValorCartao>
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 {FORMATAR.numero(anterior.lancamentos)} lançamentos
               </p>

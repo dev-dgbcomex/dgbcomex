@@ -697,6 +697,7 @@ export const crmContent: Record<string, InfoContent> = {
     description:
       "Análise consolidada dos dados do CRM com gráficos de leads por origem, pipeline, performance por representante, tarefas e taxa de conversão.",
     rules: [
+      "Os cards de indicador e os cards de gráfico usam a cor do tema Dracula e um pequeno ícone, os dois derivados do título: o mesmo título mantém sempre a mesma cor e o mesmo ícone, mesmo que a ordem dos cards mude. A cor é só identificação visual — os números continuam sendo os do banco.",
       "Os dados são atualizados em tempo real com base no banco.",
       "Use os gráficos para identificar gargalos no pipeline.",
       "A taxa de conversão considera apenas oportunidades fechadas (ganhas vs perdidas).",
@@ -721,6 +722,7 @@ export const crmContent: Record<string, InfoContent> = {
     description:
       "Mostra tudo que as contas comerciais fizeram no CRM: registros criados por pessoa, cliente, oportunidade, proposta, visita, tarefa, lead e contato, com data, hora e pessoa ou cliente envolvida.",
     rules: [
+      "Os cards de resumo usam a cor do tema Dracula e um pequeno ícone, os dois derivados do rótulo do card: o mesmo rótulo mantém sempre a mesma cor e o mesmo ícone.",
       "A base do relatório é a tabela de logs: cada ação registrada no CRM aparece aqui.",
       "Os cards comparam o período escolhido com hoje, últimos 7 dias e mês atual.",
       "A tabela 'Produção por usuário' mostra quantos registros cada usuário criou em cada intervalo.",
@@ -744,6 +746,7 @@ export const crmContent: Record<string, InfoContent> = {
     description:
       "Relatório do cadastro de pessoas do CRM criado no período, com tipo de pessoa, documento, segmento, cidade, responsável, vínculo com cliente e a tarja de cliente (promoção).",
     rules: [
+      "Os cards de resumo usam a cor do tema Dracula e um pequeno ícone, os dois derivados do rótulo do card: o mesmo rótulo mantém sempre a mesma cor e o mesmo ícone.",
       "O período padrão é os últimos 7 dias; troque para Hoje, Mês ou um período personalizado.",
       "PF e PJ são separados nos cards de resumo.",
       "Pessoas convertidas em cliente são as que já possuem vínculo na tabela de Clientes.",
@@ -771,6 +774,7 @@ export const crmContent: Record<string, InfoContent> = {
     description:
       "Pessoas que viraram cliente (tarja de cliente) no período, com o cliente vinculado, quem promoveu e o negócio gerado por cada uma (oportunidades, propostas e visitas).",
     rules: [
+      "Os cards de resumo usam a cor do tema Dracula e um pequeno ícone, os dois derivados do rótulo do card: o mesmo rótulo mantém sempre a mesma cor e o mesmo ícone.",
       "Só entram no relatório as pessoas promovidas a cliente com a ação 'Tornar cliente'.",
       "O período padrão é os últimos 7 dias; troque para Hoje, Mês ou um período personalizado.",
       "O filtro Usuário mostra quem fez cada promoção.",
@@ -796,6 +800,7 @@ export const crmContent: Record<string, InfoContent> = {
     description:
       "Visão consolidada de cada cliente com o negócio do período: pessoas promovidas, oportunidades (em aberto e valor), propostas e visitas — incluindo o que foi feito nas pessoas do CRM que viraram o cliente.",
     rules: [
+      "Os cards de resumo usam a cor do tema Dracula e um pequeno ícone, os dois derivados do rótulo do card: o mesmo rótulo mantém sempre a mesma cor e o mesmo ícone.",
       "O período padrão é os últimos 7 dias; troque para Hoje, Mês ou um período personalizado.",
       "O filtro Segmento separa os clientes por ramo de atividade.",
       "O card 'Clientes com negócio' mostra quem teve oportunidade, proposta ou visita no período.",
@@ -824,6 +829,7 @@ export const crmContent: Record<string, InfoContent> = {
     description:
       "Oportunidades criadas no período com status, valor estimado, probabilidade, responsável e a pessoa ou cliente relacionada.",
     rules: [
+      "Os cards de resumo usam a cor do tema Dracula e um pequeno ícone, os dois derivados do rótulo do card: o mesmo rótulo mantém sempre a mesma cor e o mesmo ícone.",
       "Os cards mostram o total, as em aberto, as ganhas, as perdidas e a taxa de conversão.",
       "A taxa de conversão considera apenas as oportunidades do período selecionado.",
       "O valor ponderado soma o valor estimado multiplicado pela probabilidade de cada oportunidade.",
@@ -847,6 +853,7 @@ export const crmContent: Record<string, InfoContent> = {
     description:
       "Propostas do CRM criadas no período, com valor, status (enviada, aceita, recusada ou em revisão), responsável e a pessoa ou cliente atendida.",
     rules: [
+      "Os cards de resumo usam a cor do tema Dracula e um pequeno ícone, os dois derivados do rótulo do card: o mesmo rótulo mantém sempre a mesma cor e o mesmo ícone.",
       "A taxa de aceitação considera as propostas aceitas sobre o total do período.",
       "O valor aceito soma apenas as propostas com status ACEITA.",
       "O filtro Status permite separar enviadas, aceitas, recusadas e em revisão.",
@@ -869,6 +876,7 @@ export const crmContent: Record<string, InfoContent> = {
     description:
       "Visitas do CRM realizadas ou agendadas no período, separando o tipo presencial, por vídeo e por telefone, com cidade, responsável e pessoa ou cliente atendido.",
     rules: [
+      "Os cards de resumo usam a cor do tema Dracula e um pequeno ícone, os dois derivados do rótulo do card: o mesmo rótulo mantém sempre a mesma cor e o mesmo ícone.",
       "O relatório considera o registro da visita, não o relatório de campo preenchido depois.",
       "A taxa de comparecimento compara as visitas concluídas com o total do período.",
       "O filtro Tipo separa visitas presenciais, por vídeo e por telefone.",

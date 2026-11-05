@@ -252,6 +252,38 @@ describe("getInfoContent", () => {
     }
   })
 
+  it("os relatórios de BI e do CRM explicam a cor Dracula e o ícone dos cards", () => {
+    const telas = [
+      "/bi/integracoes/faturamento",
+      "/bi/integracoes/contas-pagas",
+      "/bi/integracoes/custos-administrativos",
+      "/bi/integracoes/custos-administrativos-anual",
+      "/comercial/crm/relatorios",
+      "/comercial/crm/relatorios/atividades",
+      "/comercial/crm/relatorios/pessoas",
+      "/comercial/crm/relatorios/oportunidades",
+      "/comercial/crm/relatorios/propostas",
+      "/comercial/crm/relatorios/visitas",
+      "/comercial/crm/relatorios/conversoes",
+      "/comercial/crm/relatorios/clientes",
+    ]
+
+    for (const caminho of telas) {
+      const conteudo = getInfoContent(caminho)
+      expect(conteudo).not.toBeNull()
+
+      const texto = [
+        conteudo?.description ?? "",
+        ...(conteudo?.rules ?? []),
+        ...(conteudo?.fields ?? []).map((f) => `${f.name}: ${f.desc}`),
+      ].join("\n")
+
+      expect(texto).toMatch(/Dracula/i)
+      expect(texto).toMatch(/ícone/i)
+      expect(texto).toMatch(/derivad[oa]s? do (título|rótulo)/i)
+    }
+  })
+
   it("as telas de relatório do CRM registram data/hora e pessoa ou cliente envolvida", () => {
     const atividades = getInfoContent("/comercial/crm/relatorios/atividades")
     const pessoas = getInfoContent("/comercial/crm/relatorios/pessoas")

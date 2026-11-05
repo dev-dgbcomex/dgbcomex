@@ -141,6 +141,7 @@ function GraficoOrdenado({
     >
       <ChartCard
         title={titulo}
+        dracula
         // Altura uniforme: o card estica até a do vizinho mais alto e o gráfico
         // ocupa o que sobra, então a pizza com legenda não desalinha a grade.
         className={`flex h-full flex-col ${isDragging ? "ring-2 ring-teal-500" : ""}`}
@@ -281,8 +282,7 @@ export function ContasPagasCharts({
       }
       return res.json()
     },
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["contas-pagas-ordem-graficos"] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["contas-pagas-ordem-graficos"] }),
   })
 
   // A ordem salva no servidor manda. Sem ela (primeiro acesso ou API fora), cai no
@@ -339,7 +339,9 @@ export function ContasPagasCharts({
   )
 
   const top = (grupos: GrupoPorChave[], chave: string) =>
-    grupos.slice(0, TOP).map((grupo) => ({ rotulo: String(grupo[chave] || "—"), valor: Number(grupo.valor) }))
+    grupos
+      .slice(0, TOP)
+      .map((grupo) => ({ rotulo: String(grupo[chave] || "—"), valor: Number(grupo.valor) }))
 
   const topFornecedor = useMemo(() => top(porFornecedor, "razao_social"), [porFornecedor])
   const topBanco = useMemo(() => top(porBanco, "banco"), [porBanco])
@@ -369,7 +371,10 @@ export function ContasPagasCharts({
     () =>
       porDepartamento
         .slice(0, TOP)
-        .map((grupo) => ({ rotulo: String(grupo.departamento || "—"), valor: Number(grupo.valor) })),
+        .map((grupo) => ({
+          rotulo: String(grupo.departamento || "—"),
+          valor: Number(grupo.valor),
+        })),
     [porDepartamento]
   )
 
@@ -426,7 +431,12 @@ export function ContasPagasCharts({
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-            <XAxis dataKey="mes" tick={{ fontSize: 10 }} stroke="#94a3b8" interval="preserveStartEnd" />
+            <XAxis
+              dataKey="mes"
+              tick={{ fontSize: 10 }}
+              stroke="#94a3b8"
+              interval="preserveStartEnd"
+            />
             <YAxis
               yAxisId="valor"
               tick={{ fontSize: 11 }}
@@ -561,8 +571,7 @@ function graficoBarrasVerticais(
   gradiente: string,
   cor: string
 ) {
-  const pct = (v: number) =>
-    `${v.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`
+  const pct = (v: number) => `${v.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`
   const maxPct = dados.reduce((maior, item) => Math.max(maior, item.valor), 0)
 
   return (

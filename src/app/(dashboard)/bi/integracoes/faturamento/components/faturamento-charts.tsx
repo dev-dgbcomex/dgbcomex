@@ -89,7 +89,6 @@ interface Props {
   totalPeso: number
 }
 
-
 /** Cartão de gráfico com handle de arraste e alternativa por teclado (setas). */
 function GraficoOrdenado({
   id,
@@ -106,7 +105,9 @@ function GraficoOrdenado({
   podeSubir: boolean
   podeDescer: boolean
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id,
+  })
 
   return (
     <div
@@ -116,6 +117,7 @@ function GraficoOrdenado({
     >
       <ChartCard
         title={titulo}
+        dracula
         // Altura uniforme: o card estica até a do vizinho mais alto e o gráfico
         // ocupa o que sobra, então a pizza com legenda não desalinha a grade.
         className={`flex h-full flex-col ${isDragging ? "ring-2 ring-teal-500" : ""}`}
@@ -180,10 +182,7 @@ function LegendaRepresentantes({
             key={d.representante}
             className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300"
           >
-            <span
-              className="h-2 w-2 shrink-0 rounded-full"
-              style={{ backgroundColor: d.fill }}
-            />
+            <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: d.fill }} />
             <span className="max-w-[120px] truncate" title={d.representante}>
               {d.representante}
             </span>
@@ -288,13 +287,14 @@ export function FaturamentoCharts({
 
   const topClientes = useMemo(
     () =>
-      topPorFaturamento(
-        (grupo) => {
-          const nome = grupo.nome_cliente || grupo.cliente || "Sem cliente"
-          return { chave: nome, rotulo: nome }
-        },
-        grupos
-      ).map((serie) => ({ nome: serie.rotulo, faturamento: serie.faturamento, metros: serie.metros })),
+      topPorFaturamento((grupo) => {
+        const nome = grupo.nome_cliente || grupo.cliente || "Sem cliente"
+        return { chave: nome, rotulo: nome }
+      }, grupos).map((serie) => ({
+        nome: serie.rotulo,
+        faturamento: serie.faturamento,
+        metros: serie.metros,
+      })),
     [grupos]
   )
 
@@ -302,19 +302,15 @@ export function FaturamentoCharts({
 
   const topRepresentantes = useMemo(
     () =>
-      topPorFaturamento(
-        (grupo) => {
-          const nome = grupo.representante || "Sem representante"
-          return { chave: nome, rotulo: nome }
-        },
-        grupos
-      ).map((serie) => ({ representante: serie.rotulo, faturamento: serie.faturamento })),
+      topPorFaturamento((grupo) => {
+        const nome = grupo.representante || "Sem representante"
+        return { chave: nome, rotulo: nome }
+      }, grupos).map((serie) => ({ representante: serie.rotulo, faturamento: serie.faturamento })),
     [grupos]
   )
 
   const representacao = useMemo(
-    () =>
-      topRepresentantes.map((item, i) => ({ ...item, fill: CORES[i % CORES.length] })),
+    () => topRepresentantes.map((item, i) => ({ ...item, fill: CORES[i % CORES.length] })),
     [topRepresentantes]
   )
 
@@ -323,53 +319,59 @@ export function FaturamentoCharts({
       <ChartCardBody className={ALTURA_MIN_GRAFICO}>
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={porMes} margin={{ bottom: 8 }}>
-          <defs>
-            <linearGradient id="gradFaturamento" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#0f766e" stopOpacity={0.45} />
-              <stop offset="100%" stopColor="#0f766e" stopOpacity={0.02} />
-            </linearGradient>
-          </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-          <XAxis dataKey="mes" tick={{ fontSize: 11 }} stroke="#94a3b8" />
-          <YAxis
-            yAxisId="valor"
-            tick={{ fontSize: 11 }}
-            stroke="#94a3b8"
-            tickFormatter={(v) => formatarValor(Number(v))}
-          />
-          <YAxis
-            yAxisId="metros"
-            orientation="right"
-            tick={{ fontSize: 11 }}
-            stroke="#94a3b8"
-            tickFormatter={(v) => `${Math.round(Number(v))} m`}
-          />
-          <Tooltip
-            content={<ChartTooltip formatter={(v, nome) => (nome === "Metros" ? formatarMetragem(v) : formatarValor(v))} />}
-          />
-          <Area
-            yAxisId="valor"
-            type="monotone"
-            dataKey="faturamento"
-            name="Faturamento"
-            stroke="#0f766e"
-            strokeWidth={2.5}
-            fill="url(#gradFaturamento)"
-            animationDuration={1200}
-          />
-          <Line
-            yAxisId="metros"
-            type="monotone"
-            dataKey="metros"
-            name="Metros"
-            stroke="#b45309"
-            strokeWidth={2}
-            strokeDasharray="5 4"
-            dot={false}
-            activeDot={{ r: 5 }}
-            animationDuration={1200}
-          />
-</AreaChart>
+            <defs>
+              <linearGradient id="gradFaturamento" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#0f766e" stopOpacity={0.45} />
+                <stop offset="100%" stopColor="#0f766e" stopOpacity={0.02} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+            <XAxis dataKey="mes" tick={{ fontSize: 11 }} stroke="#94a3b8" />
+            <YAxis
+              yAxisId="valor"
+              tick={{ fontSize: 11 }}
+              stroke="#94a3b8"
+              tickFormatter={(v) => formatarValor(Number(v))}
+            />
+            <YAxis
+              yAxisId="metros"
+              orientation="right"
+              tick={{ fontSize: 11 }}
+              stroke="#94a3b8"
+              tickFormatter={(v) => `${Math.round(Number(v))} m`}
+            />
+            <Tooltip
+              content={
+                <ChartTooltip
+                  formatter={(v, nome) =>
+                    nome === "Metros" ? formatarMetragem(v) : formatarValor(v)
+                  }
+                />
+              }
+            />
+            <Area
+              yAxisId="valor"
+              type="monotone"
+              dataKey="faturamento"
+              name="Faturamento"
+              stroke="#0f766e"
+              strokeWidth={2.5}
+              fill="url(#gradFaturamento)"
+              animationDuration={1200}
+            />
+            <Line
+              yAxisId="metros"
+              type="monotone"
+              dataKey="metros"
+              name="Metros"
+              stroke="#b45309"
+              strokeWidth={2}
+              strokeDasharray="5 4"
+              dot={false}
+              activeDot={{ r: 5 }}
+              animationDuration={1200}
+            />
+          </AreaChart>
         </ResponsiveContainer>
       </ChartCardBody>
     ),
@@ -377,65 +379,67 @@ export function FaturamentoCharts({
       <ChartCardBody className={ALTURA_MIN_GRAFICO}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={topClientes} margin={{ bottom: 8 }}>
-          <defs>
-            <linearGradient id="gradCliente" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#1d4ed8" />
-              <stop offset="100%" stopColor="#1d4ed8" stopOpacity={0.4} />
-            </linearGradient>
-          </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-          <XAxis
-            dataKey="nome"
-            tick={{ fontSize: 10 }}
-            stroke="#94a3b8"
-            interval={0}
-            angle={-20}
-            textAnchor="end"
-            height={70}
-            tickFormatter={(v: string) => (v.length > 14 ? `${v.slice(0, 13)}…` : v)}
-          />
-          <YAxis
-            yAxisId="valor"
-            tick={{ fontSize: 11 }}
-            stroke="#94a3b8"
-            tickFormatter={(v) => formatarValor(Number(v))}
-          />
-          <YAxis
-            yAxisId="metros"
-            orientation="right"
-            tick={{ fontSize: 10 }}
-            stroke="#94a3b8"
-            tickFormatter={(v) => `${Math.round(Number(v))} m`}
-          />
-          <Tooltip
-            cursor={{ fill: "#94a3b8", fillOpacity: 0.08 }}
-            content={
-              <ChartTooltip
-                formatter={(v, nome) => (nome === "Metros" ? formatarMetragem(v) : formatarValor(v))}
-              />
-            }
-          />
-          <Bar
-            yAxisId="valor"
-            dataKey="faturamento"
-            name="Faturamento"
-            fill="url(#gradCliente)"
-            radius={[6, 6, 0, 0]}
-            maxBarSize={44}
-            animationDuration={1000}
-          />
-          <Line
-            yAxisId="metros"
-            type="monotone"
-            dataKey="metros"
-            name="Metros"
-            stroke="#b45309"
-            strokeWidth={2}
-            dot={{ r: 3, fill: "#b45309" }}
-            activeDot={{ r: 5 }}
-            animationDuration={1000}
-          />
-        </BarChart>
+            <defs>
+              <linearGradient id="gradCliente" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#1d4ed8" />
+                <stop offset="100%" stopColor="#1d4ed8" stopOpacity={0.4} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+            <XAxis
+              dataKey="nome"
+              tick={{ fontSize: 10 }}
+              stroke="#94a3b8"
+              interval={0}
+              angle={-20}
+              textAnchor="end"
+              height={70}
+              tickFormatter={(v: string) => (v.length > 14 ? `${v.slice(0, 13)}…` : v)}
+            />
+            <YAxis
+              yAxisId="valor"
+              tick={{ fontSize: 11 }}
+              stroke="#94a3b8"
+              tickFormatter={(v) => formatarValor(Number(v))}
+            />
+            <YAxis
+              yAxisId="metros"
+              orientation="right"
+              tick={{ fontSize: 10 }}
+              stroke="#94a3b8"
+              tickFormatter={(v) => `${Math.round(Number(v))} m`}
+            />
+            <Tooltip
+              cursor={{ fill: "#94a3b8", fillOpacity: 0.08 }}
+              content={
+                <ChartTooltip
+                  formatter={(v, nome) =>
+                    nome === "Metros" ? formatarMetragem(v) : formatarValor(v)
+                  }
+                />
+              }
+            />
+            <Bar
+              yAxisId="valor"
+              dataKey="faturamento"
+              name="Faturamento"
+              fill="url(#gradCliente)"
+              radius={[6, 6, 0, 0]}
+              maxBarSize={44}
+              animationDuration={1000}
+            />
+            <Line
+              yAxisId="metros"
+              type="monotone"
+              dataKey="metros"
+              name="Metros"
+              stroke="#b45309"
+              strokeWidth={2}
+              dot={{ r: 3, fill: "#b45309" }}
+              activeDot={{ r: 5 }}
+              animationDuration={1000}
+            />
+          </BarChart>
         </ResponsiveContainer>
       </ChartCardBody>
     ),
@@ -443,64 +447,66 @@ export function FaturamentoCharts({
       <ChartCardBody className={ALTURA_MIN_GRAFICO}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={topProdutos} margin={{ bottom: 8 }}>
-          <defs>
-            <linearGradient id="gradProduto" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#0f766e" />
-              <stop offset="100%" stopColor="#0f766e" stopOpacity={0.4} />
-            </linearGradient>
-          </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-          <XAxis
-            dataKey="produto"
-            tick={{ fontSize: 10 }}
-            stroke="#94a3b8"
-            interval={0}
-            angle={-20}
-            textAnchor="end"
-            height={70}
-          />
-          <YAxis
-            yAxisId="valor"
-            tick={{ fontSize: 11 }}
-            stroke="#94a3b8"
-            tickFormatter={(v) => formatarValor(Number(v))}
-          />
-          <YAxis
-            yAxisId="metros"
-            orientation="right"
-            tick={{ fontSize: 10 }}
-            stroke="#94a3b8"
-            tickFormatter={(v) => `${Math.round(Number(v))} m`}
-          />
-          <Tooltip
-            cursor={{ fill: "#94a3b8", fillOpacity: 0.08 }}
-            content={
-              <ChartTooltip
-                formatter={(v, nome) => (nome === "Metros" ? formatarMetragem(v) : formatarValor(v))}
-              />
-            }
-          />
-          <Bar
-            yAxisId="valor"
-            dataKey="faturamento"
-            name="Faturamento"
-            fill="url(#gradProduto)"
-            radius={[6, 6, 0, 0]}
-            maxBarSize={44}
-            animationDuration={1000}
-          />
-          <Line
-            yAxisId="metros"
-            type="monotone"
-            dataKey="metros"
-            name="Metros"
-            stroke="#b45309"
-            strokeWidth={2}
-            dot={{ r: 3, fill: "#b45309" }}
-            activeDot={{ r: 5 }}
-            animationDuration={1000}
-          />
-        </BarChart>
+            <defs>
+              <linearGradient id="gradProduto" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#0f766e" />
+                <stop offset="100%" stopColor="#0f766e" stopOpacity={0.4} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+            <XAxis
+              dataKey="produto"
+              tick={{ fontSize: 10 }}
+              stroke="#94a3b8"
+              interval={0}
+              angle={-20}
+              textAnchor="end"
+              height={70}
+            />
+            <YAxis
+              yAxisId="valor"
+              tick={{ fontSize: 11 }}
+              stroke="#94a3b8"
+              tickFormatter={(v) => formatarValor(Number(v))}
+            />
+            <YAxis
+              yAxisId="metros"
+              orientation="right"
+              tick={{ fontSize: 10 }}
+              stroke="#94a3b8"
+              tickFormatter={(v) => `${Math.round(Number(v))} m`}
+            />
+            <Tooltip
+              cursor={{ fill: "#94a3b8", fillOpacity: 0.08 }}
+              content={
+                <ChartTooltip
+                  formatter={(v, nome) =>
+                    nome === "Metros" ? formatarMetragem(v) : formatarValor(v)
+                  }
+                />
+              }
+            />
+            <Bar
+              yAxisId="valor"
+              dataKey="faturamento"
+              name="Faturamento"
+              fill="url(#gradProduto)"
+              radius={[6, 6, 0, 0]}
+              maxBarSize={44}
+              animationDuration={1000}
+            />
+            <Line
+              yAxisId="metros"
+              type="monotone"
+              dataKey="metros"
+              name="Metros"
+              stroke="#b45309"
+              strokeWidth={2}
+              dot={{ r: 3, fill: "#b45309" }}
+              activeDot={{ r: 5 }}
+              animationDuration={1000}
+            />
+          </BarChart>
         </ResponsiveContainer>
       </ChartCardBody>
     ),
@@ -527,7 +533,7 @@ export function FaturamentoCharts({
                 ))}
               </Pie>
               <Tooltip content={<ChartTooltip formatter={(v) => formatarValor(v)} />} />
-</PieChart>
+            </PieChart>
           </ResponsiveContainer>
         </ChartCardBody>
         <LegendaRepresentantes dados={representacao} />

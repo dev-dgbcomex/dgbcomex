@@ -8,7 +8,7 @@ import { BiIntegracaoResumo } from "./bi-integracao-dashboard"
 import { BiIntegracaoKpiModal } from "./bi-integracao-kpi-modal"
 import { BI_KPI_METADADOS, formatarKpi } from "@/lib/bi-kpi-metadados"
 import { ROTA_DETALHE } from "@/lib/bi/integracao-bi"
-import { corPorTitulo, iconePorTitulo } from "@/lib/bi/estilo-card"
+import { corPorTitulo, iconePorTitulo } from "@/lib/dracula"
 
 function valorNoCaminho(obj: Record<string, unknown> | null | undefined, caminho: string[]) {
   let atual: unknown = obj

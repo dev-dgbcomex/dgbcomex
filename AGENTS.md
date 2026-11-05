@@ -1,10 +1,10 @@
 # Graphify Knowledge Graph
 
-O projeto tem um grafo de conhecimento em `graphify-out/` com 7277 nós, 25034 arestas e 331 comunidades.
+O projeto tem um grafo de conhecimento em `graphify-out/` com 7276 nós, 25061 arestas e 392 comunidades.
 
 ## Como usar
 
-- **Consulta rápida**: carregue `graphify-out/GRAPH_REPORT.md` (1088 linhas) para visão geral das comunidades
+- **Consulta rápida**: carregue `graphify-out/GRAPH_REPORT.md` (1329 linhas) para visão geral das comunidades
 - **Consulta detalhada**: carregue `graphify-out/graph.json` e pesquise nós/arestas para entender dependências entre arquivos
 - **Perguntas específicas**: aponte o nome do nó (ex: `requireAuth`, `getInfoContent`, `prisma`) que eu encontro no grafo
 
@@ -164,6 +164,12 @@ Compara colunas/tipos entre o Neon e o warehouse local e lista diferenças.
 - Envio imediato para os administradores: botão **"Enviar teste para os administradores"** no painel → `POST /api/admin/notificacao-regras/enviar-admins`; ou por linha de comando: `node scripts/enviar-notificacao-admins.js` (`--dry-run`, `--db=local`, `--mensagem="..."`).
 - SMTP do sistema: `node scripts/configurar-smtp.js` grava `email_config` nos 2 bancos usando `GMAIL_USER`/`GMAIL_APP_PASSWORD` do `.env.local` (senha criptografada com `ENCRYPTION_KEY`, igual `src/lib/crypto.ts`). O script valida o login antes de gravar e mantém **uma única** config ativa.
 - Sem SMTP válido, o e-mail de notificação **falha em silêncio** (o `notificar()` só loga o erro) — a notificação in-app continua criada. Sempre validar com o botão de teste do painel.
+
+# Identidade visual dos cards (tema Dracula)
+
+- `src/lib/dracula.ts` é a fonte única: `corPorTitulo(titulo)` (paleta Dracula + fundo/borda/gradiente) e `iconePorTitulo(titulo)` (ícone representativo). A cor e o ícone saem do **título/rótulo** do card, então o mesmo indicador tem sempre a mesma cara.
+- Usado em: painel `/bi/integracoes` (`src/components/bi-integracao/bi-integracao-kpi-card.tsx`), relatórios de BI (`src/components/ui/kpi-card.tsx`, `src/components/ui/chart-card.tsx` com a prop `dracula`, `src/components/bi/cartao-kpi.tsx`) e relatórios do CRM (`src/components/crm/relatorios/cards-relatorio.tsx`).
+- Cards novos **não** inventam cor: usam `corPorTitulo` + `iconePorTitulo`. O `ChartCard` só recebe Dracula por opt-in (prop `dracula`), porque ele também vive em dashboards que não devem mudar.
 
 # CRM — Cliente, pessoa e relatórios
 

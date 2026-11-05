@@ -24,6 +24,7 @@ export const biContent: Record<string, InfoContent> = {
     description:
       "Detalhe do card 'Contas Pagas': cada baixa de conta a pagar (documento, fornecedor, banco, empresa, departamento e valor), as quatro janelas fixas do card — mês atual, mês anterior, ano atual e ano anterior — mais o card 'Período selecionado', e os gráficos do recorte: mês a mês, fornecedor, participação do fornecedor (% do total), banco, empresa e departamento.",
     rules: [
+      "Os cards da tela (janelas do topo e indicadores) usam a cor do tema Dracula e um pequeno ícone, os dois derivados do título do card: o mesmo título mantém sempre a mesma cor e o mesmo ícone. A cor é só identificação visual — o número exibido continua sendo o que a API devolveu.",
       "O valor considera a DATA DA BAIXA, não a data de vencimento: uma conta vencida em abril e paga em maio entra em maio.",
       "O card soma a view vwContasPagas, que tem só duas colunas (Data_Baixa e valorPago) — por isso ele mostra apenas o total. A lista vem da tabela Pag_Baixas, que está por trás dessa view. As duas foram conferidas no ERP e batem com diferença R$ 0,00 em cada mês.",
       "A tela nasce com um trimestre: a Data inicial vem no 1º dia do mês três meses atrás e a Data final em hoje. Os quatro cards do topo (Mês atual, Mês anterior, Ano atual e Ano anterior) são fixos — medem sempre as janelas do mês corrente, como o card do BI. O quinto card, 'Período selecionado', acompanha as datas.",
@@ -143,6 +144,7 @@ export const biContent: Record<string, InfoContent> = {
     description:
       "Tela de detalhe do card 'Média – Custo administrativo 12 meses': mostra os 12 meses fechados mês a mês (custo, faturamento e a % entre os dois) e os lançamentos de contas pagas que formam o total, dos departamentos 1.1.1.1 e 1.1.1.2.",
     rules: [
+      "Os cards da tela (mês selecionado, mês anterior, variação, departamentos e os indicadores do ano) usam a cor do tema Dracula e um pequeno ícone, os dois derivados do título do card: o mesmo título mantém sempre a mesma cor e o mesmo ícone.",
       "A janela é sempre de 12 meses fechados: do dia 1º do mês 12 meses atrás até o último dia do mês anterior. O mês selecionado no filtro só ancora a janela — o mês corrente nunca entra, porque ainda não fechou.",
       "A tela lê direto da API do ERP a cada abertura, sem cache local.",
       "O total e a média batem exatamente com o card: R$ 9.906.460,70 e R$ 825.538,39 na consulta de outubro/2026.",
@@ -196,6 +198,7 @@ export const biContent: Record<string, InfoContent> = {
     description:
       "Tela de detalhe do custo administrativo: mostra os lançamentos de contas pagas que formam o valor do card 'Custos Administrativos Mensal', do mês selecionado e do mês anterior, quebrados por departamento, tipo de despesa e fornecedor, com a lista linha a linha e exportação em CSV.",
     rules: [
+      "Os cards da tela (mês selecionado, mês anterior,Departamentos e os indicadores de custo e faturamento) usam a cor do tema Dracula e um pequeno ícone, os dois derivados do título do card: o mesmo título mantém sempre a mesma cor e o mesmo ícone.",
       "A tela lê direto da API do ERP a cada abertura — não usa cache local. Por isso, o que aparece aqui é o que o ERP tem agora.",
       "O mês selecionado conta de 1º até o dia escolhido, igual ao card. No fim do mês, o card costuma vir zerado: ainda não houve baixa de contas pagas no mês.",
       "Só entram os departamentos administrativos 1.1.1.1 e 1.1.1.2 — os mesmos que o card consolida.",
@@ -244,6 +247,7 @@ export const biContent: Record<string, InfoContent> = {
     description:
       "Tela de detalhe do faturamento no nível do item de nota: mostra cada nota fiscal com seus itens (pedido, produto, romaneio, cliente, representante, metros, peso e valores) dos últimos 12 meses, com filtros, gráficos e geração de PDF e CSV.",
     rules: [
+      "Os cards da tela (janelas do topo e indicadores) e os gráficos usam a cor do tema Dracula e um pequeno ícone, os dois derivados do título do card/gráfico: o mesmo título mantém sempre a mesma cor e o mesmo ícone.",
       "A tela lê de um cache local (IndexedDB) do seu próprio navegador. Por isso filtrar, agrupar e gerar PDF é instantâneo e não pesa no ERP.",
       "VOCÊ NÃO PRECISA CLICAR EM NADA PARA A TELA TER DADO. Ao abrir, ela pergunta ao Neon até quando a base vai e decide sozinha: baixa o espelho, busca só as notas novas, ou recarrega os 12 meses do ERP. O que ela decidiu fica escrito numa faixa azul no topo da tela.",
       "A base vem do ERP em dois tempos: uma carga de 12 meses (que espelha no Neon) e, depois, apenas as notas novas.",

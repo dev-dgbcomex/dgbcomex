@@ -97,8 +97,8 @@ export default function RelatorioClientesPage() {
             Clientes{info && <InfoButton content={info} />}
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-            Negócio de cada cliente no período — inclui o que foi feito nas pessoas do CRM que viraram
-            este cliente.
+            Negócio de cada cliente no período — inclui o que foi feito nas pessoas do CRM que
+            viraram este cliente.
           </p>
         </div>
         <ExportarRelatorio dados={exportacao} disabled={isLoading || linhas.length === 0} />
@@ -117,50 +117,36 @@ export default function RelatorioClientesPage() {
               label: "Clientes",
               value: cards?.total || 0,
               icon: <Building2 size={18} />,
-              cor: "text-blue-600",
-              fundo: "bg-blue-50 dark:bg-blue-950/50",
             },
             {
               label: "Clientes com negócio",
               value: cards?.comNegocio || 0,
               icon: <Handshake size={18} />,
-              cor: "text-emerald-600",
-              fundo: "bg-emerald-50 dark:bg-emerald-950/50",
             },
             {
               label: "Oportunidades",
               value: cards?.oportunidades || 0,
               icon: <Target size={18} />,
-              cor: "text-blue-600",
-              fundo: "bg-blue-50 dark:bg-blue-950/50",
             },
             {
               label: "Propostas",
               value: cards?.propostas || 0,
               icon: <CalendarCheck size={18} />,
-              cor: "text-purple-600",
-              fundo: "bg-purple-50 dark:bg-purple-950/50",
             },
             {
               label: "Visitas",
               value: cards?.visitas || 0,
               icon: <Handshake size={18} />,
-              cor: "text-amber-600",
-              fundo: "bg-amber-50 dark:bg-amber-950/50",
             },
             {
               label: "Valor das oportunidades",
               value: moeda.format(cards?.valorOportunidades || 0),
               icon: <CircleDollarSign size={18} />,
-              cor: "text-cyan-600",
-              fundo: "bg-cyan-50 dark:bg-cyan-950/50",
             },
             {
               label: "Valor das propostas",
               value: moeda.format(cards?.valorPropostas || 0),
               icon: <Ticket size={18} />,
-              cor: "text-slate-600",
-              fundo: "bg-slate-100 dark:bg-slate-800",
             },
           ]}
         />
@@ -210,12 +196,16 @@ export default function RelatorioClientesPage() {
                   {l.nome}
                 </Link>
               </CelulaRelatorio>
-              <CelulaRelatorio className="whitespace-nowrap font-mono">{l.cnpj || "—"}</CelulaRelatorio>
+              <CelulaRelatorio className="whitespace-nowrap font-mono">
+                {l.cnpj || "—"}
+              </CelulaRelatorio>
               <CelulaRelatorio>{l.segmento || "—"}</CelulaRelatorio>
               <CelulaRelatorio className="whitespace-nowrap">{l.local || "—"}</CelulaRelatorio>
               <CelulaRelatorio className="tabular-nums">{l.pessoas || 0}</CelulaRelatorio>
               <CelulaRelatorio className="tabular-nums">{l.oportunidades || 0}</CelulaRelatorio>
-              <CelulaRelatorio className="tabular-nums">{l.oportunidadesEmAberto || 0}</CelulaRelatorio>
+              <CelulaRelatorio className="tabular-nums">
+                {l.oportunidadesEmAberto || 0}
+              </CelulaRelatorio>
               <CelulaRelatorio className="whitespace-nowrap tabular-nums">
                 {moeda.format(l.valorOportunidades || 0)}
               </CelulaRelatorio>

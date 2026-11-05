@@ -94,43 +94,31 @@ export default function RelatorioVisitasPage() {
               label: "Visitas no período",
               value: cards?.total || 0,
               icon: <CalendarCheck size={18} />,
-              cor: "text-blue-600",
-              fundo: "bg-blue-50 dark:bg-blue-950/50",
             },
             {
               label: "Presenciais",
               value: cards?.presencial || 0,
               icon: <MapPin size={18} />,
-              cor: "text-emerald-600",
-              fundo: "bg-emerald-50 dark:bg-emerald-950/50",
             },
             {
               label: "Por vídeo",
               value: cards?.video || 0,
               icon: <Video size={18} />,
-              cor: "text-purple-600",
-              fundo: "bg-purple-50 dark:bg-purple-950/50",
             },
             {
               label: "Por telefone",
               value: cards?.telefone || 0,
               icon: <Phone size={18} />,
-              cor: "text-amber-600",
-              fundo: "bg-amber-50 dark:bg-amber-950/50",
             },
             {
               label: "Concluídas",
               value: cards?.concluidas || 0,
               icon: <CalendarCheck size={18} />,
-              cor: "text-cyan-600",
-              fundo: "bg-cyan-50 dark:bg-cyan-950/50",
             },
             {
               label: "Taxa de comparecimento",
               value: `${cards?.taxaComparecimento || 0}%`,
               icon: <CalendarCheck size={18} />,
-              cor: "text-slate-600",
-              fundo: "bg-slate-100 dark:bg-slate-800",
             },
           ]}
         />
