@@ -36,6 +36,10 @@ ON CONFLICT DO NOTHING;
 INSERT INTO notificacao_regras (tipo, roles) VALUES ('ATIVIDADE_COMERCIAL', '["COMERCIAL","CRM"]'::jsonb)
 ON CONFLICT (tipo) DO NOTHING;
 
+-- notificacao_regras: perfis que recebem TODAS as notificacoes (administradores)
+INSERT INTO notificacao_regras (tipo, roles) VALUES ('TODOS', '["ADMIN","SUDO"]'::jsonb)
+ON CONFLICT (tipo) DO NOTHING;
+
 -- crm_pessoas: tarja de promocao para cliente
 DO $$ BEGIN
   ALTER TABLE crm_pessoas ADD COLUMN IF NOT EXISTS promovida_cliente boolean NOT NULL DEFAULT false;

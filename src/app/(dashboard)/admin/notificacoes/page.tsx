@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { toast } from "sonner"
-import { Loader2, Save, Bell, ArrowLeft } from "lucide-react"
+import { Loader2, Save, Bell, ArrowLeft, ShieldCheck, Send } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { InfoButton } from "@/components/ui/info-button"
@@ -13,6 +13,8 @@ interface Regra {
   tipo: string
   roles: string[]
 }
+
+const TIPO_REGRA_GLOBAL = "TODOS"
 
 const ALL_ROLES = [
   "COMERCIAL",
@@ -71,14 +73,16 @@ export default function NotificacoesAdminPage() {
   const pathname = usePathname()
   const info = getInfoContent(pathname)
   const [regras, setRegras] = useState<Regra[]>([])
+  const [rolesGlobais, setRolesGlobais] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
+  const [sending, setSending] = useState(false)
   const [dirty, setDirty] = useState(false)
 
   const {
     data: regrasData,
     isLoading: loading,
     isError,
-  } = useQuery<{ regras: Regra[] }>({
+  } = useQuery<{ regras: Regra[]; regrasGlobais?: Regra }>({
     queryKey: ["admin-notificacao-regras"],
     queryFn: async () => {
       const res = await fetch("/api/admin/notificacao-regras")
@@ -89,6 +93,10 @@ export default function NotificacoesAdminPage() {
 
   useEffect(() => {
     if (regrasData) setRegras(regrasData.regras ?? [])
+  }, [regrasData])
+
+  useEffect(() => {
+    if (regrasData?.regrasGlobais) setRolesGlobais(regrasData.regrasGlobais.roles ?? [])
   }, [regrasData])
 
   useEffect(() => {
@@ -118,9 +126,23 @@ export default function NotificacoesAdminPage() {
     setDirty(true)
   }
 
+  function toggleRoleGlobal(role: string) {
+    setRolesGlobais((prev) =>
+      prev.includes(role) ? prev.filter((x) => x !== role) : [...prev, role]
+    )
+    setDirty(true)
+  }
+
   async function salvar() {
     setSaving(true)
     try {
+      const resGlobal = await fetch("/api/admin/notificacao-regras", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tipo: TIPO_REGRA_GLOBAL, roles: rolesGlobais }),
+      })
+      if (!resGlobal.ok) throw new Error("Erro ao salvar a regra global")
+
       for (const regra of regras) {
         const res = await fetch("/api/admin/notificacao-regras", {
           method: "PUT",
@@ -135,6 +157,30 @@ export default function NotificacoesAdminPage() {
       toast.error(err.message || "Erro ao salvar")
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function enviarTesteAdmins() {
+    setSending(true)
+    try {
+      const res = await fetch("/api/admin/notificacao-regras/enviar-admins", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || "Erro ao enviar notificação")
+      if (data.erroEmail) {
+        toast.error(`Notificação criada, mas o e-mail falhou: ${data.erroEmail}`)
+      } else {
+        toast.success(
+          `Notificação enviada para ${data.usuariosNotificados} administrador(es) — ${data.emailsEnviados} e-mail(s)`
+        )
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao enviar notificação")
+    } finally {
+      setSending(false)
     }
   }
 
@@ -165,6 +211,48 @@ export default function NotificacoesAdminPage() {
           <p className="text-sm text-slate-500 mt-1">
             Selecione quais perfis recebem notificação para cada tipo de evento
           </p>
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-blue-200 dark:border-blue-900 bg-blue-50/60 dark:bg-blue-950/30 p-4">
+        <div className="flex items-start gap-3">
+          <ShieldCheck className="text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" size={20} />
+          <div className="flex-1 space-y-3">
+            <div>
+              <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                Perfis que recebem todas as notificações
+              </h2>
+              <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+                Os perfis marcados aqui recebem <strong>todas</strong> as notificações do sistema —
+                inclusive as que não têm regra por tipo — no sino do cabeçalho e por e-mail. Por
+                padrão: ADMIN e SUDO.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-x-4 gap-y-2">
+              {ALL_ROLES.map((role: any) => (
+                <label
+                  key={role}
+                  className="flex items-center gap-2 text-xs font-medium text-slate-700 dark:text-slate-300 cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    checked={rolesGlobais.includes(role)}
+                    onChange={() => toggleRoleGlobal(role)}
+                    className="h-4 w-4 accent-blue-600"
+                  />
+                  {role}
+                </label>
+              ))}
+            </div>
+            <button
+              onClick={enviarTesteAdmins}
+              disabled={sending}
+              className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-900 border border-blue-300 dark:border-blue-800 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-100 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium text-sm"
+            >
+              {sending ? <Loader2 className="animate-spin" size={16} /> : <Send size={16} />}
+              {sending ? "Enviando..." : "Enviar teste para os administradores"}
+            </button>
+          </div>
         </div>
       </div>
 

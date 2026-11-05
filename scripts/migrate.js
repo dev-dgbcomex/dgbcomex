@@ -388,6 +388,11 @@ async function migrate() {
     await sql`INSERT INTO notificacao_regras (tipo, roles) VALUES ('ATIVIDADE_COMERCIAL', '["COMERCIAL","CRM"]'::jsonb) ON CONFLICT (tipo) DO NOTHING`
     console.log("✓ Regra ATIVIDADE_COMERCIAL verificada")
 
+    // Perfis que recebem TODAS as notificações (administradores), configurável
+    // em Admin › Notificações. Array vazio desliga o recebimento global.
+    await sql`INSERT INTO notificacao_regras (tipo, roles) VALUES ('TODOS', '["ADMIN","SUDO"]'::jsonb) ON CONFLICT (tipo) DO NOTHING`
+    console.log("✓ Regra global TODOS verificada")
+
     // crm_pessoas: tarja de promocao para cliente (a pessoa sai da listagem, mas
     // continua nos relatorios com todo o historico)
     await sql`ALTER TABLE crm_pessoas ADD COLUMN IF NOT EXISTS promovida_cliente boolean NOT NULL DEFAULT false`
@@ -443,9 +448,11 @@ async function migrate() {
     console.log("✓ Tabela bancos_dados criada")
 
     // Atualiza regras existentes que ficaram com array vazio (da seed anterior)
+    // A regra global "TODOS" fica de fora: array vazio nela significa
+    // "ninguém recebe todas as notificações".
     const defaultRoles =
       '["COMERCIAL","DESENVOLVIMENTO","ADMIN","SUDO","QUALIDADE","TECELAGEM","BENEFICIAMENTO","PCP"]'
-    await sql`UPDATE notificacao_regras SET roles = ${defaultRoles}::jsonb WHERE roles = '[]'::jsonb`
+    await sql`UPDATE notificacao_regras SET roles = ${defaultRoles}::jsonb WHERE roles = '[]'::jsonb AND tipo <> 'TODOS'`
     const atualizadas = await sql`SELECT count(*) FROM notificacao_regras`
     console.log(`✓ ${atualizadas[0].count} regras de notificação no total`)
 

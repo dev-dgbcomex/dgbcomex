@@ -162,11 +162,14 @@ export const adminContent: Record<string, InfoContent> = {
   "/admin/notificacoes": {
     title: "Notificações por Tipo",
     description:
-      "Configure quais perfis (roles) recebem notificações para cada tipo de evento do sistema.",
+      "Configure quais perfis (roles) recebem notificações para cada tipo de evento do sistema e defina os perfis que recebem todas as notificações.",
     rules: [
       "Cada tipo de notificação pode ser atribuído a um ou mais perfis.",
       "As notificações são exibidas no ícone de sino no cabeçalho.",
       "Alterações são aplicadas imediatamente após salvar.",
+      "Perfis que recebem todas as notificações: os perfis marcados no quadro azul (por padrão ADMIN e SUDO) recebem TODAS as notificações do sistema, inclusive as que não têm regra por tipo, no sino do cabeçalho e por e-mail.",
+      "Para desligar o recebimento global, desmarque todos os perfis no quadro azul e salve — os administradores deixam de receber as notificações dos tipos sem regra.",
+      "O botão Enviar teste para os administradores dispara na hora uma notificação (sino + e-mail) para os perfis globais, útil para conferir a configuração do SMTP.",
       "O tipo ATIVIDADE_COMERCIAL avisa as outras contas comerciais sobre cada atividade do CRM (pessoa, oportunidade, proposta, visita, lead, contato e tarefa), no sistema e por e-mail.",
       "Quem executou a ação não recebe a própria notificação.",
       "As notificações de atividade comercial também são enviadas por e-mail para os perfis configurados.",
@@ -174,6 +177,10 @@ export const adminContent: Record<string, InfoContent> = {
     fields: [
       { name: "Tipo", desc: "Categoria do evento que gera a notificação" },
       { name: "Perfis", desc: "Selecione um ou mais perfis que devem receber a notificação" },
+      {
+        name: "Perfis que recebem todas as notificações",
+        desc: "Perfis que recebem qualquer notificação do sistema, mesmo as que não têm regra por tipo",
+      },
     ],
   },
   "/admin/bot-config": {

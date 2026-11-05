@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { notificacaoRegras } from "@/lib/db/schema/notificacao-regras"
 import { eq } from "drizzle-orm"
+import { ROLES_GLOBAIS_PADRAO, TIPO_REGRA_GLOBAL } from "@/lib/notificar"
 export const dynamic = "force-dynamic"
 
 const TIPOS_NOTIFICACAO = [
@@ -69,7 +70,18 @@ export async function GET() {
       roles: mapa.get(tipo) ?? [],
     }))
 
-    return NextResponse.json({ tipos: TIPOS_NOTIFICACAO, regras: data })
+    // Perfis que recebem TODAS as notificações (administradores)
+    const regraGlobal = mapa.get(TIPO_REGRA_GLOBAL)
+    const regrasGlobais = {
+      tipo: TIPO_REGRA_GLOBAL,
+      roles: regraGlobal ?? [...ROLES_GLOBAIS_PADRAO],
+    }
+
+    return NextResponse.json({
+      tipos: TIPOS_NOTIFICACAO,
+      regras: data,
+      regrasGlobais,
+    })
   } catch (error) {
     console.error("[GET /api/admin/notificacao-regras]", error)
     return NextResponse.json({ error: "Erro interno" }, { status: 500 })
@@ -90,7 +102,7 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: "tipo e roles (array) são obrigatórios" }, { status: 400 })
     }
 
-    if (!TIPOS_NOTIFICACAO.includes(tipo)) {
+    if (!TIPOS_NOTIFICACAO.includes(tipo) && tipo !== TIPO_REGRA_GLOBAL) {
       return NextResponse.json({ error: `Tipo de notificação inválido: ${tipo}` }, { status: 400 })
     }
 

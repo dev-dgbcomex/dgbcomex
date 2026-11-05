@@ -155,6 +155,16 @@ Compara colunas/tipos entre o Neon e o warehouse local e lista diferenças.
 - Os endpoints `executar`/`processar` aceitam **Bearer `CRON_SECRET`** **OU** sessão de admin (`ADMIN`/`SUDO`/`CRM`).
 - **Atenção (fuso)**: cron do Vercel roda em **UTC**. Um agendamento para 09:00 Brasília (12:00Z) só é pego por um cron que rode **depois** das 12:00Z — no Hobby, o 1x/dia é insuficiente para horários da tarde/noite.
 
+# Notificações — regras por tipo e perfis globais
+
+- Motor: `src/lib/notificar.ts` (`notificar`, `notificarAdmins`, `rolesNotificacaoGlobal`). Grava in-app em `notificacoes` e envia e-mail pelo SMTP do sistema (`email_config`, sem fila — envio síncrono).
+- Regras por tipo: tabela `notificacao_regras` (`tipo` UNIQUE + `roles` JSONB). Sem regra do tipo, **ninguém** recebe aquela notificação.
+- **Regra global `TODOS`**: linha reservada em `notificacao_regras` com os perfis que recebem **todas** as notificações, inclusive as que não têm regra por tipo (padrão: `["ADMIN","SUDO"]`). Migration `0066_notificacao_regras_globais.sql`; configurável em **Admin › Notificações** (quadro azul) — `GET/PUT /api/admin/notificacao-regras`.
+- `notificar()` sempre soma os perfis globais aos da regra do tipo; `notificarErro`/`notificarDelecao` (SUDO) também chegam aos demais globais.
+- Envio imediato para os administradores: botão **"Enviar teste para os administradores"** no painel → `POST /api/admin/notificacao-regras/enviar-admins`; ou por linha de comando: `node scripts/enviar-notificacao-admins.js` (`--dry-run`, `--db=local`, `--mensagem="..."`).
+- SMTP do sistema: `node scripts/configurar-smtp.js` grava `email_config` nos 2 bancos usando `GMAIL_USER`/`GMAIL_APP_PASSWORD` do `.env.local` (senha criptografada com `ENCRYPTION_KEY`, igual `src/lib/crypto.ts`). O script valida o login antes de gravar e mantém **uma única** config ativa.
+- Sem SMTP válido, o e-mail de notificação **falha em silêncio** (o `notificar()` só loga o erro) — a notificação in-app continua criada. Sempre validar com o botão de teste do painel.
+
 # CRM — Cliente, pessoa e relatórios
 
 **LEIA `docs/crm-cliente-e-relatorios.md`** — referência técnica (modelo de dados, endpoints, telas e regras).

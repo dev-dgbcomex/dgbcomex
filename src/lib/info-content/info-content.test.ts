@@ -357,4 +357,19 @@ describe("getInfoContent", () => {
     expect(texto).toMatch(/e-mail/i)
     expect(texto).toMatch(/não recebe a própria notificação/i)
   })
+
+  it("a configuração de notificações explica os perfis que recebem tudo", () => {
+    const conteudo = getInfoContent("/admin/notificacoes")
+
+    expect(conteudo).not.toBeNull()
+    const texto = [
+      conteudo?.description ?? "",
+      ...(conteudo?.rules ?? []),
+      ...(conteudo?.fields ?? []).map((f) => `${f.name}: ${f.desc}`),
+    ].join("\n")
+
+    expect(texto).toMatch(/todas as notificações/i)
+    expect(texto).toMatch(/ADMIN/)
+    expect(texto).toMatch(/Enviar teste para os administradores/i)
+  })
 })
