@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useCallback, useState, useEffect } from "react"
 import { useRouter, useParams, usePathname } from "next/navigation"
 import Link from "next/link"
 import { InfoButton } from "@/components/ui/info-button"
@@ -23,6 +23,27 @@ import { useSession } from "next-auth/react"
 import { ConfirmModal } from "@/components/ui/confirm-modal"
 import type { ClienteResumo, Contato, ContatoFormState, EmpresaResumo, VinculoTipo } from "../types"
 
+function contatoToForm(c: Contato): ContatoFormState {
+  return {
+    nome: c.nome,
+    cargo: c.cargo ?? "",
+    email: c.email ?? "",
+    telefone: c.telefone ?? "",
+    celular: c.celular ?? "",
+    whatsapp: c.whatsapp ?? "",
+    principal: c.principal,
+    observacoes: c.observacoes ?? "",
+    empresaId: c.empresaId,
+    clienteId: c.clienteId,
+  }
+}
+
+function empresaNome(c: Contato) {
+  return (
+    c.empresaRazaoSocial || c.empresaNomeFantasia || c.empresaNome || `Empresa #${c.empresaId}`
+  )
+}
+
 export default function ContatoDetailPage() {
   const router = useRouter()
   const pathname = usePathname()
@@ -32,6 +53,7 @@ export default function ContatoDetailPage() {
   const isAdmin = session?.user?.role === "ADMIN" || session?.user?.role === "SUDO"
   const [contato, setContato] = useState<Contato | null>(null)
   const [loading, setLoading] = useState(true)
+  const [erro, setErro] = useState<string | null>(null)
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState<ContatoFormState>({
     nome: "",
@@ -51,33 +73,42 @@ export default function ContatoDetailPage() {
   const [clientes, setClientes] = useState<ClienteResumo[]>([])
   const [vinculoTipo, setVinculoTipo] = useState<VinculoTipo>("none")
 
-  function contatoToForm(c: Contato): ContatoFormState {
-    return {
-      nome: c.nome,
-      cargo: c.cargo ?? "",
-      email: c.email ?? "",
-      telefone: c.telefone ?? "",
-      celular: c.celular ?? "",
-      whatsapp: c.whatsapp ?? "",
-      principal: c.principal,
-      observacoes: c.observacoes ?? "",
-      empresaId: c.empresaId,
-      clienteId: c.clienteId,
-    }
-  }
-
-  useEffect(() => {
-    if (!params.id) return
-    fetch(`/api/crm/contatos/${params.id}`)
-      .then((r) => r.json())
-      .then((data: Contato) => {
+  const carregarContato = useCallback(
+    async (opcoes: { loading?: boolean; silencioso?: boolean } = {}) => {
+      if (!params.id) {
+        setLoading(false)
+        return
+      }
+      if (opcoes.loading) setLoading(true)
+      try {
+        const res = await fetch(`/api/crm/contatos/${params.id}`)
+        if (!res.ok) {
+          const corpo = await res.json().catch(() => null)
+          throw new Error(corpo?.error || "Erro ao carregar contato")
+        }
+        const data: Contato = await res.json()
+        if (!data) throw new Error("Contato não encontrado")
         setContato(data)
         setForm(contatoToForm(data))
         setVinculoTipo(data.empresaId ? "pessoa" : data.clienteId ? "cliente" : "none")
-      })
-      .catch(() => toast.error("Erro ao carregar contato"))
-      .finally(() => setLoading(false))
-  }, [params.id])
+        setErro(null)
+      } catch (err) {
+        const mensagem = err instanceof Error ? err.message : "Erro ao carregar contato"
+        if (!opcoes.silencioso) {
+          setContato(null)
+          setErro(mensagem)
+          toast.error(mensagem)
+        }
+      } finally {
+        if (opcoes.loading) setLoading(false)
+      }
+    },
+    [params.id]
+  )
+
+  useEffect(() => {
+    carregarContato({ loading: true })
+  }, [carregarContato])
 
   useEffect(() => {
     if (!editing) return
@@ -116,14 +147,12 @@ export default function ContatoDetailPage() {
         body: JSON.stringify(body),
       })
       if (!res.ok) {
-        const err = await res.json()
-        throw new Error(err.error)
+        const err = await res.json().catch(() => null)
+        throw new Error(err?.error || "Erro ao atualizar contato")
       }
-      const updated: Contato = await res.json()
-      setContato(updated)
-      setForm(contatoToForm(updated))
       setEditing(false)
       toast.success("Contato atualizado")
+      await carregarContato({ silencioso: true })
     } catch (err) {
       toast.error(err instanceof Error ? err.message : String(err))
     }
@@ -154,8 +183,8 @@ export default function ContatoDetailPage() {
 
   if (!contato) {
     return (
-      <div className="text-center py-20">
-        <p className="text-slate-500">Contato não encontrado</p>
+      <div className="text-center py-20 space-y-2">
+        <p className="text-slate-500">{erro || "Contato não encontrado"}</p>
         <Link
           href="/comercial/crm/contatos"
           className="text-blue-600 hover:underline mt-2 inline-block"
@@ -163,12 +192,6 @@ export default function ContatoDetailPage() {
           Voltar
         </Link>
       </div>
-    )
-  }
-
-  function empresaNome(c: Contato) {
-    return (
-      c.empresaRazaoSocial || c.empresaNomeFantasia || c.empresaNome || `Empresa #${c.empresaId}`
     )
   }
 
@@ -383,7 +406,7 @@ export default function ContatoDetailPage() {
                 </Link>
               ) : contato.clienteId ? (
                 <Link
-                  href={`/comercial/crm/clientes/${contato.clienteId}`}
+                  href={`/comercial/clientes/${contato.clienteId}`}
                   className="inline-flex items-center gap-1 text-emerald-600 hover:underline font-medium"
                 >
                   <Building2 size={14} />

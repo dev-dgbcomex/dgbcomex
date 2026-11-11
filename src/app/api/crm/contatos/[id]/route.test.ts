@@ -5,7 +5,7 @@ import { requireAuth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { notificar } from "@/lib/notificar"
 import { createQueryBuilder, resetDb } from "@/test/route-db-mock"
-import { DELETE, PUT } from "./route"
+import { DELETE, GET, PUT } from "./route"
 
 vi.mock("@/lib/auth", () => ({ requireAuth: vi.fn() }))
 vi.mock("@/lib/notificar", () => ({
@@ -33,6 +33,75 @@ function txMock() {
     delete: vi.fn(() => createQueryBuilder(undefined)),
   }
 }
+
+describe("GET /api/crm/contatos/[id]", () => {
+  const contato = {
+    id: 4,
+    nome: "Ana Souza",
+    cargo: "Compradora",
+    email: "ana@alpha.com",
+    telefone: null,
+    celular: null,
+    whatsapp: null,
+    principal: true,
+    observacoes: null,
+    empresaId: 5,
+    empresaNome: "Alpha",
+    empresaRazaoSocial: "Tecelagem Alpha LTDA",
+    empresaNomeFantasia: null,
+    clienteId: null,
+    clienteNome: null,
+    createdAt: new Date("2026-01-01"),
+    updatedAt: new Date("2026-01-02"),
+  }
+
+  beforeEach(() => {
+    vi.mocked(requireAuth).mockReset()
+    resetDb(db)
+    vi.mocked(requireAuth).mockResolvedValue(sessionAdmin as any)
+    db.select = vi.fn(() => createQueryBuilder([contato]))
+  })
+
+  function get(id: string) {
+    return GET(new NextRequest(`http://localhost/api/crm/contatos/${id}`), {
+      params: Promise.resolve({ id }),
+    })
+  }
+
+  it("retorna 401 sem autenticação", async () => {
+    vi.mocked(requireAuth).mockResolvedValue(
+      new NextResponse(JSON.stringify({ error: "Não autorizado" }), { status: 401 }) as any
+    )
+    const res = await get("4")
+    expect(res.status).toBe(401)
+  })
+
+  it("retorna 404 quando o contato não existe", async () => {
+    db.select = vi.fn(() => createQueryBuilder([]))
+    const res = await get("99")
+    expect(res.status).toBe(404)
+    expect(await res.json()).toEqual({ error: "Contato não encontrado" })
+  })
+
+  it("retorna 404 para id inválido", async () => {
+    const res = await get("abc")
+    expect(res.status).toBe(404)
+    expect(db.select).not.toHaveBeenCalled()
+  })
+
+  it("retorna o contato com os nomes da pessoa e do cliente", async () => {
+    const res = await get("4")
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body).toMatchObject({
+      id: 4,
+      nome: "Ana Souza",
+      empresaId: 5,
+      empresaRazaoSocial: "Tecelagem Alpha LTDA",
+      clienteNome: null,
+    })
+  })
+})
 
 describe("DELETE /api/crm/contatos/[id]", () => {
   beforeEach(() => {

@@ -52,6 +52,29 @@ describe("ContatoDetailPage", () => {
     )
   })
 
+  it("linka o contato vinculado a um cliente na ficha do cliente", async () => {
+    const fetchMock = createFetchMock(({ method, url }) => {
+      if (method === "GET" && url === "/api/crm/contatos/1")
+        return {
+          json: {
+            ...contato,
+            empresaId: null,
+            empresaRazaoSocial: null,
+            clienteId: 9,
+            clienteNome: "Cliente SP",
+          },
+        }
+      return { json: null }
+    })
+    vi.stubGlobal("fetch", fetchMock.fn)
+    renderPage(<ContatoDetailPage />)
+
+    expect(await screen.findByRole("link", { name: "Cliente SP" })).toHaveAttribute(
+      "href",
+      "/comercial/clientes/9"
+    )
+  })
+
   it("edita e salva via PUT", async () => {
     const fetchMock = createFetchMock(({ method, url }) => {
       if (method === "GET" && url === "/api/crm/contatos/1") return { json: contato }
@@ -150,11 +173,53 @@ describe("ContatoDetailPage", () => {
   })
 
   it("mostra mensagem quando o contato não é encontrado", async () => {
-    const fetchMock = createFetchMock(() => ({ json: null }))
+    const fetchMock = createFetchMock(() => ({
+      status: 404,
+      json: { error: "Contato não encontrado" },
+    }))
     vi.stubGlobal("fetch", fetchMock.fn)
     renderPage(<ContatoDetailPage />)
 
     expect(await screen.findByText("Contato não encontrado")).toBeInTheDocument()
+  })
+
+  it("mostra o erro da API quando a carga do contato falha", async () => {
+    const fetchMock = createFetchMock(() => ({
+      status: 500,
+      json: { error: "Ocorreu um erro inesperado. A equipe de suporte foi notificada." },
+    }))
+    vi.stubGlobal("fetch", fetchMock.fn)
+    renderPage(<ContatoDetailPage />)
+
+    expect(
+      await screen.findByText("Ocorreu um erro inesperado. A equipe de suporte foi notificada.")
+    ).toBeInTheDocument()
+    expect(toastMock.error).toHaveBeenCalledWith(
+      "Ocorreu um erro inesperado. A equipe de suporte foi notificada."
+    )
+  })
+
+  it("recarrega o contato após salvar", async () => {
+    let salvou = false
+    const fetchMock = createFetchMock(({ method, url }) => {
+      if (method === "GET" && url === "/api/crm/contatos/1")
+        return { json: salvou ? { ...contato, nome: "Carlos Silva Jr" } : contato }
+      if (method === "PUT" && url === "/api/crm/contatos/1") {
+        salvou = true
+        return { json: { ...contato, nome: "Carlos Silva Jr" } }
+      }
+      return { json: null }
+    })
+    vi.stubGlobal("fetch", fetchMock.fn)
+    renderPage(<ContatoDetailPage />)
+
+    fireEvent.click(await screen.findByRole("button", { name: "Editar" }))
+    fireEvent.change(screen.getByDisplayValue("Carlos Silva"), {
+      target: { value: "Carlos Silva Jr" },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Salvar" }))
+
+    expect(await screen.findByRole("heading", { name: "Carlos Silva Jr" })).toBeInTheDocument()
   })
 
   it("não mostra o botão de excluir para não-administradores", async () => {

@@ -2,12 +2,61 @@ import { NextRequest, NextResponse } from "next/server"
 import { requireAuth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { crmContatos } from "@/lib/db/schema/crm-contatos"
+import { crmPessoas } from "@/lib/db/schema/crm-pessoas"
+import { clientes } from "@/lib/db/schema/clientes"
 import { crmOportunidades } from "@/lib/db/schema/crm-oportunidades"
 import { crmVisitas } from "@/lib/db/schema/crm-visitas"
 import { crmWhatsappMensagens } from "@/lib/db/schema/crm-whatsapp"
 import { eq } from "drizzle-orm"
 import { notificar, registrarLog } from "@/lib/notificar"
 import { handleApiError } from "@/lib/api-error"
+
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const auth = await requireAuth()
+    if (auth instanceof NextResponse) return auth
+
+    const { id } = await params
+    const contatoId = parseInt(id)
+    if (Number.isNaN(contatoId)) {
+      return NextResponse.json({ error: "Contato não encontrado" }, { status: 404 })
+    }
+
+    const [contato] = await db
+      .select({
+        id: crmContatos.id,
+        nome: crmContatos.nome,
+        cargo: crmContatos.cargo,
+        email: crmContatos.email,
+        telefone: crmContatos.telefone,
+        celular: crmContatos.celular,
+        whatsapp: crmContatos.whatsapp,
+        principal: crmContatos.principal,
+        observacoes: crmContatos.observacoes,
+        empresaId: crmContatos.empresaId,
+        empresaNome: crmPessoas.nome,
+        empresaRazaoSocial: crmPessoas.razaoSocial,
+        empresaNomeFantasia: crmPessoas.nomeFantasia,
+        clienteId: crmContatos.clienteId,
+        clienteNome: clientes.nome,
+        createdAt: crmContatos.createdAt,
+        updatedAt: crmContatos.updatedAt,
+      })
+      .from(crmContatos)
+      .leftJoin(crmPessoas, eq(crmContatos.empresaId, crmPessoas.id))
+      .leftJoin(clientes, eq(crmContatos.clienteId, clientes.id))
+      .where(eq(crmContatos.id, contatoId))
+      .limit(1)
+
+    if (!contato) {
+      return NextResponse.json({ error: "Contato não encontrado" }, { status: 404 })
+    }
+
+    return NextResponse.json(contato)
+  } catch (error) {
+    return handleApiError(error, "GET /api/crm/contatos/[id]")
+  }
+}
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {

@@ -390,6 +390,25 @@ describe("getInfoContent", () => {
     }
   })
 
+  it("a tela de contatos explica vínculos, ficha e exclusão restrita", () => {
+    const conteudo = getInfoContent("/comercial/crm/contatos")
+
+    expect(conteudo).not.toBeNull()
+    const texto = [
+      conteudo?.description ?? "",
+      ...(conteudo?.rules ?? []),
+      ...(conteudo?.fields ?? []).map((f) => `${f.name}: ${f.desc}`),
+      ...(conteudo?.columns ?? []).map((c) => `${c.name}: ${c.desc}`),
+    ].join("\n")
+
+    expect(texto).toMatch(/Pessoa \(Negócio\)/)
+    expect(texto).toMatch(/Cliente/)
+    expect(texto).toMatch(/avulso|órfão/i)
+    expect(texto).toMatch(/ficha/i)
+    expect(texto).toMatch(/ADMIN/)
+    expect(texto).toMatch(/Voltar/)
+  })
+
   it("a configuração de notificações explica a atividade comercial", () => {
     const conteudo = getInfoContent("/admin/notificacoes")
 
