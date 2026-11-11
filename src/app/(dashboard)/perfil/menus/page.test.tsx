@@ -23,6 +23,12 @@ const menus = [
 
 const telas = [
   { id: "clientes", label: "Clientes", href: "/comercial/clientes", module: "comercial" },
+  {
+    id: "crm-relatorios",
+    label: "CRM — Relatórios",
+    href: "/comercial/crm/relatorios",
+    module: "CRM",
+  },
 ]
 
 const statusOportunidade = {
@@ -49,6 +55,9 @@ function handler() {
     if (method === "GET" && url === "/api/admin/status") return { json: [statusOportunidade] }
     if (method === "POST" && url === "/api/user/menus") {
       return { json: { id: 2, titulo: "Financeiro", icone: "wallet", ordem: 1 } }
+    }
+    if (method === "POST" && url === "/api/user/menus/1/itens") {
+      return { json: { id: 12, titulo: "Clientes", url: "/comercial/clientes", ordem: 0 } }
     }
     return { json: null }
   }
@@ -153,6 +162,59 @@ describe("ConfigurarMenusPage", () => {
       expect(findCall(fetchMock.calls, "/api/user/menus/1", "DELETE")).toBeDefined()
     })
     await waitFor(() => expect(toastMock.success).toHaveBeenCalledWith("Menu excluído"))
+  })
+
+  it("filtra as telas pelo nome na seleção de item de menu", async () => {
+    const fetchMock = createFetchMock(handler())
+    vi.stubGlobal("fetch", fetchMock.fn)
+    renderPage(<ConfigurarMenusPage />)
+
+    await screen.findByText("Comercial")
+    fireEvent.click(screen.getByRole("button", { name: "Expandir Comercial" }))
+
+    await waitFor(() => expect(screen.getAllByLabelText("Buscar tela").length).toBeGreaterThan(1))
+
+    const buscas = screen.getAllByLabelText("Buscar tela")
+    const buscaDoMenu = buscas[buscas.length - 1]
+    fireEvent.change(buscaDoMenu, { target: { value: "relat" } })
+
+    const container = buscaDoMenu.closest("div")?.parentElement
+    const trigger = container?.querySelector('[role="combobox"]')
+    fireEvent.click(trigger as HTMLElement)
+
+    await waitFor(() => expect(screen.getAllByRole("listbox").length).toBeGreaterThan(0))
+    const lista = screen.getAllByRole("listbox")[0]
+    expect(within(lista).getByText("CRM — Relatórios")).toBeInTheDocument()
+    expect(within(lista).queryByText("Clientes")).not.toBeInTheDocument()
+  })
+
+  it("adiciona um item de menu com a tela escolhida", async () => {
+    const fetchMock = createFetchMock(handler())
+    vi.stubGlobal("fetch", fetchMock.fn)
+    renderPage(<ConfigurarMenusPage />)
+
+    await screen.findByText("Comercial")
+    fireEvent.click(screen.getByRole("button", { name: "Expandir Comercial" }))
+
+    await waitFor(() => expect(screen.getAllByLabelText("Buscar tela").length).toBeGreaterThan(1))
+    const buscas = screen.getAllByLabelText("Buscar tela")
+    const buscaDoMenu = buscas[buscas.length - 1]
+    const container = buscaDoMenu.closest("div")?.parentElement
+    fireEvent.click(container?.querySelector('[role="combobox"]') as HTMLElement)
+
+    await waitFor(() => expect(screen.getAllByRole("listbox").length).toBeGreaterThan(0))
+    fireEvent.click(screen.getAllByRole("listbox")[0].querySelector('[role="option"]') as HTMLElement)
+    fireEvent.click(screen.getByRole("button", { name: "Adicionar" }))
+
+    await waitFor(() => {
+      expect(findCall(fetchMock.calls, "/api/user/menus/1/itens", "POST")).toBeDefined()
+    })
+    const call = findCall(fetchMock.calls, "/api/user/menus/1/itens", "POST")
+    expect(call?.body).toEqual({
+      titulo: "Clientes",
+      url: "/comercial/clientes",
+      ordem: 0,
+    })
   })
 
   it("mostra o cadastro de status na página", async () => {

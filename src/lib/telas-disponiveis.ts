@@ -70,6 +70,24 @@ function hrefDeCaminho(caminho: string): string | null {
   return href
 }
 
+/**
+ * Telas estáticas do app (as que têm `page.tsx`).
+ *
+ * Na Vercel esse diretório não existe no bundle, então a lista vem vazia e o
+ * `searchRegistry` é a garantia real do que aparece no /perfil/menus.
+ */
+export function telasEstaticas(): string[] {
+  const diretorio = path.join(process.cwd(), "src", "app")
+  if (!fs.existsSync(diretorio)) return []
+
+  const hrefs: string[] = []
+  for (const arquivo of caminhar(diretorio)) {
+    const href = hrefDeCaminho(arquivo)
+    if (href) hrefs.push(href)
+  }
+  return hrefs
+}
+
 let cache: SearchItem[] | null = null
 
 export function todasTelas(): SearchItem[] {
@@ -84,23 +102,18 @@ export function todasTelas(): SearchItem[] {
   const resultados: SearchItem[] = [...searchRegistry].filter((item) =>
     ehHrefRotinaValida(item.href)
   )
-  const diretorio = path.join(process.cwd(), "src", "app")
-  if (fs.existsSync(diretorio)) {
-    for (const arquivo of caminhar(diretorio)) {
-      const href = hrefDeCaminho(arquivo)
-      if (!href) continue
-      if (porHref.has(href)) continue
-      const novo: SearchItem = {
-        id: "pagina-" + href.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, ""),
-        label: labelDeHref(href),
-        keywords: [],
-        href,
-        description: "",
-        module: moduloDeHref(href),
-      }
-      porHref.set(href, novo)
-      resultados.push(novo)
+  for (const href of telasEstaticas()) {
+    if (porHref.has(href)) continue
+    const novo: SearchItem = {
+      id: "pagina-" + href.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, ""),
+      label: labelDeHref(href),
+      keywords: [],
+      href,
+      description: "",
+      module: moduloDeHref(href),
     }
+    porHref.set(href, novo)
+    resultados.push(novo)
   }
 
   if (process.env.NODE_ENV === "production") cache = resultados

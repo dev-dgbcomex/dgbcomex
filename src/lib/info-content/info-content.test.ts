@@ -173,6 +173,22 @@ describe("getInfoContent", () => {
     expect(textoKanban).toMatch(/Exibir no Kanban/)
   })
 
+  it("a selecao de tela do menu de navegacao explica a busca", () => {
+    const cadastro = getInfoContent("/perfil/menus")
+
+    expect(cadastro).not.toBeNull()
+
+    const texto = [
+      cadastro?.description ?? "",
+      ...(cadastro?.rules ?? []),
+      ...(cadastro?.fields ?? []).map((f) => `${f.name}: ${f.desc}`),
+    ].join("\n")
+
+    expect(texto).toMatch(/busca/i)
+    expect(texto).toMatch(/Buscar tela/i)
+    expect(texto).toMatch(/search-registry|registro de telas/i)
+  })
+
   it("os chamados explicam quem recebe notificacao e e-mail", () => {
     const chamados = getInfoContent("/chamados")
 

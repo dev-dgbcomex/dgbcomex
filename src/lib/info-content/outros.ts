@@ -38,6 +38,9 @@ export const outrosContent: Record<string, InfoContent> = {
     rules: [
       "Arraste os menus e os itens para reordenar a navegação; a ordem é salva ao soltar.",
       "A cópia de menus substitui a navegação atual pelos menus do usuário escolhido.",
+      "A seleção de tela tem busca por nome: o sistema tem mais de 150 telas e o filtro encontra a desejada (ex: 'CRM — Relatórios').",
+      "A lista de telas vem do cadastro de telas do sistema (src/lib/search-registry.ts): uma tela nova só aparece aqui depois de registrada nele.",
+      "A página inicial também é escolhida pela mesma busca.",
       "A seção Status é o cadastro único de etiquetas usadas pelos módulos (Oportunidade, Proposta, Amostra, Produto Cru, Requisição de Corte e Solicitação de Desenvolvimento).",
       "Cada status pertence a um tipo (módulo) e define rótulo, cor, ordem e regras de exibição.",
       "O nome é o valor interno gravado nos registros (ex: QUALIFICACAO) e não pode se repetir dentro do mesmo tipo.",
@@ -52,6 +55,8 @@ export const outrosContent: Record<string, InfoContent> = {
       "Apenas usuários ADMIN e SUDO podem criar, editar ou excluir status e gatilhos.",
     ],
     fields: [
+      { name: "Buscar tela", desc: "Filtra a lista de telas pelo nome, URL ou módulo" },
+      { name: "Página Inicial", desc: "Tela que abre ao clicar no logo ou na home" },
       { name: "Nome", desc: "Valor interno do status (ex: PENDENTE)" },
       { name: "Rótulo", desc: "Texto exibido nas telas (ex: Pendente)" },
       { name: "Tipo", desc: "Módulo que usa o status (ex: Oportunidade)" },

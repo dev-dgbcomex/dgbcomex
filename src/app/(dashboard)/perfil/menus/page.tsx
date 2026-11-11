@@ -11,13 +11,6 @@ import { Label } from "@/components/ui/label"
 import { ConfirmModal } from "@/components/ui/confirm-modal"
 import { Loader2, Plus, Save, Copy } from "lucide-react"
 import { CadastroStatus } from "@/components/admin/cadastro-status"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { DndContext, PointerSensor, useSensor, useSensors, closestCenter } from "@dnd-kit/core"
 import { SortableContext, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable"
 import type { Tela, Menu } from "./components/types"
@@ -25,6 +18,7 @@ import { SortableMenu } from "./components/sortable-menu"
 import { SortableItem } from "./components/sortable-item"
 import { CopiarMenusDialog } from "./components/copiar-dialog"
 import { NovoMenuDialog } from "./components/novo-menu-dialog"
+import { SeletorTela } from "./components/seletor-tela"
 
 export default function ConfigurarMenusPage() {
   return (
@@ -371,23 +365,13 @@ function ConfigurarMenusContent() {
         <div className="flex items-end gap-3">
           <div className="flex-1 space-y-2">
             <Label>Escolha a tela que abre ao clicar no logo ou na home</Label>
-            <Select
-              value={paginaInicial}
-              onValueChange={(v: string | null) => {
-                if (v) setPaginaInicial(v)
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione a página inicial" />
-              </SelectTrigger>
-              <SelectContent>
-                {telas.map((t: any) => (
-                  <SelectItem key={t.id} value={t.href}>
-                    {t.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <SeletorTela
+              telas={telas}
+              valor={paginaInicial}
+              chave="href"
+              onChange={(v) => setPaginaInicial(v)}
+              placeholder="Selecione a página inicial"
+            />
           </div>
           <Button onClick={salvarPaginaInicial} disabled={saving} className="gap-2">
             {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
@@ -522,26 +506,13 @@ function ConfigurarMenusContent() {
                         </DndContext>
 
                         <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-                          <div className="flex-1">
-                            <Select
-                              value={editForm[`novo-item-${menu.id}`] || ""}
-                              onValueChange={(v: string | null) => {
-                                if (v)
-                                  setEditForm((prev) => ({ ...prev, [`novo-item-${menu.id}`]: v }))
-                              }}
-                            >
-                              <SelectTrigger className="h-8 text-sm">
-                                <SelectValue placeholder="Selecionar tela..." />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {telas.map((t: any) => (
-                                  <SelectItem key={t.id} value={t.id}>
-                                    {t.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
+                          <SeletorTela
+                            telas={telas}
+                            valor={editForm[`novo-item-${menu.id}`] || ""}
+                            onChange={(v) =>
+                              setEditForm((prev) => ({ ...prev, [`novo-item-${menu.id}`]: v }))
+                            }
+                          />
                           <Button
                             size="sm"
                             variant="outline"

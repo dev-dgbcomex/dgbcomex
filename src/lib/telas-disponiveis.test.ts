@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import { searchRegistry } from "./search-registry"
-import { todasTelas } from "./telas-disponiveis"
+import { telasEstaticas, todasTelas } from "./telas-disponiveis"
 
 /**
  * `todasTelas()` alimenta o "selecionar tela" do /perfil/menus e a busca geral.
@@ -45,5 +45,47 @@ describe("telas disponiveis", () => {
     )
 
     expect(invalidas.map((item) => item.id)).toEqual([])
+  })
+
+  /**
+   * Telas que ficam de fora de propósito: a de login é pública e as demais são
+   * telas legadas/auxiliares que não fazem sentido como item de menu.
+   */
+  const IGNORADAS = new Set([
+    "/login",
+    "/admin/configuracoes/status",
+    "/kanban-standalone",
+    "/kanban-crm",
+    "/kanban-amostras-standalone",
+    "/comercial/crm/treinamento/admin/novo",
+    "/comercial/crm/treinamento/exportar-pdf",
+    "/processos/treinamento/admin/novo",
+    "/processos/treinamento/exportar-pdf",
+  ])
+
+  it("toda tela do app esta no registro (sem isso ela nao aparece no menu da Vercel)", () => {
+    const noRegistro = new Set(searchRegistry.map((item) => item.href.split("?")[0]))
+    const faltando = telasEstaticas().filter(
+      (href) => !IGNORADAS.has(href) && !noRegistro.has(href)
+    )
+
+    expect(faltando).toEqual([])
+  })
+
+  it("os relatorios do CRM estao no registro para virar item de menu", () => {
+    const relatorios = [
+      "/comercial/crm/relatorios",
+      "/comercial/crm/relatorios/atividades",
+      "/comercial/crm/relatorios/pessoas",
+      "/comercial/crm/relatorios/oportunidades",
+      "/comercial/crm/relatorios/propostas",
+      "/comercial/crm/relatorios/visitas",
+      "/comercial/crm/relatorios/conversoes",
+      "/comercial/crm/relatorios/clientes",
+    ]
+
+    for (const href of relatorios) {
+      expect(searchRegistry.some((item) => item.href === href)).toBe(true)
+    }
   })
 })
