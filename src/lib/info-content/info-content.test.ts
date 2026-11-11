@@ -222,6 +222,25 @@ describe("getInfoContent", () => {
     }
   })
 
+  it("as telas de visita explicam o cadastro rápido de contato", () => {
+    const telas = ["/comercial/crm/visitas/novo", "/comercial/crm/visitas/[id]"]
+
+    for (const caminho of telas) {
+      const conteudo = getInfoContent(caminho)
+      expect(conteudo).not.toBeNull()
+
+      const texto = [
+        conteudo?.description ?? "",
+        ...(conteudo?.rules ?? []),
+        ...(conteudo?.fields ?? []).map((f) => `${f.name}: ${f.desc}`),
+      ].join("\n")
+
+      expect(texto).toMatch(/Contato/)
+      expect(texto).toMatch(/\(\+\)/)
+      expect(texto).toMatch(/pessoa|cliente/i)
+    }
+  })
+
   it("os relatórios do CRM explicam filtros, cards e exportações", () => {
     const telas = [
       "/comercial/crm/relatorios",

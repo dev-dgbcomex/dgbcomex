@@ -383,15 +383,18 @@ export const crmContent: Record<string, InfoContent> = {
   "/comercial/crm/visitas/novo": {
     title: "Nova Visita",
     description:
-      "Agende uma visita a uma pessoa. Informe o tipo, data, contato e observações sobre o objetivo da visita.",
+      "Agende uma visita a uma pessoa, a um cliente ou a um avulso. Informe o tipo, data, contato e observações sobre o objetivo da visita.",
     rules: [
-      "Selecione a pessoa (autocomplete com pessoas cadastradas).",
+      "Escolha quem será visitado: Pessoa (Negócio), Cliente ou Visita Avulsa.",
       "Escolha o tipo: Presencial (vai até o cliente), Vídeo (chamada online) ou Telefone.",
       "A data e horário definem quando a visita será realizada.",
-      "O contato é opcional — você pode selecionar um contato cadastrado da pessoa.",
+      "O contato é opcional — você pode selecionar um contato já cadastrado da pessoa ou do cliente.",
+      "O botão (+) ao lado de Contato cadastra um novo contato vinculado à pessoa ou ao cliente da visita, sem sair da tela.",
+      "Ao salvar com recorrência, a agenda cria uma visita por período definido.",
     ],
     fields: [
-      { name: "Pessoa", desc: "Pessoa a ser visitada (obrigatório)" },
+      { name: "Pessoa / Cliente", desc: "Quem será visitado (obrigatório, exceto na visita avulsa)" },
+      { name: "Contato", desc: "Contato da pessoa ou do cliente — pode ser cadastrado na hora" },
       { name: "Tipo", desc: "Presencial, Vídeo ou Telefone" },
       { name: "Data/Hora", desc: "Quando a visita será realizada" },
       { name: "Observações", desc: "Objetivo e pauta da visita" },
@@ -405,8 +408,10 @@ export const crmContent: Record<string, InfoContent> = {
       "Visitas realizadas podem ter fotos anexadas.",
       "O relato da visita ajuda a IA a gerar resumo da pessoa.",
       "É possível alterar o status da visita (Realizada, Cancelada).",
+      "No modo de edição você pode trocar o contato da visita e cadastrar um novo contato (+) da pessoa ou do cliente vinculado.",
     ],
     fields: [
+      { name: "Contato", desc: "Contato da visita — pode ser alterado ou cadastrado na edição" },
       { name: "Fotos", desc: "Imagens registradas durante a visita" },
       { name: "Relato", desc: "Descrição do que foi tratado na visita" },
       { name: "Próximo Passo", desc: "Ação de follow-up acordada com o cliente" },

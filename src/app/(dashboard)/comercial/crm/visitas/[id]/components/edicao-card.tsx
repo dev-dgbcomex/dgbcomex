@@ -5,8 +5,10 @@ import { ViagemSelect } from "@/components/crm/viagem-select"
 import { CreatableSelect } from "@/components/ui/creatable-select"
 import { QuickCreateOportunidade } from "@/components/crm/quick-create-oportunidade"
 import { QuickCreateProposta } from "@/components/crm/quick-create-proposta"
+import { QuickCreateContato } from "@/components/crm/quick-create-contato"
 import type {
   Conflito,
+  ContatoResult,
   FormVisitaDetalhe,
   OportunidadeResumo,
   SetField,
@@ -24,7 +26,9 @@ interface EdicaoCardProps {
   onCopiarEndereco: () => void
   onOportunidadeCreated: (id: number) => void
   onPropostaCreated: (id: number, titulo: string) => void
+  onContatoCreated: (id: number) => void
   oportunidades?: OportunidadeResumo[]
+  contatos?: ContatoResult[]
 }
 
 export function EdicaoCard({
@@ -37,9 +41,17 @@ export function EdicaoCard({
   onCopiarEndereco,
   onOportunidadeCreated,
   onPropostaCreated,
+  onContatoCreated,
   oportunidades = [],
+  contatos = [],
 }: EdicaoCardProps) {
   const listaOportunidades = oportunidades ?? []
+  const contatoAtual = form.contatoId ?? visita.contatoId
+  const contatoAtualForaDaLista =
+    contatoAtual != null &&
+    !contatos.some((c) => c.id === contatoAtual) &&
+    !visita.contatoNome?.trim()
+  const semVinculo = !form.empresaId && !form.clienteId
   return (
     <>
       <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
@@ -119,6 +131,48 @@ export function EdicaoCard({
                   </option>
                 ))}
             </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">
+              Contato
+              {form.empresaId ? (
+                <QuickCreateContato
+                  empresaId={String(form.empresaId)}
+                  onCreated={onContatoCreated}
+                />
+              ) : form.clienteId ? (
+                <QuickCreateContato
+                  clienteId={String(form.clienteId)}
+                  clienteNome={visita.clienteNome || ""}
+                  onCreated={onContatoCreated}
+                />
+              ) : null}
+            </label>
+            <select
+              value={contatoAtual ? String(contatoAtual) : ""}
+              onChange={(e) =>
+                setField("contatoId", e.target.value ? parseInt(e.target.value) : null)
+              }
+              className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
+            >
+              <option value="">Sem contato</option>
+              {contatoAtualForaDaLista && (
+                <option value={String(contatoAtual)}>
+                  {visita.contatoNome || `Contato #${contatoAtual}`}
+                </option>
+              )}
+              {contatos.map((c) => (
+                <option key={c.id} value={String(c.id)}>
+                  {c.nome}
+                  {c.cargo ? ` (${c.cargo})` : ""}
+                </option>
+              ))}
+            </select>
+            {semVinculo && (
+              <p className="text-[11px] text-slate-400 mt-1">
+                A visita precisa estar vinculada a uma pessoa ou cliente para cadastrar contatos.
+              </p>
+            )}
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">

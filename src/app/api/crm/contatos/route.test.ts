@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { NextRequest, NextResponse } from "next/server"
 import { requireAuth } from "@/lib/auth"
 import { db } from "@/lib/db"
-import { notificar } from "@/lib/notificar"
+import { notificar, notificarErro } from "@/lib/notificar"
 import { createQueryBuilder, resetDb } from "@/test/route-db-mock"
 import { GET, POST } from "./route"
 
@@ -107,5 +107,17 @@ describe("POST /api/crm/contatos", () => {
     const builder = (db.insert as ReturnType<typeof vi.fn>).mock.results[0].value
     const values = builder.values.mock.calls[0][0]
     expect(values).toMatchObject({ empresaId: null, clienteId: 9 })
+  })
+
+  it("notifica a equipe e devolve 500 quando a criação falha", async () => {
+    db.insert = vi.fn(() => {
+      throw new Error("not-null violation")
+    })
+    const res = await post({ nome: "Ana", clienteId: "9" })
+    expect(res.status).toBe(500)
+    expect(await res.json()).toEqual({
+      error: "Erro ao criar contato. A equipe de suporte foi notificada.",
+    })
+    expect(notificarErro).toHaveBeenCalledWith("POST /api/crm/contatos", expect.any(Error))
   })
 })

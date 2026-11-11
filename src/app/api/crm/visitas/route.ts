@@ -9,7 +9,7 @@ import { crmOportunidades } from "@/lib/db/schema/crm-oportunidades"
 import { crmPropostas } from "@/lib/db/schema/crm-propostas"
 import { usuarios } from "@/lib/db/schema/usuarios"
 import { eq, desc, like, or, and, count, gte, lte, inArray } from "drizzle-orm"
-import { registrarLog, notificar } from "@/lib/notificar"
+import { registrarLog, notificar, notificarErro } from "@/lib/notificar"
 import { notificarAtividadeComercial } from "@/lib/crm/notificar-atividade"
 import { inserirTimelineEvento } from "@/lib/crm-timeline"
 import { temEndereco, type EnderecoCampos } from "@/lib/crm/endereco"
@@ -245,7 +245,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ visita: primeira, total: inserted.length }, { status: 201 })
   } catch (error) {
     console.error("[POST /api/crm/visitas]", error)
-    return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 })
+    await notificarErro("POST /api/crm/visitas", error)
+    return NextResponse.json(
+      { error: "Erro ao criar visita. A equipe de suporte foi notificada." },
+      { status: 500 }
+    )
   }
 }
 

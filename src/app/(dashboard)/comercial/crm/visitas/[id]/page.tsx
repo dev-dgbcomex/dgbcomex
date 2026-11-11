@@ -11,7 +11,13 @@ import { ConfirmModal } from "@/components/ui/confirm-modal"
 import { useStatuses } from "@/hooks/use-statuses"
 import { normalizeVisitaFotos } from "@/lib/crm/visita-fotos"
 import type { VisitaFoto } from "@/lib/crm/visita-fotos"
-import type { Conflito, FormVisitaDetalhe, OportunidadeResumo, VisitaDetalhe } from "../types"
+import type {
+  Conflito,
+  ContatoResult,
+  FormVisitaDetalhe,
+  OportunidadeResumo,
+  VisitaDetalhe,
+} from "../types"
 import VincularVisitaModal from "@/components/crm/vincular-visita-modal"
 import { VisitaHeader } from "./components/visita-header"
 import { EdicaoCard } from "./components/edicao-card"
@@ -62,6 +68,24 @@ export default function DetalheVisitaPage() {
 
   const visita = visitaQuery.data ?? null
   const loading = visitaQuery.isLoading && !visita
+
+  const contatosQuery = useQuery<ContatoResult[]>({
+    queryKey: ["visita-contatos-edicao", visita?.empresaId, visita?.clienteId],
+    queryFn: async () => {
+      if (visita?.empresaId) {
+        const res = await fetch(`/api/crm/pessoas/${visita.empresaId}`)
+        const data = await res.json()
+        return Array.isArray(data.contatos) ? data.contatos : []
+      }
+      if (visita?.clienteId) {
+        const res = await fetch(`/api/crm/contatos?clienteId=${visita.clienteId}`)
+        const data = await res.json()
+        return Array.isArray(data) ? data : []
+      }
+      return []
+    },
+    enabled: !!(visita?.empresaId || visita?.clienteId),
+  })
 
   useEffect(() => {
     if (visitaQuery.data) {
@@ -119,6 +143,11 @@ export default function DetalheVisitaPage() {
   function handlePropostaCreated(id: number, titulo: string) {
     setField("propostaId", id)
     setField("propostaTitulo", titulo)
+  }
+
+  function handleContatoCreated(id: number) {
+    queryClient.invalidateQueries({ queryKey: ["visita-contatos-edicao"] })
+    setField("contatoId", id)
   }
 
   function startEditing() {
@@ -397,7 +426,9 @@ export default function DetalheVisitaPage() {
             onCopiarEndereco={handleCopiarEndereco}
             onOportunidadeCreated={handleOportunidadeCreated}
             onPropostaCreated={handlePropostaCreated}
+            onContatoCreated={handleContatoCreated}
             oportunidades={oportunidades}
+            contatos={contatosQuery.data ?? []}
           />
         ) : (
           <VisualizacaoCard

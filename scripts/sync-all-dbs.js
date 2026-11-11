@@ -69,6 +69,11 @@ DO $$ BEGIN
   ALTER TABLE crm_contatos ADD COLUMN IF NOT EXISTS cliente_id integer REFERENCES clientes(id);
 EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
 END $$;
+-- crm_contatos: empresa_id deixa de ser obrigatorio (contato de cliente ou avulso)
+DO $$ BEGIN
+  ALTER TABLE crm_contatos ALTER COLUMN empresa_id DROP NOT NULL;
+EXCEPTION WHEN undefined_table THEN NULL;
+END $$;
 
 -- crm_timeline_eventos: timeline tambem do cliente (empresa_id deixa de ser obrigatorio)
 DO $$ BEGIN
@@ -149,6 +154,11 @@ END $$;
 DO $$ BEGIN
   ALTER TABLE crm_visitas ADD COLUMN IF NOT EXISTS endereco_lng double precision;
 EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
+END $$;
+-- crm_visitas: empresa_id deixa de ser obrigatorio (visita de cliente ou avulsa)
+DO $$ BEGIN
+  ALTER TABLE crm_visitas ALTER COLUMN empresa_id DROP NOT NULL;
+EXCEPTION WHEN undefined_table THEN NULL;
 END $$;
 
 -- crm_visitas_localizacoes: adicionar colunas faltantes

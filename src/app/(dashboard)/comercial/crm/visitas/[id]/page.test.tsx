@@ -469,6 +469,80 @@ describe("DetalheVisitaPage", () => {
     )
   })
 
+  it("permite cadastrar e vincular um contato na edição da visita", async () => {
+    const handler = ({ method, url }: { method: string; url: string }) => {
+      if (method === "GET" && url === "/api/crm/oportunidades") return { json: [] }
+      if (method === "GET" && url === "/api/crm/estados")
+        return { json: [{ id: 35, uf: "SP", nome: "São Paulo" }] }
+      if (method === "GET" && url === "/api/crm/viagens?all=true") return { json: [] }
+      if (method === "GET" && url === "/api/admin/status?tipo=VISITA")
+        return { json: statusesVisita }
+      if (method === "GET" && url === "/api/crm/visitas/1") return { json: visita }
+      if (method === "GET" && url === "/api/crm/cidades?estadoId=35")
+        return { json: [{ id: 1, nome: "São Paulo", estadoId: 35 }] }
+      if (method === "GET" && url === "/api/crm/pessoas/1")
+        return {
+          json: {
+            id: 1,
+            razaoSocial: "Tecelagem Alpha",
+            uf: "SP",
+            cidade: "São Paulo",
+            contatos: [{ id: 7, nome: "Ana Souza", cargo: "Compradora" }],
+          },
+        }
+      if (method === "GET" && url === "/api/crm/pessoas")
+        return { json: [{ id: 1, razaoSocial: "Tecelagem Alpha" }] }
+      if (method === "GET" && url.startsWith("/api/crm/visitas/conflictos?"))
+        return { json: { conflictos: [] } }
+      if (method === "POST" && url === "/api/crm/contatos")
+        return { json: { id: 9, nome: "Contato Novo" } }
+      if (method === "PUT" && url === "/api/crm/visitas/1") return { json: { ok: true } }
+      return { json: null }
+    }
+    const mock = createFetchMock(handler)
+    vi.stubGlobal("fetch", mock.fn)
+    renderPage(<DetalheVisitaPage />)
+
+    await screen.findByRole("heading", { name: "Visita — Tecelagem Alpha" })
+    fireEvent.click(screen.getByRole("button", { name: "Editar" }))
+    await screen.findByRole("button", { name: "Salvar" })
+
+    const contatoSelect = await waitFor(() => {
+      const select = screen
+        .getAllByRole("combobox")
+        .find(
+          (c) =>
+            c.tagName === "SELECT" &&
+            Array.from((c as HTMLSelectElement).options).some((o) =>
+              o.textContent?.includes("Ana Souza")
+            )
+        ) as HTMLSelectElement | undefined
+      expect(select).toBeDefined()
+      return select!
+    })
+
+    fireEvent.click(screen.getByTitle("Cadastrar novo contato"))
+    const dialog = await screen.findByRole("dialog")
+    fireEvent.change(within(dialog).getAllByRole("textbox")[0], {
+      target: { value: "Contato Novo" },
+    })
+    fireEvent.click(within(dialog).getByRole("button", { name: /^Criar$/ }))
+
+    await waitFor(() => {
+      const call = findCall(mock.calls, "/api/crm/contatos", "POST")
+      expect(call).toBeDefined()
+      expect(call!.body).toEqual(expect.objectContaining({ nome: "Contato Novo", empresaId: 1 }))
+    })
+
+    fireEvent.click(screen.getByRole("button", { name: "Salvar" }))
+
+    await waitFor(() => {
+      const call = findCall(mock.calls, "/api/crm/visitas/1", "PUT")
+      expect(call).toBeDefined()
+      expect(call!.body).toEqual(expect.objectContaining({ contatoId: 9 }))
+    })
+  })
+
   it("copia o endereço do cliente quando a visita está vinculada a um cliente", async () => {
     navMock.setParams({ id: "3" })
     const comCliente = {

@@ -5,7 +5,7 @@ import { crmContatos } from "@/lib/db/schema/crm-contatos"
 import { crmPessoas } from "@/lib/db/schema/crm-pessoas"
 import { clientes } from "@/lib/db/schema/clientes"
 import { eq, desc, like, sql } from "drizzle-orm"
-import { notificar, registrarLog } from "@/lib/notificar"
+import { notificar, notificarErro, registrarLog } from "@/lib/notificar"
 import { notificarAtividadeComercial } from "@/lib/crm/notificar-atividade"
 
 export async function GET(req: NextRequest) {
@@ -137,6 +137,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(novo, { status: 201 })
   } catch (error) {
     console.error("[POST /api/crm/contatos]", error)
-    return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 })
+    await notificarErro("POST /api/crm/contatos", error)
+    return NextResponse.json(
+      { error: "Erro ao criar contato. A equipe de suporte foi notificada." },
+      { status: 500 }
+    )
   }
 }

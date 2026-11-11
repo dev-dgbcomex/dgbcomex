@@ -855,12 +855,16 @@ async function migrate() {
         whatsapp VARCHAR(255),
         principal BOOLEAN DEFAULT false,
         observacoes TEXT,
-        empresa_id INTEGER NOT NULL REFERENCES crm_pessoas(id),
+        empresa_id INTEGER REFERENCES crm_pessoas(id),
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW()
       )
     `
     console.log("✓ Tabela crm_contatos criada")
+    // Contato pode ser de cliente (cliente_id) ou avulso: empresa_id nao e obrigatorio
+    await sql`ALTER TABLE crm_contatos ADD COLUMN IF NOT EXISTS cliente_id INTEGER REFERENCES clientes(id)`
+    await sql`ALTER TABLE crm_contatos ALTER COLUMN empresa_id DROP NOT NULL`
+    console.log("✓ crm_contatos: empresa_id pode ser nulo (contato de cliente ou avulso)")
 
     await sql`
       CREATE TABLE IF NOT EXISTS crm_oportunidades (
@@ -885,7 +889,7 @@ async function migrate() {
     await sql`
       CREATE TABLE IF NOT EXISTS crm_visitas (
         id SERIAL PRIMARY KEY,
-        empresa_id INTEGER NOT NULL REFERENCES crm_pessoas(id),
+        empresa_id INTEGER REFERENCES crm_pessoas(id),
         oportunidade_id INTEGER REFERENCES crm_oportunidades(id),
         contato_id INTEGER REFERENCES crm_contatos(id),
         data_visita DATE NOT NULL,
@@ -900,6 +904,9 @@ async function migrate() {
       )
     `
     console.log("✓ Tabela crm_visitas criada")
+    // Visita pode ser de cliente (cliente_id) ou avulsa (nome_avulso): empresa_id nao e obrigatorio
+    await sql`ALTER TABLE crm_visitas ALTER COLUMN empresa_id DROP NOT NULL`
+    console.log("✓ crm_visitas: empresa_id pode ser nulo (visita de cliente ou avulsa)")
 
     await sql`
       CREATE TABLE IF NOT EXISTS crm_tarefas (

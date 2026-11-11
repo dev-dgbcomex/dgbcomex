@@ -5,6 +5,7 @@ import { requireAuth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { geocodificarCamposEndereco } from "@/lib/crm/geocode"
 import { createDbMock, createQueryBuilder } from "@/test/route-db-mock"
+import { notificarErro } from "@/lib/notificar"
 import { POST } from "./route"
 
 vi.mock("@/lib/auth", () => ({ requireAuth: vi.fn() }))
@@ -19,7 +20,11 @@ vi.mock("@/lib/db", () => ({
   },
 }))
 vi.mock("@/lib/crm/geocode", () => ({ geocodificarCamposEndereco: vi.fn() }))
-vi.mock("@/lib/notificar", () => ({ registrarLog: vi.fn(), notificar: vi.fn() }))
+vi.mock("@/lib/notificar", () => ({
+  registrarLog: vi.fn(),
+  notificar: vi.fn(),
+  notificarErro: vi.fn(),
+}))
 vi.mock("@/lib/crm-timeline", () => ({ inserirTimelineEvento: vi.fn() }))
 
 const sessionAdmin = { session: { user: { id: "1", role: "ADMIN", name: "Tiago" } }, userId: 1 }
@@ -72,6 +77,23 @@ describe("POST /api/crm/visitas", () => {
       })
     )
     expect(res.status).toBe(401)
+  })
+
+  it("notifica a equipe e devolve 500 quando a criação da visita falha", async () => {
+    ;(db.insert as ReturnType<typeof vi.fn>).mockImplementation(() => {
+      throw new Error("not-null violation")
+    })
+    const res = await POST(
+      new NextRequest("http://localhost/api/crm/visitas", {
+        method: "POST",
+        body: JSON.stringify({ dataVisita: "2026-08-10" }),
+      })
+    )
+    expect(res.status).toBe(500)
+    expect(await res.json()).toEqual({
+      error: "Erro ao criar visita. A equipe de suporte foi notificada.",
+    })
+    expect(notificarErro).toHaveBeenCalledWith("POST /api/crm/visitas", expect.any(Error))
   })
 
   it("geocodifica o endereço da visita e salva as coordenadas no cadastro", async () => {
