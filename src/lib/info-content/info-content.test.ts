@@ -173,6 +173,23 @@ describe("getInfoContent", () => {
     expect(textoKanban).toMatch(/Exibir no Kanban/)
   })
 
+  it("os chamados explicam quem recebe notificacao e e-mail", () => {
+    const chamados = getInfoContent("/chamados")
+
+    expect(chamados).not.toBeNull()
+
+    const texto = [
+      chamados?.description ?? "",
+      ...(chamados?.rules ?? []),
+      ...(chamados?.fields ?? []).map((f) => `${f.name}: ${f.desc}`),
+    ].join("\n")
+
+    expect(texto).toMatch(/notifica/i)
+    expect(texto).toMatch(/e-mail/i)
+    expect(texto).toMatch(/administradores/i)
+    expect(texto).toMatch(/fila/i)
+  })
+
   it("a tela antiga de status aponta para o novo cadastro", () => {
     const antigo = getInfoContent("/admin/configuracoes/status")
 

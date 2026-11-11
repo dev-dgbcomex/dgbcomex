@@ -12,7 +12,7 @@ import { handleApiError } from "@/lib/api-error"
 import { validateRequest } from "@/lib/validation"
 import { chamadoSchema } from "@/lib/validation"
 import { calcularSLA } from "@/lib/chamados/sla"
-import { notificarChamado } from "@/lib/chamados/notificar"
+import { notificarChamado, notificarEquipeChamado } from "@/lib/chamados/notificar"
 import type { ChamadoPrioridade } from "@/lib/db/schema/chamados"
 
 const responsavel = alias(usuarios, "responsavel")
@@ -155,6 +155,15 @@ export async function POST(req: NextRequest) {
       link: `/chamados/${nova.id}`,
       usuarioId: nova.solicitanteId,
       usuarioNome: session.user.name,
+    })
+
+    await notificarEquipeChamado({
+      tipo: "CHAMADO",
+      mensagem: `Chamado #${nova.id} cadastrado: ${nova.titulo}`,
+      link: `/chamados/${nova.id}`,
+      areaId: nova.areaId,
+      usuarioNome: session.user.name,
+      excluirUsuarioIds: [nova.solicitanteId, auth.userId],
     })
 
     return NextResponse.json(nova, { status: 201 })

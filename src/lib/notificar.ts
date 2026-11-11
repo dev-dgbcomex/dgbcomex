@@ -6,12 +6,37 @@ import { eq, inArray } from "drizzle-orm"
 import { and } from "drizzle-orm"
 import { sendEmail } from "./email"
 import { registrarLog } from "./log"
+import { urlBase } from "./branding"
 
 const SITE_URL =
   process.env.NEXT_PUBLIC_APP_URL ||
   (process.env.NODE_ENV === "development"
     ? "http://localhost:3000"
-    : "https://pdmprotextil.vercel.app")
+    : "https://dgbcomex.vercel.app")
+
+/**
+ * URL usada nos e-mails. O host da requisição tem prioridade: o
+ * NEXT_PUBLIC_APP_URL apontava para outro host e os links das notificações
+ * levavam para o sistema errado.
+ */
+async function urlDoSite(): Promise<string> {
+  try {
+    const base = await urlBase()
+    return base.origin
+  } catch {
+    return SITE_URL
+  }
+}
+
+function htmlNotificacao(mensagem: string, link: string | undefined, site: string) {
+  return `<div style="font-family:Arial,sans-serif;padding:20px;max-width:600px">
+<h2 style="color:#1e3a5f">PDM Têxtil</h2>
+<p>${mensagem}</p>
+${link ? `<p><a href="${site}${link}" style="background:#1e3a5f;color:#fff;padding:10px 20px;text-decoration:none;border-radius:6px;display:inline-block">Ver detalhes</a></p>` : ""}
+<hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0" />
+<p style="color:#94a3b8;font-size:12px">Sistema DGBCOMEX</p>
+</div>`
+}
 
 /**
  * Tipo reservado em `notificacao_regras`: os perfis listados aqui recebem
@@ -40,7 +65,7 @@ export async function notificar(
   link?: string,
   usuarioNome?: string | null,
   roles?: string[],
-  opcoes?: { excluirUsuarioId?: number | null }
+  opcoes?: { excluirUsuarioId?: number | null; excluirUsuarioIds?: (number | null | undefined)[] }
 ) {
   let rolesFiltro: string[]
 
@@ -74,10 +99,12 @@ export async function notificar(
   }[]
 
   // Atividade do próprio usuário não é enviada para ele (ex.: notificar as outras contas).
-  const usuariosNotificados =
-    opcoes?.excluirUsuarioId != null
-      ? usuariosFiltrados.filter((u) => u.id !== opcoes.excluirUsuarioId)
-      : usuariosFiltrados
+  const excluidos = new Set(
+    [opcoes?.excluirUsuarioId, ...(opcoes?.excluirUsuarioIds ?? [])].filter(
+      (id): id is number => typeof id === "number"
+    )
+  )
+  const usuariosNotificados = usuariosFiltrados.filter((u) => !excluidos.has(u.id))
 
   if (usuariosNotificados.length === 0) {
     return { usuariosNotificados: 0, emailsEnviados: 0, erroEmail: null as string | null }
@@ -102,13 +129,7 @@ export async function notificar(
     const result = await sendEmail({
       to: emailsValidos,
       subject: `[PDM Têxtil] ${mensagem}`,
-      html: `<div style="font-family:Arial,sans-serif;padding:20px;max-width:600px">
-<h2 style="color:#1e3a5f">PDM Têxtil</h2>
-<p>${mensagem}</p>
-${link ? `<p><a href="${SITE_URL}${link}" style="background:#1e3a5f;color:#fff;padding:10px 20px;text-decoration:none;border-radius:6px;display:inline-block">Ver detalhes</a></p>` : ""}
-<hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0" />
-<p style="color:#94a3b8;font-size:12px">Sistema DGBCOMEX</p>
-</div>`,
+      html: htmlNotificacao(mensagem, link, await urlDoSite()),
     })
     emailsEnviados = result.sent
     erroEmail = result.error ?? null
@@ -125,6 +146,58 @@ ${link ? `<p><a href="${SITE_URL}${link}" style="background:#1e3a5f;color:#fff;p
     usuariosNotificados: usuariosNotificados.length,
     emailsEnviados,
     erroEmail,
+  }
+}
+
+/**
+ * Notifica um usuário específico (notificação in-app + e-mail).
+ * Usado quando o destinatário não pode ser deduzido por perfil, como o
+ * solicitante de um chamado.
+ */
+export async function notificarUsuario(params: {
+  usuarioId: number
+  tipo: string
+  mensagem: string
+  link?: string
+  usuarioNome?: string | null
+}) {
+  const [destinatario] = await db
+    .select({ id: usuarios.id, name: usuarios.name, email: usuarios.email })
+    .from(usuarios)
+    .where(eq(usuarios.id, params.usuarioId))
+    .limit(1)
+
+  if (!destinatario) {
+    return { notificado: false, emailEnviado: false, erroEmail: null as string | null }
+  }
+
+  await db.insert(notificacoes).values({
+    tipo: params.tipo,
+    mensagem: params.mensagem,
+    usuarioId: destinatario.id,
+    usuarioNome: params.usuarioNome || null,
+    link: params.link || null,
+  })
+
+  const email = destinatario.email
+  if (!email || !email.includes("@")) {
+    return { notificado: true, emailEnviado: false, erroEmail: "Usuário sem e-mail válido" }
+  }
+
+  const result = await sendEmail({
+    to: [email],
+    subject: `[PDM Têxtil] ${params.mensagem}`,
+    html: htmlNotificacao(params.mensagem, params.link, await urlDoSite()),
+  })
+
+  if (result.error) {
+    console.error(`[NOTIFICAR] E-mail não enviado para ${destinatario.name}: ${result.error}`)
+  }
+
+  return {
+    notificado: true,
+    emailEnviado: result.sent > 0,
+    erroEmail: result.error ?? null,
   }
 }
 

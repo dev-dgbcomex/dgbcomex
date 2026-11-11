@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { requireAuth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { createQueryBuilder, resetDb } from "@/test/route-db-mock"
+import { notificarChamado, notificarEquipeChamado } from "@/lib/chamados/notificar"
 import { PATCH } from "./route"
 
 vi.mock("@/lib/auth", () => ({ requireAuth: vi.fn() }))
@@ -13,6 +14,7 @@ vi.mock("@/lib/notificar", () => ({
 }))
 vi.mock("@/lib/chamados/notificar", () => ({
   notificarChamado: vi.fn(),
+  notificarEquipeChamado: vi.fn(),
 }))
 vi.mock("@/lib/db", () => ({
   db: { select: vi.fn(), insert: vi.fn(), update: vi.fn() },
@@ -85,6 +87,20 @@ describe("PATCH /api/chamados/[id]/status", () => {
     const res = await patch("3", { status: "RESOLVIDO" })
     expect(res.status).toBe(200)
     expect((await res.json()).status).toBe("RESOLVIDO")
+  })
+
+  it("avisa o solicitante e a equipe da fila na mudança de status", async () => {
+    db.select.mockReturnValueOnce(createQueryBuilder([ticketRow()]))
+    db.update.mockReturnValueOnce(createQueryBuilder([ticketRow({ status: "RESOLVIDO" })]))
+
+    await patch("3", { status: "RESOLVIDO" })
+
+    expect(notificarChamado).toHaveBeenCalledWith(
+      expect.objectContaining({ usuarioId: ticketRow().solicitanteId })
+    )
+    expect(notificarEquipeChamado).toHaveBeenCalledWith(
+      expect.objectContaining({ areaId: ticketRow().areaId })
+    )
   })
 
   it("bloqueia mudança de um chamado fechado para algo que não seja reaberto", async () => {

@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { requireAuth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { createQueryBuilder, resetDb } from "@/test/route-db-mock"
+import { notificarChamado, notificarEquipeChamado } from "@/lib/chamados/notificar"
 import { GET, POST } from "./route"
 
 vi.mock("@/lib/auth", () => ({ requireAuth: vi.fn() }))
@@ -13,6 +14,7 @@ vi.mock("@/lib/notificar", () => ({
 }))
 vi.mock("@/lib/chamados/notificar", () => ({
   notificarChamado: vi.fn(),
+  notificarEquipeChamado: vi.fn(),
 }))
 vi.mock("@/lib/db", () => ({
   db: { select: vi.fn(), insert: vi.fn() },
@@ -129,6 +131,24 @@ describe("POST /api/chamados", () => {
     })
     expect(res.status).toBe(201)
     expect((await res.json()).id).toBe(50)
+  })
+
+  it("avisa a equipe da fila e os administradores ao criar o chamado", async () => {
+    db.insert.mockReturnValueOnce(createQueryBuilder([{ ...ticketRow, id: 50 }]))
+    await post({
+      titulo: "Teste",
+      descricao: "Problema",
+      categoria: "INCIDENTE",
+      prioridade: "MEDIA",
+      areaId: 2,
+    })
+
+    expect(notificarChamado).toHaveBeenCalledWith(
+      expect.objectContaining({ usuarioId: ticketRow.solicitanteId, link: "/chamados/50" })
+    )
+    expect(notificarEquipeChamado).toHaveBeenCalledWith(
+      expect.objectContaining({ areaId: 2, link: "/chamados/50" })
+    )
   })
 
   it("retorna 400 quando o processo não pertence à fila selecionada", async () => {

@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { requireAuth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { createQueryBuilder, resetDb } from "@/test/route-db-mock"
-import { notificarChamado } from "@/lib/chamados/notificar"
+import { notificarChamado, notificarEquipeChamado } from "@/lib/chamados/notificar"
 import { POST } from "./route"
 
 vi.mock("@/lib/auth", () => ({ requireAuth: vi.fn() }))
@@ -14,6 +14,7 @@ vi.mock("@/lib/notificar", () => ({
 }))
 vi.mock("@/lib/chamados/notificar", () => ({
   notificarChamado: vi.fn(),
+  notificarEquipeChamado: vi.fn(),
 }))
 vi.mock("@/lib/db", () => ({
   db: { select: vi.fn(), insert: vi.fn(), update: vi.fn() },
@@ -134,6 +135,9 @@ describe("POST /api/chamados/[id]/mensagens", () => {
     )
     expect(notificarChamado).toHaveBeenCalledWith(
       expect.objectContaining({ usuarioId: 7, mensagem: expect.stringContaining("seu comentário") })
+    )
+    expect(notificarEquipeChamado).toHaveBeenCalledWith(
+      expect.objectContaining({ areaId: ticketRow.areaId })
     )
   })
 

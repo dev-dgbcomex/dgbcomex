@@ -21,6 +21,7 @@ import { sendEmail } from "@/lib/email"
 import {
   notificar,
   notificarAdmins,
+  notificarUsuario,
   rolesNotificacaoGlobal,
   ROLES_GLOBAIS_PADRAO,
   TIPO_REGRA_GLOBAL,
@@ -94,6 +95,80 @@ describe("notificar", () => {
 
     expect(resultado.usuariosNotificados).toBe(0)
     expect(db.insert).not.toHaveBeenCalled()
+  })
+
+  it("exclui varios usuarios da notificacao", async () => {
+    prepararSelects([[], [{ roles: ["ADMIN"] }], [admin, comercial]])
+
+    const resultado = await notificar(
+      "ATIVIDADE_COMERCIAL",
+      "Atividade",
+      undefined,
+      "Tiago",
+      undefined,
+      { excluirUsuarioIds: [admin.id, comercial.id] }
+    )
+
+    expect(resultado.usuariosNotificados).toBe(0)
+    expect(db.insert).not.toHaveBeenCalled()
+  })
+})
+
+describe("notificarUsuario", () => {
+  beforeEach(() => {
+    vi.mocked(db.select).mockReset()
+    vi.mocked(db.insert).mockReset()
+    vi.mocked(sendEmail).mockReset()
+    vi.mocked(sendEmail).mockResolvedValue({ sent: 1, error: null })
+    prepararInsert()
+  })
+
+  it("cria a notificacao in-app e envia o e-mail para o usuario", async () => {
+    prepararSelects([[admin]])
+
+    const resultado = await notificarUsuario({
+      usuarioId: admin.id,
+      tipo: "CHAMADO",
+      mensagem: "Chamado #1 cadastrado",
+      link: "/chamados/1",
+      usuarioNome: "Tiago",
+    })
+
+    expect(resultado.notificado).toBe(true)
+    expect(resultado.emailEnviado).toBe(true)
+    expect(db.insert).toHaveBeenCalledTimes(1)
+    expect(sendEmail).toHaveBeenCalledWith(
+      expect.objectContaining({ to: ["admin@dgbcomex.com"] })
+    )
+  })
+
+  it("nao notifica quando o usuario nao existe", async () => {
+    prepararSelects([[]])
+
+    const resultado = await notificarUsuario({
+      usuarioId: 99,
+      tipo: "CHAMADO",
+      mensagem: "Chamado #1 cadastrado",
+    })
+
+    expect(resultado.notificado).toBe(false)
+    expect(db.insert).not.toHaveBeenCalled()
+    expect(sendEmail).not.toHaveBeenCalled()
+  })
+
+  it("avisa quando o usuario nao tem e-mail valido", async () => {
+    prepararSelects([[{ id: 7, name: "Sem Email", email: "" }]])
+
+    const resultado = await notificarUsuario({
+      usuarioId: 7,
+      tipo: "CHAMADO",
+      mensagem: "Chamado #1 cadastrado",
+    })
+
+    expect(resultado.notificado).toBe(true)
+    expect(resultado.emailEnviado).toBe(false)
+    expect(resultado.erroEmail).toMatch(/e-mail/i)
+    expect(sendEmail).not.toHaveBeenCalled()
   })
 })
 

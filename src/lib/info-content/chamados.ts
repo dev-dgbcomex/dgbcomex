@@ -10,6 +10,9 @@ export const chamadosContent: Record<string, InfoContent> = {
       "A fila do chamado é definida por um setor (proc_areas), opcionalmente com ativo e processo vinculados.",
       "Chamados podem ser auto-atribuídos ou designados a um responsável; fechar/reabrir/cancelar substituem a exclusão.",
       "O SLA de primeira resposta é medido em horas úteis; o de resolução, em horas corridas conforme a prioridade.",
+      "Ao abrir um chamado, a equipe da fila (perfil com o mesmo nome da fila) e os administradores recebem notificação no painel e e-mail.",
+      "Novas respostas e mudanças de status também avisam a equipe da fila e os administradores; quem executou a ação não recebe o aviso.",
+      "O solicitante é avisado por notificação e e-mail a cada resposta ou mudança de status do próprio chamado.",
     ],
     fields: [
       { name: "Chamado", desc: "Solicitação com título, descrição, categoria, prioridade e fila" },
@@ -20,6 +23,10 @@ export const chamadosContent: Record<string, InfoContent> = {
         desc: "Prazo de primeira resposta (horas úteis) e de resolução (horas corridas)",
       },
       { name: "Mensagens", desc: "Thread com respostas, notas internas e mensagens do sistema" },
+      {
+        name: "Avisos",
+        desc: "Notificação no painel e e-mail para a equipe da fila, administradores e solicitante",
+      },
     ],
     examples: [
       {

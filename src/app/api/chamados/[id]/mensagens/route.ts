@@ -7,7 +7,7 @@ import { registrarLog } from "@/lib/notificar"
 import { handleApiError } from "@/lib/api-error"
 import { validateRequest } from "@/lib/validation"
 import { chamadoMensagemSchema } from "@/lib/validation"
-import { notificarChamado } from "@/lib/chamados/notificar"
+import { notificarChamado, notificarEquipeChamado } from "@/lib/chamados/notificar"
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -96,6 +96,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         link: `/chamados/${ticket.id}`,
         usuarioId: ticket.solicitanteId,
         usuarioNome: session.user.name,
+      })
+
+      await notificarEquipeChamado({
+        tipo: "CHAMADO",
+        mensagem: `Nova resposta no chamado #${ticket.id}: ${ticket.titulo}`,
+        link: `/chamados/${ticket.id}`,
+        areaId: ticket.areaId,
+        usuarioNome: session.user.name,
+        excluirUsuarioIds: [auth.userId],
       })
 
       if (
