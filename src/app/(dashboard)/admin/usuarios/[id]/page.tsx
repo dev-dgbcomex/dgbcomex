@@ -109,7 +109,7 @@ export default function EditarUsuarioPage() {
     <div className="max-w-xl mx-auto space-y-6">
       <div className="flex items-center gap-4">
         <Link href="/admin/usuarios">
-          <Button variant="ghost" size="icon">
+          <Button variant="ghost" size="icon" aria-label="Voltar">
             <ArrowLeft size={20} />
           </Button>
         </Link>

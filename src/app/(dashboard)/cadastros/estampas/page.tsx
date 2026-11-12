@@ -201,7 +201,12 @@ export default function EstampasPage() {
                         href={`/cadastros/estampas/${estampa.id}`}
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          aria-label={`Editar ${estampa.nome}`}
+                        >
                           <Pencil size={14} />
                         </Button>
                       </Link>
@@ -209,6 +214,7 @@ export default function EstampasPage() {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 text-red-500 hover:text-red-600"
+                        aria-label={`Excluir ${estampa.nome}`}
                         onClick={(e: MouseEvent<HTMLButtonElement>) => {
                           e.stopPropagation()
                           setDeleteTarget(estampa)

@@ -280,6 +280,7 @@ export function ConversationView({ chatId, onBack }: { chatId: number; onBack: (
             onClick={() => sendMsg.mutate()}
             disabled={!mensagem.trim() || sendMsg.isPending}
             className="h-10 w-10 flex-shrink-0"
+            aria-label="Enviar mensagem"
           >
             <Send size={16} />
           </Button>

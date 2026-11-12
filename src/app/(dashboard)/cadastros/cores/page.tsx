@@ -205,7 +205,12 @@ export default function CoresPage() {
                         href={`/cadastros/cores/${cor.id}`}
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          aria-label={`Editar ${cor.nome}`}
+                        >
                           <Pencil size={14} />
                         </Button>
                       </Link>
@@ -213,6 +218,7 @@ export default function CoresPage() {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 text-red-500 hover:text-red-600"
+                        aria-label={`Excluir ${cor.nome}`}
                         onClick={(e: MouseEvent<HTMLButtonElement>) => {
                           e.stopPropagation()
                           setDeleteTarget(cor)

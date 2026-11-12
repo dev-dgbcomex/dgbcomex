@@ -166,7 +166,7 @@ export default function ProcessoAtividadeFormPage() {
             processoIdParam ? `/processos/processos/${processoIdParam}` : "/processos/atividades"
           }
         >
-          <Button variant="ghost" size="icon">
+          <Button variant="ghost" size="icon" aria-label="Voltar">
             <ArrowLeft size={20} />
           </Button>
         </Link>

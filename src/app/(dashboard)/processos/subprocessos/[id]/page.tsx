@@ -159,7 +159,7 @@ export default function ProcessoSubprocessoFormPage() {
             processoIdParam ? `/processos/processos/${processoIdParam}` : "/processos/subprocessos"
           }
         >
-          <Button variant="ghost" size="icon">
+          <Button variant="ghost" size="icon" aria-label="Voltar">
             <ArrowLeft size={20} />
           </Button>
         </Link>

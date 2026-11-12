@@ -423,6 +423,7 @@ export default function WhatsAppCatalogosPage() {
                       size="icon"
                       onClick={() => handleEditLinha(l)}
                       className="h-7 w-7"
+                      aria-label={`Editar ${l.nome}`}
                     >
                       <Pencil size={13} />
                     </Button>
@@ -431,6 +432,7 @@ export default function WhatsAppCatalogosPage() {
                       size="icon"
                       onClick={() => handleDeleteLinha(l)}
                       className="h-7 w-7"
+                      aria-label={`Excluir ${l.nome}`}
                     >
                       <Trash2 size={13} />
                     </Button>

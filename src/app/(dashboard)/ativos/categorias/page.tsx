@@ -164,7 +164,12 @@ export default function AtivosCategoriasPage() {
                         href={`/ativos/categorias/${categoria.id}`}
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          aria-label={`Editar ${categoria.nome}`}
+                        >
                           <Pencil size={14} />
                         </Button>
                       </Link>
@@ -172,6 +177,7 @@ export default function AtivosCategoriasPage() {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 text-red-500 hover:text-red-600"
+                        aria-label={`Excluir ${categoria.nome}`}
                         onClick={(e: MouseEvent<HTMLButtonElement>) => {
                           e.stopPropagation()
                           setDeleteTarget(categoria)

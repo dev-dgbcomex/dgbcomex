@@ -212,7 +212,12 @@ export default function ClientesPage() {
                         href={`/comercial/clientes/${cliente.id}`}
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          aria-label={`Editar ${cliente.nome}`}
+                        >
                           <Pencil size={14} />
                         </Button>
                       </Link>
@@ -220,6 +225,7 @@ export default function ClientesPage() {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 text-red-500 hover:text-red-600"
+                        aria-label={`Excluir ${cliente.nome}`}
                         onClick={(e: MouseEvent<HTMLButtonElement>) => {
                           e.stopPropagation()
                           setDeleteTarget(cliente)

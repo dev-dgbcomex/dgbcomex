@@ -201,7 +201,12 @@ export default function FiosPage() {
                   <td className="p-4 text-right">
                     <div className="flex items-center justify-end gap-1">
                       <Link href={`/cadastros/fios/${fio.id}`} onClick={(e) => e.stopPropagation()}>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          aria-label={`Editar ${fio.nome}`}
+                        >
                           <Pencil size={14} />
                         </Button>
                       </Link>
@@ -209,6 +214,7 @@ export default function FiosPage() {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 text-red-500 hover:text-red-600"
+                        aria-label={`Excluir ${fio.nome}`}
                         onClick={(e: MouseEvent<HTMLButtonElement>) => {
                           e.stopPropagation()
                           setDeleteTarget(fio)

@@ -91,6 +91,7 @@ export function ComposicaoTab({
                   variant="ghost"
                   size="icon"
                   onClick={() => onExcluirComposicao(c)}
+                  aria-label="Remover composição"
                 >
                   <Trash2 size={16} />
                 </Button>

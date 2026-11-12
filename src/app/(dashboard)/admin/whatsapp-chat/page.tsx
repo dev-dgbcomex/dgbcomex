@@ -442,6 +442,7 @@ export default function WhatsAppChatPage() {
                   disabled={!inputMsg.trim() || sending}
                   size="icon"
                   className="shrink-0"
+                  aria-label="Enviar mensagem"
                 >
                   {sending ? <Loader2 className="animate-spin" size={16} /> : <Send size={16} />}
                 </Button>

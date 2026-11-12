@@ -208,7 +208,12 @@ export default function BasesUrdumePage() {
                         href={`/cadastros/bases-urdume/${base.id}`}
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          aria-label={`Editar ${base.nome}`}
+                        >
                           <Pencil size={14} />
                         </Button>
                       </Link>
@@ -216,6 +221,7 @@ export default function BasesUrdumePage() {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 text-red-500 hover:text-red-600"
+                        aria-label={`Excluir ${base.nome}`}
                         onClick={(e: MouseEvent<HTMLButtonElement>) => {
                           e.stopPropagation()
                           setDeleteTarget(base)

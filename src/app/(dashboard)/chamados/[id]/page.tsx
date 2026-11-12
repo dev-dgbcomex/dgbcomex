@@ -593,7 +593,7 @@ export default function ChamadoDetalhePage() {
   return (
     <div className="max-w-3xl mx-auto space-y-6 animate-fade-in">
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => router.push("/chamados")}>
+        <Button variant="ghost" size="icon" aria-label="Voltar" onClick={() => router.push("/chamados")}>
           <ArrowLeft size={20} />
         </Button>
         <div className="flex-1">

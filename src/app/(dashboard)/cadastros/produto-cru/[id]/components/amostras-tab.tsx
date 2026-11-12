@@ -221,6 +221,7 @@ export function AmostrasTab({
                       variant="ghost"
                       size="icon"
                       onClick={() => onExcluirAmostra(a)}
+                      aria-label="Remover amostra"
                     >
                       <Trash2 size={16} />
                     </Button>

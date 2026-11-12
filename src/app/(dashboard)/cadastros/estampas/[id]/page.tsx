@@ -116,7 +116,7 @@ export default function EstampaFormPage() {
     <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
       <div className="flex items-center gap-4">
         <Link href="/cadastros/estampas">
-          <Button variant="ghost" size="icon">
+          <Button variant="ghost" size="icon" aria-label="Voltar">
             <ArrowLeft size={20} />
           </Button>
         </Link>
