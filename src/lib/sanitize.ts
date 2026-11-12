@@ -1,10 +1,7 @@
-import DOMPurify from "dompurify"
+import { sanitize as dompurifySanitize } from "isomorphic-dompurify"
 
 export function sanitizeHtml(html: string): string {
-  if (typeof window === "undefined") {
-    return html
-  }
-  return DOMPurify.sanitize(html, {
+  return dompurifySanitize(html, {
     ALLOWED_TAGS: [
       "p",
       "br",
