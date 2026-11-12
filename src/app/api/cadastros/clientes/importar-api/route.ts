@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { clientes } from "@/lib/db/schema/clientes"
-import { eq, or, sql } from "drizzle-orm"
+import { eq, or, sql, inArray } from "drizzle-orm"
 export const dynamic = "force-dynamic"
 
 export async function POST(req: NextRequest) {
@@ -18,8 +18,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Nenhum item para importar" }, { status: 400 })
     }
 
-    let importados = 0
-    let duplicatas = 0
+    // uniqueKey is an API field name; translate to PDM field name
+    const pdmKeyField = (fieldMapping[uniqueKey] as string) || uniqueKey
+
+    // Mapeia todos os itens e coleta os valores de chave para verificacao em lote
+    const mappedItems: Array<{
+      mapped: Record<string, any>
+      keyValue: string | null
+      insertData: Record<string, any> | null
+    }> = []
 
     for (const item of items) {
       const mapped: Record<string, any> = {}
@@ -31,24 +38,7 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // uniqueKey is an API field name; translate to PDM field name
-      const pdmKeyField = (fieldMapping[uniqueKey] as string) || uniqueKey
-      const keyValue = mapped[pdmKeyField]
-      if (!keyValue) {
-        duplicatas++
-        continue
-      }
-
-      const existing = await db
-        .select({ id: clientes.id })
-        .from(clientes)
-        .where(or(eq(clientes.idIntegracao, String(keyValue)), eq(clientes.cnpj, String(keyValue))))
-        .limit(1)
-
-      if (existing.length > 0) {
-        duplicatas++
-        continue
-      }
+      const keyValue = mapped[pdmKeyField] ? String(mapped[pdmKeyField]) : null
 
       // Parse fields for insertion
       const insertData: Record<string, any> = {}
@@ -65,13 +55,55 @@ export async function POST(req: NextRequest) {
       if (mapped.idIntegracao) insertData.idIntegracao = String(mapped.idIntegracao)
       insertData.ativo = mapped.ativo === true || mapped.ativo === "true" || mapped.ativo === 1
 
-      if (!insertData.nome) {
+      mappedItems.push({ mapped, keyValue, insertData: insertData.nome ? insertData : null })
+    }
+
+    // Verificacao de duplicatas em lote: uma consulta para todas as chaves
+    const keyValues = mappedItems
+      .map((m) => m.keyValue)
+      .filter((v): v is string => v !== null)
+
+    let existingKeys = new Set<string>()
+
+    if (keyValues.length > 0) {
+      const existing = await db
+        .select({ idIntegracao: clientes.idIntegracao, cnpj: clientes.cnpj })
+        .from(clientes)
+        .where(
+          or(
+            inArray(clientes.idIntegracao, keyValues),
+            inArray(clientes.cnpj, keyValues),
+          ),
+        )
+
+      for (const row of existing) {
+        if (row.idIntegracao) existingKeys.add(row.idIntegracao)
+        if (row.cnpj) existingKeys.add(row.cnpj)
+      }
+    }
+
+    let importados = 0
+    let duplicatas = 0
+    const toInsert: Record<string, any>[] = []
+
+    for (const m of mappedItems) {
+      if (!m.keyValue || existingKeys.has(m.keyValue)) {
         duplicatas++
         continue
       }
 
-      await db.insert(clientes).values(insertData as any)
-      importados++
+      if (!m.insertData) {
+        duplicatas++
+        continue
+      }
+
+      toInsert.push(m.insertData)
+    }
+
+    // Insercao em lote: uma consulta para todos os novos clientes
+    if (toInsert.length > 0) {
+      await db.insert(clientes).values(toInsert)
+      importados = toInsert.length
     }
 
     return NextResponse.json({ importados, duplicatas })
