@@ -168,7 +168,7 @@ export default function AtivosPlanosPage() {
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8"
-                          aria-label={`Editar ${plano.nome}`}
+                          aria-label={`Editar ${plano.ativoNome || plano.tipoVistoriaNome || "plano"}`}
                         >
                           <Pencil size={14} />
                         </Button>
@@ -177,7 +177,7 @@ export default function AtivosPlanosPage() {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 text-red-500 hover:text-red-600"
-                        aria-label={`Excluir ${plano.nome}`}
+                        aria-label={`Excluir ${plano.ativoNome || plano.tipoVistoriaNome || "plano"}`}
                         onClick={(e: MouseEvent<HTMLButtonElement>) => {
                           e.stopPropagation()
                           setDeleteTarget(plano)

@@ -209,7 +209,7 @@ export default function ProdutoCruPage() {
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8"
-                          aria-label={`Editar ${produto.nome}`}
+                          aria-label={`Editar ${produto.descricao}`}
                         >
                           <Pencil size={14} />
                         </Button>
@@ -218,7 +218,7 @@ export default function ProdutoCruPage() {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 text-red-500 hover:text-red-600"
-                        aria-label={`Excluir ${produto.nome}`}
+                        aria-label={`Excluir ${produto.descricao}`}
                         onClick={(e: MouseEvent<HTMLButtonElement>) => {
                           e.stopPropagation()
                           setDeleteTarget(produto)
