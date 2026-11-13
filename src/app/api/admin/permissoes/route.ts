@@ -13,6 +13,7 @@ const MODULOS = [
   "AMOSTRAS",
   "USUARIOS",
   "CONFIGURACOES",
+  "VISITAS",
 ]
 const PERMISSOES = ["VIEW", "INSERT", "UPDATE", "DELETE"]
 
