@@ -99,7 +99,7 @@ function VisitasPageContent() {
   const [debouncedSearch, setDebouncedSearch] = useState("")
   const [page, setPage] = useState(1)
   const [modo, setModo] = useState<ModoVisao>(
-    searchParams.get("view") === "kanban" ? "kanban" : "tabela"
+    searchParams.get("view") === "kanban" ? "kanban" : "calendario"
   )
   const [selectedVisita, setSelectedVisita] = useState<{ id: number; nome: string } | null>(null)
   const [dataInicio, setDataInicio] = useState("")

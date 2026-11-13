@@ -23,6 +23,7 @@ import {
   Unlink,
   Clock,
   MessageSquare,
+  RefreshCw,
 } from "lucide-react"
 import { toast } from "sonner"
 import { ConfirmModal } from "@/components/ui/confirm-modal"
@@ -75,6 +76,7 @@ export default function EditarClientePage({ params }: { params: Promise<{ id: st
   const [loadingContatos, setLoadingContatos] = useState(false)
   const [orfaos, setOrfaos] = useState<Contato[]>([])
   const [contatoSelecionado, setContatoSelecionado] = useState("")
+  const [atualizandoCNPJ, setAtualizandoCNPJ] = useState(false)
 
   const [historico, setHistorico] = useState<HistoricoPromocao | null>(null)
   const [loadingHistorico, setLoadingHistorico] = useState(false)
@@ -255,6 +257,56 @@ export default function EditarClientePage({ params }: { params: Promise<{ id: st
     setRepToRemove(null)
   }
 
+  async function atualizarDadosCNPJ() {
+    if (!cliente) return
+    const cnpjLimpo = (cliente.cnpj || "").replace(/\D/g, "")
+    if (cnpjLimpo.length !== 14) {
+      toast.error("CNPJ deve ter 14 dígitos")
+      return
+    }
+    setAtualizandoCNPJ(true)
+    try {
+      const res = await fetch(`/api/crm/consulta-cnpj?cnpj=${cnpjLimpo}`)
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || "Erro ao consultar CNPJ")
+      }
+      const data = await res.json()
+      const api = data.apiData
+      if (!api) {
+        toast.error("CNPJ não encontrado na Receita Federal")
+        return
+      }
+
+      const endereco = [
+        api.logradouro,
+        api.numero,
+        api.bairro,
+        api.complemento,
+      ]
+        .filter(Boolean)
+        .join(", ")
+
+      setCliente((prev) => {
+        if (!prev) return null
+        return {
+          ...prev,
+          nome: api.nome_fantasia || prev.nome,
+          razaoSocial: api.razao_social || prev.razaoSocial,
+          endereco: endereco || prev.endereco,
+          cidade: api.municipio || prev.cidade,
+          uf: api.uf || prev.uf,
+        }
+      })
+
+      toast.success("Cliente atualizado com dados da Receita Federal")
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao atualizar dados do CNPJ")
+    } finally {
+      setAtualizandoCNPJ(false)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (!cliente) return
@@ -361,13 +413,28 @@ export default function EditarClientePage({ params }: { params: Promise<{ id: st
               <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
                 CNPJ *
               </label>
-              <input
-                type="text"
-                value={cliente.cnpj}
-                onChange={(e) => handleChange("cnpj", e.target.value)}
-                className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm font-mono"
-                required
-              />
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={cliente.cnpj}
+                  onChange={(e) => handleChange("cnpj", e.target.value)}
+                  className="flex-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm font-mono"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={atualizarDadosCNPJ}
+                  disabled={atualizandoCNPJ || !cliente?.cnpj}
+                  className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 transition-colors"
+                  title="Atualizar dados do CNPJ via Receita Federal"
+                >
+                  {atualizandoCNPJ ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <RefreshCw size={16} />
+                  )}
+                </button>
+              </div>
             </div>
 
             <div className="space-y-2 md:col-span-2">

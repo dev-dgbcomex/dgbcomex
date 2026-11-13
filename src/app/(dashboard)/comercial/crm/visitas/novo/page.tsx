@@ -228,7 +228,19 @@ function NovaVisitaPageContent() {
     setField("propostaTitulo", titulo)
   }
 
-  function copiarEnderecoEmpresa() {
+  async function copiarEnderecoEmpresa() {
+    const enderecoCompleto = [
+      empresaEndereco.endereco,
+      empresaEndereco.numero,
+      empresaEndereco.complemento,
+      empresaEndereco.bairro,
+      empresaEndereco.cidade,
+      empresaEndereco.uf,
+      empresaEndereco.cep,
+    ]
+      .filter(Boolean)
+      .join(", ")
+
     setForm((prev) => ({
       ...prev,
       endereco: empresaEndereco.endereco || "",
@@ -239,6 +251,13 @@ function NovaVisitaPageContent() {
       uf: empresaEndereco.uf || "",
       cep: empresaEndereco.cep || "",
     }))
+
+    try {
+      await navigator.clipboard.writeText(enderecoCompleto)
+      toast.success("Endereço copiado para a área de transferência")
+    } catch {
+      toast.success("Endereço preenchido no formulário")
+    }
   }
 
   function handleTrocar() {
