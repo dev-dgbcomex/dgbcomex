@@ -270,6 +270,33 @@ O módulo `src/app/(dashboard)/comercial` está **100% sem `any`** (0 matches em
 - Seed: `node scripts/seed-vistorias.js` (categorias + tipos da taxonomia, idempotente).
 - Testes: `agendamento.test.ts` (unitário) + list/form pages + telas atípicas (tipos-vistoria form, agenda de vistorias, dashboard).
 
+# Bancos ERP Externos — Regras de Segurança Obrigatórias
+
+## Bancos abrangidos
+
+| Banco | Tipo | Onde | Papel |
+|-------|------|------|-------|
+| **DBMicrodata_DGB** | SQL Server (ERP legado) | rede interna | Romaneio de coleta (`Car_Romaneio` / `Car_Itens_Romaneio`, procedure `SP_Car_InsertRomaneio_Separacao`) |
+| **DBProDash** | SQL Server (ERP ao vivo) | rede interna | Fonte da verdade de faturamento e KPIs BI |
+
+## Regras rígidas (não negociáveis)
+
+1. **Nenhuma alteração sem autorização prévia do usuário.** É proibido executar `INSERT`, `UPDATE`, `DELETE`, `DROP`, `ALTER`, `CREATE` ou qualquer DDL/DML nesses bancos sem aprovação explícita e documentada do usuário. Apenas `SELECT` é permitido por padrão.
+2. **Backup automático obrigatório antes de qualquer operação.** Antes de qualquer leitura que possa gerar efeito colateral, procedure call ou sincronização, execute backup automático do banco alvo. Nunca pule o backup.
+3. **Nunca conectar diretamente do Next.js ao SQL Server.** Todo acesso aos bancos ERP deve passar exclusivamente pela **api-microdata** (FastAPI on-premise). O dgbcomex não tem string de conexão direta para `DBMicrodata_DGB` nem `DBProDash`.
+4. **Somente leitura via api-microdata.** O dgbcomex consome os ERPs apenas para leitura de pedidos, faturamentos e estoque. Qualquera gravação (ex.: procedure de romaneio) só ocorre por decisão explícita do usuário e via api-microdata.
+5. **Não rodar migrations do dgbcomex nesses bancos.** Migrations Drizzle/DDL só existem para Neon e warehouse local (`DATABASE_URL` / `DATABASE_URL_LOCAL`).
+
+## Procedimento antes de qualquer toque nos ERPs
+
+1. Obter autorização explícita do usuário (por escrito no chat/commit).
+2. Executar backup automático do banco alvo (`DBMicrodata_DGB` ou `DBProDash`).
+3. Confirmar backup concluído com sucesso.
+4. Executar a operação apenas via api-microdata.
+5. Registrar a operação no commit e, se aplicável, no `AGENTS.md`.
+
+---
+
 # Commits — sempre
 
 **Ao concluir qualquer entrega, commitar e dar push — sem precisar perguntar.** Vale para os dois repos:
