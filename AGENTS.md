@@ -297,6 +297,47 @@ O módulo `src/app/(dashboard)/comercial` está **100% sem `any`** (0 matches em
 
 ---
 
+# Lembretes de visitas por email — cron na api-microdata
+
+## Visão geral
+
+O dgbcomex (Vercel, plano Hobby) **não roda cron confiável** (1x/dia em UTC). Os lembretes de visita rodam na **api-microdata** (FastAPI on-premise), que tem acesso ao Neon e ao warehouse local.
+
+## Componentes
+
+| Arquivo | Função |
+|---------|--------|
+| `M:\dev\api-microdata\app\src\api\routers\lembretes_visitas.py` | Router FastAPI com endpoints POST protegidos por `Bearer <JWT_SECRET>` |
+| `M:\dev\api-microdata\scripts\enviar_lembretes_visitas.py` | Script standalone chamado pelo Agendador de Tarefas do Windows |
+
+## Endpoints (api-microdata, porta 58244)
+
+- `POST /lembretes-visitas/dia-anterior` — busca visitas `AGENDADA` para **amanhã** no Neon (`crm_visitas.data_visita`), envia email para o `criado_por`, marca `lembrete_dia_anterior_enviado = true`
+- `POST /lembretes-visitas/dia-da-visita` — busca visitas `AGENDADA` para **hoje**, envia email, marca `lembrete_dia_visita_enviado = true`
+
+## Agendador de Tarefas do Windows
+
+Criar duas tarefas no Agendador de Tarefas (executar na máquina onde a api-microdata roda):
+
+| Tarefa | Horário | Comando |
+|--------|---------|---------|
+| Lembrete dia anterior | 13:55 (Brasília) | `python M:\dev\api-microdata\scripts\enviar_lembretes_visitas.py dia-anterior` |
+| Lembrete dia da visita | 07:30 (Brasília) | `python M:\dev\api-microdata\scripts\enviar_lembretes_visitas.py dia-da-visita` |
+
+## Banco de dados
+
+Migration `0068_crm_visitas_lembretes_email.sql` adiciona as colunas:
+- `crm_visitas.lembrete_dia_anterior_enviado` (boolean, default false)
+- `crm_visitas.lembrete_dia_visita_enviado` (boolean, default false)
+
+Aplicadas no Neon e replicadas no warehouse local.
+
+## Configuração
+
+O router reusa `JWT_SECRET` (já no `.env` da api-microdata) como token de autorização do cron. SMTP usa `GMAIL_USER` / `GMAIL_APP_PASSWORD` (já no `.env`).
+
+---
+
 # Commits — sempre
 
 **Ao concluir qualquer entrega, commitar e dar push — sem precisar perguntar.** Vale para os dois repos:
