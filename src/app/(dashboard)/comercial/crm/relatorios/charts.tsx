@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import {
   BarChart,
   Bar,
@@ -15,6 +16,7 @@ import {
 import { UserPlus, Target, FileText, PieChart } from "lucide-react"
 import { ChartTooltip } from "@/components/ui/chart-tooltip"
 import { corPorTitulo } from "@/lib/dracula"
+import { ModalDetalhesGrafico } from "@/components/crm/relatorios/modal-detalhes-grafico"
 import type { CSSProperties } from "react"
 
 const CHART_COLORS = [
@@ -61,23 +63,37 @@ function GraficoCard({
   titulo,
   icone,
   children,
+  onClick,
 }: {
   titulo: string
   icone: React.ReactNode
   children: React.ReactNode
+  onClick?: () => void
 }) {
   const estilo = corPorTitulo(titulo)
   return (
     <div
+      onClick={onClick}
+      onKeyDown={(e) => {
+        if ((e.key === "Enter" || e.key === " ") && onClick) {
+          e.preventDefault()
+          onClick()
+        }
+      }}
+      role="button"
+      tabIndex={0}
       style={
         {
           "--card-fundo": estilo.fundoClaro,
           "--card-fundo-escuro": estilo.fundoEscuro,
           "--card-borda": estilo.borda,
           "--card-realce": estilo.cor,
+          cursor: onClick ? "pointer" : "default",
         } as CSSProperties
       }
-      className="rounded-xl border border-[color:var(--card-borda)] bg-white dark:bg-slate-900 bg-[image:var(--card-fundo)] dark:bg-[image:var(--card-fundo-escuro)] p-5"
+      className={`rounded-xl border border-[color:var(--card-borda)] bg-white dark:bg-slate-900 bg-[image:var(--card-fundo)] dark:bg-[image:var(--card-fundo-escuro)] p-5 transition-colors ${
+        onClick ? "hover:border-[color:var(--card-realce)]" : ""
+      }`}
     >
       <div className="flex items-center gap-2 mb-4">
         <span style={{ color: estilo.cor }}>{icone}</span>
@@ -89,10 +105,20 @@ function GraficoCard({
 }
 
 export function CrmRelatoriosCharts({ data }: { data: RelatoriosData }) {
+  const [abertoLeads, setAbertoLeads] = useState(false)
+  const [abertoPipeline, setAbertoPipeline] = useState(false)
+  const [abertoRepresentante, setAbertoRepresentante] = useState(false)
+  const [abertoPropostas, setAbertoPropostas] = useState(false)
+  const [abertoTarefas, setAbertoTarefas] = useState(false)
+  const [abertoConversao, setAbertoConversao] = useState(false)
   return (
     <>
       <div className="grid gap-6 md:grid-cols-2">
-        <GraficoCard titulo="Leads por Origem" icone={<UserPlus size={16} />}>
+        <GraficoCard
+          titulo="Leads por Origem"
+          icone={<UserPlus size={16} />}
+          onClick={() => setAbertoLeads(true)}
+        >
           {data.leadsPorOrigem && data.leadsPorOrigem.length > 0 ? (
             <>
               <ResponsiveContainer width="100%" height={220}>
@@ -119,13 +145,30 @@ export function CrmRelatoriosCharts({ data }: { data: RelatoriosData }) {
                   <Tooltip content={<ChartTooltip />} />
                 </RPieChart>
               </ResponsiveContainer>
+              <ModalDetalhesGrafico
+                aberto={abertoLeads}
+                setAberto={setAbertoLeads}
+                titulo="Leads por Origem"
+                colunas={[
+                  { chave: "origem", label: "Origem" },
+                  { chave: "total", label: "Quantidade" },
+                ]}
+                dados={data.leadsPorOrigem.map((s) => ({
+                  origem: s.origem,
+                  total: s.total,
+                }))}
+              />
             </>
           ) : (
             <p className="text-sm text-slate-400 text-center py-12">Nenhum dado</p>
           )}
         </GraficoCard>
 
-        <GraficoCard titulo="Pipeline (Oportunidades por Status)" icone={<Target size={16} />}>
+        <GraficoCard
+          titulo="Pipeline (Oportunidades por Status)"
+          icone={<Target size={16} />}
+          onClick={() => setAbertoPipeline(true)}
+        >
           {data.oportunidadesPorStatus && data.oportunidadesPorStatus.length > 0 ? (
             <>
               <ResponsiveContainer width="100%" height={220}>
@@ -151,53 +194,96 @@ export function CrmRelatoriosCharts({ data }: { data: RelatoriosData }) {
                     fill="#6366f1"
                     radius={[4, 4, 0, 0]}
                     name="Registros"
+                    label={{ position: "top", fill: "#374151", fontSize: 11 }}
                     animationDuration={1800}
                     animationEasing="ease-in-out"
                     animationBegin={1000}
                   />
                 </BarChart>
               </ResponsiveContainer>
+              <ModalDetalhesGrafico
+                aberto={abertoPipeline}
+                setAberto={setAbertoPipeline}
+                titulo="Pipeline (Oportunidades por Status)"
+                colunas={[
+                  { chave: "name", label: "Status" },
+                  { chave: "total", label: "Quantidade" },
+                  { chave: "valor", label: "Valor" },
+                ]}
+                dados={data.oportunidadesPorStatus.map((s) => ({
+                  name: PIPELINE_LABELS[s.status] || s.status,
+                  total: s.total,
+                  valor: s.valor,
+                }))}
+                formatarValor={(valor, chave) =>
+                  chave === "valor" ? formatCurrency(Number(valor)) : String(valor)
+                }
+              />
             </>
           ) : (
             <p className="text-sm text-slate-400 text-center py-12">Nenhum dado</p>
           )}
         </GraficoCard>
 
-        <GraficoCard titulo="Oportunidades por Representante" icone={<FileText size={16} />}>
+        <GraficoCard
+          titulo="Oportunidades por Representante"
+          icone={<FileText size={16} />}
+          onClick={() => setAbertoRepresentante(true)}
+        >
           {data.oportunidadesPorResponsavel && data.oportunidadesPorResponsavel.length > 0 ? (
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart
-                data={data.oportunidadesPorResponsavel}
-                layout="vertical"
-                margin={{ left: 100 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
-                <XAxis type="number" tick={{ fontSize: 11 }} stroke="#94a3b8" />
-                <YAxis
-                  type="category"
-                  dataKey="nome"
-                  tick={{ fontSize: 11 }}
-                  stroke="#94a3b8"
-                  width={90}
-                />
-                <Tooltip content={<ChartTooltip formatter={(v) => `${v} registros`} />} />
-                <Bar
-                  dataKey="total"
-                  fill="#06b6d4"
-                  radius={[0, 4, 4, 0]}
-                  name="Oportunidades"
-                  animationDuration={1800}
-                  animationEasing="ease-in-out"
-                  animationBegin={1200}
-                />
-              </BarChart>
-            </ResponsiveContainer>
+            <>
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart
+                  data={data.oportunidadesPorResponsavel}
+                  layout="vertical"
+                  margin={{ left: 100 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
+                  <XAxis type="number" tick={{ fontSize: 11 }} stroke="#94a3b8" />
+                  <YAxis
+                    type="category"
+                    dataKey="nome"
+                    tick={{ fontSize: 11 }}
+                    stroke="#94a3b8"
+                    width={90}
+                  />
+                  <Tooltip content={<ChartTooltip formatter={(v) => `${v} registros`} />} />
+                  <Bar
+                    dataKey="total"
+                    fill="#06b6d4"
+                    radius={[0, 4, 4, 0]}
+                    name="Oportunidades"
+                    label={{ position: "end", fill: "#374151", fontSize: 11 }}
+                    animationDuration={1800}
+                    animationEasing="ease-in-out"
+                    animationBegin={1200}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+              <ModalDetalhesGrafico
+                aberto={abertoRepresentante}
+                setAberto={setAbertoRepresentante}
+                titulo="Oportunidades por Representante"
+                colunas={[
+                  { chave: "nome", label: "Representante" },
+                  { chave: "total", label: "Quantidade" },
+                ]}
+                dados={data.oportunidadesPorResponsavel.map((s) => ({
+                  nome: s.nome,
+                  total: s.total,
+                }))}
+              />
+            </>
           ) : (
             <p className="text-sm text-slate-400 text-center py-12">Nenhum dado</p>
           )}
         </GraficoCard>
 
-        <GraficoCard titulo="Propostas por Status" icone={<FileText size={16} />}>
+        <GraficoCard
+          titulo="Propostas por Status"
+          icone={<FileText size={16} />}
+          onClick={() => setAbertoPropostas(true)}
+        >
           {data.propostasPorStatus && data.propostasPorStatus.length > 0 ? (
             <>
               <ResponsiveContainer width="100%" height={220}>
@@ -213,6 +299,8 @@ export function CrmRelatoriosCharts({ data }: { data: RelatoriosData }) {
                     innerRadius={40}
                     outerRadius={80}
                     dataKey="value"
+                    label={({ name, value }) => `${name}: ${value}`}
+                    labelLine={false}
                     startAngle={90}
                     endAngle={-270}
                     animationDuration={2500}
@@ -240,6 +328,19 @@ export function CrmRelatoriosCharts({ data }: { data: RelatoriosData }) {
                   </span>
                 ))}
               </div>
+              <ModalDetalhesGrafico
+                aberto={abertoPropostas}
+                setAberto={setAbertoPropostas}
+                titulo="Propostas por Status"
+                colunas={[
+                  { chave: "status", label: "Status" },
+                  { chave: "total", label: "Quantidade" },
+                ]}
+                dados={data.propostasPorStatus.map((s) => ({
+                  status: PROPOSTA_LABELS[s.status] || s.status,
+                  total: s.total,
+                }))}
+              />
             </>
           ) : (
             <p className="text-sm text-slate-400 text-center py-12">Nenhum dado</p>
@@ -248,31 +349,55 @@ export function CrmRelatoriosCharts({ data }: { data: RelatoriosData }) {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <GraficoCard titulo="Tarefas por Status" icone={<Target size={16} />}>
+        <GraficoCard
+          titulo="Tarefas por Status"
+          icone={<Target size={16} />}
+          onClick={() => setAbertoTarefas(true)}
+        >
           {data.tarefasPorStatus && data.tarefasPorStatus.length > 0 ? (
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={data.tarefasPorStatus}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="status" tick={{ fontSize: 11 }} stroke="#94a3b8" />
-                <YAxis tick={{ fontSize: 11 }} stroke="#94a3b8" />
-                <Tooltip content={<ChartTooltip />} />
-                <Bar
-                  dataKey="total"
-                  fill="#f97316"
-                  radius={[4, 4, 0, 0]}
-                  name="Tarefas"
-                  animationDuration={1800}
-                  animationEasing="ease-in-out"
-                  animationBegin={1100}
-                />
-              </BarChart>
-            </ResponsiveContainer>
+            <>
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={data.tarefasPorStatus}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis dataKey="status" tick={{ fontSize: 11 }} stroke="#94a3b8" />
+                  <YAxis tick={{ fontSize: 11 }} stroke="#94a3b8" />
+                  <Tooltip content={<ChartTooltip />} />
+                  <Bar
+                    dataKey="total"
+                    fill="#f97316"
+                    radius={[4, 4, 0, 0]}
+                    name="Tarefas"
+                    label={{ position: "top", fill: "#374151", fontSize: 11 }}
+                    animationDuration={1800}
+                    animationEasing="ease-in-out"
+                    animationBegin={1100}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+              <ModalDetalhesGrafico
+                aberto={abertoTarefas}
+                setAberto={setAbertoTarefas}
+                titulo="Tarefas por Status"
+                colunas={[
+                  { chave: "status", label: "Status" },
+                  { chave: "total", label: "Quantidade" },
+                ]}
+                dados={data.tarefasPorStatus.map((s) => ({
+                  status: s.status,
+                  total: s.total,
+                }))}
+              />
+            </>
           ) : (
             <p className="text-sm text-slate-400 text-center py-12">Nenhum dado</p>
           )}
         </GraficoCard>
 
-        <GraficoCard titulo="Taxa de Conversão" icone={<PieChart size={16} />}>
+        <GraficoCard
+          titulo="Taxa de Conversão"
+          icone={<PieChart size={16} />}
+          onClick={() => setAbertoConversao(true)}
+        >
           {data.taxaConversao && data.taxaConversao.total > 0 ? (
             <div className="flex flex-col items-center justify-center py-4">
               <div className="relative w-32 h-32">
@@ -295,6 +420,8 @@ export function CrmRelatoriosCharts({ data }: { data: RelatoriosData }) {
                       innerRadius={40}
                       outerRadius={65}
                       dataKey="value"
+                      label={({ name, value }) => `${name}: ${value}`}
+                      labelLine={false}
                       animationDuration={1000}
                       animationEasing="ease-out"
                     >
@@ -324,6 +451,27 @@ export function CrmRelatoriosCharts({ data }: { data: RelatoriosData }) {
                   {data.taxaConversao.perdidas}
                 </span>
               </div>
+              <ModalDetalhesGrafico
+                aberto={abertoConversao}
+                setAberto={setAbertoConversao}
+                titulo="Taxa de Conversão"
+                colunas={[
+                  { chave: "status", label: "Status" },
+                  { chave: "total", label: "Quantidade" },
+                ]}
+                dados={[
+                  { status: "Ganhas", total: data.taxaConversao.ganhas },
+                  { status: "Perdidas", total: data.taxaConversao.perdidas },
+                  {
+                    status: "Abertas",
+                    total:
+                      data.taxaConversao.total -
+                      data.taxaConversao.ganhas -
+                      data.taxaConversao.perdidas,
+                  },
+                ]}
+                totalLabel="Total oportunidades"
+              />
             </div>
           ) : (
             <p className="text-sm text-slate-400 text-center py-12">Nenhum dado</p>
