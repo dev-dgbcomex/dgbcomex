@@ -1,78 +1,90 @@
 "use client"
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/react-query"
+import Link from "next/link"
+import dynamic from "next/dynamic"
+import { useState, useCallback } from "react"
+import { usePathname } from "next/navigation"
+import {
+  Calendar,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  MapPin,
+  Users,
+  ArrowRight,
+  BarChart3,
+  PieChart as PieChartIcon,
+  ClipboardCheck,
+  Navigation,
+  User,
+  Loader2,
+} from "lucide-react"
+import VisitLocationModal from "@/components/crm/visit-location-modal"
+import ViagemCronogramaModal from "@/components/crm/viagem-cronograma"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { InfoButton } from "@/components/ui/info-button"
 import { getInfoContent } from "@/lib/info-content"
-import Link from "next/link"
-import { Suspense, useState, useEffect, useCallback, useRef } from "react"
-import { useRouter, usePathname, useSearchParams } from "next/navigation"
-import {
-  PlusCircle,
-  CalendarDays,
-  Table,
-  Columns,
-  Search,
-  MapPin,
-  Navigation,
-  Users,
-  User,
-  ChevronLeft,
-  ChevronRight,
-  CalendarRange,
-  X,
-  Trash2,
-  CheckSquare,
-  AlertTriangle,
-  Link as LinkIcon,
-} from "lucide-react"
-import { toast } from "sonner"
-import { useStatuses } from "@/hooks/use-statuses"
-import dynamic from "next/dynamic"
-import { PageSkeleton } from "@/components/ui/page-skeleton"
-import type { VisitaResumo } from "./types"
+import type { VisitaModalRow } from "./types"
 
-const VisitasCalendario = dynamic(() => import("@/components/crm/visitas-calendario"), {
-  ssr: false,
-})
-const VisitasKanban = dynamic(() => import("@/components/crm/visitas-kanban"), { ssr: false })
-const FloatableKanban = dynamic(
-  () => import("@/components/crm/floatable-kanban").then((m) => m.FloatableKanban),
-  { ssr: false }
-)
-const VisitLocationModal = dynamic(() => import("@/components/crm/visit-location-modal"), {
+const VisitasCharts = dynamic(() => import("./dashboard/charts").then((m) => m.VisitasCharts), {
   ssr: false,
 })
 
-const PAGE_SIZE = 50
-
-async function fetchVisitasPaginated(params: {
-  mine: boolean
-  page: number
-  q: string
-  dataInicio: string
-  dataFim: string
-  avulsas: boolean
-}): Promise<{ data: VisitaResumo[]; total: number; totalPages: number }> {
-  const sp = new URLSearchParams()
-  sp.set("page", String(params.page))
-  sp.set("limit", String(PAGE_SIZE))
-  if (params.mine) sp.set("mine", "true")
-  if (params.q) sp.set("q", params.q)
-  if (params.dataInicio) sp.set("dataInicio", params.dataInicio)
-  if (params.dataFim) sp.set("dataFim", params.dataFim)
-  if (params.avulsas) sp.set("avulsas", "true")
-  const res = await fetch(`/api/crm/visitas?${sp}`)
-  if (!res.ok) throw new Error("Falha ao carregar")
-  return res.json()
+type VisitasDashboardData = {
+  total: number
+  realizadas: number
+  canceladas: number
+  agendadas: number
+  hoje: number
+  esteMes: number
+  byTipo: { tipo: string; total: number }[]
+  byStatus: { status: string; total: number }[]
+  porDia: { dia: string; total: number }[]
+  porGerente: {
+    gerenteId: number | null
+    gerenteNome: string
+    visitas: number
+    diasAtivos: number
+    mediaPorDia: number
+    melhorDia: { dia: string; total: number } | null
+    piorDia: { dia: string; total: number } | null
+  }[]
+  viagens: {
+    viagemId: number | null
+    viagemTitulo: string
+    total: number
+    realizadas: number
+    dataInicio: string | null
+    dataFim: string | null
+    totalInvestimento: number
+    possivelRetorno: number
+    retornoReal: number
+    vendas: number
+  }[]
+  ultimasVisitas: {
+    id: number
+    empresaId: number
+    clienteId: number | null
+    dataVisita: string
+    hora: string | null
+    tipo: string
+    status: string
+    endereco: string | null
+    numero: string | null
+    complemento: string | null
+    bairro: string | null
+    cidade: string | null
+    uf: string | null
+  }[]
+  pesquisas: { enviadas: number; abertas: number; respondidas: number }
 }
 
-async function fetchVisitasAll(mine: boolean, avulsas: boolean): Promise<VisitaResumo[]> {
-  const sp = new URLSearchParams({ all: "true" })
-  if (mine) sp.set("mine", "true")
-  if (avulsas) sp.set("avulsas", "true")
-  const res = await fetch(`/api/crm/visitas?${sp}`)
-  if (!res.ok) throw new Error("Falha ao carregar")
-  return res.json()
+const STATUS_LABELS: Record<string, string> = {
+  AGENDADA: "Agendada",
+  EM_ANDAMENTO: "Em Andamento",
+  REALIZADA: "Realizada",
+  CANCELADA: "Cancelada",
 }
 
 const TIPO_LABELS: Record<string, string> = {
@@ -81,171 +93,84 @@ const TIPO_LABELS: Record<string, string> = {
   TELEFONE: "Telefone",
 }
 
-const TIPO_CORES: Record<string, string> = {
-  PRESENCIAL: "text-blue-600 bg-blue-50 dark:bg-blue-950/50 dark:text-blue-400",
-  VIDEO: "text-purple-600 bg-purple-50 dark:bg-purple-950/50 dark:text-purple-400",
-  TELEFONE: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/50 dark:text-emerald-400",
+const FILTROS_LABELS: Record<string, string> = {
+  total: "Total de Visitas",
+  realizadas: "Visitas Realizadas",
+  canceladas: "Visitas Canceladas",
+  agendadas: "Visitas Agendadas",
+  hoje: "Visitas de Hoje",
+  "este-mes": "Visitas deste Mês",
+  "pesquisas-respondidas": "Visitas com Pesquisa Respondida",
+  "tipo-PRESENCIAL": "Visitas Presenciais",
+  "tipo-VIDEO": "Visitas por Vídeo",
+  "tipo-TELEFONE": "Visitas por Telefone",
+  "status-EM_ANDAMENTO": "Visitas Em Andamento",
 }
 
-type ModoVisao = "tabela" | "calendario" | "kanban"
-
-function VisitasPageContent() {
-  const router = useRouter()
+export default function VisitasPage() {
   const pathname = usePathname()
-  const searchParams = useSearchParams()
   const info = getInfoContent(pathname)
-  const { getLabel, getColor } = useStatuses("VISITA")
-  const [search, setSearch] = useState("")
-  const [debouncedSearch, setDebouncedSearch] = useState("")
-  const [page, setPage] = useState(1)
-  const [modo, setModo] = useState<ModoVisao>(
-    searchParams.get("view") === "kanban" ? "kanban" : "calendario"
-  )
   const [selectedVisita, setSelectedVisita] = useState<{ id: number; nome: string } | null>(null)
-  const [dataInicio, setDataInicio] = useState("")
-  const [dataFim, setDataFim] = useState("")
-  const [selectedIds, setSelectedIds] = useState<number[]>([])
-  const debounceRef = useRef<NodeJS.Timeout | null>(null)
-  const queryClient = useQueryClient()
-
+  const [modalFiltro, setModalFiltro] = useState<string | null>(null)
+  const [modalTitle, setModalTitle] = useState("")
   const [visitasFilter, setVisitasFilter] = useState<"todas" | "minhas">("minhas")
-  const [filterAvulsas, setFilterAvulsas] = useState(false)
+  const [selectedViagem, setSelectedViagem] = useState<{
+    viagemId: number
+    viagemTitulo: string
+  } | null>(null)
 
-  const handleSearchChange = useCallback((value: string) => {
-    setSearch(value)
-    if (debounceRef.current) clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(() => {
-      setDebouncedSearch(value)
-      setPage(1)
-    }, 400)
-  }, [])
-
-  useEffect(() => {
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current)
-    }
-  }, [])
-
-  const isTableMode = modo === "tabela"
-
-  const { data: avulsasCount } = useQuery({
-    queryKey: ["crm-visitas-avulsas-count", visitasFilter],
-    queryFn: async () => {
-      const sp = new URLSearchParams({ page: "1", limit: "1", avulsas: "true" })
-      if (visitasFilter === "minhas") sp.set("mine", "true")
-      const res = await fetch(`/api/crm/visitas?${sp}`)
-      if (!res.ok) throw new Error("Falha ao carregar")
-      const data = await res.json()
-      return data?.total || 0
-    },
-    retry: 1,
-  })
-
-  const { data: tableData, isLoading: tableLoading } = useQuery<{
-    data: VisitaResumo[]
-    total: number
-    totalPages: number
-  }>({
-    queryKey: [
-      "crm-visitas-table",
-      visitasFilter,
-      page,
-      debouncedSearch,
-      dataInicio,
-      dataFim,
-      filterAvulsas,
-    ],
+  const { data, isLoading } = useQuery<VisitasDashboardData>({
+    queryKey: ["visitas-dashboard", visitasFilter],
     queryFn: () =>
-      fetchVisitasPaginated({
-        mine: visitasFilter === "minhas",
-        page,
-        q: debouncedSearch,
-        dataInicio,
-        dataFim,
-        avulsas: filterAvulsas,
-      }),
+      fetch(`/api/crm/visitas/dashboard${visitasFilter === "minhas" ? "?mine=true" : ""}`).then(
+        (r) => r.json()
+      ),
     retry: 1,
-    enabled: isTableMode,
   })
 
-  const { data: allVisitas, isLoading: allLoading } = useQuery<VisitaResumo[]>({
-    queryKey: ["crm-visitas-all", visitasFilter, filterAvulsas],
-    queryFn: () => fetchVisitasAll(visitasFilter === "minhas", filterAvulsas),
+  const modalQuery = useQuery<VisitaModalRow[]>({
+    queryKey: ["visitas-dashboard-lista", modalFiltro, visitasFilter],
+    queryFn: async () => {
+      const res = await fetch(
+        `/api/crm/visitas/dashboard-lista?filtro=${modalFiltro}${visitasFilter === "minhas" ? "&mine=true" : ""}`
+      )
+      if (!res.ok) return []
+      const data = await res.json()
+      return Array.isArray(data) ? data : []
+    },
+    enabled: !!modalFiltro,
     retry: 1,
-    enabled: !isTableMode,
   })
 
-  const isLoading = isTableMode ? tableLoading : allLoading
-  const tableRows = tableData?.data || []
-  const totalRows = tableData?.total || 0
-  const totalPages = tableData?.totalPages || 0
-  const visitas = isTableMode ? tableRows : allVisitas || []
+  const openModal = useCallback((filtro: string) => {
+    setModalTitle(FILTROS_LABELS[filtro] || filtro)
+    setModalFiltro(filtro)
+  }, [])
 
-  const fromRow = totalRows === 0 ? 0 : (page - 1) * PAGE_SIZE + 1
-  const toRow = Math.min(page * PAGE_SIZE, totalRows)
-
-  const allSelected = tableRows.length > 0 && tableRows.every((v) => selectedIds.includes(v.id))
-
-  const bulkStatusMutation = useMutation({
-    mutationFn: async ({ ids, status }: { ids: number[]; status: string }) => {
-      const res = await fetch("/api/crm/visitas/bulk", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids, status }),
-      })
-      if (!res.ok) throw new Error("Erro ao atualizar")
-      return res.json()
-    },
-    onSuccess: () => {
-      setSelectedIds([])
-      queryClient.invalidateQueries({ queryKey: ["crm-visitas-table"] })
-      toast.success("Status atualizado com sucesso")
-    },
-    onError: () => toast.error("Erro ao atualizar status"),
-  })
-
-  const bulkDeleteMutation = useMutation({
-    mutationFn: async (ids: number[]) => {
-      const res = await fetch("/api/crm/visitas/bulk", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids }),
-      })
-      if (!res.ok) {
-        const err = await res.json()
-        throw new Error(err.error || "Erro ao excluir")
-      }
-      return res.json()
-    },
-    onSuccess: () => {
-      setSelectedIds([])
-      queryClient.invalidateQueries({ queryKey: ["crm-visitas-table"] })
-      toast.success("Visitas excluidas com sucesso")
-    },
-    onError: (err: Error) => toast.error(err.message),
-  })
+  const modalLista = modalQuery.data ?? []
+  const modalLoading = modalQuery.isFetching
 
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-50">
-            Visitas{info && <InfoButton content={info} />}
+            Dashboard de Visitas{info && <InfoButton content={info} />}
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-            {isLoading
-              ? "Carregando..."
-              : isTableMode
-                ? totalRows > 0
-                  ? `${fromRow}-${toRow} de ${totalRows} visita(s)`
-                  : "0 visitas"
-                : `${visitas.length} visita(s)`}
+            Métricas de visitas comerciais, check-in e performance
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-0.5 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div
+            role="group"
+            aria-label="Filtro de visitas"
+            className="flex rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-0.5 shadow-sm"
+          >
             <button
+              type="button"
               onClick={() => setVisitasFilter("todas")}
+              aria-pressed={visitasFilter === "todas"}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                 visitasFilter === "todas"
                   ? "bg-blue-600 text-white shadow-sm"
@@ -256,7 +181,9 @@ function VisitasPageContent() {
               Todas
             </button>
             <button
+              type="button"
               onClick={() => setVisitasFilter("minhas")}
+              aria-pressed={visitasFilter === "minhas"}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                 visitasFilter === "minhas"
                   ? "bg-blue-600 text-white shadow-sm"
@@ -267,411 +194,358 @@ function VisitasPageContent() {
               Minhas Visitas
             </button>
           </div>
-          <div className="flex rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-0.5 shadow-sm">
-            <button
-              onClick={() => setModo("tabela")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                modo === "tabela"
-                  ? "bg-blue-600 text-white shadow-sm"
-                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
-              }`}
-            >
-              <Table size={14} />
-              Tabela
-            </button>
-            <button
-              onClick={() => setModo("calendario")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                modo === "calendario"
-                  ? "bg-blue-600 text-white shadow-sm"
-                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
-              }`}
-            >
-              <CalendarDays size={14} />
-              Calendário
-            </button>
-            <button
-              onClick={() => setModo("kanban")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                modo === "kanban"
-                  ? "bg-blue-600 text-white shadow-sm"
-                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
-              }`}
-            >
-              <Columns size={14} />
-              Kanban
-            </button>
-          </div>
           <Link
-            href="/comercial/crm/visitas/novo"
-            className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 transition-colors shadow-sm"
+            href="/comercial/crm/visitas"
+            className="text-sm text-blue-600 hover:underline flex items-center gap-1"
           >
-            <PlusCircle size={14} />
-            Nova Visita
+            Ver todas <ArrowRight size={14} />
           </Link>
         </div>
       </div>
 
-      {modo === "tabela" && (
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="relative max-w-md flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <input
-              type="text"
-              placeholder="Buscar por pessoa, cliente ou oportunidade..."
-              value={search}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+      {isLoading ? (
+        <div role="status" className="flex justify-center py-20">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+          <span className="sr-only">Carregando dashboard de visitas...</span>
+        </div>
+      ) : (
+        <>
+          {/* Linha 1: Cards de resumo */}
+          <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
+            <SummaryCard
+              onClick={() => openModal("total")}
+              icon={<Calendar size={20} />}
+              value={data?.total ?? 0}
+              label="Total Visitas"
+              bgColor="bg-blue-100 dark:bg-blue-950/50"
+              iconColor="text-blue-600 dark:text-blue-400"
+            />
+            <SummaryCard
+              onClick={() => openModal("realizadas")}
+              icon={<CheckCircle2 size={20} />}
+              value={data?.realizadas ?? 0}
+              label="Realizadas"
+              bgColor="bg-green-100 dark:bg-green-950/50"
+              iconColor="text-green-600 dark:text-green-400"
+            />
+            <SummaryCard
+              onClick={() => openModal("canceladas")}
+              icon={<XCircle size={20} />}
+              value={data?.canceladas ?? 0}
+              label="Canceladas"
+              bgColor="bg-red-100 dark:bg-red-950/50"
+              iconColor="text-red-600 dark:text-red-400"
+            />
+            <SummaryCard
+              onClick={() => openModal("agendadas")}
+              icon={<Clock size={20} />}
+              value={data?.agendadas ?? 0}
+              label="Agendadas"
+              bgColor="bg-indigo-100 dark:bg-indigo-950/50"
+              iconColor="text-indigo-600 dark:text-indigo-400"
+            />
+            <SummaryCard
+              onClick={() => openModal("hoje")}
+              icon={<MapPin size={20} />}
+              value={data?.hoje ?? 0}
+              label="Visitas Hoje"
+              bgColor="bg-amber-100 dark:bg-amber-950/50"
+              iconColor="text-amber-600 dark:text-amber-400"
+            />
+            <SummaryCard
+              onClick={() => openModal("este-mes")}
+              icon={<Calendar size={20} />}
+              value={data?.esteMes ?? 0}
+              label="Este Mes"
+              bgColor="bg-teal-100 dark:bg-teal-950/50"
+              iconColor="text-teal-600 dark:text-teal-400"
+            />
+            <SummaryCard
+              onClick={() => openModal("pesquisas-respondidas")}
+              icon={<ClipboardCheck size={20} />}
+              value={data?.pesquisas?.respondidas ?? 0}
+              label="Pesquisas Respondidas"
+              sub={`${data?.pesquisas?.abertas ?? 0} abertas`}
+              bgColor="bg-violet-100 dark:bg-violet-950/50"
+              iconColor="text-violet-600 dark:text-violet-400"
             />
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
-              <CalendarRange size={14} />
-              <span>Período:</span>
-            </div>
-            <input
-              type="date"
-              value={dataInicio}
-              onChange={(e) => {
-                setDataInicio(e.target.value)
-                setPage(1)
-              }}
-              aria-label="Data inicial do período"
-              className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <span className="text-xs text-slate-400">até</span>
-            <input
-              type="date"
-              value={dataFim}
-              onChange={(e) => {
-                setDataFim(e.target.value)
-                setPage(1)
-              }}
-              aria-label="Data final do período"
-              className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            {(dataInicio || dataFim) && (
-              <button
-                onClick={() => {
-                  setDataInicio("")
-                  setDataFim("")
-                  setPage(1)
-                }}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors min-h-[32px] min-w-[32px] flex items-center justify-center"
-                title="Limpar período"
+
+          {/* Linha 2: Graficos */}
+          <VisitasCharts data={data} openModal={openModal} />
+
+          {/* Linha 3: Viagens */}
+          <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-slate-100 dark:border-slate-800">
+              <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-50 flex items-center gap-2">
+                <Navigation size={16} className="text-cyan-500" />
+                Viagens
+              </h2>
+              <Link
+                href="/comercial/crm/viagens"
+                className="text-xs text-blue-600 hover:underline flex items-center gap-1"
               >
-                <X size={14} />
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-
-      {(avulsasCount || 0) > 0 && (
-        <div className="rounded-xl border border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-950/30 p-4 flex items-center gap-3">
-          <LinkIcon size={18} className="text-orange-500 shrink-0" />
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-orange-800 dark:text-orange-200">
-              <strong>{avulsasCount}</strong> visita(s) avulsa(s) aguardando vínculo
-            </p>
-            <p className="text-xs text-orange-600 dark:text-orange-400">
-              {filterAvulsas
-                ? "Mostrando apenas visitas avulsas"
-                : "Visitas sem cliente ou pessoa vinculada. Vincule para associar a um registro existente."}
-            </p>
-          </div>
-          <button
-            onClick={() => {
-              setFilterAvulsas(!filterAvulsas)
-              setPage(1)
-            }}
-            className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-colors shrink-0 ${
-              filterAvulsas
-                ? "bg-orange-200 dark:bg-orange-800 text-orange-800 dark:text-orange-200 hover:bg-orange-300 dark:hover:bg-orange-700"
-                : "bg-orange-500 text-white hover:bg-orange-600"
-            }`}
-          >
-            {filterAvulsas ? "Mostrar todas" : "Ver visitas avulsas"}
-          </button>
-        </div>
-      )}
-
-      <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
-        {modo === "calendario" ? (
-          isLoading ? (
-            <div className="flex justify-center py-20">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+                Ver todas <ArrowRight size={12} />
+              </Link>
             </div>
-          ) : (
-            <VisitasCalendario visitas={visitas || []} />
-          )
-        ) : modo === "kanban" ? (
-          isLoading ? (
-            <div className="flex justify-center py-20">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-            </div>
-          ) : (
-            <FloatableKanban tipo="VISITA">
-              <VisitasKanban visitas={visitas || []} />
-            </FloatableKanban>
-          )
-        ) : isLoading ? (
-          <div className="flex justify-center py-20">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-          </div>
-        ) : tableRows.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center">
-            <CalendarDays className="w-12 h-12 text-slate-300 dark:text-slate-700 mb-3" />
-            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
-              {debouncedSearch
-                ? "Nenhuma visita encontrada para essa busca"
-                : "Nenhuma visita encontrada"}
-            </p>
-          </div>
-        ) : (
-          <>
-            <div className="overflow-auto max-h-[70vh]">
-              <table className="w-full">
-                <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
-                  <tr>
-                    <th className="px-2 py-2 md:px-4 md:py-3 w-10">
-                      <input
-                        type="checkbox"
-                        checked={allSelected}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedIds(tableRows.map((v) => v.id))
-                          } else {
-                            setSelectedIds([])
-                          }
-                        }}
-                        aria-label="Selecionar todas as visitas desta página"
-                        className="rounded border-slate-300 dark:border-slate-600 text-blue-600 focus:ring-blue-500"
-                      />
-                    </th>
-                    <th className="px-2 py-2 md:px-4 md:py-3 text-left text-[10px] md:text-xs font-medium text-slate-500 dark:text-slate-400 uppercase whitespace-nowrap">
-                      Data
-                    </th>
-                    <th className="px-2 py-2 md:px-4 md:py-3 text-left text-[10px] md:text-xs font-medium text-slate-500 dark:text-slate-400 uppercase whitespace-nowrap">
-                      Entidade
-                    </th>
-                    <th className="px-2 py-2 md:px-4 md:py-3 text-left text-[10px] md:text-xs font-medium text-slate-500 dark:text-slate-400 uppercase whitespace-nowrap hidden sm:table-cell">
-                      Oportunidade
-                    </th>
-                    <th className="px-2 py-2 md:px-4 md:py-3 text-left text-[10px] md:text-xs font-medium text-slate-500 dark:text-slate-400 uppercase whitespace-nowrap">
-                      Tipo
-                    </th>
-                    <th className="px-2 py-2 md:px-4 md:py-3 text-left text-[10px] md:text-xs font-medium text-slate-500 dark:text-slate-400 uppercase whitespace-nowrap">
-                      Status
-                    </th>
-                    <th className="px-2 py-2 md:px-4 md:py-3 text-left text-[10px] md:text-xs font-medium text-slate-500 dark:text-slate-400 uppercase whitespace-nowrap hidden md:table-cell">
-                      Criado por
-                    </th>
-                    <th className="px-2 py-2 md:px-4 md:py-3 text-left text-[10px] md:text-xs font-medium text-slate-500 dark:text-slate-400 uppercase whitespace-nowrap">
-                      Ações
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {tableRows.map((v) => (
-                    <tr
-                      key={v.id}
-                      className={`hover:bg-slate-50 dark:hover:bg-slate-800/50 ${selectedIds.includes(v.id) ? "bg-blue-50 dark:bg-blue-950/30" : ""}`}
-                    >
-                      <td
-                        className="px-2 py-2 md:px-4 md:py-3 w-10"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedIds.includes(v.id)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedIds((prev) => [...prev, v.id])
-                            } else {
-                              setSelectedIds((prev) => prev.filter((id) => id !== v.id))
-                            }
-                          }}
-                          aria-label={`Selecionar visita de ${v.nomeAvulso || v.empresaNome || v.clienteNome || "registro sem identificação"}`}
-                          className="rounded border-slate-300 dark:border-slate-600 text-blue-600 focus:ring-blue-500"
+            {data?.viagens && data.viagens.length > 0 ? (
+              <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                {data.viagens.map((vg) => {
+                  const viagemId = vg.viagemId
+                  const periodo = vg.dataInicio
+                    ? `${fmtData(vg.dataInicio)} a ${fmtData(vg.dataFim ?? "")}`
+                    : null
+                  const row = (
+                    <div className="flex items-center gap-3 p-3">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <Navigation
+                          size={14}
+                          className={vg.viagemId ? "text-cyan-500" : "text-slate-300"}
                         />
-                      </td>
-                      <td className="px-2 py-2 md:px-4 md:py-3 text-xs md:text-sm text-slate-900 dark:text-slate-200 whitespace-nowrap">
-                        {v.dataVisita
-                          ? new Date(v.dataVisita + "T12:00:00").toLocaleDateString("pt-BR")
-                          : "—"}
-                        {v.hora ? ` ${v.hora}` : ""}
-                      </td>
-                      <td className="px-2 py-2 md:px-4 md:py-3 text-xs md:text-sm font-medium text-slate-900 dark:text-slate-200">
-                        <Link
-                          href={`/comercial/crm/visitas/${v.id}`}
-                          className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                        >
-                          {!v.empresaId && !v.clienteId ? (
-                            <span className="inline-flex items-center gap-1">
-                              <span className="text-orange-500 font-semibold">Avulsa:</span>
-                              <span>{v.nomeAvulso || "—"}</span>
-                            </span>
-                          ) : (
-                            v.empresaNome || v.clienteNome || "—"
-                          )}
-                        </Link>
-                      </td>
-                      <td className="px-2 py-2 md:px-4 md:py-3 text-xs md:text-sm text-slate-500 dark:text-slate-400 hidden sm:table-cell">
-                        {v.oportunidadeTitulo || "—"}
-                      </td>
-                      <td className="px-2 py-2 md:px-4 md:py-3">
-                        <span
-                          className={`inline-flex text-[10px] px-1.5 md:px-2 py-0.5 rounded-full font-medium ${TIPO_CORES[v.tipo] || ""}`}
-                        >
-                          {TIPO_LABELS[v.tipo] || v.tipo}
-                        </span>
-                      </td>
-                      <td className="px-2 py-2 md:px-4 md:py-3">
-                        <span
-                          className="inline-flex text-[10px] px-1.5 md:px-2 py-0.5 rounded-full font-medium"
-                          style={{
-                            backgroundColor: `light-dark(color-mix(in srgb, ${getColor(v.status)} 14%, white), color-mix(in srgb, ${getColor(v.status)} 30%, #0f172a))`,
-                            color: `light-dark(color-mix(in srgb, ${getColor(v.status)} 48%, black), color-mix(in srgb, ${getColor(v.status)} 78%, white))`,
-                          }}
-                        >
-                          {getLabel(v.status)}
-                        </span>
-                      </td>
-                      <td className="px-2 py-2 md:px-4 md:py-3 text-xs md:text-sm text-slate-500 dark:text-slate-400 hidden md:table-cell">
-                        {v.criadoPorNome || "—"}
-                      </td>
-                      <td className="px-2 py-2 md:px-4 md:py-3">
-                        <div className="flex items-center gap-1">
-                          {(v.endereco || v.cidade) && (
-                            <a
-                              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([v.endereco, v.numero, v.complemento, v.bairro, v.cidade, v.uf].filter(Boolean).join(", "))}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              onClick={(e) => e.stopPropagation()}
-                              className="p-2 rounded-lg hover:bg-emerald-100 dark:hover:bg-emerald-950/50 transition-colors"
-                              title="Abrir no Google Maps"
-                            >
-                              <Navigation size={16} className="text-emerald-500" />
-                            </a>
-                          )}
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setSelectedVisita({
-                                id: v.id,
-                                nome: v.nomeAvulso || v.empresaNome || v.clienteNome || "Visita",
-                              })
-                            }}
-                            className="p-2 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-950/50 transition-colors"
-                            title="Gerenciar localizações"
-                          >
-                            <MapPin size={16} className="text-blue-500" />
-                          </button>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">
+                            {vg.viagemTitulo ?? "Sem viagem"}
+                          </p>
+                          <p className="text-xs text-slate-400">
+                            {periodo
+                              ? `${periodo} · ${vg.realizadas ?? 0} realizada(s) · ${vg.total} visitas`
+                              : `${vg.total} visitas`}
+                          </p>
                         </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 dark:border-slate-700">
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Página {page} de {totalPages}
-                </p>
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    disabled={page === 1}
-                    className="p-2 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center"
-                  >
-                    <ChevronLeft size={16} />
-                  </button>
-                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                    let pageNum: number
-                    if (totalPages <= 5) {
-                      pageNum = i + 1
-                    } else if (page <= 3) {
-                      pageNum = i + 1
-                    } else if (page >= totalPages - 2) {
-                      pageNum = totalPages - 4 + i
-                    } else {
-                      pageNum = page - 2 + i
-                    }
-                    return (
-                      <button
-                        key={pageNum}
-                        onClick={() => setPage(pageNum)}
-                        className={`min-h-[36px] min-w-[36px] flex items-center justify-center rounded-lg text-xs font-medium transition-colors ${
-                          pageNum === page
-                            ? "bg-blue-600 text-white"
-                            : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-                        }`}
-                      >
-                        {pageNum}
-                      </button>
-                    )
-                  })}
-                  <button
-                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={page === totalPages}
-                    className="p-2 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center"
-                  >
-                    <ChevronRight size={16} />
-                  </button>
-                </div>
+                      </div>
+                      <div className="flex items-center gap-4 shrink-0">
+                        <div className="flex flex-col items-end gap-1.5">
+                          <div className="text-right">
+                            <p className="text-[10px] leading-none text-slate-400 dark:text-slate-500">
+                              Investimento
+                            </p>
+                            <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                              {fmtBRL(vg.totalInvestimento ?? 0)}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-[10px] leading-none text-slate-400 dark:text-slate-500">
+                              Possível retorno
+                            </p>
+                            <p className="text-xs font-semibold text-cyan-600 dark:text-cyan-400">
+                              {fmtBRL(vg.possivelRetorno ?? 0)}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-[10px] leading-none text-slate-400 dark:text-slate-500">
+                              Retorno real
+                            </p>
+                            <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                              {vg.retornoReal ? fmtBRL(vg.retornoReal) : "—"}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-[10px] leading-none text-slate-400 dark:text-slate-500">
+                              Vendas
+                            </p>
+                            <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                              {vg.vendas ? fmtBRL(vg.vendas) : "—"}
+                            </p>
+                          </div>
+                        </div>
+                        {vg.viagemId && <ArrowRight size={14} className="text-cyan-500" />}
+                      </div>
+                    </div>
+                  )
+                  return viagemId ? (
+                    <button
+                      key={viagemId}
+                      type="button"
+                      onClick={() => setSelectedViagem({ viagemId, viagemTitulo: vg.viagemTitulo })}
+                      className="w-full text-left hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors"
+                      title={`Ver cronograma da ${vg.viagemTitulo}`}
+                    >
+                      {row}
+                    </button>
+                  ) : (
+                    <div key="sem" className="cursor-default">
+                      {row}
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <Navigation className="w-10 h-10 text-slate-300 dark:text-slate-700 mb-2" />
+                <p className="text-sm text-slate-400">Nenhuma viagem vinculada</p>
               </div>
             )}
-          </>
-        )}
-      </div>
-
-      {selectedIds.length > 0 && isTableMode && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-xl shadow-2xl px-5 py-3 animate-fade-in">
-          <div className="flex items-center gap-2">
-            <CheckSquare size={16} />
-            <span className="text-sm font-medium">{selectedIds.length} selecionada(s)</span>
           </div>
-          <div className="w-px h-6 bg-slate-700 dark:bg-slate-300" />
-          <select
-            onChange={(e) => {
-              if (e.target.value) {
-                bulkStatusMutation.mutate({ ids: selectedIds, status: e.target.value })
-                e.target.value = ""
-              }
-            }}
-            defaultValue=""
-            className="bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-900 text-xs rounded-lg px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 min-h-[36px]"
-          >
-            <option value="" disabled>
-              Mudar status...
-            </option>
-            <option value="AGENDADA">Agendada</option>
-            <option value="EM_ANDAMENTO">Em Andamento</option>
-            <option value="REALIZADA">Realizada</option>
-            <option value="CANCELADA">Cancelada</option>
-          </select>
-          <button
-            onClick={() => {
-              if (window.confirm(`Excluir ${selectedIds.length} visita(s)?`)) {
-                bulkDeleteMutation.mutate(selectedIds)
-              }
-            }}
-            disabled={bulkDeleteMutation.isPending}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-medium min-h-[36px] transition-colors disabled:opacity-50"
-          >
-            <Trash2 size={14} />
-            Excluir
-          </button>
-          <button
-            onClick={() => setSelectedIds([])}
-            className="p-2 rounded-lg hover:bg-slate-700 dark:hover:bg-slate-300 transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center"
-          >
-            <X size={16} />
-          </button>
-        </div>
+
+          {/* Linha 4: Performance por Gerente Comercial */}
+          <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-slate-100 dark:border-slate-800">
+              <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-50 flex items-center gap-2">
+                <Users size={16} className="text-blue-500" />
+                Performance por Gerente Comercial
+              </h2>
+              <Link
+                href="/comercial/crm/visitas"
+                className="text-xs text-blue-600 hover:underline flex items-center gap-1"
+              >
+                Ver todas <ArrowRight size={12} />
+              </Link>
+            </div>
+            {data?.porGerente && data.porGerente.length > 0 ? (
+              <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                {data.porGerente.map((g, i) => (
+                  <div key={g.gerenteId ?? i} className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className="text-xs font-bold text-slate-400 w-5">{i + 1}.</span>
+                        <p className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">
+                          {g.gerenteNome}
+                        </p>
+                      </div>
+                      <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                        {g.visitas} visitas
+                      </p>
+                    </div>
+                    <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-3 pl-8">
+                      <KpiMini label="Média/dia" value={`${g.mediaPorDia}`} />
+                      <KpiMini
+                        label="Melhor dia"
+                        value={
+                          g.melhorDia ? `${fmtData(g.melhorDia.dia)} (${g.melhorDia.total})` : "—"
+                        }
+                        tone="green"
+                      />
+                      <KpiMini
+                        label="Pior dia"
+                        value={g.piorDia ? `${fmtData(g.piorDia.dia)} (${g.piorDia.total})` : "—"}
+                        tone="red"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <Users className="w-10 h-10 text-slate-300 dark:text-slate-700 mb-2" />
+                <p className="text-sm text-slate-400">Nenhuma visita registrada</p>
+              </div>
+            )}
+          </div>
+
+          {/* Linha 5: Últimas Visitas */}
+          <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-slate-100 dark:border-slate-800">
+              <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-50 flex items-center gap-2">
+                <Calendar size={16} className="text-amber-500" />
+                Últimas Visitas
+              </h2>
+              <Link
+                href="/comercial/crm/visitas"
+                className="text-xs text-blue-600 hover:underline flex items-center gap-1"
+              >
+                Ver todas <ArrowRight size={12} />
+              </Link>
+            </div>
+            {data?.ultimasVisitas && data.ultimasVisitas.length > 0 ? (
+              <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                {data.ultimasVisitas.map((visita) => (
+                  <div key={visita.id} className="flex items-center justify-between gap-2 p-3">
+                    <div className="flex items-center gap-2 min-w-0 shrink-0">
+                      <Link
+                        href={`/comercial/crm/visitas/${visita.id}`}
+                        className="text-xs md:text-sm font-medium text-slate-900 dark:text-slate-100 truncate hover:underline whitespace-nowrap"
+                      >
+                        Visita #{visita.id}
+                      </Link>
+                      <span className="text-[10px] md:text-xs text-slate-500 whitespace-nowrap">
+                        {visita.dataVisita
+                          ? new Date(visita.dataVisita + "T12:00:00").toLocaleDateString("pt-BR")
+                          : "—"}
+                        {visita.hora ? ` ${visita.hora}` : ""}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1 md:gap-2 shrink-0">
+                      <span
+                        className={`text-[10px] px-1.5 md:px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${
+                          visita.status === "REALIZADA"
+                            ? "bg-green-100 text-green-700 dark:bg-green-950/50 dark:text-green-400"
+                            : visita.status === "CANCELADA"
+                              ? "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-400"
+                              : "bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-400"
+                        }`}
+                      >
+                        {STATUS_LABELS[visita.status] || visita.status}
+                      </span>
+                      {(visita.endereco || visita.cidade) && (
+                        <a
+                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([visita.endereco, visita.numero, visita.complemento, visita.bairro, visita.cidade, visita.uf].filter(Boolean).join(", "))}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-2 md:p-1.5 rounded-lg hover:bg-emerald-100 dark:hover:bg-emerald-950/50 transition-colors"
+                          aria-label="Abrir no Google Maps"
+                        >
+                          <Navigation size={12} className="text-emerald-500 md:text-emerald-500" />
+                        </a>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setSelectedVisita({ id: visita.id, nome: `Visita #${visita.id}` })
+                        }
+                        className="p-2 md:p-1.5 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-950/50 transition-colors"
+                        aria-label="Gerenciar localizações"
+                      >
+                        <MapPin size={12} className="text-blue-500 md:text-blue-500" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <Calendar className="w-10 h-10 text-slate-300 dark:text-slate-700 mb-2" />
+                <p className="text-sm text-slate-400">Nenhuma visita registrada</p>
+              </div>
+            )}
+          </div>
+
+          {/* Quick Actions */}
+          <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
+            <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">
+              Ações Rápidas
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <QuickAction
+                href="/comercial/crm/visitas/novo"
+                icon={<Calendar size={18} />}
+                label="Nova Visita"
+                color="text-amber-600"
+                bg="bg-amber-100 dark:bg-amber-950/50"
+              />
+              <QuickAction
+                href="/comercial/crm/visitas"
+                icon={<BarChart3 size={18} />}
+                label="Listar Visitas"
+                color="text-blue-600"
+                bg="bg-blue-100 dark:bg-blue-950/50"
+              />
+              <QuickAction
+                href="/comercial/crm/visitas?view=kanban"
+                icon={<PieChartIcon size={18} />}
+                label="Kanban Visitas"
+                color="text-indigo-600"
+                bg="bg-indigo-100 dark:bg-indigo-950/50"
+              />
+              <QuickAction
+                href="/comercial/crm/visitas/dashboard"
+                icon={<CheckCircle2 size={18} />}
+                label="Dashboard"
+                color="text-green-600"
+                bg="bg-green-100 dark:bg-green-950/50"
+              />
+            </div>
+          </div>
+        </>
       )}
 
       {selectedVisita && (
@@ -682,14 +556,166 @@ function VisitasPageContent() {
           onClose={() => setSelectedVisita(null)}
         />
       )}
+
+      {selectedViagem && (
+        <ViagemCronogramaModal
+          viagemId={selectedViagem.viagemId}
+          viagemTitulo={selectedViagem.viagemTitulo}
+          open={!!selectedViagem}
+          onClose={() => setSelectedViagem(null)}
+        />
+      )}
+
+      <Dialog
+        open={!!modalFiltro}
+        onOpenChange={(open) => {
+          if (!open) setModalFiltro(null)
+        }}
+      >
+        <DialogContent className="sm:max-w-2xl max-h-[75vh] flex flex-col overflow-hidden p-0 gap-0">
+          <DialogHeader className="flex-row items-center justify-between gap-2 p-4 pr-12 border-b border-slate-100 dark:border-slate-800">
+            <DialogTitle className="text-lg font-semibold text-slate-900 dark:text-slate-50">
+              {modalTitle}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="overflow-y-auto p-4 flex-1">
+            {modalLoading ? (
+              <div role="status" className="flex items-center justify-center py-12">
+                <Loader2 className="animate-spin text-slate-400" size={24} />
+                <span className="sr-only">Carregando visitas...</span>
+              </div>
+            ) : modalLista.length === 0 ? (
+              <p className="text-center text-slate-500 py-12">Nenhuma visita encontrada</p>
+            ) : (
+              <div className="space-y-1">
+                {modalLista.map((v) => (
+                  <Link
+                    key={v.id}
+                    href={`/comercial/crm/visitas/${v.id}`}
+                    onClick={() => setModalFiltro(null)}
+                    className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 text-left"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-slate-900 dark:text-slate-200 truncate">
+                        {v.empresaNome || v.clienteNome || v.nomeAvulso || `Visita #${v.id}`}
+                      </p>
+                      <p className="text-xs text-slate-400">
+                        {v.dataVisita
+                          ? new Date(v.dataVisita + "T12:00:00").toLocaleDateString("pt-BR")
+                          : ""}
+                        {v.hora ? ` ${v.hora}` : ""}
+                        {` · ${TIPO_LABELS[v.tipo || ""] || v.tipo}`}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3 ml-3 shrink-0">
+                      <span
+                        className={`text-[10px] px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${
+                          v.status === "REALIZADA"
+                            ? "bg-green-100 text-green-700 dark:bg-green-950/50 dark:text-green-400"
+                            : v.status === "CANCELADA"
+                              ? "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-400"
+                              : v.status === "EM_ANDAMENTO"
+                                ? "bg-orange-100 text-orange-700 dark:bg-orange-950/50 dark:text-orange-400"
+                                : "bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-400"
+                        }`}
+                      >
+                        {STATUS_LABELS[v.status || ""] || v.status}
+                      </span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
 
-export default function VisitasPage() {
+function SummaryCard({
+  onClick,
+  icon,
+  value,
+  label,
+  sub,
+  bgColor,
+  iconColor,
+}: {
+  onClick: () => void
+  icon: React.ReactNode
+  value: number
+  label: string
+  sub?: string
+  bgColor: string
+  iconColor: string
+}) {
   return (
-    <Suspense fallback={<PageSkeleton />}>
-      <VisitasPageContent />
-    </Suspense>
+    <button
+      type="button"
+      onClick={onClick}
+      className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 hover:shadow-md transition-shadow text-left w-full"
+    >
+      <div className="flex items-center gap-3">
+        <div className={`rounded-lg ${bgColor} p-2.5`}>
+          <span className={iconColor}>{icon}</span>
+        </div>
+        <div>
+          <p className="text-2xl font-bold text-slate-900 dark:text-slate-50">{value}</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">{label}</p>
+        </div>
+      </div>
+      {sub && <p className="text-[10px] text-slate-400 mt-1.5">{sub}</p>}
+    </button>
+  )
+}
+
+function QuickAction({
+  href,
+  icon,
+  label,
+  color,
+  bg,
+}: {
+  href: string
+  icon: React.ReactNode
+  label: string
+  color: string
+  bg: string
+}) {
+  return (
+    <Link
+      href={href}
+      className="flex items-center gap-2 p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors border border-transparent hover:border-slate-200 dark:hover:border-slate-700"
+    >
+      <div className={`rounded-lg ${bg} p-2`}>
+        <span className={color}>{icon}</span>
+      </div>
+      <span className="text-xs font-medium text-slate-700 dark:text-slate-300">{label}</span>
+    </Link>
+  )
+}
+
+function fmtData(dia: string): string {
+  const d = new Date(dia + "T12:00:00")
+  return isNaN(d.getTime()) ? dia : d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })
+}
+
+function fmtBRL(value: number): string {
+  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+}
+
+function KpiMini({ label, value, tone }: { label: string; value: string; tone?: "green" | "red" }) {
+  const valueCls =
+    tone === "green"
+      ? "text-green-600 dark:text-green-400"
+      : tone === "red"
+        ? "text-red-600 dark:text-red-400"
+        : "text-slate-800 dark:text-slate-100"
+  return (
+    <div className="rounded-lg bg-slate-50 dark:bg-slate-800/50 px-3 py-2">
+      <p className="text-[10px] text-slate-400">{label}</p>
+      <p className={`text-sm font-semibold ${valueCls}`}>{value}</p>
+    </div>
   )
 }
