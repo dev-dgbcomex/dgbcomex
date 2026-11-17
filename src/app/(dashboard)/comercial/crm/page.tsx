@@ -31,6 +31,7 @@ const CrmCharts = dynamic(() => import("./charts").then((m) => m.CrmCharts), { s
 type CrmDashboardData = {
   leads: { total: number; esteMes: number }
   pessoas: { total: number }
+  clientes: { total: number }
   oportunidades: {
     total: number
     esteMes: number
@@ -163,6 +164,14 @@ export default function CrmDashboardPage() {
               label="Pessoas (Negócios)"
               bgColor="bg-blue-100 dark:bg-blue-950/50"
               iconColor="text-blue-600 dark:text-blue-400"
+            />
+            <SummaryCard
+              href="/comercial/crm/relatorios/clientes"
+              icon={<Users size={20} />}
+              value={data?.clientes.total ?? 0}
+              label="Clientes"
+              bgColor="bg-indigo-100 dark:bg-indigo-950/50"
+              iconColor="text-indigo-600 dark:text-indigo-400"
             />
             <SummaryCard
               href="/comercial/crm/oportunidades"

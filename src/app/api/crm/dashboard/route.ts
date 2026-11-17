@@ -10,6 +10,7 @@ import { crmTarefas } from "@/lib/db/schema/crm-tarefas"
 import { crmTimelineEventos } from "@/lib/db/schema/crm-timeline-eventos"
 import { crmCampanhas } from "@/lib/db/schema/crm-campanhas"
 import { crmPrevisaoVendas } from "@/lib/db/schema/crm-previsao-vendas"
+import { clientes } from "@/lib/db/schema/clientes"
 import { emailEnviados } from "@/lib/db/schema/email-enviados"
 import { emailCliques } from "@/lib/db/schema/email-cliques"
 import { eq, desc, sql, and, gte, lte, count } from "drizzle-orm"
@@ -40,6 +41,7 @@ export async function GET() {
       leadsTotal,
       leadsMes,
       empresasTotal,
+      clientesTotal,
       oportunidadesTotal,
       oportunidadesByStatus,
       oportunidadesMes,
@@ -67,6 +69,14 @@ export async function GET() {
           db
             .select({ total: count() })
             .from(crmPessoas)
+            .then((r: any) => r),
+        []
+      ),
+      safeQuery(
+        () =>
+          db
+            .select({ total: count() })
+            .from(clientes)
             .then((r: any) => r),
         []
       ),
@@ -293,6 +303,7 @@ export async function GET() {
     return NextResponse.json({
       leads: { total: getCount(leadsTotal), esteMes: getCount(leadsMes) },
       pessoas: { total: getCount(empresasTotal) },
+      clientes: { total: getCount(clientesTotal) },
       oportunidades: {
         total: getCount(oportunidadesTotal),
         esteMes: getCount(oportunidadesMes),
