@@ -393,6 +393,20 @@ async function migrate() {
     await sql`INSERT INTO notificacao_regras (tipo, roles) VALUES ('TODOS', '["ADMIN","SUDO"]'::jsonb) ON CONFLICT (tipo) DO NOTHING`
     console.log("✓ Regra global TODOS verificada")
 
+    await sql`
+      CREATE TABLE IF NOT EXISTS campo_visibilidade (
+        id SERIAL PRIMARY KEY,
+        cadastro VARCHAR(80) NOT NULL,
+        campo VARCHAR(80) NOT NULL,
+        roles_ocultos JSONB NOT NULL DEFAULT '[]'::jsonb,
+        created_at TIMESTAMP DEFAULT now(),
+        updated_at TIMESTAMP DEFAULT now(),
+        CONSTRAINT campo_visibilidade_cadastro_campo_key UNIQUE (cadastro, campo)
+      )
+    `
+    await sql`INSERT INTO campo_visibilidade (cadastro, campo, roles_ocultos) VALUES ('CRM_VISITA_DETALHE', 'proposta_vinculada', '["COMERCIAL"]'::jsonb) ON CONFLICT (cadastro, campo) DO NOTHING`
+    console.log("✓ Regras de visibilidade de campos verificadas")
+
     // crm_pessoas: tarja de promocao para cliente (a pessoa sai da listagem, mas
     // continua nos relatorios com todo o historico)
     await sql`ALTER TABLE crm_pessoas ADD COLUMN IF NOT EXISTS promovida_cliente boolean NOT NULL DEFAULT false`

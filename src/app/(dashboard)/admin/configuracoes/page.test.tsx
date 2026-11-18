@@ -25,5 +25,9 @@ describe("ConfiguracoesHubPage", () => {
       "href",
       "/admin/notificacoes"
     )
+    expect(screen.getByRole("link", { name: /Campos Visíveis/ })).toHaveAttribute(
+      "href",
+      "/admin/configuracoes/campos-visiveis"
+    )
   })
 })

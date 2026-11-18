@@ -7,9 +7,15 @@ interface VisualizacaoCardProps {
   visita: VisitaDetalhe
   statusLabel: string
   statusColor: string
+  mostrarProposta: boolean
 }
 
-export function VisualizacaoCard({ visita, statusLabel, statusColor }: VisualizacaoCardProps) {
+export function VisualizacaoCard({
+  visita,
+  statusLabel,
+  statusColor,
+  mostrarProposta,
+}: VisualizacaoCardProps) {
   return (
     <>
       <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
@@ -108,7 +114,7 @@ export function VisualizacaoCard({ visita, statusLabel, statusColor }: Visualiza
               <p className="text-slate-900 dark:text-slate-200">{visita.representanteNome}</p>
             </div>
           )}
-          {visita.propostaId && (
+          {mostrarProposta && visita.propostaId && (
             <div>
               <span className="text-xs text-slate-500 block mb-0.5">Proposta Vinculada</span>
               <Link

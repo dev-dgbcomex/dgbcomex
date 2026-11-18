@@ -109,7 +109,34 @@ export const adminContent: Record<string, InfoContent> = {
     rules: [
       "Alterações em configurações de integração podem afetar a comunicação com sistemas externos.",
       "Configurações de email afetam o envio de notificações.",
+      "A tela Campos Visíveis define quais campos ficam ocultos por cadastro e perfil.",
       "Apenas usuários ADMIN podem alterar configurações.",
+    ],
+  },
+  "/admin/configuracoes/campos-visiveis": {
+    title: "Campos Visíveis",
+    description:
+      "Defina quais campos de cada cadastro ficam ocultos para determinados perfis de acesso.",
+    rules: [
+      "Marque Oculto para impedir que o perfil veja o campo na tela e também na API.",
+      "Quando nenhum perfil está marcado, o campo fica visível para todos.",
+      "ADMIN e SUDO sempre enxergam todos os campos, independentemente das regras.",
+      "As alterações passam a valer imediatamente após salvar, inclusive para sessões já abertas.",
+      "No catálogo inicial é possível ocultar a Proposta Vinculada no detalhe da visita.",
+    ],
+    columns: [
+      { name: "Campo", desc: "Nome do campo do cadastro selecionado" },
+      { name: "Perfis", desc: "Cada coluna representa um perfil que pode ter o campo oculto" },
+    ],
+    fields: [
+      { name: "Cadastro", desc: "Tela/cadastro cujos campos serão configurados" },
+      { name: "Oculto", desc: "Caixa por campo e perfil; marcada significa que o perfil não vê o campo" },
+    ],
+    examples: [
+      {
+        title: "Ocultar proposta do comercial",
+        desc: "Em Detalhe da Visita, marque Oculto na coluna COMERCIAL da linha Proposta Vinculada e salve.",
+      },
     ],
   },
   "/admin/configuracoes/banco-dados": {

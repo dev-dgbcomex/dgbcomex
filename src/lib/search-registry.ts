@@ -482,6 +482,14 @@ export const searchRegistry: SearchItem[] = [
     module: "Administrativo",
   },
   {
+    id: "admin-campos-visiveis",
+    label: "Campos Visíveis",
+    keywords: ["campo", "visibilidade", "oculto", "perfil", "role", "admin", "configuracao"],
+    href: "/admin/configuracoes/campos-visiveis",
+    description: "Configuração de campos ocultos por cadastro e perfil",
+    module: "Administrativo",
+  },
+  {
     id: "admin-email-config",
     label: "Configuração de Email",
     keywords: ["email", "smtp", "admin", "configuracao", "servidor", "massa", "crm", "notificacao"],

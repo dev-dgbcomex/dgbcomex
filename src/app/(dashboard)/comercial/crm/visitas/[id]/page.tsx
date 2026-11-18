@@ -9,6 +9,11 @@ import Link from "next/link"
 import { toast } from "sonner"
 import { ConfirmModal } from "@/components/ui/confirm-modal"
 import { useStatuses } from "@/hooks/use-statuses"
+import { useCamposVisiveis } from "@/hooks/use-campos-visiveis"
+import {
+  CADASTRO_VISITA_DETALHE,
+  CAMPO_PROPOSTA_VINCOLADA,
+} from "@/lib/campos-visiveis/catalogo"
 import { normalizeVisitaFotos } from "@/lib/crm/visita-fotos"
 import type { VisitaFoto } from "@/lib/crm/visita-fotos"
 import type {
@@ -34,6 +39,11 @@ export default function DetalheVisitaPage() {
   const info = getInfoContent(pathname)
   const params = useParams()
   const { getLabel, getColor } = useStatuses("VISITA")
+  const { campos: camposVisiveis, isLoading: carregandoVisibilidade } = useCamposVisiveis(
+    CADASTRO_VISITA_DETALHE
+  )
+  const propostaVisivel =
+    !carregandoVisibilidade && camposVisiveis[CAMPO_PROPOSTA_VINCOLADA] === true
   const [showDelete, setShowDelete] = useState(false)
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [editing, setEditing] = useState(false)
@@ -168,13 +178,12 @@ export default function DetalheVisitaPage() {
 
   async function handleSave() {
     try {
+      const corpo: Record<string, unknown> = { ...form, fotos }
+      if (!propostaVisivel) delete corpo.propostaId
       const res = await fetch(`/api/crm/visitas/${params.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...form,
-          fotos: fotos,
-        }),
+        body: JSON.stringify(corpo),
       })
       if (!res.ok) {
         const err = await res.json()
@@ -426,6 +435,7 @@ export default function DetalheVisitaPage() {
             onCopiarEndereco={handleCopiarEndereco}
             onOportunidadeCreated={handleOportunidadeCreated}
             onPropostaCreated={handlePropostaCreated}
+            mostrarProposta={propostaVisivel}
             onContatoCreated={handleContatoCreated}
             oportunidades={oportunidades}
             contatos={contatosQuery.data ?? []}
@@ -435,6 +445,7 @@ export default function DetalheVisitaPage() {
             visita={visita}
             statusLabel={getLabel(visita.status)}
             statusColor={getColor(visita.status)}
+            mostrarProposta={propostaVisivel}
           />
         )}
 

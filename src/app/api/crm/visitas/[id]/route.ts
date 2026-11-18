@@ -17,6 +17,7 @@ import { handleApiError } from "@/lib/api-error"
 import { sendCrmEmail } from "@/lib/email"
 import { temEndereco, type EnderecoCampos } from "@/lib/crm/endereco"
 import { geocodificarCamposEndereco } from "@/lib/crm/geocode"
+import { propostaVinculadaVisivelPara } from "@/lib/campos-visiveis"
 import crypto from "crypto"
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -96,6 +97,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       return NextResponse.json({ error: "Visita não encontrada" }, { status: 404 })
     }
 
+    const propostaVisivel = await propostaVinculadaVisivelPara(auth.session.user?.role)
+    if (!propostaVisivel) {
+      const resposta: Record<string, unknown> = { ...visita }
+      delete resposta.propostaId
+      delete resposta.propostaTitulo
+      return NextResponse.json(resposta)
+    }
+
     return NextResponse.json(visita)
   } catch (error) {
     return handleApiError(error, "GET /api/crm/visitas/[id]")
@@ -129,6 +138,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       )
     }
 
+    const propostaVisivel = await propostaVinculadaVisivelPara(userRole)
+
     const values: Record<string, any> = { updatedAt: new Date() }
     if (body.empresaId !== undefined) {
       values.empresaId = body.empresaId
@@ -147,7 +158,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       values.representanteId = body.representanteId ? parseInt(body.representanteId) : null
     if (body.representanteNome !== undefined)
       values.representanteNome = body.representanteNome || null
-    if (body.propostaId !== undefined)
+    if (propostaVisivel && body.propostaId !== undefined)
       values.propostaId = body.propostaId
         ? typeof body.propostaId === "number"
           ? body.propostaId

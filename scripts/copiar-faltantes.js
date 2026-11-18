@@ -3,7 +3,7 @@ require('dotenv').config({ path: '.env.local' })
 const src = new Pool({ connectionString: process.env.DATABASE_URL })
 const dst = new Pool({ connectionString: process.env.DATABASE_URL_LOCAL })
 
-const tabelas = ['public.usuarios', 'public.integracoes', 'public.notificacao_regras']
+const tabelas = ['public.usuarios', 'public.integracoes', 'public.notificacao_regras', 'public.campo_visibilidade']
 
 async function main() {
   for (const t of tabelas) {

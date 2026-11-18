@@ -12,6 +12,7 @@ import {
   CheckCircle2,
   Layout,
   Bot,
+  EyeOff,
 } from "lucide-react"
 import { PageInfoButton } from "@/components/ui/page-info-button"
 
@@ -50,6 +51,13 @@ const modulos = [
     desc: "Configurar permissões CRUD por perfil",
     icon: Lock,
     color: "text-rose-600 bg-rose-50 dark:bg-rose-950/50",
+  },
+  {
+    href: "/admin/configuracoes/campos-visiveis",
+    label: "Campos Visíveis",
+    desc: "Escolher campos ocultos por cadastro e perfil",
+    icon: EyeOff,
+    color: "text-indigo-600 bg-indigo-50 dark:bg-indigo-950/50",
   },
   {
     href: "/admin/usuarios",

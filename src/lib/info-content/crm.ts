@@ -478,6 +478,7 @@ export const crmContent: Record<string, InfoContent> = {
       "Visitas realizadas podem ter fotos anexadas.",
       "O relato da visita ajuda a IA a gerar resumo da pessoa.",
       "É possível alterar o status da visita (Realizada, Cancelada).",
+      "Alguns campos podem não aparecer conforme as regras de visibilidade definidas em Admin › Configurações.",
       "No modo de edição você pode trocar o contato da visita e cadastrar um novo contato (+) da pessoa ou do cliente vinculado.",
     ],
     fields: [

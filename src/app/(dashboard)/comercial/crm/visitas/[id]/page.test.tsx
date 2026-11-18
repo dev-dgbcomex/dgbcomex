@@ -5,8 +5,10 @@ import DetalheVisitaPage from "./page"
 import { createFetchMock, renderPage, findCall, toastMock, navMock } from "@/test/harness"
 import type { VisitaDetalhe } from "../types"
 
+const sessao = vi.hoisted(() => ({ id: "3", role: "ADMIN" }))
+
 vi.mock("next-auth/react", () => ({
-  useSession: () => ({ data: { user: { role: "ADMIN" } } }),
+  useSession: () => ({ data: { user: { id: sessao.id, role: sessao.role } } }),
 }))
 
 const statusesVisita = [
@@ -77,6 +79,18 @@ function buildHandler(data: Partial<VisitaDetalhe>) {
     if (method === "GET" && url === `/api/crm/visitas/${data.id}`) {
       return { json: data }
     }
+    if (
+      method === "GET" &&
+      url === "/api/campos-visiveis?cadastro=CRM_VISITA_DETALHE"
+    ) {
+      return {
+        json: {
+          cadastro: "CRM_VISITA_DETALHE",
+          campos: { proposta_vinculada: sessao.role !== "COMERCIAL" },
+          falhou: false,
+        },
+      }
+    }
     if (method === "GET" && url === "/api/crm/cidades?estadoId=35") {
       return { json: [{ id: 1, nome: "São Paulo", estadoId: 35 }] }
     }
@@ -128,6 +142,7 @@ describe("DetalheVisitaPage", () => {
   let fetchMock: ReturnType<typeof createFetchMock>
 
   beforeEach(() => {
+    sessao.role = "ADMIN"
     fetchMock = createFetchMock(buildHandler(visita))
     vi.stubGlobal("fetch", fetchMock.fn)
     navMock.setParams({ id: "1" })
@@ -173,6 +188,40 @@ describe("DetalheVisitaPage", () => {
       expect(call!.body).toEqual(expect.objectContaining({ id: 1, status: "REALIZADA", fotos: [] }))
     })
     await waitFor(() => expect(toastMock.success).toHaveBeenCalledWith("Visita atualizada"))
+  })
+
+  it("oculta a proposta vinculada para o perfil COMERCIAL", async () => {
+    sessao.role = "COMERCIAL"
+    const visitaComProposta = {
+      ...visita,
+      propostaId: 42,
+      propostaTitulo: "Proposta Oculta",
+    }
+    fetchMock = createFetchMock(buildHandler(visitaComProposta))
+    vi.stubGlobal("fetch", fetchMock.fn)
+
+    renderPage(<DetalheVisitaPage />)
+    await screen.findByRole("heading", { name: "Visita — Tecelagem Alpha" })
+    await waitFor(() => {
+      expect(
+        findCall(fetchMock.calls, "/api/campos-visiveis?cadastro=CRM_VISITA_DETALHE")
+      ).toBeDefined()
+    })
+
+    expect(screen.queryByText("Proposta Vinculada")).not.toBeInTheDocument()
+    expect(screen.queryByText("Proposta Oculta")).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole("button", { name: "Editar" }))
+    await screen.findByRole("button", { name: "Salvar" })
+    expect(screen.queryByTitle("Cadastrar nova proposta")).not.toBeInTheDocument()
+    expect(screen.queryByPlaceholderText("Buscar proposta...")).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole("button", { name: "Salvar" }))
+    await waitFor(() => {
+      const call = findCall(fetchMock.calls, "/api/crm/visitas/1", "PUT")
+      expect(call).toBeDefined()
+      expect(call!.body).not.toHaveProperty("propostaId")
+    })
   })
 
   it("exclui a visita via DELETE", async () => {
@@ -350,6 +399,15 @@ describe("DetalheVisitaPage", () => {
 
   it("permite definir a oportunidade na edição da visita", async () => {
     const handler = ({ method, url }: { method: string; url: string }) => {
+      if (method === "GET" && url === "/api/campos-visiveis?cadastro=CRM_VISITA_DETALHE") {
+        return {
+          json: {
+            cadastro: "CRM_VISITA_DETALHE",
+            campos: { proposta_vinculada: sessao.role !== "COMERCIAL" },
+            falhou: false,
+          },
+        }
+      }
       if (method === "GET" && url === "/api/crm/oportunidades") {
         return { json: [{ id: 3, titulo: "Venda de malha", empresaId: 1, clienteId: null }] }
       }
@@ -397,6 +455,7 @@ describe("DetalheVisitaPage", () => {
     await screen.findByRole("heading", { name: "Visita — Tecelagem Alpha" })
     fireEvent.click(screen.getByRole("button", { name: "Editar" }))
     await screen.findByRole("button", { name: "Salvar" })
+    await screen.findByTitle("Cadastrar nova proposta")
 
     const opSelect = screen
       .getAllByRole("combobox")
@@ -421,6 +480,14 @@ describe("DetalheVisitaPage", () => {
 
   it("cria uma proposta via quick create na edição da visita", async () => {
     const handler = ({ method, url }: { method: string; url: string }) => {
+      if (method === "GET" && url === "/api/campos-visiveis?cadastro=CRM_VISITA_DETALHE")
+        return {
+          json: {
+            cadastro: "CRM_VISITA_DETALHE",
+            campos: { proposta_vinculada: sessao.role !== "COMERCIAL" },
+            falhou: false,
+          },
+        }
       if (method === "GET" && url === "/api/crm/oportunidades") return { json: [] }
       if (method === "GET" && url === "/api/crm/estados")
         return { json: [{ id: 35, uf: "SP", nome: "São Paulo" }] }
@@ -450,7 +517,7 @@ describe("DetalheVisitaPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Editar" }))
     await screen.findByRole("button", { name: "Salvar" })
 
-    fireEvent.click(screen.getByTitle("Cadastrar nova proposta"))
+    fireEvent.click(await screen.findByTitle("Cadastrar nova proposta"))
     const dialog = await screen.findByRole("dialog")
     fireEvent.change(within(dialog).getByPlaceholderText("Ex: Proposta Comercial - Tecido X"), {
       target: { value: "Proposta Edit" },
@@ -471,6 +538,14 @@ describe("DetalheVisitaPage", () => {
 
   it("permite cadastrar e vincular um contato na edição da visita", async () => {
     const handler = ({ method, url }: { method: string; url: string }) => {
+      if (method === "GET" && url === "/api/campos-visiveis?cadastro=CRM_VISITA_DETALHE")
+        return {
+          json: {
+            cadastro: "CRM_VISITA_DETALHE",
+            campos: { proposta_vinculada: sessao.role !== "COMERCIAL" },
+            falhou: false,
+          },
+        }
       if (method === "GET" && url === "/api/crm/oportunidades") return { json: [] }
       if (method === "GET" && url === "/api/crm/estados")
         return { json: [{ id: 35, uf: "SP", nome: "São Paulo" }] }

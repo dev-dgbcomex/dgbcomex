@@ -26,6 +26,7 @@ interface EdicaoCardProps {
   onCopiarEndereco: () => void
   onOportunidadeCreated: (id: number) => void
   onPropostaCreated: (id: number, titulo: string) => void
+  mostrarProposta: boolean
   onContatoCreated: (id: number) => void
   oportunidades?: OportunidadeResumo[]
   contatos?: ContatoResult[]
@@ -41,6 +42,7 @@ export function EdicaoCard({
   onCopiarEndereco,
   onOportunidadeCreated,
   onPropostaCreated,
+  mostrarProposta,
   onContatoCreated,
   oportunidades = [],
   contatos = [],
@@ -174,43 +176,45 @@ export function EdicaoCard({
               </p>
             )}
           </div>
-          <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">
-              Proposta Vinculada
-              {form.empresaId ? (
-                <QuickCreateProposta
-                  empresaId={String(form.empresaId ?? "")}
-                  oportunidadeId={String(form.oportunidadeId || "")}
-                  onCreated={onPropostaCreated}
-                />
-              ) : form.clienteId ? (
-                <QuickCreateProposta
-                  clienteId={String(form.clienteId ?? "")}
-                  oportunidadeId={String(form.oportunidadeId || "")}
-                  onCreated={onPropostaCreated}
-                />
-              ) : null}
-            </label>
-            <CreatableSelect
-              valueId={form.propostaId ?? null}
-              valueNome={form.propostaTitulo || null}
-              onChange={(id, nome) => {
-                setField("propostaId", id || null)
-                setField("propostaTitulo", nome || null)
-              }}
-              onSelect={(opt) => {
-                if (opt.oportunidadeId) setField("oportunidadeId", Number(opt.oportunidadeId))
-              }}
-              fetchUrl={
-                form.oportunidadeId
-                  ? `/api/crm/propostas?oportunidadeId=${form.oportunidadeId}`
-                  : "/api/crm/propostas"
-              }
-              labelField="titulo"
-              placeholder="Buscar proposta..."
-              className="w-full"
-            />
-          </div>
+          {mostrarProposta && (
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">
+                Proposta Vinculada
+                {form.empresaId ? (
+                  <QuickCreateProposta
+                    empresaId={String(form.empresaId ?? "")}
+                    oportunidadeId={String(form.oportunidadeId || "")}
+                    onCreated={onPropostaCreated}
+                  />
+                ) : form.clienteId ? (
+                  <QuickCreateProposta
+                    clienteId={String(form.clienteId ?? "")}
+                    oportunidadeId={String(form.oportunidadeId || "")}
+                    onCreated={onPropostaCreated}
+                  />
+                ) : null}
+              </label>
+              <CreatableSelect
+                valueId={form.propostaId ?? null}
+                valueNome={form.propostaTitulo || null}
+                onChange={(id, nome) => {
+                  setField("propostaId", id || null)
+                  setField("propostaTitulo", nome || null)
+                }}
+                onSelect={(opt) => {
+                  if (opt.oportunidadeId) setField("oportunidadeId", Number(opt.oportunidadeId))
+                }}
+                fetchUrl={
+                  form.oportunidadeId
+                    ? `/api/crm/propostas?oportunidadeId=${form.oportunidadeId}`
+                    : "/api/crm/propostas"
+                }
+                labelField="titulo"
+                placeholder="Buscar proposta..."
+                className="w-full"
+              />
+            </div>
+          )}
           {form.status === "CANCELADA" && (
             <div>
               <label className="block text-xs font-medium text-slate-500 mb-1">

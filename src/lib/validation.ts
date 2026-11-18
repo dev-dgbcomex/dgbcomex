@@ -21,6 +21,12 @@ export function validateRequest<T>(
   return { data: result.data }
 }
 
+export const campoVisibilidadeSchema = z.object({
+  cadastro: z.string().min(1, "Cadastro obrigatório"),
+  campo: z.string().min(1, "Campo obrigatório"),
+  rolesOcultos: z.array(z.string()),
+})
+
 const linkSchema = z.object({
   url: z.string().url("URL inválida"),
   descricao: z.string().default(""),

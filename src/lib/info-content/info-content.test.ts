@@ -278,6 +278,11 @@ describe("getInfoContent", () => {
     }
   })
 
+  it("o detalhe da visita menciona regras de visibilidade de campos", () => {
+    const conteudo = getInfoContent("/comercial/crm/visitas/[id]")
+    expect(conteudo?.rules?.join(" ")).toMatch(/visibilidade/i)
+  })
+
   it("a listagem de visitas explica a visão padrão Calendário", () => {
     const conteudo = getInfoContent("/comercial/crm/visitas")
     const texto = (conteudo?.rules ?? []).join("\n")
@@ -541,6 +546,26 @@ describe("getInfoContent", () => {
     expect(texto).toMatch(/todas as notificações/i)
     expect(texto).toMatch(/ADMIN/)
     expect(texto).toMatch(/Enviar teste para os administradores/i)
+  })
+
+  it("a configuração de campos visíveis explica ocultação por perfil", () => {
+    const conteudo = getInfoContent("/admin/configuracoes/campos-visiveis")
+
+    expect(conteudo).not.toBeNull()
+    const texto = [
+      conteudo?.title ?? "",
+      conteudo?.description ?? "",
+      ...(conteudo?.rules ?? []),
+      ...(conteudo?.columns ?? []).map((c) => `${c.name}: ${c.desc}`),
+      ...(conteudo?.fields ?? []).map((f) => `${f.name}: ${f.desc}`),
+      ...(conteudo?.examples ?? []).map((e) => `${e.title}: ${e.desc}`),
+    ].join("\n")
+
+    expect(texto).toMatch(/Campos Visíveis/i)
+    expect(texto).toMatch(/Oculto/i)
+    expect(texto).toMatch(/API/)
+    expect(texto).toMatch(/ADMIN/)
+    expect(texto).toMatch(/Proposta Vinculada/i)
   })
 })
 

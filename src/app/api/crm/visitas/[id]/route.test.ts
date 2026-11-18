@@ -2,11 +2,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { NextRequest, NextResponse } from "next/server"
 import { requireAuth } from "@/lib/auth"
+import { propostaVinculadaVisivelPara } from "@/lib/campos-visiveis"
 import { db } from "@/lib/db"
 import { notificarDelecao } from "@/lib/notificar"
 import { geocodificarCamposEndereco } from "@/lib/crm/geocode"
 import { createDbMock, createQueryBuilder, resetDb } from "@/test/route-db-mock"
-import { DELETE, PUT } from "./route"
+import { DELETE, GET, PUT } from "./route"
 
 vi.mock("@/lib/auth", () => ({ requireAuth: vi.fn() }))
 vi.mock("@/lib/notificar", () => ({
@@ -26,6 +27,7 @@ vi.mock("@/lib/db", () => ({
   },
 }))
 vi.mock("@/lib/crm/geocode", () => ({ geocodificarCamposEndereco: vi.fn() }))
+vi.mock("@/lib/campos-visiveis", () => ({ propostaVinculadaVisivelPara: vi.fn() }))
 
 const sessionAdmin = { session: { user: { id: "1", role: "ADMIN", name: "Tiago" } }, userId: 1 }
 
@@ -77,6 +79,8 @@ function visitaExistente(overrides: Record<string, any> = {}) {
 describe("DELETE /api/crm/visitas/[id]", () => {
   beforeEach(() => {
     vi.mocked(requireAuth).mockReset()
+    vi.mocked(propostaVinculadaVisivelPara).mockReset()
+    vi.mocked(propostaVinculadaVisivelPara).mockResolvedValue(true)
     resetDb(db)
     vi.mocked(requireAuth).mockResolvedValue(sessionAdmin as any)
     db.select = vi.fn(() => createQueryBuilder([]))
@@ -122,11 +126,56 @@ describe("DELETE /api/crm/visitas/[id]", () => {
   })
 })
 
+describe("GET /api/crm/visitas/[id]", () => {
+  function get(id: string) {
+    return GET(new NextRequest(`http://localhost/api/crm/visitas/${id}`), {
+      params: Promise.resolve({ id }),
+    })
+  }
+
+  beforeEach(() => {
+    vi.mocked(requireAuth).mockReset()
+    vi.mocked(propostaVinculadaVisivelPara).mockReset()
+    resetDb(db)
+    vi.mocked(requireAuth).mockResolvedValue(sessionAdmin as any)
+    db.select = vi.fn(() =>
+      createQueryBuilder([
+        visitaExistente({ propostaId: 42, propostaTitulo: "Proposta Vinculada" }),
+      ])
+    )
+  })
+
+  it("remove os dados da proposta quando o campo está oculto para o perfil", async () => {
+    vi.mocked(propostaVinculadaVisivelPara).mockResolvedValue(false)
+
+    const res = await get("10")
+    const corpo = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(corpo.id).toBe(10)
+    expect(corpo).not.toHaveProperty("propostaId")
+    expect(corpo).not.toHaveProperty("propostaTitulo")
+  })
+
+  it("mantém os dados da proposta quando o campo está visível", async () => {
+    vi.mocked(propostaVinculadaVisivelPara).mockResolvedValue(true)
+
+    const res = await get("10")
+    const corpo = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(corpo.propostaId).toBe(42)
+    expect(corpo.propostaTitulo).toBe("Proposta Vinculada")
+  })
+})
+
 describe("PUT /api/crm/visitas/[id]", () => {
   beforeEach(() => {
     vi.mocked(requireAuth).mockReset()
 
     vi.mocked(geocodificarCamposEndereco).mockReset()
+    vi.mocked(propostaVinculadaVisivelPara).mockReset()
+    vi.mocked(propostaVinculadaVisivelPara).mockResolvedValue(true)
     vi.mocked(requireAuth).mockResolvedValue(sessionAdmin as any)
     vi.mocked(geocodificarCamposEndereco).mockResolvedValue(null)
   })
@@ -264,5 +313,21 @@ describe("PUT /api/crm/visitas/[id]", () => {
     expect(geocodificarCamposEndereco).not.toHaveBeenCalled()
     const setArgs = builder.set.mock.calls[0][0]
     expect(setArgs.enderecoLat).toBeUndefined()
+  })
+
+  it("ignora propostaId enviado quando o campo está oculto para o perfil", async () => {
+    vi.mocked(propostaVinculadaVisivelPara).mockResolvedValue(false)
+    ;(db.select as ReturnType<typeof vi.fn>).mockReturnValueOnce(
+      createQueryBuilder([visitaExistente()])
+    )
+    const builder = createQueryBuilder([visitaExistente()])
+    ;(db.update as ReturnType<typeof vi.fn>).mockReturnValue(builder)
+
+    const res = await put("10", { propostaId: 99, relato: "sem proposta" })
+
+    expect(res.status).toBe(200)
+    const setArgs = builder.set.mock.calls[0][0]
+    expect(setArgs.propostaId).toBeUndefined()
+    expect(setArgs.relato).toBe("sem proposta")
   })
 })
