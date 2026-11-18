@@ -307,6 +307,9 @@ describe("getInfoContent", () => {
     expect(texto).toMatch(/Conversão/i)
     expect(texto).toMatch(/Visitas R\/A\/C/i)
     expect(texto).toMatch(/Itens de engajamento/i)
+    expect(texto).toMatch(/36%/i)
+    expect(texto).toMatch(/9,33%/i)
+    expect(texto).toMatch(/58 visitas cadastradas/i)
     expect(texto).toMatch(/Próxima visita/i)
     expect(texto).toMatch(/0 a 100%/i)
     expect(texto).toMatch(/relato\/ata/i)
@@ -550,6 +553,14 @@ describe("saudeProspeccaoInfo", () => {
     expect(saudeProspeccaoInfo.esforco.rules?.join(" ")).toMatch(/visita realizada \(\+20\)/i)
     expect(saudeProspeccaoInfo.engajamento.rules?.join(" ")).toMatch(
       /proposta negociada \(\+20\)/i
+    )
+    expect(saudeProspeccaoInfo.itensEngajamento.rules?.join(" ")).toMatch(
+      /Proposta e oportunidade valem 36% cada/i
+    )
+    expect(saudeProspeccaoInfo.itensEngajamento.rules?.join(" ")).toMatch(/9,33% cada/i)
+    expect(saudeProspeccaoInfo.registros.description).toMatch(/não é a quantidade de visitas/i)
+    expect(saudeProspeccaoInfo.registros.examples?.map((e) => e.desc).join(" ")).toMatch(
+      /58 visitas cadastradas/i
     )
     expect(saudeProspeccaoInfo.registros.examples?.length).toBeGreaterThan(0)
     expect(saudeProspeccaoInfo.engajados.examples?.length).toBeGreaterThan(0)

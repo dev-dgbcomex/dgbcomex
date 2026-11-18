@@ -394,7 +394,8 @@ export const crmContent: Record<string, InfoContent> = {
       "Pedidos e faturamentos entram pela OPORTUNIDADE vinculada à visita — não existe vínculo direto de pedido/faturamento com a visita. Os valores vêm dos itens.",
       "Os cards usam os dois percentuais: esforço até 35% é BEC (Baixo Esforço comercial); esforço e engajamento acima de 35% com diferença menor que 20 pontos é EQL (Equilibrado); esforço acima de 35% e pelo menos 20 pontos à frente é AEC (Alto Esforço comercial); o contrário é Engajados. Clique em AEC, EQL ou BEC para ver a lista de clientes/pessoas.",
       "Conversão = (pedidos de venda + faturamentos) ÷ total de visitas da linha, arredondado e limitado a 100%. Clique no badge para ver quantidades e valores.",
-      "Cada item de engajamento (ata/relato, check-in/check-out, contato, proposta e oportunidade) vale 20%. A coluna mostra quantidade e percentual; clique nela para detalhar os itens e os registros vinculados.",
+      "No badge de itens de engajamento, proposta e oportunidade valem 36% cada; ata/relato, check-in/check-out e contato dividem os 28% restantes (9,33% cada). A coluna mostra quantidade de itens presentes e o percentual ponderado; clique nela para detalhar. Esses pesos não mudam o score de engajamento nem a classificação.",
+      "O card Registros conta clientes/pessoas distintos do recorte, não visitas: 58 visitas cadastradas podem aparecer como 28 registros.",
       "A coluna Visitas R/A/C abre a lista de visitas; cada visita da lista é clicável e abre o cadastro da visita.",
       "Clique no nome do cliente/pessoa para abrir o modal com todas as visitas do período, contatos, propostas, oportunidades, valores, status, relato/ata, check-in e check-out.",
       "Filtros de segmento, porte, responsável, status da visita, status da oportunidade e tipo de visita combinam com a busca. Exportações CSV, PDF e MD respeitam o recorte atual.",
@@ -407,7 +408,7 @@ export const crmContent: Record<string, InfoContent> = {
       { name: "Visitas R/A/C", desc: "Realizadas / agendadas / canceladas no ano corrente. Clique para listar as visitas." },
       { name: "Última visita", desc: "Data da visita mais recente já realizada no recorte." },
       { name: "Próxima visita", desc: "Data da próxima visita agendada; mostra — quando não há agendamento futuro." },
-      { name: "Itens de engajamento", desc: "Ata/relato, check-in/check-out, contato, proposta e oportunidade: quantidade de itens presentes, percentual e clique para detalhar." },
+      { name: "Itens de engajamento", desc: "Ata/relato, check-in/check-out, contato, proposta e oportunidade: quantidade de itens presentes e percentual ponderado; clique para detalhar." },
       { name: "Status", desc: "Status da oportunidade mais avançada: NEGOCIADA, ACEITA, FECHADO GANHO etc." },
       { name: "Valor estimado / Prob.", desc: "Soma do valor das oportunidades e média das probabilidades." },
       { name: "Conversão", desc: "Percentual de (pedidos + faturamentos) sobre o total de visitas; clique para ver quantidades e valores." },
@@ -1267,7 +1268,7 @@ export const saudeProspeccaoInfo = {
       "Fórmula do esforço: visita realizada (+20) + relato/ata (+20) + check-in (+15) + contato (+15) + proposta (+15) + oportunidade (+15), limitado a 100%.",
       "Fórmula do engajamento: visita realizada (+20) + visita agendada (+10) + proposta negociada (+20) + oportunidade negociada (+20) + pedido de venda (+15) + faturamento (+15), limitado a 100%.",
       "Fórmula da conversão: (pedidos de venda + faturamentos) ÷ total de visitas da linha, arredondado e limitado a 100%.",
-      "Cada item de engajamento vale 20%; a coluna mostra quantos dos 5 itens estão presentes e abre o detalhe ao clicar.",
+      "No badge de itens de engajamento, proposta e oportunidade valem 36% cada e os outros três itens dividem 28% (9,33% cada); a coluna mostra quantos itens estão presentes e o percentual ponderado.",
       "Visitas R/A/C abre a lista de visitas; cada visita da lista leva ao cadastro da visita.",
       "Clique no nome para ver todas as visitas, vínculos e valores do cliente/pessoa.",
     ],
@@ -1285,7 +1286,33 @@ export const saudeProspeccaoInfo = {
       },
       {
         title: "Itens de engajamento 3/5",
-        desc: "Visita com relato, check-in e contato, mas sem proposta e sem oportunidade: 3 itens presentes × 20% = 60%, classificado como Em evolução.",
+        desc: "Visita com relato, check-in e contato, mas sem proposta e sem oportunidade: 9,33% + 9,33% + 9,33% = 28% no badge.",
+      },
+    ],
+  },
+  itensEngajamento: {
+    title: "Itens de engajamento — pesos e detalhes",
+    description:
+      "Composição ponderada do badge Itens de engajamento; ela é diferente do score de engajamento usado em AEC, Engajados, EQL e BEC.",
+    rules: [
+      "Proposta e oportunidade valem 36% cada.",
+      "Ata/relato, check-in/check-out e contato dividem os 28% restantes: 9,33% cada.",
+      "O badge mostra a quantidade de itens presentes e o percentual ponderado. Esses pesos não alteram o score nem a classificação.",
+      "Clique em um registro vinculado para abrir a visita, a proposta ou a oportunidade.",
+    ],
+    columns: [
+      { name: "Item", desc: "Ata/relato, check-in/check-out, contato, proposta ou oportunidade." },
+      { name: "Peso", desc: "Percentual que o item presente soma ao badge." },
+      { name: "Registros", desc: "Itens vinculados ao cliente/pessoa no ano corrente." },
+    ],
+    examples: [
+      {
+        title: "Só proposta",
+        desc: "1 de 5 itens presente, mas o badge mostra 36% porque a proposta vale 36%.",
+      },
+      {
+        title: "Ata, check-in e contato",
+        desc: "3 de 5 itens presentes e 28% no badge: 9,33% + 9,33% + 9,33%.",
       },
     ],
   },
@@ -1324,15 +1351,16 @@ export const saudeProspeccaoInfo = {
   registros: {
     title: "Registros — saúde da prospecção",
     description:
-      "Quantidade de clientes e pessoas que aparecem na saúde da prospecção depois dos filtros da tabela.",
+      "Quantidade de clientes e pessoas distintos que aparecem na saúde da prospecção depois dos filtros da tabela — não é a quantidade de visitas.",
     rules: [
+      "Cada cliente ou pessoa com pelo menos uma visita no ano corrente conta como um registro, mesmo com várias visitas.",
       "Pessoa promovida a cliente é contada uma única vez, junto com o cliente.",
       "Visita avulsa aparece como pessoa.",
     ],
     examples: [
       {
         title: "Exemplo",
-        desc: "Com o filtro de responsável Maria e 18 linhas na tabela, o card Registros mostra 18.",
+        desc: "58 visitas cadastradas podem virar 28 registros quando várias visitas são do mesmo cliente ou da mesma pessoa.",
       },
     ],
   },

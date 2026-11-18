@@ -147,11 +147,11 @@ const ITENS_ENGAJAMENTO: {
   rotulo: string
   peso: number
 }[] = [
-  { chave: "ata", rotulo: "Ata/Relato", peso: 20 },
-  { chave: "checkIn", rotulo: "Check-in/check-out", peso: 20 },
-  { chave: "contato", rotulo: "Contato", peso: 20 },
-  { chave: "proposta", rotulo: "Proposta", peso: 20 },
-  { chave: "oportunidade", rotulo: "Oportunidade", peso: 20 },
+  { chave: "ata", rotulo: "Ata/Relato", peso: 28 / 3 },
+  { chave: "checkIn", rotulo: "Check-in/check-out", peso: 28 / 3 },
+  { chave: "contato", rotulo: "Contato", peso: 28 / 3 },
+  { chave: "proposta", rotulo: "Proposta", peso: 36 },
+  { chave: "oportunidade", rotulo: "Oportunidade", peso: 36 },
 ]
 
 function pluralizar(quantidade: number, singular: string, plural: string): string {
@@ -261,7 +261,12 @@ export function calcularItensEngajamento(cliente: ClienteSaude): ItemEngajamento
 export function calcularResumoEngajamento(itens: ItemEngajamento[]): ResumoEngajamento {
   const total = itens.length
   const quantidade = itens.filter((item) => item.presente).length
-  const porcentagem = total > 0 ? Math.round((quantidade / total) * 100) : 0
+  const porcentagem =
+    total > 0
+      ? Math.round(
+          Math.min(100, itens.reduce((soma, item) => soma + (item.presente ? item.peso : 0), 0))
+        )
+      : 0
   const tom =
     quantidade === 0 ? "vermelho" : quantidade <= 2 ? "amarelo" : quantidade < total ? "azul" : "verde"
   const rotulo =

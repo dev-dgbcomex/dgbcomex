@@ -154,7 +154,7 @@ describe("visitas-saude", () => {
     expect(filtrarClientesSaude(linhas, { busca: "inexistente" })).toHaveLength(0)
   })
 
-  it("calcula os itens de engajamento com peso de 20% e resumo percentual", () => {
+  it("calcula os itens de engajamento com pesos de 36% e 9,33% e resumo ponderado", () => {
     const linha = cliente({
       visitas: [
         {
@@ -201,9 +201,38 @@ describe("visitas-saude", () => {
       "Proposta",
       "Oportunidade",
     ])
-    expect(itens.every((item) => item.presente && item.peso === 20)).toBe(true)
+    expect(itens.map((item) => item.peso)).toEqual([28 / 3, 28 / 3, 28 / 3, 36, 36])
+    expect(itens.every((item) => item.presente)).toBe(true)
     expect(itens[1].quantidade).toBe(1)
     expect(itens[3].registros[0].href).toBe("/comercial/crm/propostas/40")
+  })
+
+  it("aplica os pesos no resumo quando só alguns itens estão presentes", () => {
+    const soProposta = obterEngajamento(
+      cliente({
+        visitasComRelato: 0,
+        visitasComCheckIn: 0,
+        temContato: false,
+        temProposta: true,
+        temOportunidade: false,
+      })
+    )
+    expect(soProposta.resumo).toMatchObject({ quantidade: 1, total: 5, porcentagem: 36 })
+
+    const semPropostaOuOportunidade = obterEngajamento(
+      cliente({
+        visitasComRelato: 1,
+        visitasComCheckIn: 1,
+        temContato: true,
+        temProposta: false,
+        temOportunidade: false,
+      })
+    )
+    expect(semPropostaOuOportunidade.resumo).toMatchObject({
+      quantidade: 3,
+      total: 5,
+      porcentagem: 28,
+    })
   })
 
   it("marca todos os itens como ausentes quando não há sinais de engajamento", () => {

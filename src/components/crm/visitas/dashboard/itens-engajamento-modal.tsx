@@ -3,8 +3,14 @@
 import Link from "next/link"
 import { Check, Circle, ExternalLink } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { InfoButton } from "@/components/ui/info-button"
 import { obterEngajamento, type ClienteSaude } from "@/lib/crm/visitas-saude"
+import { saudeProspeccaoInfo } from "@/lib/info-content/crm"
 import { EngajamentoBadge } from "./engajamento-badge"
+
+function formatarPeso(peso: number): string {
+  return peso.toLocaleString("pt-BR", { maximumFractionDigits: 2 })
+}
 
 export function ItensEngajamentoModal({
   cliente,
@@ -26,14 +32,18 @@ export function ItensEngajamentoModal({
         {cliente && engajamento && (
           <>
             <DialogHeader className="border-b border-slate-100 p-5 pr-12 dark:border-slate-800">
-              <DialogTitle className="text-lg font-semibold text-slate-900 dark:text-slate-50">
-                {cliente.nome} — itens de engajamento
-              </DialogTitle>
+              <div className="flex items-center">
+                <DialogTitle className="text-lg font-semibold text-slate-900 dark:text-slate-50">
+                  {cliente.nome} — itens de engajamento
+                </DialogTitle>
+                <InfoButton content={saudeProspeccaoInfo.itensEngajamento} />
+              </div>
               <div className="flex flex-wrap items-center gap-2 pt-2">
                 <EngajamentoBadge resumo={engajamento.resumo} nome={cliente.nome} />
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Cada item presente vale 20% do total. Última visita: {cliente.ultimaVisita ?? "—"}
+                Proposta e oportunidade valem 36% cada; os outros três itens dividem os 28% restantes
+                (9,33% cada). Última visita: {cliente.ultimaVisita ?? "—"}
                 {cliente.proximaVisita ? ` · Próxima visita: ${cliente.proximaVisita}` : ""}
               </p>
             </DialogHeader>
@@ -68,7 +78,7 @@ export function ItensEngajamentoModal({
                               : "text-slate-400"
                           }`}
                         >
-                          {item.presente ? `${item.peso}%` : "0%"}
+                          {item.presente ? `${formatarPeso(item.peso)}%` : "0%"}
                         </p>
                         <p className="text-[10px] uppercase text-slate-400">
                           {item.presente ? "Presente" : "Ausente"}

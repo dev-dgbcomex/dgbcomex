@@ -4,7 +4,8 @@ import { fireEvent, render, screen, within } from "@testing-library/react"
 import { ClienteSaudeModal } from "./cliente-saude-modal"
 import { ClienteSaudeTable } from "./cliente-saude-table"
 import { ItensEngajamentoModal } from "./itens-engajamento-modal"
-import type { ClienteSaude } from "@/lib/crm/visitas-saude"
+import { EngajamentoBadge } from "./engajamento-badge"
+import { obterEngajamento, type ClienteSaude } from "@/lib/crm/visitas-saude"
 
 function cliente(overrides: Partial<ClienteSaude> = {}): ClienteSaude {
   return {
@@ -300,11 +301,32 @@ describe("ItensEngajamentoModal", () => {
     ).toBeInTheDocument()
     expect(within(dialog).getByText("Ata/Relato")).toBeInTheDocument()
     expect(within(dialog).getByText("Check-in/check-out")).toBeInTheDocument()
-    expect(within(dialog).getAllByText("20%").length).toBeGreaterThan(0)
+    expect(within(dialog).getAllByText("36%")).toHaveLength(2)
+    expect(within(dialog).getAllByText("9,33%")).toHaveLength(3)
+    expect(
+      within(dialog).getByRole("button", { name: "Informações da tela" })
+    ).toBeInTheDocument()
     expect(within(dialog).getByRole("link", { name: /Proposta 40/ })).toHaveAttribute(
       "href",
       "/comercial/crm/propostas/40"
     )
+  })
+
+  it("mostra o percentual ponderado no badge quando só a proposta está presente", () => {
+    const { resumo } = obterEngajamento(
+      cliente({
+        visitasComRelato: 0,
+        visitasComCheckIn: 0,
+        temContato: false,
+        temProposta: true,
+        temOportunidade: false,
+        visitas: [],
+      })
+    )
+
+    render(<EngajamentoBadge resumo={resumo} nome="Cliente Alpha" />)
+
+    expect(screen.getByText("1/5 · 36%")).toBeInTheDocument()
   })
 
   it("não renderiza conteúdo sem cliente selecionado", () => {
