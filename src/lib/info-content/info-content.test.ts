@@ -231,6 +231,9 @@ describe("getInfoContent", () => {
     expect(texto).toMatch(/pedido de venda|faturamento/)
     expect(texto).toMatch(/CNPJ/)
     expect(texto).toMatch(/já está vinculado/)
+    expect(texto).toMatch(/diferencial/)
+    expect(texto).toMatch(/cancelados/)
+    expect(texto).toMatch(/já viraram nota|já faturados/)
   })
 
   it("as telas de oportunidade e proposta explicam a edição dos campos", () => {

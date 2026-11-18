@@ -98,8 +98,11 @@ export function renderPage(ui: ReactNode) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
+  const resultado = render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>)
   return {
-    ...render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>),
+    ...resultado,
+    rerender: (proximos: ReactNode) =>
+      resultado.rerender(<QueryClientProvider client={queryClient}>{proximos}</QueryClientProvider>),
     queryClient,
   }
 }

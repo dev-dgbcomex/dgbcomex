@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { Loader2, Link2, Search, Receipt, ShoppingCart } from "lucide-react"
 import { toast } from "sonner"
@@ -35,17 +35,20 @@ export default function VincularDocumentoErpModal({
   const [busca, setBusca] = useState("")
   const [somentePessoa, setSomentePessoa] = useState(true)
   const [vinculando, setVinculando] = useState<string | null>(null)
+  const [sincronizando, setSincronizando] = useState(false)
+  const sincronizado = useRef<string | null>(null)
 
   useEffect(() => {
     if (!open) {
       setBusca("")
       setVinculando(null)
+      sincronizado.current = null
     }
   }, [open])
 
   const cnpj = somentePessoa ? cnpjPessoa || "" : ""
 
-  const { data, isLoading, isError, error } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["erp-documentos", tipo, busca, cnpj],
     queryFn: async () => {
       const params = new URLSearchParams()
@@ -64,6 +67,45 @@ export default function VincularDocumentoErpModal({
     enabled: open,
     retry: false,
   })
+
+  useEffect(() => {
+    if (!open) return
+    const chave = `${tipo}:${oportunidadeId}`
+    if (sincronizado.current === chave) return
+    sincronizado.current = chave
+
+    let ativo = true
+    setSincronizando(true)
+    const url =
+      tipo === "PEDIDO"
+        ? "/api/crm/erp/pedidos/sincronizar"
+        : "/api/crm/erp/faturamentos/sincronizar"
+
+    fetch(url, { method: "POST" })
+      .then(async (res) => {
+        const corpo = await res.json().catch(() => null)
+        if (!res.ok) throw new Error(corpo?.error || "Erro ao carregar dados novos do ERP")
+      })
+      .catch((err: unknown) => {
+        if (ativo) {
+          toast.error(
+            err instanceof Error
+              ? err.message
+              : "Erro ao carregar dados novos do ERP"
+          )
+        }
+      })
+      .finally(async () => {
+        if (ativo) {
+          setSincronizando(false)
+          await refetch()
+        }
+      })
+
+    return () => {
+      ativo = false
+    }
+  }, [open, tipo, oportunidadeId, refetch])
 
   const itens = data?.itens || []
 
@@ -150,9 +192,12 @@ export default function VincularDocumentoErpModal({
             )}
           </div>
 
-          {isLoading ? (
-            <div className="flex justify-center py-8">
+          {isLoading || sincronizando ? (
+            <div className="flex flex-col items-center justify-center gap-2 py-8">
               <Loader2 size={20} className="animate-spin text-slate-400" />
+              <span className="text-xs text-slate-500">
+                {sincronizando ? "Buscando documentos novos no ERP..." : "Carregando documentos..."}
+              </span>
             </div>
           ) : isError ? (
             <p className="py-6 text-center text-sm text-red-500">
@@ -160,7 +205,9 @@ export default function VincularDocumentoErpModal({
             </p>
           ) : itens.length === 0 ? (
             <p className="py-6 text-center text-sm text-slate-500">
-              Nenhum documento encontrado no ERP com esses filtros.
+              {tipo === "PEDIDO"
+                ? "Nenhum pedido disponível com esses filtros. Cancelados e já faturados não aparecem; use Faturamento para vincular a nota."
+                : "Nenhuma nota disponível com esses filtros."}
             </p>
           ) : (
             <div className="max-h-[50vh] overflow-auto rounded-lg border border-slate-200 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-800">

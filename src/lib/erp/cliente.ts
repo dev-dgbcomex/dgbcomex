@@ -9,7 +9,7 @@
  * (login + cache de token) é a mesma, o que muda é só o vocabulário do erro.
  */
 
-import { ErroWms, requisitarWms } from "@/lib/wms/cliente"
+import { ErroWms, requisitarWms, type OpcoesRequisicao } from "@/lib/wms/cliente"
 
 export class ErroErp extends Error {
   readonly status: number
@@ -22,9 +22,12 @@ export class ErroErp extends Error {
 }
 
 /** Chama a api-microdata e devolve o JSON; erro da API vira `ErroErp` com o status real. */
-export async function requisitarErp<T>(caminho: string): Promise<T> {
+export async function requisitarErp<T>(
+  caminho: string,
+  opcoes: OpcoesRequisicao = {}
+): Promise<T> {
   try {
-    return await requisitarWms<T>(caminho)
+    return await requisitarWms<T>(caminho, opcoes)
   } catch (erro) {
     if (erro instanceof ErroWms) {
       throw new ErroErp(erro.message, erro.status)
