@@ -4,7 +4,7 @@ import Link from "next/link"
 import { CalendarDays, FileText, MapPin } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { labelStatusOportunidade, type ClienteSaude } from "@/lib/crm/visitas-saude"
-import { DiferencaBadge, ScoreBadge } from "./score-badges"
+import { ScoreBadge } from "./score-badges"
 
 const STATUS_VISITA_LABELS: Record<string, string> = {
   AGENDADA: "Agendada",
@@ -59,12 +59,19 @@ export function ClienteSaudeModal({
               <div className="flex flex-wrap items-center gap-2 pt-2">
                 <ScoreBadge rotulo="Esforço" valor={cliente.scoreEsforco} />
                 <ScoreBadge rotulo="Engajamento" valor={cliente.scoreEngajamento} />
-                <DiferencaBadge valor={cliente.diferenca} />
               </div>
               <div className="grid gap-2 pt-2 text-xs text-slate-500 dark:text-slate-400 sm:grid-cols-3">
                 <p>
                   <span className="font-medium text-slate-700 dark:text-slate-300">Visitas:</span>{" "}
                   {cliente.totalVisitas} no ano corrente
+                </p>
+                <p>
+                  <span className="font-medium text-slate-700 dark:text-slate-300">Última visita:</span>{" "}
+                  {cliente.ultimaVisita ?? "—"}
+                </p>
+                <p>
+                  <span className="font-medium text-slate-700 dark:text-slate-300">Próxima visita:</span>{" "}
+                  {cliente.proximaVisita ?? "—"}
                 </p>
                 <p>
                   <span className="font-medium text-slate-700 dark:text-slate-300">Oportunidade:</span>{" "}

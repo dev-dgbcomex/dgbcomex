@@ -1,19 +1,20 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useState, type CSSProperties } from "react"
 import { FileDown, FileSpreadsheet, FileText, Loader2, Search } from "lucide-react"
+import { exportCSV, exportMarkdown, exportPDFRelatorio } from "@/lib/export-utils"
+import { corPorTitulo, iconePorTitulo } from "@/lib/dracula"
 import {
-  exportCSV,
-  exportMarkdown,
-  exportPDFRelatorio,
-} from "@/lib/export-utils"
-import {
+  calcularDiferenca,
+  classificarAlerta,
   filtrarClientesSaude,
   labelStatusOportunidade,
+  obterEngajamento,
   type ClienteSaude,
   type FiltrosSaude,
 } from "@/lib/crm/visitas-saude"
-import { DiferencaBadge, ScoreBadge } from "./score-badges"
+import { EngajamentoBadge } from "./engajamento-badge"
+import { ScoreBadge } from "./score-badges"
 
 const STATUS_VISITA_LABELS: Record<string, string> = {
   AGENDADA: "Agendada",
@@ -38,11 +39,9 @@ const CABECALHOS = [
   "Visitas realizadas",
   "Visitas agendadas",
   "Visitas canceladas",
-  "Ata/Relato",
-  "Check-in",
-  "Contato",
-  "Proposta",
-  "Oportunidade",
+  "Última visita",
+  "Próxima visita",
+  "Itens de engajamento",
   "Status oportunidade",
   "Valor estimado",
   "Probabilidade média",
@@ -50,9 +49,8 @@ const CABECALHOS = [
   "Valor pedidos",
   "Faturamentos",
   "Valor faturado",
-  "Score esforço",
-  "Score engajamento",
-  "Diferença",
+  "Esforço",
+  "Engajamento",
 ] as const
 
 function formatarMoeda(valor: number): string {
@@ -79,10 +77,12 @@ export function ClienteSaudeTable({
   linhas,
   isLoading,
   onSelecionar,
+  onVerItens,
 }: {
   linhas: ClienteSaude[]
   isLoading?: boolean
   onSelecionar: (linha: ClienteSaude) => void
+  onVerItens: (linha: ClienteSaude) => void
 }) {
   const [busca, setBusca] = useState("")
   const [segmento, setSegmento] = useState("")
@@ -130,38 +130,42 @@ export function ClienteSaudeTable({
     [linhas]
   )
 
-  const dadosExportacao = filtradas.map((linha) => [
-    linha.nome,
-    linha.tipo,
-    linha.documento,
-    linha.segmento,
-    linha.porte,
-    linha.responsaveis.join("; "),
-    linha.visitasRealizadas,
-    linha.visitasAgendadas,
-    linha.visitasCanceladas,
-    linha.visitasComRelato > 0 ? "Sim" : "Não",
-    linha.visitasComCheckIn > 0 ? "Sim" : "Não",
-    linha.temContato ? "Sim" : "Não",
-    linha.temProposta ? "Sim" : "Não",
-    linha.temOportunidade ? "Sim" : "Não",
-    labelStatusOportunidade(linha.statusOportunidadeDominante),
-    formatarMoeda(linha.valorEstimadoTotal),
-    `${linha.probabilidadeMedia}%`,
-    linha.pedidosVenda,
-    formatarMoeda(linha.valorPedidosVenda),
-    linha.faturamentos,
-    formatarMoeda(linha.valorFaturamento),
-    `${linha.scoreEsforco}/100`,
-    `${linha.scoreEngajamento}/100`,
-    `${linha.diferenca > 0 ? "+" : ""}${linha.diferenca}`,
-  ])
+  const dadosExportacao = filtradas.map((linha) => {
+    const { resumo } = obterEngajamento(linha)
+    return [
+      linha.nome,
+      linha.tipo,
+      linha.documento,
+      linha.segmento,
+      linha.porte,
+      linha.responsaveis.join("; "),
+      linha.visitasRealizadas,
+      linha.visitasAgendadas,
+      linha.visitasCanceladas,
+      formatarData(linha.ultimaVisita),
+      formatarData(linha.proximaVisita),
+      `${resumo.quantidade}/${resumo.total} (${resumo.porcentagem}%)`,
+      labelStatusOportunidade(linha.statusOportunidadeDominante),
+      formatarMoeda(linha.valorEstimadoTotal),
+      `${linha.probabilidadeMedia}%`,
+      linha.pedidosVenda,
+      formatarMoeda(linha.valorPedidosVenda),
+      linha.faturamentos,
+      formatarMoeda(linha.valorFaturamento),
+      `${linha.scoreEsforco}%`,
+      `${linha.scoreEngajamento}%`,
+    ]
+  })
+
+  const rotulosAlerta = filtradas.map((linha) =>
+    classificarAlerta(calcularDiferenca(linha)).rotulo
+  )
 
   const estatisticas = {
     Registros: filtradas.length,
-    "Muito esforço, pouco retorno": filtradas.filter((linha) => linha.diferenca >= 20).length,
-    "Cliente engajado, pouco esforço": filtradas.filter((linha) => linha.diferenca <= -20).length,
-    Equilibrados: filtradas.filter((linha) => Math.abs(linha.diferenca) < 20).length,
+    Esforçados: rotulosAlerta.filter((rotulo) => rotulo === "Esforçados").length,
+    Engajados: rotulosAlerta.filter((rotulo) => rotulo === "Engajados").length,
+    Equilibrados: rotulosAlerta.filter((rotulo) => rotulo === "Equilibrados").length,
   }
 
   function exportarCSV() {
@@ -233,12 +237,40 @@ export function ClienteSaudeTable({
       </div>
 
       <div className="grid gap-2 border-b border-slate-100 p-4 dark:border-slate-800 sm:grid-cols-2 lg:grid-cols-4">
-        {Object.entries(estatisticas).map(([rotulo, valor]) => (
-          <div key={rotulo} className="rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800/50">
-            <p className="text-[10px] text-slate-500 dark:text-slate-400">{rotulo}</p>
-            <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">{valor}</p>
-          </div>
-        ))}
+        {Object.entries(estatisticas).map(([rotulo, valor]) => {
+          const estilo = corPorTitulo(rotulo)
+          const Icone = iconePorTitulo(rotulo)
+          const estiloCss = {
+            "--card-fundo": estilo.fundoClaro,
+            "--card-fundo-escuro": estilo.fundoEscuro,
+            "--card-borda": estilo.borda,
+            "--card-realce": estilo.cor,
+          } as CSSProperties
+
+          return (
+            <div
+              key={rotulo}
+              style={estiloCss}
+              className="rounded-lg border border-[color:var(--card-borda)] bg-[image:var(--card-fundo)] p-3 dark:bg-[image:var(--card-fundo-escuro)]"
+            >
+              <div className="flex items-center gap-2">
+                <span
+                  className="inline-flex h-5 w-5 items-center justify-center rounded-md"
+                  style={{ backgroundColor: estilo.fundoIcone, color: estilo.cor }}
+                  aria-hidden="true"
+                >
+                  <Icone size={12} />
+                </span>
+                <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                  {rotulo}
+                </p>
+              </div>
+              <p className="mt-2 text-lg font-semibold" style={{ color: estilo.cor }}>
+                {valor}
+              </p>
+            </div>
+          )
+        })}
       </div>
 
       <div className="grid gap-2 border-b border-slate-100 p-4 dark:border-slate-800 sm:grid-cols-2 lg:grid-cols-4">
@@ -346,7 +378,7 @@ export function ClienteSaudeTable({
             onChange={(event) => setApenasAlertas(event.target.checked)}
             className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 dark:border-slate-600"
           />
-          Só alertas (diferença ≥ 20)
+          Só alertas
         </label>
       </div>
 
@@ -370,11 +402,8 @@ export function ClienteSaudeTable({
                   "Segmento/Porte",
                   "Visitas R/A/C",
                   "Última visita",
-                  "Ata",
-                  "Check-in",
-                  "Contato",
-                  "Proposta",
-                  "Oportunidade",
+                  "Próxima visita",
+                  "Itens de engajamento",
                   "Status",
                   "Valor estimado",
                   "Prob.",
@@ -382,7 +411,6 @@ export function ClienteSaudeTable({
                   "Faturado",
                   "Esforço",
                   "Engajamento",
-                  "Diferença",
                 ].map((coluna) => (
                   <th
                     key={coluna}
@@ -395,80 +423,70 @@ export function ClienteSaudeTable({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {filtradas.map((linha) => (
-                <tr key={`${linha.tipo}-${linha.id}`} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                  <td className="px-3 py-2">
-                    <button
-                      type="button"
-                      onClick={() => onSelecionar(linha)}
-                      className="text-left font-medium text-blue-600 hover:underline dark:text-blue-400"
-                    >
-                      {linha.nome}
-                    </button>
-                    <p className="text-[10px] text-slate-400 capitalize">{linha.tipo}</p>
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-2 text-slate-600 dark:text-slate-300">
-                    {linha.documento ?? "—"}
-                  </td>
-                  <td className="px-3 py-2 text-slate-600 dark:text-slate-300">
-                    {linha.segmento ?? "—"}
-                    {linha.porte ? ` / ${linha.porte}` : ""}
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-2 font-mono text-slate-700 dark:text-slate-200">
-                    {linha.visitasRealizadas}/{linha.visitasAgendadas}/{linha.visitasCanceladas}
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-2 text-slate-600 dark:text-slate-300">
-                    {formatarData(linha.ultimaVisita)}
-                  </td>
-                  <td className="px-3 py-2">
-                    <span
-                      className={
-                        linha.visitasComRelato > 0
-                          ? "text-emerald-600 dark:text-emerald-400"
-                          : "text-amber-600 dark:text-amber-400"
-                      }
-                    >
-                      {linha.visitasComRelato > 0 ? `Sim (${linha.visitasComRelato})` : "Não"}
-                    </span>
-                  </td>
-                  <td className="px-3 py-2 text-slate-600 dark:text-slate-300">
-                    {linha.visitasComCheckIn > 0 ? `Sim (${linha.visitasComCheckIn})` : "Não"}
-                  </td>
-                  <td className="px-3 py-2 text-slate-600 dark:text-slate-300">
-                    {linha.temContato ? "Sim" : "Não"}
-                  </td>
-                  <td className="px-3 py-2 text-slate-600 dark:text-slate-300">
-                    {linha.temProposta ? "Sim" : "Não"}
-                  </td>
-                  <td className="px-3 py-2 text-slate-600 dark:text-slate-300">
-                    {linha.temOportunidade ? "Sim" : "Não"}
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-2 text-slate-600 dark:text-slate-300">
-                    {labelStatusOportunidade(linha.statusOportunidadeDominante)}
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-2 text-slate-700 dark:text-slate-200">
-                    {formatarMoeda(linha.valorEstimadoTotal)}
-                  </td>
-                  <td className="px-3 py-2 text-slate-600 dark:text-slate-300">
-                    {linha.probabilidadeMedia}%
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-2 text-slate-600 dark:text-slate-300">
-                    {linha.pedidosVenda} · {formatarMoeda(linha.valorPedidosVenda)}
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-2 text-slate-600 dark:text-slate-300">
-                    {linha.faturamentos} · {formatarMoeda(linha.valorFaturamento)}
-                  </td>
-                  <td className="px-3 py-2">
-                    <ScoreBadge rotulo="Esforço" valor={linha.scoreEsforco} />
-                  </td>
-                  <td className="px-3 py-2">
-                    <ScoreBadge rotulo="Engajamento" valor={linha.scoreEngajamento} />
-                  </td>
-                  <td className="px-3 py-2">
-                    <DiferencaBadge valor={linha.diferenca} />
-                  </td>
-                </tr>
-              ))}
+              {filtradas.map((linha) => {
+                const { resumo } = obterEngajamento(linha)
+                return (
+                  <tr
+                    key={`${linha.tipo}-${linha.id}`}
+                    className="hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                  >
+                    <td className="px-3 py-2">
+                      <button
+                        type="button"
+                        onClick={() => onSelecionar(linha)}
+                        className="text-left font-medium text-blue-600 hover:underline dark:text-blue-400"
+                      >
+                        {linha.nome}
+                      </button>
+                      <p className="text-[10px] text-slate-400 capitalize">{linha.tipo}</p>
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-2 text-slate-600 dark:text-slate-300">
+                      {linha.documento ?? "—"}
+                    </td>
+                    <td className="px-3 py-2 text-slate-600 dark:text-slate-300">
+                      {linha.segmento ?? "—"}
+                      {linha.porte ? ` / ${linha.porte}` : ""}
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-2 font-mono text-slate-700 dark:text-slate-200">
+                      {linha.visitasRealizadas}/{linha.visitasAgendadas}/{linha.visitasCanceladas}
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-2 text-slate-600 dark:text-slate-300">
+                      {formatarData(linha.ultimaVisita)}
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-2 text-slate-600 dark:text-slate-300">
+                      {formatarData(linha.proximaVisita)}
+                    </td>
+                    <td className="px-3 py-2">
+                      <EngajamentoBadge
+                        resumo={resumo}
+                        nome={linha.nome}
+                        onClick={() => onVerItens(linha)}
+                      />
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-2 text-slate-600 dark:text-slate-300">
+                      {labelStatusOportunidade(linha.statusOportunidadeDominante)}
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-2 text-slate-700 dark:text-slate-200">
+                      {formatarMoeda(linha.valorEstimadoTotal)}
+                    </td>
+                    <td className="px-3 py-2 text-slate-600 dark:text-slate-300">
+                      {linha.probabilidadeMedia}%
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-2 text-slate-600 dark:text-slate-300">
+                      {linha.pedidosVenda} · {formatarMoeda(linha.valorPedidosVenda)}
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-2 text-slate-600 dark:text-slate-300">
+                      {linha.faturamentos} · {formatarMoeda(linha.valorFaturamento)}
+                    </td>
+                    <td className="px-3 py-2">
+                      <ScoreBadge rotulo="Esforço" valor={linha.scoreEsforco} />
+                    </td>
+                    <td className="px-3 py-2">
+                      <ScoreBadge rotulo="Engajamento" valor={linha.scoreEngajamento} />
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>

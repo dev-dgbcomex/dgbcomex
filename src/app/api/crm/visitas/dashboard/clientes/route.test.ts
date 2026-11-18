@@ -17,6 +17,17 @@ vi.mock("@/lib/notificar", () => ({
 
 const sessao = { userId: 7, session: { user: { id: "7", role: "ADMIN" } } }
 
+function dataLocal(deltaDias: number): string {
+  const data = new Date()
+  data.setDate(data.getDate() + deltaDias)
+  return `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, "0")}-${String(
+    data.getDate()
+  ).padStart(2, "0")}`
+}
+
+const dataUltima = dataLocal(-7)
+const dataProxima = dataLocal(30)
+
 const visita = {
   id: 1,
   clienteId: 10,
@@ -25,13 +36,13 @@ const visita = {
   propostaId: 40,
   oportunidadeId: 50,
   viagemId: 99,
-  dataVisita: "2026-11-10",
+  dataVisita: dataUltima,
   hora: "10:00",
   tipo: "PRESENCIAL",
   status: "REALIZADA",
   relato: "Ata da visita",
-  checkInTime: "2026-11-10T10:00:00.000Z",
-  checkOutTime: "2026-11-10T11:00:00.000Z",
+  checkInTime: `${dataUltima}T10:00:00.000Z`,
+  checkOutTime: `${dataUltima}T11:00:00.000Z`,
   nomeAvulso: null,
   endereco: "Rua A",
   numero: "100",
@@ -60,9 +71,30 @@ const visita = {
   viagemTitulo: "Viagem SP",
 }
 
+const visitaAgendada = {
+  ...visita,
+  id: 2,
+  dataVisita: dataProxima,
+  hora: "14:00",
+  status: "AGENDADA",
+  relato: null,
+  checkInTime: null,
+  checkOutTime: null,
+  contatoId: null,
+  propostaId: null,
+  oportunidadeId: null,
+  contatoNome: null,
+  propostaTitulo: null,
+  propostaStatus: null,
+  oportunidadeTitulo: null,
+  oportunidadeStatus: null,
+  oportunidadeValor: null,
+  oportunidadeProbabilidade: null,
+}
+
 function mockarConsultaSucesso() {
   vi.mocked(db.select)
-    .mockReturnValueOnce(createQueryBuilder([visita]))
+    .mockReturnValueOnce(createQueryBuilder([visita, visitaAgendada]))
     .mockReturnValueOnce(
       createQueryBuilder([
         {
@@ -132,7 +164,11 @@ describe("GET /api/crm/visitas/dashboard/clientes", () => {
       segmento: "Têxtil",
       porte: "Médio",
       responsaveis: ["Maria"],
+      totalVisitas: 2,
       visitasRealizadas: 1,
+      visitasAgendadas: 1,
+      ultimaVisita: dataUltima,
+      proximaVisita: dataProxima,
       visitasComRelato: 1,
       visitasComCheckIn: 1,
       temContato: true,
@@ -146,12 +182,11 @@ describe("GET /api/crm/visitas/dashboard/clientes", () => {
       faturamentos: 1,
       valorFaturamento: 200,
       scoreEsforco: 100,
-      scoreEngajamento: 90,
-      diferenca: 10,
+      scoreEngajamento: 100,
     })
-    expect(dados[0].visitas[0]).toMatchObject({
+    expect(dados[0].visitas.find((visita: { id: number }) => visita.id === 1)).toMatchObject({
       id: 1,
-      dataVisita: "2026-11-10",
+      dataVisita: dataUltima,
       relato: "Ata da visita",
       oportunidadeId: 50,
       propostaId: 40,

@@ -91,6 +91,7 @@ const saudeLinha: ClienteSaude = {
   visitasAgendadas: 0,
   visitasCanceladas: 0,
   ultimaVisita: "2026-11-10",
+  proximaVisita: "2026-12-15",
   visitasComRelato: 2,
   visitasComCheckIn: 1,
   temContato: true,
@@ -105,7 +106,6 @@ const saudeLinha: ClienteSaude = {
   valorFaturamento: 20000,
   scoreEsforco: 100,
   scoreEngajamento: 90,
-  diferenca: 50,
   visitas: [
     {
       id: 11,
@@ -374,9 +374,12 @@ describe("VisitasDashboardPage", () => {
       await screen.findByRole("heading", { name: /Saúde da prospecção por cliente\/pessoa/i })
     ).toBeInTheDocument()
     expect(screen.getByText("Cliente Alpha")).toBeInTheDocument()
-    expect(screen.getByText("100/100")).toBeInTheDocument()
-    expect(screen.getByText("90/100")).toBeInTheDocument()
-    expect(screen.getAllByText("Muito esforço, pouco retorno").length).toBeGreaterThan(0)
+    expect(screen.getByText("100%")).toBeInTheDocument()
+    expect(screen.getByText("90%")).toBeInTheDocument()
+    expect(screen.getAllByText("Esforçados").length).toBeGreaterThan(0)
+    expect(
+      screen.getByRole("button", { name: /Itens de engajamento de Cliente Alpha/i })
+    ).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "CSV" })).toBeInTheDocument()
     expect(
       findCall(fetchMock.calls, "/api/crm/visitas/dashboard/clientes?mine=true")
@@ -397,6 +400,24 @@ describe("VisitasDashboardPage", () => {
       within(dialog).getByRole("heading", { name: /Cliente Alpha — detalhamento das visitas/i })
     ).toBeInTheDocument()
     expect(within(dialog).getByText("Ata assinada com o cliente")).toBeInTheDocument()
+  })
+
+  it("abre os itens de engajamento ao clicar na coluna", async () => {
+    const fetchMock = mockRoutes({
+      "GET /api/crm/visitas/dashboard?mine=true": dashboardPayload(false),
+    })
+    vi.stubGlobal("fetch", fetchMock.fn)
+    renderPage(<VisitasDashboardPage />)
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: /Itens de engajamento de Cliente Alpha/i })
+    )
+
+    const dialog = await screen.findByRole("dialog")
+    expect(
+      within(dialog).getByRole("heading", { name: /Cliente Alpha — itens de engajamento/i })
+    ).toBeInTheDocument()
+    expect(within(dialog).getByText("Check-in/check-out")).toBeInTheDocument()
   })
 
   it("recarrega o recorte ao alternar para Todas as visitas", async () => {

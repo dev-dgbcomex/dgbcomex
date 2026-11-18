@@ -26,6 +26,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { InfoButton } from "@/components/ui/info-button"
 import { ClienteSaudeModal } from "@/components/crm/visitas/dashboard/cliente-saude-modal"
 import { ClienteSaudeTable } from "@/components/crm/visitas/dashboard/cliente-saude-table"
+import { ItensEngajamentoModal } from "@/components/crm/visitas/dashboard/itens-engajamento-modal"
 import type { ClienteSaude } from "@/lib/crm/visitas-saude"
 import { getInfoContent } from "@/lib/info-content"
 import type { VisitaModalRow } from "../types"
@@ -122,6 +123,7 @@ export default function VisitasDashboardPage() {
     viagemTitulo: string
   } | null>(null)
   const [clienteSelecionado, setClienteSelecionado] = useState<ClienteSaude | null>(null)
+  const [itensSelecionados, setItensSelecionados] = useState<ClienteSaude | null>(null)
 
   const { data, isLoading } = useQuery<VisitasDashboardData>({
     queryKey: ["visitas-dashboard", visitasFilter],
@@ -293,6 +295,7 @@ export default function VisitasDashboardPage() {
             linhas={saude ?? []}
             isLoading={saudeLoading}
             onSelecionar={setClienteSelecionado}
+            onVerItens={setItensSelecionados}
           />
 
           <VisitasCharts data={data} openModal={openModal} />
@@ -594,6 +597,11 @@ export default function VisitasDashboardPage() {
       )}
 
       <ClienteSaudeModal cliente={clienteSelecionado} onClose={() => setClienteSelecionado(null)} />
+
+      <ItensEngajamentoModal
+        cliente={itensSelecionados}
+        onClose={() => setItensSelecionados(null)}
+      />
 
       <Dialog
         open={!!modalFiltro}

@@ -1,9 +1,11 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest"
 import {
+  calcularDiferenca,
   calcularScores,
   classificarAlerta,
   filtrarClientesSaude,
+  obterEngajamento,
   isStatusNegociado,
   labelStatusOportunidade,
   type ClienteSaude,
@@ -26,6 +28,7 @@ function cliente(overrides: Partial<ClienteSaude> = {}): ClienteSaude {
     visitasAgendadas: 0,
     visitasCanceladas: 0,
     ultimaVisita: "2026-11-10",
+    proximaVisita: null,
     visitasComRelato: 1,
     visitasComCheckIn: 1,
     temContato: true,
@@ -40,7 +43,6 @@ function cliente(overrides: Partial<ClienteSaude> = {}): ClienteSaude {
     valorFaturamento: 200,
     scoreEsforco: 100,
     scoreEngajamento: 100,
-    diferenca: 0,
     visitas: [],
     ...overrides,
   }
@@ -62,7 +64,7 @@ describe("visitas-saude", () => {
       faturamentos: 2,
     })
 
-    expect(scores).toEqual({ scoreEsforco: 100, scoreEngajamento: 100, diferenca: 0 })
+    expect(scores).toEqual({ scoreEsforco: 100, scoreEngajamento: 100 })
   })
 
   it("dá muito esforço e pouco retorno quando só visitas e atas existem", () => {
@@ -80,17 +82,20 @@ describe("visitas-saude", () => {
       faturamentos: 0,
     })
 
-    expect(scores).toEqual({ scoreEsforco: 70, scoreEngajamento: 20, diferenca: 50 })
-    expect(classificarAlerta(scores.diferenca).rotulo).toBe("Muito esforço, pouco retorno")
+    expect(scores).toEqual({ scoreEsforco: 70, scoreEngajamento: 20 })
+    expect(classificarAlerta(calcularDiferenca(scores))).toEqual({
+      rotulo: "Esforçados",
+      tom: "vermelho",
+    })
   })
 
   it("classifica engajado sem esforço e equilibrado", () => {
     expect(classificarAlerta(-40)).toEqual({
-      rotulo: "Cliente engajado, pouco esforço",
+      rotulo: "Engajados",
       tom: "amarelo",
     })
-    expect(classificarAlerta(19)).toEqual({ rotulo: "Equilibrado", tom: "verde" })
-    expect(classificarAlerta(-19)).toEqual({ rotulo: "Equilibrado", tom: "verde" })
+    expect(classificarAlerta(19)).toEqual({ rotulo: "Equilibrados", tom: "verde" })
+    expect(classificarAlerta(-19)).toEqual({ rotulo: "Equilibrados", tom: "verde" })
   })
 
   it("reconhece status negociados e ignora perdido", () => {
@@ -116,7 +121,7 @@ describe("visitas-saude", () => {
         statusVisitas: ["AGENDADA"],
         tiposVisita: ["VIDEO"],
         statusOportunidades: ["PERDIDO"],
-        diferenca: 30,
+        scoreEngajamento: 70,
       }),
     ]
 
@@ -130,5 +135,77 @@ describe("visitas-saude", () => {
     expect(filtrarClientesSaude(linhas, { tipoVisita: "VIDEO" })[0].id).toBe(2)
     expect(filtrarClientesSaude(linhas, { apenasAlertas: true })[0].id).toBe(2)
     expect(filtrarClientesSaude(linhas, { busca: "inexistente" })).toHaveLength(0)
+  })
+
+  it("calcula os itens de engajamento com peso de 20% e resumo percentual", () => {
+    const linha = cliente({
+      visitas: [
+        {
+          id: 11,
+          dataVisita: "2026-11-10",
+          hora: "10:00",
+          tipo: "PRESENCIAL",
+          status: "REALIZADA",
+          relato: "Ata assinada",
+          checkInTime: null,
+          checkOutTime: "2026-11-10T11:00:00.000Z",
+          empresaNome: "Cliente Alpha",
+          clienteNome: null,
+          nomeAvulso: null,
+          oportunidadeId: 50,
+          oportunidadeTitulo: "Oportunidade 50",
+          oportunidadeStatus: "NEGOCIADA",
+          oportunidadeValor: 1000,
+          oportunidadeProbabilidade: 50,
+          propostaId: 40,
+          propostaTitulo: "Proposta 40",
+          propostaStatus: "NEGOCIADA",
+          contatoId: 30,
+          contatoNome: "João",
+          criadoPorNome: "Maria",
+          enderecoTexto: null,
+        },
+      ],
+    })
+
+    const { itens, resumo } = obterEngajamento(linha)
+
+    expect(resumo).toEqual({
+      quantidade: 5,
+      total: 5,
+      porcentagem: 100,
+      rotulo: "Completo",
+      tom: "verde",
+    })
+    expect(itens.map((item) => item.rotulo)).toEqual([
+      "Ata/Relato",
+      "Check-in/check-out",
+      "Contato",
+      "Proposta",
+      "Oportunidade",
+    ])
+    expect(itens.every((item) => item.presente && item.peso === 20)).toBe(true)
+    expect(itens[1].quantidade).toBe(1)
+    expect(itens[3].registros[0].href).toBe("/comercial/crm/propostas/40")
+  })
+
+  it("marca todos os itens como ausentes quando não há sinais de engajamento", () => {
+    const { itens, resumo } = obterEngajamento(
+      cliente({
+        visitasComRelato: 0,
+        visitasComCheckIn: 0,
+        temContato: false,
+        temProposta: false,
+        temOportunidade: false,
+      })
+    )
+
+    expect(resumo).toMatchObject({
+      quantidade: 0,
+      porcentagem: 0,
+      rotulo: "Sem itens",
+      tom: "vermelho",
+    })
+    expect(itens.every((item) => !item.presente)).toBe(true)
   })
 })

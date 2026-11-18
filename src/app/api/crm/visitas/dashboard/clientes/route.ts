@@ -16,6 +16,7 @@ import { clientes } from "@/lib/db/schema/clientes"
 import { usuarios } from "@/lib/db/schema/usuarios"
 import { and, desc, eq, gte, inArray, lt, or } from "drizzle-orm"
 import {
+  calcularDiferenca,
   calcularScores,
   isStatusNegociado,
   labelStatusOportunidade,
@@ -147,6 +148,9 @@ export async function GET(req: NextRequest) {
     const agora = new Date()
     const inicioAno = `${agora.getFullYear()}-01-01`
     const fimAno = `${agora.getFullYear() + 1}-01-01`
+    const hoje = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, "0")}-${String(
+      agora.getDate()
+    ).padStart(2, "0")}`
 
     const condicaoBase = and(gte(crmVisitas.dataVisita, inicioAno), lt(crmVisitas.dataVisita, fimAno))
     const condicao = isMine
@@ -454,6 +458,7 @@ export async function GET(req: NextRequest) {
           visitasAgendadas: 0,
           visitasCanceladas: 0,
           ultimaVisita: null,
+          proximaVisita: null,
           visitasComRelato: 0,
           visitasComCheckIn: 0,
           temContato: false,
@@ -468,7 +473,6 @@ export async function GET(req: NextRequest) {
           valorFaturamento: 0,
           scoreEsforco: 0,
           scoreEngajamento: 0,
-          diferenca: 0,
           visitas: [],
         }
         grupos.set(dono.key, grupo)
@@ -480,8 +484,20 @@ export async function GET(req: NextRequest) {
       if (v.status === "CANCELADA") grupo.visitasCanceladas += 1
       if (v.relato?.trim()) grupo.visitasComRelato += 1
       if (v.checkInTime) grupo.visitasComCheckIn += 1
-      if (v.dataVisita && (!grupo.ultimaVisita || v.dataVisita > grupo.ultimaVisita)) {
+      if (
+        v.dataVisita &&
+        v.dataVisita <= hoje &&
+        (!grupo.ultimaVisita || v.dataVisita > grupo.ultimaVisita)
+      ) {
         grupo.ultimaVisita = v.dataVisita
+      }
+      if (
+        v.status === "AGENDADA" &&
+        v.dataVisita &&
+        v.dataVisita >= hoje &&
+        (!grupo.proximaVisita || v.dataVisita < grupo.proximaVisita)
+      ) {
+        grupo.proximaVisita = v.dataVisita
       }
 
       adicionarUnico(grupo.statusVisitas, v.status)
@@ -630,7 +646,6 @@ export async function GET(req: NextRequest) {
 
       grupo.scoreEsforco = scores.scoreEsforco
       grupo.scoreEngajamento = scores.scoreEngajamento
-      grupo.diferenca = scores.diferenca
       grupo.responsaveis = grupo.responsaveis.filter((r, i, arr) => arr.indexOf(r) === i && r.length > 0)
       grupo.statusVisitas = grupo.statusVisitas.filter((s, i, arr) => arr.indexOf(s) === i && s.length > 0)
       grupo.tiposVisita = grupo.tiposVisita.filter((t, i, arr) => arr.indexOf(t) === i && t.length > 0)
@@ -639,7 +654,7 @@ export async function GET(req: NextRequest) {
     }
 
     const resultado = Array.from(grupos.values()).sort(
-      (a, b) => b.diferenca - a.diferenca || b.totalVisitas - a.totalVisitas
+      (a, b) => calcularDiferenca(b) - calcularDiferenca(a) || b.totalVisitas - a.totalVisitas
     )
 
     return NextResponse.json(resultado)

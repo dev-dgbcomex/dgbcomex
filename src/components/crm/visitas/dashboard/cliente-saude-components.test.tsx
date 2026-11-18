@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest"
 import { fireEvent, render, screen, within } from "@testing-library/react"
 import { ClienteSaudeModal } from "./cliente-saude-modal"
 import { ClienteSaudeTable } from "./cliente-saude-table"
+import { ItensEngajamentoModal } from "./itens-engajamento-modal"
 import type { ClienteSaude } from "@/lib/crm/visitas-saude"
 
 function cliente(overrides: Partial<ClienteSaude> = {}): ClienteSaude {
@@ -22,6 +23,7 @@ function cliente(overrides: Partial<ClienteSaude> = {}): ClienteSaude {
     visitasAgendadas: 0,
     visitasCanceladas: 0,
     ultimaVisita: "2026-11-10",
+    proximaVisita: "2026-12-15",
     visitasComRelato: 2,
     visitasComCheckIn: 1,
     temContato: true,
@@ -36,7 +38,6 @@ function cliente(overrides: Partial<ClienteSaude> = {}): ClienteSaude {
     valorFaturamento: 200,
     scoreEsforco: 100,
     scoreEngajamento: 90,
-    diferenca: 10,
     visitas: [
       {
         id: 11,
@@ -69,11 +70,12 @@ function cliente(overrides: Partial<ClienteSaude> = {}): ClienteSaude {
 }
 
 describe("ClienteSaudeTable", () => {
-  it("renderiza scores, filtros, ações de exportação e a tabela", () => {
+  it("renderiza scores percentuais, cards, filtros e a tabela", () => {
     render(
       <ClienteSaudeTable
-        linhas={[cliente()]}
+        linhas={[cliente(), cliente({ id: 2, nome: "Beta Ltda", scoreEngajamento: 60 })]}
         onSelecionar={vi.fn()}
+        onVerItens={vi.fn()}
       />
     )
 
@@ -84,17 +86,25 @@ describe("ClienteSaudeTable", () => {
     expect(screen.getByRole("button", { name: "PDF" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "MD" })).toBeInTheDocument()
     expect(screen.getByRole("searchbox", { name: /Buscar cliente ou pessoa/i })).toBeInTheDocument()
-    expect(screen.getAllByText("Esforço").length).toBeGreaterThan(0)
-    expect(screen.getByText("100/100")).toBeInTheDocument()
-    expect(screen.getAllByText("Engajamento").length).toBeGreaterThan(0)
-    expect(screen.getByText("90/100")).toBeInTheDocument()
-    expect(screen.getByText("Equilibrado")).toBeInTheDocument()
+    expect(screen.getAllByText("100%").length).toBeGreaterThan(0)
+    expect(screen.getByText("90%")).toBeInTheDocument()
+    expect(screen.getByText("Esforçados")).toBeInTheDocument()
+    expect(screen.getByText("Equilibrados")).toBeInTheDocument()
+    expect(screen.queryByText(/Diferença/i)).not.toBeInTheDocument()
+    expect(screen.getByRole("columnheader", { name: "Próxima visita" })).toBeInTheDocument()
+    expect(screen.getByRole("columnheader", { name: "Itens de engajamento" })).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", {
+        name: /Itens de engajamento de Cliente Alpha: 5 de 5, 100%, Completo/i,
+      })
+    ).toBeInTheDocument()
     expect(screen.getByText("Cliente Alpha")).toBeInTheDocument()
     expect(screen.getByRole("columnheader", { name: "Visitas R/A/C" })).toBeInTheDocument()
   })
 
-  it("filtra pela busca e abre o detalhe da linha", () => {
+  it("filtra pela busca, abre o detalhe da linha e abre os itens de engajamento", () => {
     const aoSelecionar = vi.fn()
+    const aoVerItens = vi.fn()
     const linha = cliente()
     const outra = cliente({ id: 2, nome: "Beta Ltda", documento: "99999999000100" })
 
@@ -102,6 +112,7 @@ describe("ClienteSaudeTable", () => {
       <ClienteSaudeTable
         linhas={[linha, outra]}
         onSelecionar={aoSelecionar}
+        onVerItens={aoVerItens}
       />
     )
 
@@ -111,10 +122,19 @@ describe("ClienteSaudeTable", () => {
 
     fireEvent.click(screen.getByText("Beta Ltda"))
     expect(aoSelecionar).toHaveBeenCalledWith(outra)
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /Itens de engajamento de Beta Ltda: 5 de 5, 100%, Completo/i,
+      })
+    )
+    expect(aoVerItens).toHaveBeenCalledWith(outra)
   })
 
   it("mostra estado vazio quando não há registros", () => {
-    render(<ClienteSaudeTable linhas={[]} onSelecionar={vi.fn()} />)
+    render(
+      <ClienteSaudeTable linhas={[]} onSelecionar={vi.fn()} onVerItens={vi.fn()} />
+    )
     expect(
       screen.getByText(/Nenhum cliente\/pessoa encontrado com os filtros atuais/i)
     ).toBeInTheDocument()
@@ -122,7 +142,7 @@ describe("ClienteSaudeTable", () => {
 })
 
 describe("ClienteSaudeModal", () => {
-  it("mostra o detalhamento das visitas e os links vinculados", () => {
+  it("mostra o detalhamento das visitas, datas e links vinculados", () => {
     const aoFechar = vi.fn()
     render(<ClienteSaudeModal cliente={cliente()} onClose={aoFechar} />)
 
@@ -130,6 +150,8 @@ describe("ClienteSaudeModal", () => {
     expect(
       within(dialog).getByRole("heading", { name: /Cliente Alpha — detalhamento das visitas/i })
     ).toBeInTheDocument()
+    expect(within(dialog).getByText(/Última visita:/)).toBeInTheDocument()
+    expect(within(dialog).getByText(/Próxima visita:/)).toBeInTheDocument()
     expect(within(dialog).getByText("Ata assinada com o cliente")).toBeInTheDocument()
     expect(within(dialog).getByText(/Check-in:/)).toBeInTheDocument()
     expect(within(dialog).getByRole("link", { name: /#11/ })).toHaveAttribute(
@@ -144,10 +166,34 @@ describe("ClienteSaudeModal", () => {
       "href",
       "/comercial/crm/propostas/40"
     )
+    expect(within(dialog).queryByText(/Diferença/i)).not.toBeInTheDocument()
   })
 
   it("não renderiza conteúdo sem cliente selecionado", () => {
     render(<ClienteSaudeModal cliente={null} onClose={vi.fn()} />)
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+  })
+})
+
+describe("ItensEngajamentoModal", () => {
+  it("detalha cada item com peso, estado e registros vinculados", () => {
+    render(<ItensEngajamentoModal cliente={cliente()} onClose={vi.fn()} />)
+
+    const dialog = screen.getByRole("dialog")
+    expect(
+      within(dialog).getByRole("heading", { name: /Cliente Alpha — itens de engajamento/i })
+    ).toBeInTheDocument()
+    expect(within(dialog).getByText("Ata/Relato")).toBeInTheDocument()
+    expect(within(dialog).getByText("Check-in/check-out")).toBeInTheDocument()
+    expect(within(dialog).getAllByText("20%").length).toBeGreaterThan(0)
+    expect(within(dialog).getByRole("link", { name: /Proposta 40/ })).toHaveAttribute(
+      "href",
+      "/comercial/crm/propostas/40"
+    )
+  })
+
+  it("não renderiza conteúdo sem cliente selecionado", () => {
+    render(<ItensEngajamentoModal cliente={null} onClose={vi.fn()} />)
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
   })
 })

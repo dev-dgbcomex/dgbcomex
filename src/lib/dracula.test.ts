@@ -69,6 +69,9 @@ const TITULOS_CRM = [
   "Visitas no período",
   "Criados nos últimos 7 dias",
   "Criados no mês",
+  "Esforçados",
+  "Engajados",
+  "Equilibrados",
 ]
 
 describe("corPorTitulo", () => {
@@ -140,5 +143,10 @@ describe("iconePorTitulo", () => {
   it("usa o ícone de campanha no card de campanhas", () => {
     expect(iconePorTitulo("Campanhas")).toBe(iconePorTitulo("Campanhas"))
     expect(iconePorTitulo("Campanhas")).not.toBe(iconePorTitulo("Clientes"))
+  })
+
+  it("dá ícones distintos aos alertas de saúde da prospecção", () => {
+    expect(iconePorTitulo("Esforçados")).not.toBe(iconePorTitulo("Engajados"))
+    expect(iconePorTitulo("Engajados")).not.toBe(iconePorTitulo("Equilibrados"))
   })
 })
