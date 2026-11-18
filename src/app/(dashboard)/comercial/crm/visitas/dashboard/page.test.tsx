@@ -188,7 +188,9 @@ describe("VisitasDashboardPage", () => {
     })
     vi.stubGlobal("fetch", fetchMock.fn)
     renderPage(<VisitasDashboardPage />)
-    expect(screen.getByRole("heading", { name: "Dashboard de Visitas" })).toBeInTheDocument()
+    expect(
+      screen.getByRole("heading", { name: "Dashboard de Visitas e Prospecção" })
+    ).toBeInTheDocument()
     expect(await screen.findByText("Ações Rápidas")).toBeInTheDocument()
     expect(screen.getByText("Performance por Gerente Comercial")).toBeInTheDocument()
     expect(screen.getByText("Viagens")).toBeInTheDocument()

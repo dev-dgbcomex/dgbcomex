@@ -381,7 +381,7 @@ export const crmContent: Record<string, InfoContent> = {
     ],
   },
   "/comercial/crm/visitas/dashboard": {
-    title: "Dashboard de Visitas — saúde da prospecção",
+    title: "Dashboard de Visitas e Prospecção — saúde da prospecção",
     description:
       "Central de visitas do ano corrente que cruza o esforço do comercial com o engajamento do cliente. Mantém os gráficos e indicadores de visitas, viagens e performance por gerente, e acrescenta a saúde da prospecção por cliente ou pessoa.",
     rules: [
@@ -392,7 +392,7 @@ export const crmContent: Record<string, InfoContent> = {
       "Esforço e engajamento aparecem apenas como percentual de 0 a 100%; não há mais campo de diferença.",
       "Negociada para frente inclui NEGOCIADA, NEGOCIAÇÃO/NEGOCIANDO, ACEITA/ACEITO, FECHADO GANHO, GANHO e CONVERTIDO. Perdido não soma engajamento.",
       "Pedidos e faturamentos entram pela OPORTUNIDADE vinculada à visita — não existe vínculo direto de pedido/faturamento com a visita. Os valores vêm dos itens.",
-      "Os cards usam os dois percentuais: esforço até 35% é BEC (Baixo Esforço comercial); esforço e engajamento acima de 35% com diferença menor que 20 pontos é EQL (Equilibrado); esforço acima de 35% e pelo menos 20 pontos à frente é AEC (Alto Esforço comercial); o contrário é Engajados. Clique em AEC, EQL ou BEC para ver a lista de clientes/pessoas.",
+      "Os cards usam os dois percentuais: esforço até 35% é BEC (Baixo Esforço comercial); esforço e engajamento acima de 35% com |diferença| < 20 pontos é EQL (Equilibrado), exceto quando o engajamento está pelo menos 10 pontos à frente (Engajados); esforço pelo menos 20 pontos à frente é AEC (Alto Esforço comercial). Clique em AEC, EQL ou BEC para ver a lista de clientes/pessoas.",
       "Conversão = (pedidos de venda + faturamentos) ÷ total de visitas da linha, arredondado e limitado a 100%. Clique no badge para ver quantidades e valores.",
       "No badge de itens de engajamento, proposta e oportunidade valem 36% cada; ata/relato, check-in/check-out e contato dividem os 28% restantes (9,33% cada). A coluna mostra quantidade de itens presentes e o percentual ponderado; clique nela para detalhar. Esses pesos não mudam o score de engajamento nem a classificação.",
       "O card Registros conta clientes/pessoas distintos do recorte, não visitas: 58 visitas cadastradas podem aparecer como 28 registros.",
@@ -1383,12 +1383,12 @@ export const saudeProspeccaoInfo = {
   engajados: {
     title: "Engajados — clientes puxando o resultado",
     description:
-      "Clientes e pessoas com engajamento acima de 35% e pelo menos 20 pontos à frente do esforço.",
-    rules: ["Fórmula: Engajados se Engajamento > 35 e Engajamento − Esforço ≥ 20."],
+      "Clientes e pessoas com engajamento acima de 35% e pelo menos 10 pontos à frente do esforço.",
+    rules: ["Fórmula: Engajados se Engajamento > 35 e Engajamento − Esforço ≥ 10."],
     examples: [
       {
         title: "Exemplo",
-        desc: "Esforço 40% e engajamento 75%: 75 − 40 = 35. O registro entra em Engajados.",
+        desc: "Esforço 60% e engajamento 75%: 75 − 60 = 15. O registro entra em Engajados.",
       },
     ],
   },
@@ -1398,6 +1398,7 @@ export const saudeProspeccaoInfo = {
       "Clientes e pessoas com esforço e engajamento acima de 35% e próximos um do outro.",
     rules: [
       "Fórmula: EQL se Esforço > 35, Engajamento > 35 e |Esforço − Engajamento| < 20.",
+      "Quando o engajamento fica pelo menos 10 pontos à frente, o registro vai para Engajados mesmo com diferença menor que 20.",
       "Clique no card para abrir a lista de clientes e pessoas equilibradas.",
     ],
     examples: [

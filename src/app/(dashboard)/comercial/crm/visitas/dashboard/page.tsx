@@ -176,7 +176,7 @@ export default function VisitasDashboardPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-50">
-            Dashboard de Visitas{info && <InfoButton content={info} />}
+            Dashboard de Visitas e Prospecção{info && <InfoButton content={info} />}
           </h1>
           <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">
             Central de saúde da prospecção: esforço comercial, engajamento do cliente e retorno

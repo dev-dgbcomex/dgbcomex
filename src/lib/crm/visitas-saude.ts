@@ -471,12 +471,13 @@ export function classificarAlerta(
   if (engajamento <= 35) {
     return { rotulo: "AEC", tom: "vermelho" }
   }
+  if (engajamento - esforco >= 10) {
+    return { rotulo: "Engajados", tom: "amarelo" }
+  }
   if (Math.abs(diferenca) < 20) {
     return { rotulo: "EQL", tom: "verde" }
   }
-  return diferenca > 0
-    ? { rotulo: "AEC", tom: "vermelho" }
-    : { rotulo: "Engajados", tom: "amarelo" }
+  return { rotulo: "AEC", tom: "vermelho" }
 }
 
 function normalizar(valor: string | null | undefined): string {

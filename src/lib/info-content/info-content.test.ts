@@ -286,6 +286,7 @@ describe("getInfoContent", () => {
   it("o dashboard de visitas explica saúde da prospecção, scores e detalhamento", () => {
     const conteudo = getInfoContent("/comercial/crm/visitas/dashboard")
     expect(conteudo).not.toBeNull()
+    expect(conteudo?.title).toMatch(/Dashboard de Visitas e Prospecção/i)
 
     const texto = [
       conteudo?.description ?? "",
@@ -304,6 +305,7 @@ describe("getInfoContent", () => {
     expect(texto).toMatch(/Engajados/i)
     expect(texto).toMatch(/EQL/i)
     expect(texto).toMatch(/BEC/i)
+    expect(texto).toMatch(/10 pontos à frente/i)
     expect(texto).toMatch(/Conversão/i)
     expect(texto).toMatch(/Visitas R\/A\/C/i)
     expect(texto).toMatch(/Itens de engajamento/i)
@@ -547,7 +549,11 @@ describe("saudeProspeccaoInfo", () => {
       saudeProspeccaoInfo.tabela.examples?.map((exemplo) => `${exemplo.title}: ${exemplo.desc}`).join(" ")
     ).toMatch(/4 visitas, 1 pedido/i)
     expect(saudeProspeccaoInfo.aec.rules?.join(" ")).toMatch(/Esforço > 35/i)
+    expect(saudeProspeccaoInfo.engajados.rules?.join(" ")).toMatch(
+      /Engajamento − Esforço ≥ 10/i
+    )
     expect(saudeProspeccaoInfo.eql.rules?.join(" ")).toMatch(/\|Esforço − Engajamento\| < 20/i)
+    expect(saudeProspeccaoInfo.eql.rules?.join(" ")).toMatch(/pelo menos 10 pontos à frente/i)
     expect(saudeProspeccaoInfo.bec.rules?.join(" ")).toMatch(/Esforço ≤ 35/i)
     expect(saudeProspeccaoInfo.conversao.rules?.join(" ")).toMatch(/limitado a 100%/i)
     expect(saudeProspeccaoInfo.esforco.rules?.join(" ")).toMatch(/visita realizada \(\+20\)/i)

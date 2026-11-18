@@ -92,12 +92,16 @@ describe("visitas-saude", () => {
     })
   })
 
-  it("classifica AEC, Engajados, EQL e BEC pelo limite de 35 e a diferença de 20", () => {
+  it("classifica AEC, Engajados, EQL e BEC com 10 pontos para Engajados", () => {
     expect(classificarAlerta({ scoreEsforco: 100, scoreEngajamento: 70 })).toEqual({
       rotulo: "AEC",
       tom: "vermelho",
     })
     expect(classificarAlerta({ scoreEsforco: 40, scoreEngajamento: 80 })).toEqual({
+      rotulo: "Engajados",
+      tom: "amarelo",
+    })
+    expect(classificarAlerta({ scoreEsforco: 60, scoreEngajamento: 75 })).toEqual({
       rotulo: "Engajados",
       tom: "amarelo",
     })
