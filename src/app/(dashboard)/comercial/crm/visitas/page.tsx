@@ -100,7 +100,7 @@ function VisitasPageContent() {
   const [page, setPage] = useState(1)
   const [modo, setModo] = useState<ModoVisao>(() => {
     const view = searchParams.get("view")
-    return view === "tabela" || view === "calendario" || view === "kanban" ? view : "tabela"
+    return view === "tabela" || view === "calendario" || view === "kanban" ? view : "calendario"
   })
   const [selectedVisita, setSelectedVisita] = useState<{ id: number; nome: string } | null>(null)
   const [dataInicio, setDataInicio] = useState("")

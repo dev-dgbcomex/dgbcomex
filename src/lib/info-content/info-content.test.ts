@@ -275,12 +275,12 @@ describe("getInfoContent", () => {
     }
   })
 
-  it("a listagem de visitas explica a visão padrão Tabela", () => {
+  it("a listagem de visitas explica a visão padrão Calendário", () => {
     const conteudo = getInfoContent("/comercial/crm/visitas")
     const texto = (conteudo?.rules ?? []).join("\n")
 
-    expect(texto).toMatch(/abre na visão Tabela/i)
-    expect(texto).toMatch(/Calendário ou Kanban/i)
+    expect(texto).toMatch(/abre na visão Calendário/i)
+    expect(texto).toMatch(/Tabela ou Kanban/i)
   })
 
   it("o dashboard de visitas explica saúde da prospecção, scores e detalhamento", () => {
@@ -302,6 +302,7 @@ describe("getInfoContent", () => {
     expect(texto).toMatch(/Engajamento/i)
     expect(texto).toMatch(/AEC/i)
     expect(texto).toMatch(/Engajados/i)
+    expect(texto).toMatch(/EQL/i)
     expect(texto).toMatch(/BEC/i)
     expect(texto).toMatch(/Conversão/i)
     expect(texto).toMatch(/Visitas R\/A\/C/i)
@@ -542,8 +543,9 @@ describe("saudeProspeccaoInfo", () => {
     expect(
       saudeProspeccaoInfo.tabela.examples?.map((exemplo) => `${exemplo.title}: ${exemplo.desc}`).join(" ")
     ).toMatch(/4 visitas, 1 pedido/i)
-    expect(saudeProspeccaoInfo.aec.rules?.join(" ")).toMatch(/Esforço − Engajamento ≥ 20/i)
-    expect(saudeProspeccaoInfo.bec.rules?.join(" ")).toMatch(/< 20/i)
+    expect(saudeProspeccaoInfo.aec.rules?.join(" ")).toMatch(/Esforço > 35/i)
+    expect(saudeProspeccaoInfo.eql.rules?.join(" ")).toMatch(/\|Esforço − Engajamento\| < 20/i)
+    expect(saudeProspeccaoInfo.bec.rules?.join(" ")).toMatch(/Esforço ≤ 35/i)
     expect(saudeProspeccaoInfo.conversao.rules?.join(" ")).toMatch(/limitado a 100%/i)
     expect(saudeProspeccaoInfo.esforco.rules?.join(" ")).toMatch(/visita realizada \(\+20\)/i)
     expect(saudeProspeccaoInfo.engajamento.rules?.join(" ")).toMatch(

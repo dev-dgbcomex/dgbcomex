@@ -71,6 +71,7 @@ const TITULOS_CRM = [
   "Criados no mês",
   "AEC",
   "Engajados",
+  "EQL",
   "BEC",
 ]
 
@@ -147,6 +148,7 @@ describe("iconePorTitulo", () => {
 
   it("dá ícones distintos aos alertas de saúde da prospecção", () => {
     expect(iconePorTitulo("AEC")).not.toBe(iconePorTitulo("Engajados"))
-    expect(iconePorTitulo("Engajados")).not.toBe(iconePorTitulo("BEC"))
+    expect(iconePorTitulo("Engajados")).not.toBe(iconePorTitulo("EQL"))
+    expect(iconePorTitulo("EQL")).not.toBe(iconePorTitulo("BEC"))
   })
 })

@@ -369,7 +369,7 @@ export const crmContent: Record<string, InfoContent> = {
       "Visitas FUTURAS aparecem destacadas — são compromissos agendados.",
       "O status da visita muda automaticamente com base na data.",
       "É possível registrar fotos da visita no detalhe.",
-      "A listagem abre na visão Tabela; alterne para Calendário ou Kanban quando quiser.",
+      "A listagem abre na visão Calendário; alterne para Tabela ou Kanban quando quiser.",
       "No calendário, clique em um dia para ver as visitas daquele dia. Clique em uma visita para ir ao detalhe.",
       "No Kanban, arraste os cards entre colunas para alterar o status da visita.",
     ],
@@ -392,7 +392,7 @@ export const crmContent: Record<string, InfoContent> = {
       "Esforço e engajamento aparecem apenas como percentual de 0 a 100%; não há mais campo de diferença.",
       "Negociada para frente inclui NEGOCIADA, NEGOCIAÇÃO/NEGOCIANDO, ACEITA/ACEITO, FECHADO GANHO, GANHO e CONVERTIDO. Perdido não soma engajamento.",
       "Pedidos e faturamentos entram pela OPORTUNIDADE vinculada à visita — não existe vínculo direto de pedido/faturamento com a visita. Os valores vêm dos itens.",
-      "Os cards comparam os dois percentuais: esforço pelo menos 20 pontos acima do engajamento é AEC (Alto Esforço comercial); o contrário é Engajados; os demais são BEC (Baixo Esforço comercial). Clique em AEC ou BEC para ver a lista de clientes/pessoas.",
+      "Os cards usam os dois percentuais: esforço até 35% é BEC (Baixo Esforço comercial); esforço e engajamento acima de 35% com diferença menor que 20 pontos é EQL (Equilibrado); esforço acima de 35% e pelo menos 20 pontos à frente é AEC (Alto Esforço comercial); o contrário é Engajados. Clique em AEC, EQL ou BEC para ver a lista de clientes/pessoas.",
       "Conversão = (pedidos de venda + faturamentos) ÷ total de visitas da linha, arredondado e limitado a 100%. Clique no badge para ver quantidades e valores.",
       "Cada item de engajamento (ata/relato, check-in/check-out, contato, proposta e oportunidade) vale 20%. A coluna mostra quantidade e percentual; clique nela para detalhar os itens e os registros vinculados.",
       "A coluna Visitas R/A/C abre a lista de visitas; cada visita da lista é clicável e abre o cadastro da visita.",
@@ -411,7 +411,7 @@ export const crmContent: Record<string, InfoContent> = {
       { name: "Status", desc: "Status da oportunidade mais avançada: NEGOCIADA, ACEITA, FECHADO GANHO etc." },
       { name: "Valor estimado / Prob.", desc: "Soma do valor das oportunidades e média das probabilidades." },
       { name: "Conversão", desc: "Percentual de (pedidos + faturamentos) sobre o total de visitas; clique para ver quantidades e valores." },
-      { name: "Esforço / Engajamento", desc: "Scores exibidos somente como percentual de 0 a 100%." },
+      { name: "Esforço / Engajamento", desc: "Scores de 0 a 100%; clique na porcentagem para ver os critérios e pontos que compõem cada um." },
     ],
     fields: [
       { name: "Buscar", desc: "Nome do cliente/pessoa, documento ou responsável." },
@@ -421,7 +421,7 @@ export const crmContent: Record<string, InfoContent> = {
       { name: "Status da visita", desc: "Agendada, realizada, cancelada ou em andamento." },
       { name: "Status da oportunidade", desc: "Filtra pelo status das oportunidades vinculadas." },
       { name: "Tipo de visita", desc: "Presencial, vídeo ou telefone." },
-      { name: "Só alertas", desc: "Mostra apenas AEC, Engajados e BEC, com os percentuais distantes ao menos 20 pontos ou próximos." },
+      { name: "Só alertas", desc: "Mostra AEC, Engajados e BEC; esconde os registros EQL (equilibrados)." },
       { name: "Todas / Minhas Visitas", desc: "Alterna o recorte de todos os responsáveis para somente as visitas do usuário logado." },
     ],
     examples: [
@@ -432,6 +432,10 @@ export const crmContent: Record<string, InfoContent> = {
       {
         title: "Engajados",
         desc: "Poucas visitas, mas com oportunidade negociada, pedido de venda e faturamento: o engajamento puxa o score para cima e o cliente entra em Engajados.",
+      },
+      {
+        title: "EQL — Equilibrado",
+        desc: "Esforço 60% e engajamento 55%: ambos acima de 35% e a diferença é 5 pontos. O cliente entra em EQL e o card abre a lista de equilibrados.",
       },
       {
         title: "Conversão",
@@ -1335,9 +1339,10 @@ export const saudeProspeccaoInfo = {
   aec: {
     title: "AEC — Alto Esforço comercial",
     description:
-      "Clientes e pessoas em que o esforço comercial está pelo menos 20 pontos acima do engajamento.",
+      "Clientes e pessoas com esforço acima de 35% e pelo menos 20 pontos à frente do engajamento.",
     rules: [
-      "Fórmula: AEC se Esforço − Engajamento ≥ 20.",
+      "Fórmula: AEC se Esforço > 35 e Esforço − Engajamento ≥ 20.",
+      "Também entra em AEC quem tem esforço acima de 35% e engajamento de até 35%.",
       "Clique no card para abrir a lista de clientes e pessoas desse grupo.",
     ],
     examples: [
@@ -1350,27 +1355,42 @@ export const saudeProspeccaoInfo = {
   engajados: {
     title: "Engajados — clientes puxando o resultado",
     description:
-      "Clientes e pessoas em que o engajamento está pelo menos 20 pontos acima do esforço comercial.",
-    rules: ["Fórmula: Engajados se Engajamento − Esforço ≥ 20."],
+      "Clientes e pessoas com engajamento acima de 35% e pelo menos 20 pontos à frente do esforço.",
+    rules: ["Fórmula: Engajados se Engajamento > 35 e Engajamento − Esforço ≥ 20."],
     examples: [
       {
         title: "Exemplo",
-        desc: "Esforço 30% e engajamento 75%: 75 − 30 = 45. O registro entra em Engajados.",
+        desc: "Esforço 40% e engajamento 75%: 75 − 40 = 35. O registro entra em Engajados.",
+      },
+    ],
+  },
+  eql: {
+    title: "EQL — Equilibrado",
+    description:
+      "Clientes e pessoas com esforço e engajamento acima de 35% e próximos um do outro.",
+    rules: [
+      "Fórmula: EQL se Esforço > 35, Engajamento > 35 e |Esforço − Engajamento| < 20.",
+      "Clique no card para abrir a lista de clientes e pessoas equilibradas.",
+    ],
+    examples: [
+      {
+        title: "Exemplo",
+        desc: "Esforço 60% e engajamento 55%: ambos acima de 35% e |60 − 55| = 5. O registro entra em EQL.",
       },
     ],
   },
   bec: {
     title: "BEC — Baixo Esforço comercial",
-    description:
-      "Clientes e pessoas com esforço e engajamento próximos — chamados de Equilibrados na classificação.",
+    description: "Clientes e pessoas com esforço comercial de até 35%.",
     rules: [
-      "Fórmula: BEC se |Esforço − Engajamento| < 20.",
+      "Fórmula: BEC se Esforço ≤ 35.",
+      "O engajamento pode ser qualquer valor; o que define o grupo é o esforço baixo.",
       "Clique no card para abrir a lista de clientes e pessoas desse grupo.",
     ],
     examples: [
       {
         title: "Exemplo",
-        desc: "Esforço 60% e engajamento 50%: |60 − 50| = 10. O registro entra em BEC (Baixo Esforço comercial).",
+        desc: "Esforço 30% e engajamento 60%: como o esforço é 30%, o registro entra em BEC (Baixo Esforço comercial).",
       },
     ],
   },

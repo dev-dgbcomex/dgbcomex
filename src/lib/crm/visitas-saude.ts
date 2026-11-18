@@ -448,17 +448,30 @@ export function calcularDiferenca(
   return linha.scoreEsforco - linha.scoreEngajamento
 }
 
-export function classificarAlerta(diferenca: number): {
-  rotulo: string
-  tom: "vermelho" | "amarelo" | "verde"
+export type ClassificacaoSaude = "AEC" | "Engajados" | "EQL" | "BEC"
+
+export function classificarAlerta(
+  linha: Pick<ClienteSaude, "scoreEsforco" | "scoreEngajamento">
+): {
+  rotulo: ClassificacaoSaude
+  tom: "vermelho" | "amarelo" | "verde" | "azul"
 } {
-  if (diferenca >= 20) {
-    return { rotulo: "Esforçados", tom: "vermelho" }
+  const esforco = linha.scoreEsforco
+  const engajamento = linha.scoreEngajamento
+  const diferenca = esforco - engajamento
+
+  if (esforco <= 35) {
+    return { rotulo: "BEC", tom: "azul" }
   }
-  if (diferenca <= -20) {
-    return { rotulo: "Engajados", tom: "amarelo" }
+  if (engajamento <= 35) {
+    return { rotulo: "AEC", tom: "vermelho" }
   }
-  return { rotulo: "Equilibrados", tom: "verde" }
+  if (Math.abs(diferenca) < 20) {
+    return { rotulo: "EQL", tom: "verde" }
+  }
+  return diferenca > 0
+    ? { rotulo: "AEC", tom: "vermelho" }
+    : { rotulo: "Engajados", tom: "amarelo" }
 }
 
 function normalizar(valor: string | null | undefined): string {
@@ -493,7 +506,7 @@ export function filtrarClientesSaude(
       return false
     }
     if (filtros.tipoVisita && !linha.tiposVisita.includes(filtros.tipoVisita)) return false
-    if (filtros.apenasAlertas && Math.abs(calcularDiferenca(linha)) < 20) return false
+    if (filtros.apenasAlertas && classificarAlerta(linha).rotulo === "EQL") return false
     return true
   })
 }

@@ -378,7 +378,7 @@ describe("VisitasDashboardPage", () => {
     expect(screen.getByText("Cliente Alpha")).toBeInTheDocument()
     expect(screen.getAllByText("100%").length).toBeGreaterThan(0)
     expect(screen.getAllByText("90%").length).toBeGreaterThan(0)
-    expect(screen.getAllByText("BEC").length).toBeGreaterThan(0)
+    expect(screen.getAllByText("EQL").length).toBeGreaterThan(0)
     expect(
       screen.getByRole("button", { name: /Itens de engajamento de Cliente Alpha/i })
     ).toBeInTheDocument()

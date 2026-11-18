@@ -2,7 +2,6 @@
 import { describe, expect, it } from "vitest"
 import {
   calcularConversao,
-  calcularDiferenca,
   calcularScores,
   classificarAlerta,
   filtrarClientesSaude,
@@ -87,19 +86,33 @@ describe("visitas-saude", () => {
     })
 
     expect(scores).toEqual({ scoreEsforco: 70, scoreEngajamento: 20 })
-    expect(classificarAlerta(calcularDiferenca(scores))).toEqual({
-      rotulo: "Esforçados",
+    expect(classificarAlerta(scores)).toEqual({
+      rotulo: "AEC",
       tom: "vermelho",
     })
   })
 
-  it("classifica engajado sem esforço e equilibrado", () => {
-    expect(classificarAlerta(-40)).toEqual({
+  it("classifica AEC, Engajados, EQL e BEC pelo limite de 35 e a diferença de 20", () => {
+    expect(classificarAlerta({ scoreEsforco: 100, scoreEngajamento: 70 })).toEqual({
+      rotulo: "AEC",
+      tom: "vermelho",
+    })
+    expect(classificarAlerta({ scoreEsforco: 40, scoreEngajamento: 80 })).toEqual({
       rotulo: "Engajados",
       tom: "amarelo",
     })
-    expect(classificarAlerta(19)).toEqual({ rotulo: "Equilibrados", tom: "verde" })
-    expect(classificarAlerta(-19)).toEqual({ rotulo: "Equilibrados", tom: "verde" })
+    expect(classificarAlerta({ scoreEsforco: 60, scoreEngajamento: 55 })).toEqual({
+      rotulo: "EQL",
+      tom: "verde",
+    })
+    expect(classificarAlerta({ scoreEsforco: 30, scoreEngajamento: 60 })).toEqual({
+      rotulo: "BEC",
+      tom: "azul",
+    })
+    expect(classificarAlerta({ scoreEsforco: 50, scoreEngajamento: 20 })).toEqual({
+      rotulo: "AEC",
+      tom: "vermelho",
+    })
   })
 
   it("reconhece status negociados e ignora perdido", () => {

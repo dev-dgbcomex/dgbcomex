@@ -6,7 +6,6 @@ import { exportCSV, exportMarkdown, exportPDFRelatorio } from "@/lib/export-util
 import { corPorTitulo, iconePorTitulo } from "@/lib/dracula"
 import {
   calcularConversao,
-  calcularDiferenca,
   classificarAlerta,
   filtrarClientesSaude,
   labelStatusOportunidade,
@@ -167,20 +166,16 @@ export function ClienteSaudeTable({
     ]
   })
 
-  const aec = filtradas.filter(
-    (linha) => classificarAlerta(calcularDiferenca(linha)).rotulo === "Esforçados"
-  )
-  const engajados = filtradas.filter(
-    (linha) => classificarAlerta(calcularDiferenca(linha)).rotulo === "Engajados"
-  )
-  const bec = filtradas.filter(
-    (linha) => classificarAlerta(calcularDiferenca(linha)).rotulo === "Equilibrados"
-  )
+  const aec = filtradas.filter((linha) => classificarAlerta(linha).rotulo === "AEC")
+  const engajados = filtradas.filter((linha) => classificarAlerta(linha).rotulo === "Engajados")
+  const eql = filtradas.filter((linha) => classificarAlerta(linha).rotulo === "EQL")
+  const bec = filtradas.filter((linha) => classificarAlerta(linha).rotulo === "BEC")
 
   const estatisticas = {
     Registros: filtradas.length,
     AEC: aec.length,
     Engajados: engajados.length,
+    EQL: eql.length,
     BEC: bec.length,
   }
 
@@ -200,7 +195,7 @@ export function ClienteSaudeTable({
       info: saudeProspeccaoInfo.aec,
       clicavel: true,
       titulo: "Alto Esforço comercial",
-      descricao: "Esforço pelo menos 20 pontos acima do engajamento",
+      descricao: "Esforço acima de 35% e pelo menos 20 pontos à frente do engajamento",
       linhas: aec,
     },
     {
@@ -213,12 +208,21 @@ export function ClienteSaudeTable({
       linhas: [] as ClienteSaude[],
     },
     {
+      rotulo: "EQL",
+      valor: eql.length,
+      info: saudeProspeccaoInfo.eql,
+      clicavel: true,
+      titulo: "Equilibrado",
+      descricao: "Esforço e engajamento acima de 35%, com diferença menor que 20 pontos",
+      linhas: eql,
+    },
+    {
       rotulo: "BEC",
       valor: bec.length,
       info: saudeProspeccaoInfo.bec,
       clicavel: true,
       titulo: "Baixo Esforço comercial",
-      descricao: "Esforço e engajamento distantes menos de 20 pontos",
+      descricao: "Esforço comercial até 35%",
       linhas: bec,
     },
   ]

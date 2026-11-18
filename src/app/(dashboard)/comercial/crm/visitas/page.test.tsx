@@ -100,8 +100,17 @@ describe("VisitasPage", () => {
     navMock.setPathname("/comercial/crm/visitas")
   })
 
+  it("abre no calendário por padrão", async () => {
+    renderPage(<VisitasPage />)
+
+    expect(await screen.findByRole("button", { name: "Próximo mês" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Calendário" })).toHaveClass("bg-blue-600")
+    expect(screen.queryByRole("table")).not.toBeInTheDocument()
+  })
+
   it("renderiza a tabela de visitas com dados", async () => {
     renderPage(<VisitasPage />)
+    fireEvent.click(screen.getByRole("button", { name: "Tabela" }))
 
     expect(await screen.findByRole("heading", { name: "Visitas" })).toBeInTheDocument()
     expect(await screen.findByText("Tecelagem Alpha")).toBeInTheDocument()
@@ -118,6 +127,7 @@ describe("VisitasPage", () => {
 
   it("carrega por padrao apenas as minhas visitas (mine=true)", async () => {
     renderPage(<VisitasPage />)
+    fireEvent.click(screen.getByRole("button", { name: "Tabela" }))
 
     await screen.findByText("Tecelagem Alpha")
     await waitFor(() =>
@@ -140,7 +150,6 @@ describe("VisitasPage", () => {
 
     renderPage(<VisitasPage />)
 
-    await screen.findByText("Tecelagem Alpha")
     fireEvent.click(screen.getByRole("button", { name: "Kanban" }))
 
     expect(await screen.findByRole("button", { name: "Flutuar" })).toBeInTheDocument()
@@ -150,6 +159,7 @@ describe("VisitasPage", () => {
 
   it("altera status em massa via PATCH", async () => {
     renderPage(<VisitasPage />)
+    fireEvent.click(screen.getByRole("button", { name: "Tabela" }))
     await screen.findByText("Tecelagem Alpha")
 
     const checkboxes = screen.getAllByRole("checkbox")
@@ -171,6 +181,7 @@ describe("VisitasPage", () => {
 
   it("exclui visitas selecionadas em massa", async () => {
     renderPage(<VisitasPage />)
+    fireEvent.click(screen.getByRole("button", { name: "Tabela" }))
     await screen.findByText("Tecelagem Alpha")
 
     const checkboxes = screen.getAllByRole("checkbox")
@@ -191,6 +202,7 @@ describe("VisitasPage", () => {
 
   it("busca com debounce e filtra no servidor", async () => {
     renderPage(<VisitasPage />)
+    fireEvent.click(screen.getByRole("button", { name: "Tabela" }))
     await screen.findByText("Tecelagem Alpha")
 
     fireEvent.change(screen.getByPlaceholderText("Buscar por pessoa, cliente ou oportunidade..."), {
@@ -210,6 +222,7 @@ describe("VisitasPage", () => {
 
   it("expõe labels acessíveis para filtros de data e checkboxes", async () => {
     renderPage(<VisitasPage />)
+    fireEvent.click(screen.getByRole("button", { name: "Tabela" }))
     await screen.findByText("Tecelagem Alpha")
 
     expect(screen.getByLabelText("Data inicial do período")).toBeInTheDocument()
@@ -220,10 +233,13 @@ describe("VisitasPage", () => {
   })
 
   it("mostra estado vazio", async () => {
-    const empty = createFetchMock(() => ({ json: { data: [], total: 0, totalPages: 0 } }))
+    const empty = createFetchMock(({ url }) => ({
+      json: url.includes("all=true") ? [] : { data: [], total: 0, totalPages: 0 },
+    }))
     vi.stubGlobal("fetch", empty.fn)
 
     renderPage(<VisitasPage />)
+    fireEvent.click(screen.getByRole("button", { name: "Tabela" }))
 
     expect(await screen.findByText("Nenhuma visita encontrada")).toBeInTheDocument()
   })
