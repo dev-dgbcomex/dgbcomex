@@ -8,6 +8,7 @@ import {
   calcularConversao,
   classificarAlerta,
   filtrarClientesSaude,
+  formatarPontos,
   labelStatusOportunidade,
   obterEngajamento,
   type ClienteSaude,
@@ -161,8 +162,8 @@ export function ClienteSaudeTable({
       formatarMoeda(linha.valorEstimadoTotal),
       `${linha.probabilidadeMedia}%`,
       `${calcularConversao(linha).percentual}% (${linha.pedidosVenda} pedidos / ${linha.faturamentos} faturamentos)`,
-      `${linha.scoreEsforco}%`,
-      `${linha.scoreEngajamento}%`,
+      `${formatarPontos(linha.scoreEsforco)}%`,
+      `${formatarPontos(linha.scoreEngajamento)}%`,
     ]
   })
 

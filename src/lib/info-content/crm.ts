@@ -387,7 +387,7 @@ export const crmContent: Record<string, InfoContent> = {
     rules: [
       "O recorte padrão é o ano corrente; a listagem de visitas continua em /comercial/crm/visitas.",
       "Pessoa promovida a cliente é agrupada com o cliente. Quem não virou cliente aparece pelo nome da pessoa; visita avulsa aparece como pessoa.",
-      "Esforço cresce com visita realizada (+20), relato/ata (+20), check-in (+15), contato (+15), proposta (+15) e oportunidade (+15). O relato precisa existir; status de visita sozinho não basta.",
+      "Esforço cresce com visita realizada (+12,5), relato/ata (+12,5), check-in (+12,5), contato (+12,5), proposta (+25) e oportunidade (+25). Os quatro primeiros dividem igualmente os 50 pontos restantes. O relato precisa existir; status de visita sozinho não basta.",
       "Engajamento cresce com visita realizada (+20), visita agendada (+10), proposta ou oportunidade negociada para frente (+20 cada), pedido de venda (+15) e faturamento (+15).",
       "Esforço e engajamento aparecem apenas como percentual de 0 a 100%; não há mais campo de diferença.",
       "Negociada para frente inclui NEGOCIADA, NEGOCIAÇÃO/NEGOCIANDO, ACEITA/ACEITO, FECHADO GANHO, GANHO e CONVERTIDO. Perdido não soma engajamento.",
@@ -1265,7 +1265,7 @@ export const saudeProspeccaoInfo = {
     description:
       "Cada linha é um cliente ou pessoa com visitas no ano corrente. A tabela cruza esforço comercial, engajamento e conversão, e respeita todos os filtros aplicados acima.",
     rules: [
-      "Fórmula do esforço: visita realizada (+20) + relato/ata (+20) + check-in (+15) + contato (+15) + proposta (+15) + oportunidade (+15), limitado a 100%.",
+      "Fórmula do esforço: visita realizada (+12,5) + relato/ata (+12,5) + check-in (+12,5) + contato (+12,5) + proposta (+25) + oportunidade (+25), limitado a 100%.",
       "Fórmula do engajamento: visita realizada (+20) + visita agendada (+10) + proposta negociada (+20) + oportunidade negociada (+20) + pedido de venda (+15) + faturamento (+15), limitado a 100%.",
       "Fórmula da conversão: (pedidos de venda + faturamentos) ÷ total de visitas da linha, arredondado e limitado a 100%.",
       "No badge de itens de engajamento, proposta e oportunidade valem 36% cada e os outros três itens dividem 28% (9,33% cada); a coluna mostra quantos itens estão presentes e o percentual ponderado.",
@@ -1321,14 +1321,15 @@ export const saudeProspeccaoInfo = {
     description:
       "O score de esforço mede o trabalho comercial feito com o cliente ou pessoa no período.",
     rules: [
-      "Fórmula: visita realizada (+20) + relato/ata (+20) + check-in (+15) + contato (+15) + proposta (+15) + oportunidade (+15).",
+      "Fórmula: visita realizada (+12,5) + relato/ata (+12,5) + check-in (+12,5) + contato (+12,5) + proposta (+25) + oportunidade (+25).",
+      "Proposta e oportunidade valem 25 pontos cada; os outros quatro critérios dividem igualmente os 50 pontos restantes.",
       "O total é limitado a 100%.",
       "Clique na porcentagem na tabela para ver o detalhe de cada critério.",
     ],
     examples: [
       {
         title: "Exemplo",
-        desc: "Visita realizada com relato e check-in, sem contato, proposta ou oportunidade: 20 + 20 + 15 = 55% de esforço.",
+        desc: "Visita realizada com relato e check-in, sem contato, proposta ou oportunidade: 12,5 + 12,5 + 12,5 = 37,5% de esforço.",
       },
     ],
   },

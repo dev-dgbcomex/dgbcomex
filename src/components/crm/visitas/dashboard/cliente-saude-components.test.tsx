@@ -251,6 +251,8 @@ describe("ClienteSaudeTable", () => {
     ).toBeInTheDocument()
     expect(within(dialog).getByText("Check-in")).toBeInTheDocument()
     expect(within(dialog).getByText("Relato/ata")).toBeInTheDocument()
+    expect(within(dialog).getAllByText("+12,5")).toHaveLength(4)
+    expect(within(dialog).getAllByText("+25")).toHaveLength(2)
     expect(
       within(dialog).getByText(/soma dos pontos dos critérios presentes = 100%/i)
     ).toBeInTheDocument()

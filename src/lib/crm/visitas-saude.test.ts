@@ -5,6 +5,7 @@ import {
   calcularScores,
   classificarAlerta,
   filtrarClientesSaude,
+  formatarPontos,
   obterDetalheScore,
   obterEngajamento,
   isStatusNegociado,
@@ -85,7 +86,7 @@ describe("visitas-saude", () => {
       faturamentos: 0,
     })
 
-    expect(scores).toEqual({ scoreEsforco: 70, scoreEngajamento: 20 })
+    expect(scores).toEqual({ scoreEsforco: 50, scoreEngajamento: 20 })
     expect(classificarAlerta(scores)).toEqual({
       rotulo: "AEC",
       tom: "vermelho",
@@ -286,6 +287,9 @@ describe("visitas-saude", () => {
     const esforco = obterDetalheScore(base, "Esforço")
     expect(esforco.total).toBe(100)
     expect(esforco.componentes).toHaveLength(6)
+    expect(esforco.componentes.map((componente) => componente.pontos)).toEqual([
+      12.5, 12.5, 12.5, 12.5, 25, 25,
+    ])
     expect(esforco.componentes.every((componente) => componente.presente)).toBe(true)
 
     const engajamento = obterDetalheScore(base, "Engajamento")
@@ -311,5 +315,10 @@ describe("visitas-saude", () => {
     )
     expect(semSinais.total).toBe(0)
     expect(semSinais.componentes.every((componente) => !componente.presente)).toBe(true)
+  })
+
+  it("formata pontos decimais em português", () => {
+    expect(formatarPontos(12.5)).toBe("12,5")
+    expect(formatarPontos(100)).toBe("100")
   })
 })

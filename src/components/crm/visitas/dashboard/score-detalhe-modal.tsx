@@ -3,7 +3,12 @@
 import { Check, Circle } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { InfoButton } from "@/components/ui/info-button"
-import { obterDetalheScore, type ClienteSaude, type TipoScore } from "@/lib/crm/visitas-saude"
+import {
+  formatarPontos,
+  obterDetalheScore,
+  type ClienteSaude,
+  type TipoScore,
+} from "@/lib/crm/visitas-saude"
 import { saudeProspeccaoInfo } from "@/lib/info-content/crm"
 
 export type SelecaoScore = {
@@ -82,7 +87,7 @@ export function ScoreDetalheModal({
                         </span>
                       </td>
                       <td className="px-2 py-2 text-right font-mono font-semibold text-slate-700 dark:text-slate-200">
-                        +{componente.pontos}
+                        +{formatarPontos(componente.pontos)}
                       </td>
                     </tr>
                   ))}
@@ -91,7 +96,8 @@ export function ScoreDetalheModal({
             </div>
 
             <p className="border-t border-slate-100 p-4 text-xs text-slate-600 dark:border-slate-800 dark:text-slate-300">
-              Fórmula: soma dos pontos dos critérios presentes = {detalhe.total}% (limitado a 100%).
+              Fórmula: soma dos pontos dos critérios presentes = {formatarPontos(detalhe.total)}%
+              (limitado a 100%).
             </p>
           </>
         )}

@@ -325,6 +325,13 @@ export type DetalheScore = {
   total: number
 }
 
+const PONTOS_ESFORCO_BASE = 12.5
+const PONTOS_ESFORCO_DESTAQUE = 25
+
+export function formatarPontos(pontos: number): string {
+  return pontos.toLocaleString("pt-BR", { maximumFractionDigits: 1 })
+}
+
 export function obterDetalheScore(cliente: ClienteSaude, tipo: TipoScore): DetalheScore {
   const componentes: ComponenteScore[] =
     tipo === "Esforço"
@@ -332,37 +339,37 @@ export function obterDetalheScore(cliente: ClienteSaude, tipo: TipoScore): Detal
           {
             rotulo: "Visita realizada",
             descricao: `${cliente.visitasRealizadas} visitas realizadas no período`,
-            pontos: cliente.visitasRealizadas > 0 ? 20 : 0,
+            pontos: cliente.visitasRealizadas > 0 ? PONTOS_ESFORCO_BASE : 0,
             presente: cliente.visitasRealizadas > 0,
           },
           {
             rotulo: "Relato/ata",
             descricao: `${cliente.visitasComRelato} visitas com relato preenchido`,
-            pontos: cliente.visitasComRelato > 0 ? 20 : 0,
+            pontos: cliente.visitasComRelato > 0 ? PONTOS_ESFORCO_BASE : 0,
             presente: cliente.visitasComRelato > 0,
           },
           {
             rotulo: "Check-in",
             descricao: `${cliente.visitasComCheckIn} visitas com check-in/check-out`,
-            pontos: cliente.visitasComCheckIn > 0 ? 15 : 0,
+            pontos: cliente.visitasComCheckIn > 0 ? PONTOS_ESFORCO_BASE : 0,
             presente: cliente.visitasComCheckIn > 0,
           },
           {
             rotulo: "Contato",
             descricao: cliente.temContato ? "Contato vinculado às visitas" : "Sem contato vinculado",
-            pontos: cliente.temContato ? 15 : 0,
+            pontos: cliente.temContato ? PONTOS_ESFORCO_BASE : 0,
             presente: cliente.temContato,
           },
           {
             rotulo: "Proposta",
             descricao: cliente.temProposta ? "Proposta vinculada" : "Sem proposta vinculada",
-            pontos: cliente.temProposta ? 15 : 0,
+            pontos: cliente.temProposta ? PONTOS_ESFORCO_DESTAQUE : 0,
             presente: cliente.temProposta,
           },
           {
             rotulo: "Oportunidade",
             descricao: cliente.temOportunidade ? "Oportunidade vinculada" : "Sem oportunidade vinculada",
-            pontos: cliente.temOportunidade ? 15 : 0,
+            pontos: cliente.temOportunidade ? PONTOS_ESFORCO_DESTAQUE : 0,
             presente: cliente.temOportunidade,
           },
         ]
@@ -426,12 +433,12 @@ export function calcularScores(entrada: {
 }): { scoreEsforco: number; scoreEngajamento: number } {
   const scoreEsforco = Math.min(
     100,
-    (entrada.visitasRealizadas > 0 ? 20 : 0) +
-      (entrada.visitasComRelato > 0 ? 20 : 0) +
-      (entrada.visitasComCheckIn > 0 ? 15 : 0) +
-      (entrada.temContato ? 15 : 0) +
-      (entrada.temProposta ? 15 : 0) +
-      (entrada.temOportunidade ? 15 : 0)
+    (entrada.visitasRealizadas > 0 ? PONTOS_ESFORCO_BASE : 0) +
+      (entrada.visitasComRelato > 0 ? PONTOS_ESFORCO_BASE : 0) +
+      (entrada.visitasComCheckIn > 0 ? PONTOS_ESFORCO_BASE : 0) +
+      (entrada.temContato ? PONTOS_ESFORCO_BASE : 0) +
+      (entrada.temProposta ? PONTOS_ESFORCO_DESTAQUE : 0) +
+      (entrada.temOportunidade ? PONTOS_ESFORCO_DESTAQUE : 0)
   )
 
   const scoreEngajamento = Math.min(

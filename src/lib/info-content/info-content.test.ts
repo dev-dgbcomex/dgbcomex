@@ -557,7 +557,8 @@ describe("saudeProspeccaoInfo", () => {
     expect(saudeProspeccaoInfo.eql.rules?.join(" ")).toMatch(/pelo menos 10 pontos à frente/i)
     expect(saudeProspeccaoInfo.bec.rules?.join(" ")).toMatch(/Esforço ≤ 35/i)
     expect(saudeProspeccaoInfo.conversao.rules?.join(" ")).toMatch(/limitado a 100%/i)
-    expect(saudeProspeccaoInfo.esforco.rules?.join(" ")).toMatch(/visita realizada \(\+20\)/i)
+    expect(saudeProspeccaoInfo.esforco.rules?.join(" ")).toMatch(/visita realizada \(\+12,5\)/i)
+    expect(saudeProspeccaoInfo.esforco.rules?.join(" ")).toMatch(/proposta \(\+25\)/i)
     expect(saudeProspeccaoInfo.engajamento.rules?.join(" ")).toMatch(
       /proposta negociada \(\+20\)/i
     )
