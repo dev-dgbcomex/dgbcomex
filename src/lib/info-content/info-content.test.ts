@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest"
 import { getInfoContent } from "./index"
+import { saudeProspeccaoInfo } from "./crm"
 
 describe("getInfoContent", () => {
   it("returns exact match for known path", () => {
@@ -299,8 +300,11 @@ describe("getInfoContent", () => {
     expect(texto).toMatch(/recorte padrão/i)
     expect(texto).toMatch(/Esforço/i)
     expect(texto).toMatch(/Engajamento/i)
-    expect(texto).toMatch(/Esforçados/i)
+    expect(texto).toMatch(/AEC/i)
     expect(texto).toMatch(/Engajados/i)
+    expect(texto).toMatch(/BEC/i)
+    expect(texto).toMatch(/Conversão/i)
+    expect(texto).toMatch(/Visitas R\/A\/C/i)
     expect(texto).toMatch(/Itens de engajamento/i)
     expect(texto).toMatch(/Próxima visita/i)
     expect(texto).toMatch(/0 a 100%/i)
@@ -527,5 +531,25 @@ describe("getInfoContent", () => {
     expect(texto).toMatch(/todas as notificações/i)
     expect(texto).toMatch(/ADMIN/)
     expect(texto).toMatch(/Enviar teste para os administradores/i)
+  })
+})
+
+describe("saudeProspeccaoInfo", () => {
+  it("explica cards, tabela e conversão com fórmulas e exemplos", () => {
+    expect(saudeProspeccaoInfo.tabela.rules?.join(" ")).toMatch(
+      /\(pedidos de venda \+ faturamentos\) ÷ total de visitas/i
+    )
+    expect(
+      saudeProspeccaoInfo.tabela.examples?.map((exemplo) => `${exemplo.title}: ${exemplo.desc}`).join(" ")
+    ).toMatch(/4 visitas, 1 pedido/i)
+    expect(saudeProspeccaoInfo.aec.rules?.join(" ")).toMatch(/Esforço − Engajamento ≥ 20/i)
+    expect(saudeProspeccaoInfo.bec.rules?.join(" ")).toMatch(/< 20/i)
+    expect(saudeProspeccaoInfo.conversao.rules?.join(" ")).toMatch(/limitado a 100%/i)
+    expect(saudeProspeccaoInfo.esforco.rules?.join(" ")).toMatch(/visita realizada \(\+20\)/i)
+    expect(saudeProspeccaoInfo.engajamento.rules?.join(" ")).toMatch(
+      /proposta negociada \(\+20\)/i
+    )
+    expect(saudeProspeccaoInfo.registros.examples?.length).toBeGreaterThan(0)
+    expect(saudeProspeccaoInfo.engajados.examples?.length).toBeGreaterThan(0)
   })
 })

@@ -392,8 +392,10 @@ export const crmContent: Record<string, InfoContent> = {
       "Esforço e engajamento aparecem apenas como percentual de 0 a 100%; não há mais campo de diferença.",
       "Negociada para frente inclui NEGOCIADA, NEGOCIAÇÃO/NEGOCIANDO, ACEITA/ACEITO, FECHADO GANHO, GANHO e CONVERTIDO. Perdido não soma engajamento.",
       "Pedidos e faturamentos entram pela OPORTUNIDADE vinculada à visita — não existe vínculo direto de pedido/faturamento com a visita. Os valores vêm dos itens.",
-      "Os cards comparam os dois percentuais: esforço pelo menos 20 pontos acima do engajamento é Esforçados; o contrário é Engajados; os demais são Equilibrados.",
+      "Os cards comparam os dois percentuais: esforço pelo menos 20 pontos acima do engajamento é AEC (Alto Esforço comercial); o contrário é Engajados; os demais são BEC (Baixo Esforço comercial). Clique em AEC ou BEC para ver a lista de clientes/pessoas.",
+      "Conversão = (pedidos de venda + faturamentos) ÷ total de visitas da linha, arredondado e limitado a 100%. Clique no badge para ver quantidades e valores.",
       "Cada item de engajamento (ata/relato, check-in/check-out, contato, proposta e oportunidade) vale 20%. A coluna mostra quantidade e percentual; clique nela para detalhar os itens e os registros vinculados.",
+      "A coluna Visitas R/A/C abre a lista de visitas; cada visita da lista é clicável e abre o cadastro da visita.",
       "Clique no nome do cliente/pessoa para abrir o modal com todas as visitas do período, contatos, propostas, oportunidades, valores, status, relato/ata, check-in e check-out.",
       "Filtros de segmento, porte, responsável, status da visita, status da oportunidade e tipo de visita combinam com a busca. Exportações CSV, PDF e MD respeitam o recorte atual.",
       "O botão Todas/Minhas Visitas altera todo o dashboard e a saúde da prospecção.",
@@ -402,13 +404,13 @@ export const crmContent: Record<string, InfoContent> = {
       { name: "Nome", desc: "Cliente/pessoa da visita. Clicável — abre o modal com todas as visitas." },
       { name: "Documento", desc: "CNPJ do cliente ou da pessoa; visita avulsa não tem documento." },
       { name: "Segmento/Porte", desc: "Dados do cliente ou da pessoa, quando preenchidos." },
-      { name: "Visitas R/A/C", desc: "Realizadas / agendadas / canceladas no ano corrente." },
+      { name: "Visitas R/A/C", desc: "Realizadas / agendadas / canceladas no ano corrente. Clique para listar as visitas." },
       { name: "Última visita", desc: "Data da visita mais recente já realizada no recorte." },
       { name: "Próxima visita", desc: "Data da próxima visita agendada; mostra — quando não há agendamento futuro." },
       { name: "Itens de engajamento", desc: "Ata/relato, check-in/check-out, contato, proposta e oportunidade: quantidade de itens presentes, percentual e clique para detalhar." },
       { name: "Status", desc: "Status da oportunidade mais avançada: NEGOCIADA, ACEITA, FECHADO GANHO etc." },
       { name: "Valor estimado / Prob.", desc: "Soma do valor das oportunidades e média das probabilidades." },
-      { name: "Pedidos / Faturado", desc: "Quantidade e valor total de pedidos de venda e faturamentos via oportunidade." },
+      { name: "Conversão", desc: "Percentual de (pedidos + faturamentos) sobre o total de visitas; clique para ver quantidades e valores." },
       { name: "Esforço / Engajamento", desc: "Scores exibidos somente como percentual de 0 a 100%." },
     ],
     fields: [
@@ -419,17 +421,21 @@ export const crmContent: Record<string, InfoContent> = {
       { name: "Status da visita", desc: "Agendada, realizada, cancelada ou em andamento." },
       { name: "Status da oportunidade", desc: "Filtra pelo status das oportunidades vinculadas." },
       { name: "Tipo de visita", desc: "Presencial, vídeo ou telefone." },
-      { name: "Só alertas", desc: "Mostra apenas Esforçados e Engajados, com os percentuais distantes ao menos 20 pontos." },
+      { name: "Só alertas", desc: "Mostra apenas AEC, Engajados e BEC, com os percentuais distantes ao menos 20 pontos ou próximos." },
       { name: "Todas / Minhas Visitas", desc: "Alterna o recorte de todos os responsáveis para somente as visitas do usuário logado." },
     ],
     examples: [
       {
-        title: "Esforçados",
-        desc: "12 visitas realizadas, todas com relato e check-in, mas sem proposta, oportunidade, pedido ou faturamento: esforço alto, engajamento baixo e card Esforçados.",
+        title: "AEC — Alto Esforço comercial",
+        desc: "12 visitas realizadas, todas com relato e check-in, mas sem proposta, oportunidade, pedido ou faturamento: esforço alto, engajamento baixo e card AEC.",
       },
       {
         title: "Engajados",
         desc: "Poucas visitas, mas com oportunidade negociada, pedido de venda e faturamento: o engajamento puxa o score para cima e o cliente entra em Engajados.",
+      },
+      {
+        title: "Conversão",
+        desc: "Cliente com 4 visitas, 1 pedido e 1 faturamento: (1 + 1) ÷ 4 = 50%. O badge mostra 50% e o modal mostra as quantidades e os valores.",
       },
       {
         title: "Pessoa promovida a cliente",
@@ -1247,3 +1253,141 @@ export const crmContent: Record<string, InfoContent> = {
     ],
   },
 }
+
+export const saudeProspeccaoInfo = {
+  tabela: {
+    title: "Tabela — saúde da prospecção",
+    description:
+      "Cada linha é um cliente ou pessoa com visitas no ano corrente. A tabela cruza esforço comercial, engajamento e conversão, e respeita todos os filtros aplicados acima.",
+    rules: [
+      "Fórmula do esforço: visita realizada (+20) + relato/ata (+20) + check-in (+15) + contato (+15) + proposta (+15) + oportunidade (+15), limitado a 100%.",
+      "Fórmula do engajamento: visita realizada (+20) + visita agendada (+10) + proposta negociada (+20) + oportunidade negociada (+20) + pedido de venda (+15) + faturamento (+15), limitado a 100%.",
+      "Fórmula da conversão: (pedidos de venda + faturamentos) ÷ total de visitas da linha, arredondado e limitado a 100%.",
+      "Cada item de engajamento vale 20%; a coluna mostra quantos dos 5 itens estão presentes e abre o detalhe ao clicar.",
+      "Visitas R/A/C abre a lista de visitas; cada visita da lista leva ao cadastro da visita.",
+      "Clique no nome para ver todas as visitas, vínculos e valores do cliente/pessoa.",
+    ],
+    columns: [
+      { name: "Visitas R/A/C", desc: "Realizadas / agendadas / canceladas. Clique para listar as visitas." },
+      { name: "Última / Próxima visita", desc: "Última visita já realizada e próxima visita agendada." },
+      { name: "Itens de engajamento", desc: "Ata, check-in/out, contato, proposta e oportunidade: quantidade, percentual e detalhe." },
+      { name: "Conversão", desc: "Percentual de pedidos + faturamentos sobre o total de visitas; clique para ver quantidades e valores." },
+      { name: "Esforço / Engajamento", desc: "Scores de 0 a 100% calculados pelas fórmulas acima." },
+    ],
+    examples: [
+      {
+        title: "Conversão de 50%",
+        desc: "Cliente com 4 visitas, 1 pedido de venda e 1 faturamento: (1 + 1) ÷ 4 = 50%. O badge fica verde e, ao clicar, mostra as quantidades e os valores.",
+      },
+      {
+        title: "Itens de engajamento 3/5",
+        desc: "Visita com relato, check-in e contato, mas sem proposta e sem oportunidade: 3 itens presentes × 20% = 60%, classificado como Em evolução.",
+      },
+    ],
+  },
+  esforco: {
+    title: "Esforço comercial — composição do score",
+    description:
+      "O score de esforço mede o trabalho comercial feito com o cliente ou pessoa no período.",
+    rules: [
+      "Fórmula: visita realizada (+20) + relato/ata (+20) + check-in (+15) + contato (+15) + proposta (+15) + oportunidade (+15).",
+      "O total é limitado a 100%.",
+      "Clique na porcentagem na tabela para ver o detalhe de cada critério.",
+    ],
+    examples: [
+      {
+        title: "Exemplo",
+        desc: "Visita realizada com relato e check-in, sem contato, proposta ou oportunidade: 20 + 20 + 15 = 55% de esforço.",
+      },
+    ],
+  },
+  engajamento: {
+    title: "Engajamento — composição do score",
+    description:
+      "O score de engajamento mede o retorno do cliente: negociação, pedidos e faturamentos.",
+    rules: [
+      "Fórmula: visita realizada (+20) + visita agendada (+10) + proposta negociada (+20) + oportunidade negociada (+20) + pedido de venda (+15) + faturamento (+15).",
+      "O total é limitado a 100%.",
+      "Clique na porcentagem na tabela para ver o detalhe de cada critério.",
+    ],
+    examples: [
+      {
+        title: "Exemplo",
+        desc: "Visita agendada, oportunidade negociada e 1 pedido de venda: 10 + 20 + 15 = 45% de engajamento.",
+      },
+    ],
+  },
+  registros: {
+    title: "Registros — saúde da prospecção",
+    description:
+      "Quantidade de clientes e pessoas que aparecem na saúde da prospecção depois dos filtros da tabela.",
+    rules: [
+      "Pessoa promovida a cliente é contada uma única vez, junto com o cliente.",
+      "Visita avulsa aparece como pessoa.",
+    ],
+    examples: [
+      {
+        title: "Exemplo",
+        desc: "Com o filtro de responsável Maria e 18 linhas na tabela, o card Registros mostra 18.",
+      },
+    ],
+  },
+  aec: {
+    title: "AEC — Alto Esforço comercial",
+    description:
+      "Clientes e pessoas em que o esforço comercial está pelo menos 20 pontos acima do engajamento.",
+    rules: [
+      "Fórmula: AEC se Esforço − Engajamento ≥ 20.",
+      "Clique no card para abrir a lista de clientes e pessoas desse grupo.",
+    ],
+    examples: [
+      {
+        title: "Exemplo",
+        desc: "Esforço 85% e engajamento 40%: 85 − 40 = 45. O registro entra em AEC (Alto Esforço comercial).",
+      },
+    ],
+  },
+  engajados: {
+    title: "Engajados — clientes puxando o resultado",
+    description:
+      "Clientes e pessoas em que o engajamento está pelo menos 20 pontos acima do esforço comercial.",
+    rules: ["Fórmula: Engajados se Engajamento − Esforço ≥ 20."],
+    examples: [
+      {
+        title: "Exemplo",
+        desc: "Esforço 30% e engajamento 75%: 75 − 30 = 45. O registro entra em Engajados.",
+      },
+    ],
+  },
+  bec: {
+    title: "BEC — Baixo Esforço comercial",
+    description:
+      "Clientes e pessoas com esforço e engajamento próximos — chamados de Equilibrados na classificação.",
+    rules: [
+      "Fórmula: BEC se |Esforço − Engajamento| < 20.",
+      "Clique no card para abrir a lista de clientes e pessoas desse grupo.",
+    ],
+    examples: [
+      {
+        title: "Exemplo",
+        desc: "Esforço 60% e engajamento 50%: |60 − 50| = 10. O registro entra em BEC (Baixo Esforço comercial).",
+      },
+    ],
+  },
+  conversao: {
+    title: "Conversão — pedidos e faturamentos",
+    description:
+      "Indicador que reúne pedidos de venda e faturamentos em um único percentual sobre o total de visitas do cliente/pessoa.",
+    rules: [
+      "Fórmula: (pedidos de venda + faturamentos) ÷ visitas no ano corrente.",
+      "O resultado é arredondado e limitado a 100%.",
+      "Clique no badge para ver a quantidade e o valor de pedidos e faturamentos.",
+    ],
+    examples: [
+      {
+        title: "Sem visitas",
+        desc: "Se o registro não tem visitas no período, a conversão mostra 0% e Sem visitas.",
+      },
+    ],
+  },
+} satisfies Record<string, InfoContent>

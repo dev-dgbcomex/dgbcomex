@@ -464,6 +464,8 @@ export async function GET(req: NextRequest) {
           temContato: false,
           temProposta: false,
           temOportunidade: false,
+          propostasNegociadas: 0,
+          oportunidadesNegociadas: 0,
           valorEstimadoTotal: 0,
           probabilidadeMedia: 0,
           statusOportunidadeDominante: null,
@@ -646,6 +648,8 @@ export async function GET(req: NextRequest) {
 
       grupo.scoreEsforco = scores.scoreEsforco
       grupo.scoreEngajamento = scores.scoreEngajamento
+      grupo.propostasNegociadas = propostasNegociadas
+      grupo.oportunidadesNegociadas = oportunidadesNegociadas
       grupo.responsaveis = grupo.responsaveis.filter((r, i, arr) => arr.indexOf(r) === i && r.length > 0)
       grupo.statusVisitas = grupo.statusVisitas.filter((s, i, arr) => arr.indexOf(s) === i && s.length > 0)
       grupo.tiposVisita = grupo.tiposVisita.filter((t, i, arr) => arr.indexOf(t) === i && t.length > 0)

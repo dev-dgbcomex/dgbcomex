@@ -29,6 +29,8 @@ function cliente(overrides: Partial<ClienteSaude> = {}): ClienteSaude {
     temContato: true,
     temProposta: true,
     temOportunidade: true,
+    propostasNegociadas: 1,
+    oportunidadesNegociadas: 1,
     valorEstimadoTotal: 1000,
     probabilidadeMedia: 50,
     statusOportunidadeDominante: "Negociada",
@@ -88,11 +90,13 @@ describe("ClienteSaudeTable", () => {
     expect(screen.getByRole("searchbox", { name: /Buscar cliente ou pessoa/i })).toBeInTheDocument()
     expect(screen.getAllByText("100%").length).toBeGreaterThan(0)
     expect(screen.getByText("90%")).toBeInTheDocument()
-    expect(screen.getByText("Esforçados")).toBeInTheDocument()
-    expect(screen.getByText("Equilibrados")).toBeInTheDocument()
+    expect(screen.getByText("AEC")).toBeInTheDocument()
+    expect(screen.getByText("BEC")).toBeInTheDocument()
     expect(screen.queryByText(/Diferença/i)).not.toBeInTheDocument()
     expect(screen.getByRole("columnheader", { name: "Próxima visita" })).toBeInTheDocument()
     expect(screen.getByRole("columnheader", { name: "Itens de engajamento" })).toBeInTheDocument()
+    expect(screen.getByRole("columnheader", { name: "Conversão" })).toBeInTheDocument()
+    expect(screen.getAllByRole("button", { name: "Informações da tela" })).toHaveLength(5)
     expect(
       screen.getByRole("button", {
         name: /Itens de engajamento de Cliente Alpha: 5 de 5, 100%, Completo/i,
@@ -137,6 +141,98 @@ describe("ClienteSaudeTable", () => {
     )
     expect(
       screen.getByText(/Nenhum cliente\/pessoa encontrado com os filtros atuais/i)
+    ).toBeInTheDocument()
+  })
+
+  it("abre o card AEC com a lista de clientes e pessoas", () => {
+    render(
+      <ClienteSaudeTable
+        linhas={[cliente({ nome: "Beta Ltda", scoreEngajamento: 60 })]}
+        onSelecionar={vi.fn()}
+        onVerItens={vi.fn()}
+      />
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: /AEC: 1 registros\. Abrir lista/i }))
+
+    const dialog = screen.getByRole("dialog")
+    expect(
+      within(dialog).getByRole("heading", { name: "Alto Esforço comercial" })
+    ).toBeInTheDocument()
+    expect(within(dialog).getByText("Beta Ltda")).toBeInTheDocument()
+    expect(within(dialog).queryByText("Documento")).not.toBeInTheDocument()
+  })
+
+  it("abre o card BEC com a lista de clientes e pessoas", () => {
+    render(
+      <ClienteSaudeTable
+        linhas={[cliente()]}
+        onSelecionar={vi.fn()}
+        onVerItens={vi.fn()}
+      />
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: /BEC: 1 registros\. Abrir lista/i }))
+
+    const dialog = screen.getByRole("dialog")
+    expect(
+      within(dialog).getByRole("heading", { name: "Baixo Esforço comercial" })
+    ).toBeInTheDocument()
+    expect(within(dialog).getByText("Cliente Alpha")).toBeInTheDocument()
+  })
+
+  it("abre o detalhe da conversão com quantidades e valores", () => {
+    render(
+      <ClienteSaudeTable linhas={[cliente()]} onSelecionar={vi.fn()} onVerItens={vi.fn()} />
+    )
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /Conversão de Cliente Alpha: 100%, Alta\. Ver detalhes/i,
+      })
+    )
+
+    const dialog = screen.getByRole("dialog")
+    expect(
+      within(dialog).getByRole("heading", { name: /Cliente Alpha — conversão/i })
+    ).toBeInTheDocument()
+    expect(within(dialog).getByText("R$ 300,00")).toBeInTheDocument()
+    expect(within(dialog).getByText("R$ 200,00")).toBeInTheDocument()
+    expect(within(dialog).getByText(/\(1 pedidos \+ 1 faturamentos\) ÷ 2 visitas = 100%/)).toBeInTheDocument()
+  })
+
+  it("abre a lista de visitas com cada visita clicável", () => {
+    render(
+      <ClienteSaudeTable linhas={[cliente()]} onSelecionar={vi.fn()} onVerItens={vi.fn()} />
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: /Visitas R\/A\/C de Cliente Alpha/i }))
+
+    const dialog = screen.getByRole("dialog")
+    expect(
+      within(dialog).getByRole("heading", { name: /Cliente Alpha — visitas R\/A\/C/i })
+    ).toBeInTheDocument()
+    expect(within(dialog).getByRole("link", { name: /#11/ })).toHaveAttribute(
+      "href",
+      "/comercial/crm/visitas/11"
+    )
+  })
+
+  it("abre o detalhe do score ao clicar na porcentagem de esforço", () => {
+    render(
+      <ClienteSaudeTable linhas={[cliente()]} onSelecionar={vi.fn()} onVerItens={vi.fn()} />
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "Esforço: 100%. Ver detalhes" }))
+
+    const dialog = screen.getByRole("dialog")
+    expect(
+      within(dialog).getByRole("heading", { name: /Cliente Alpha — esforço/i })
+    ).toBeInTheDocument()
+    expect(within(dialog).getByText("Check-in")).toBeInTheDocument()
+    expect(within(dialog).getByText("Relato/ata")).toBeInTheDocument()
+    expect(
+      within(dialog).getByText(/soma dos pontos dos critérios presentes = 100%/i)
     ).toBeInTheDocument()
   })
 })

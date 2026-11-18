@@ -166,6 +166,8 @@ const REGRAS_ICONE: { padrao: RegExp; icone: LucideIcon }[] = [
   { padrao: /atividade/i, icone: Activity },
   { padrao: /convers/i, icone: ArrowRightLeft },
   { padrao: /convertid/i, icone: UserCheck },
+  { padrao: /\baec\b/i, icone: Activity },
+  { padrao: /\bbec\b/i, icone: PieChart },
   { padrao: /esforc/i, icone: Activity },
   { padrao: /engajad/i, icone: UserCheck },
   { padrao: /equilibrad/i, icone: PieChart },

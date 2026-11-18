@@ -5,6 +5,7 @@ import { FileDown, FileSpreadsheet, FileText, Loader2, Search } from "lucide-rea
 import { exportCSV, exportMarkdown, exportPDFRelatorio } from "@/lib/export-utils"
 import { corPorTitulo, iconePorTitulo } from "@/lib/dracula"
 import {
+  calcularConversao,
   calcularDiferenca,
   classificarAlerta,
   filtrarClientesSaude,
@@ -13,8 +14,15 @@ import {
   type ClienteSaude,
   type FiltrosSaude,
 } from "@/lib/crm/visitas-saude"
+import { InfoButton } from "@/components/ui/info-button"
+import { saudeProspeccaoInfo } from "@/lib/info-content/crm"
+import { AlertaListaModal } from "./alerta-lista-modal"
+import { ConversaoBadge } from "./conversao-badge"
+import { ConversaoModal } from "./conversao-modal"
 import { EngajamentoBadge } from "./engajamento-badge"
 import { ScoreBadge } from "./score-badges"
+import { ScoreDetalheModal, type SelecaoScore } from "./score-detalhe-modal"
+import { VisitasRacModal } from "./visitas-rac-modal"
 
 const STATUS_VISITA_LABELS: Record<string, string> = {
   AGENDADA: "Agendada",
@@ -45,10 +53,7 @@ const CABECALHOS = [
   "Status oportunidade",
   "Valor estimado",
   "Probabilidade média",
-  "Pedidos de venda",
-  "Valor pedidos",
-  "Faturamentos",
-  "Valor faturado",
+  "Conversão",
   "Esforço",
   "Engajamento",
 ] as const
@@ -92,6 +97,14 @@ export function ClienteSaudeTable({
   const [statusOportunidade, setStatusOportunidade] = useState("")
   const [tipoVisita, setTipoVisita] = useState("")
   const [apenasAlertas, setApenasAlertas] = useState(false)
+  const [alertaSelecionado, setAlertaSelecionado] = useState<{
+    titulo: string
+    descricao: string
+    linhas: ClienteSaude[]
+  } | null>(null)
+  const [conversaoSelecionada, setConversaoSelecionada] = useState<ClienteSaude | null>(null)
+  const [visitasSelecionadas, setVisitasSelecionadas] = useState<ClienteSaude | null>(null)
+  const [selecaoScore, setSelecaoScore] = useState<SelecaoScore | null>(null)
 
   const filtros = useMemo<FiltrosSaude>(
     () => ({
@@ -148,25 +161,67 @@ export function ClienteSaudeTable({
       labelStatusOportunidade(linha.statusOportunidadeDominante),
       formatarMoeda(linha.valorEstimadoTotal),
       `${linha.probabilidadeMedia}%`,
-      linha.pedidosVenda,
-      formatarMoeda(linha.valorPedidosVenda),
-      linha.faturamentos,
-      formatarMoeda(linha.valorFaturamento),
+      `${calcularConversao(linha).percentual}% (${linha.pedidosVenda} pedidos / ${linha.faturamentos} faturamentos)`,
       `${linha.scoreEsforco}%`,
       `${linha.scoreEngajamento}%`,
     ]
   })
 
-  const rotulosAlerta = filtradas.map((linha) =>
-    classificarAlerta(calcularDiferenca(linha)).rotulo
+  const aec = filtradas.filter(
+    (linha) => classificarAlerta(calcularDiferenca(linha)).rotulo === "Esforçados"
+  )
+  const engajados = filtradas.filter(
+    (linha) => classificarAlerta(calcularDiferenca(linha)).rotulo === "Engajados"
+  )
+  const bec = filtradas.filter(
+    (linha) => classificarAlerta(calcularDiferenca(linha)).rotulo === "Equilibrados"
   )
 
   const estatisticas = {
     Registros: filtradas.length,
-    Esforçados: rotulosAlerta.filter((rotulo) => rotulo === "Esforçados").length,
-    Engajados: rotulosAlerta.filter((rotulo) => rotulo === "Engajados").length,
-    Equilibrados: rotulosAlerta.filter((rotulo) => rotulo === "Equilibrados").length,
+    AEC: aec.length,
+    Engajados: engajados.length,
+    BEC: bec.length,
   }
+
+  const cartoes = [
+    {
+      rotulo: "Registros",
+      valor: filtradas.length,
+      info: saudeProspeccaoInfo.registros,
+      clicavel: false,
+      titulo: "",
+      descricao: "",
+      linhas: [] as ClienteSaude[],
+    },
+    {
+      rotulo: "AEC",
+      valor: aec.length,
+      info: saudeProspeccaoInfo.aec,
+      clicavel: true,
+      titulo: "Alto Esforço comercial",
+      descricao: "Esforço pelo menos 20 pontos acima do engajamento",
+      linhas: aec,
+    },
+    {
+      rotulo: "Engajados",
+      valor: engajados.length,
+      info: saudeProspeccaoInfo.engajados,
+      clicavel: false,
+      titulo: "",
+      descricao: "",
+      linhas: [] as ClienteSaude[],
+    },
+    {
+      rotulo: "BEC",
+      valor: bec.length,
+      info: saudeProspeccaoInfo.bec,
+      clicavel: true,
+      titulo: "Baixo Esforço comercial",
+      descricao: "Esforço e engajamento distantes menos de 20 pontos",
+      linhas: bec,
+    },
+  ]
 
   function exportarCSV() {
     exportCSV("saude-prospeccao-visitas", [...CABECALHOS], dadosExportacao)
@@ -201,9 +256,12 @@ export function ClienteSaudeTable({
     >
       <div className="flex flex-col gap-3 border-b border-slate-100 p-4 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-50">
-            Saúde da prospecção por cliente/pessoa
-          </h2>
+          <div className="flex items-center">
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-50">
+              Saúde da prospecção por cliente/pessoa
+            </h2>
+            <InfoButton content={saudeProspeccaoInfo.tabela} />
+          </div>
           <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
             Esforço comercial × engajamento do cliente — visitas do ano corrente
           </p>
@@ -237,37 +295,86 @@ export function ClienteSaudeTable({
       </div>
 
       <div className="grid gap-2 border-b border-slate-100 p-4 dark:border-slate-800 sm:grid-cols-2 lg:grid-cols-4">
-        {Object.entries(estatisticas).map(([rotulo, valor]) => {
-          const estilo = corPorTitulo(rotulo)
-          const Icone = iconePorTitulo(rotulo)
+        {cartoes.map((cartao) => {
+          const estilo = corPorTitulo(cartao.rotulo)
+          const Icone = iconePorTitulo(cartao.rotulo)
           const estiloCss = {
             "--card-fundo": estilo.fundoClaro,
             "--card-fundo-escuro": estilo.fundoEscuro,
             "--card-borda": estilo.borda,
             "--card-realce": estilo.cor,
           } as CSSProperties
+          const classes = `rounded-lg border border-[color:var(--card-borda)] bg-[image:var(--card-fundo)] p-3 dark:bg-[image:var(--card-fundo-escuro)] ${
+            cartao.clicavel
+              ? "cursor-pointer outline-none transition hover:brightness-105 focus-visible:ring-2 focus-visible:ring-blue-500 dark:focus-visible:ring-blue-400"
+              : ""
+          }`
+
+          const conteudo = (
+            <>
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span
+                    className="inline-flex h-5 w-5 items-center justify-center rounded-md"
+                    style={{ backgroundColor: estilo.fundoIcone, color: estilo.cor }}
+                    aria-hidden="true"
+                  >
+                    <Icone size={12} />
+                  </span>
+                  <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    {cartao.rotulo}
+                  </p>
+                </div>
+                <span
+                  onClick={(evento) => evento.stopPropagation()}
+                  onKeyDown={(evento) => evento.stopPropagation()}
+                >
+                  <InfoButton content={cartao.info} />
+                </span>
+              </div>
+              <p className="mt-2 text-lg font-semibold" style={{ color: estilo.cor }}>
+                {cartao.valor}
+              </p>
+              {cartao.clicavel && (
+                <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">
+                  Clique para ver a lista
+                </p>
+              )}
+            </>
+          )
+
+          if (!cartao.clicavel) {
+            return (
+              <div key={cartao.rotulo} style={estiloCss} className={classes}>
+                {conteudo}
+              </div>
+            )
+          }
+
+          const abrir = () =>
+            setAlertaSelecionado({
+              titulo: cartao.titulo,
+              descricao: cartao.descricao,
+              linhas: cartao.linhas,
+            })
 
           return (
             <div
-              key={rotulo}
+              key={cartao.rotulo}
+              role="button"
+              tabIndex={0}
+              aria-label={`${cartao.rotulo}: ${cartao.valor} registros. Abrir lista de clientes e pessoas`}
+              onClick={abrir}
+              onKeyDown={(evento) => {
+                if (evento.key === "Enter" || evento.key === " ") {
+                  evento.preventDefault()
+                  abrir()
+                }
+              }}
               style={estiloCss}
-              className="rounded-lg border border-[color:var(--card-borda)] bg-[image:var(--card-fundo)] p-3 dark:bg-[image:var(--card-fundo-escuro)]"
+              className={classes}
             >
-              <div className="flex items-center gap-2">
-                <span
-                  className="inline-flex h-5 w-5 items-center justify-center rounded-md"
-                  style={{ backgroundColor: estilo.fundoIcone, color: estilo.cor }}
-                  aria-hidden="true"
-                >
-                  <Icone size={12} />
-                </span>
-                <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                  {rotulo}
-                </p>
-              </div>
-              <p className="mt-2 text-lg font-semibold" style={{ color: estilo.cor }}>
-                {valor}
-              </p>
+              {conteudo}
             </div>
           )
         })}
@@ -407,8 +514,7 @@ export function ClienteSaudeTable({
                   "Status",
                   "Valor estimado",
                   "Prob.",
-                  "Pedidos",
-                  "Faturado",
+                  "Conversão",
                   "Esforço",
                   "Engajamento",
                 ].map((coluna) => (
@@ -425,6 +531,7 @@ export function ClienteSaudeTable({
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {filtradas.map((linha) => {
                 const { resumo } = obterEngajamento(linha)
+                const conversao = calcularConversao(linha)
                 return (
                   <tr
                     key={`${linha.tipo}-${linha.id}`}
@@ -447,8 +554,16 @@ export function ClienteSaudeTable({
                       {linha.segmento ?? "—"}
                       {linha.porte ? ` / ${linha.porte}` : ""}
                     </td>
-                    <td className="whitespace-nowrap px-3 py-2 font-mono text-slate-700 dark:text-slate-200">
-                      {linha.visitasRealizadas}/{linha.visitasAgendadas}/{linha.visitasCanceladas}
+                    <td className="whitespace-nowrap px-3 py-2">
+                      <button
+                        type="button"
+                        onClick={() => setVisitasSelecionadas(linha)}
+                        aria-label={`Visitas R/A/C de ${linha.nome}: ${linha.visitasRealizadas}/${linha.visitasAgendadas}/${linha.visitasCanceladas}. Ver lista`}
+                        title="Ver lista de visitas"
+                        className="rounded px-1 font-mono text-slate-700 outline-none hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-slate-200 dark:hover:bg-slate-800 dark:focus-visible:ring-blue-400"
+                      >
+                        {linha.visitasRealizadas}/{linha.visitasAgendadas}/{linha.visitasCanceladas}
+                      </button>
                     </td>
                     <td className="whitespace-nowrap px-3 py-2 text-slate-600 dark:text-slate-300">
                       {formatarData(linha.ultimaVisita)}
@@ -472,17 +587,26 @@ export function ClienteSaudeTable({
                     <td className="px-3 py-2 text-slate-600 dark:text-slate-300">
                       {linha.probabilidadeMedia}%
                     </td>
-                    <td className="whitespace-nowrap px-3 py-2 text-slate-600 dark:text-slate-300">
-                      {linha.pedidosVenda} · {formatarMoeda(linha.valorPedidosVenda)}
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-2 text-slate-600 dark:text-slate-300">
-                      {linha.faturamentos} · {formatarMoeda(linha.valorFaturamento)}
+                    <td className="px-3 py-2">
+                      <ConversaoBadge
+                        resumo={conversao}
+                        nome={linha.nome}
+                        onClick={() => setConversaoSelecionada(linha)}
+                      />
                     </td>
                     <td className="px-3 py-2">
-                      <ScoreBadge rotulo="Esforço" valor={linha.scoreEsforco} />
+                      <ScoreBadge
+                        rotulo="Esforço"
+                        valor={linha.scoreEsforco}
+                        onClick={() => setSelecaoScore({ linha, tipo: "Esforço" })}
+                      />
                     </td>
                     <td className="px-3 py-2">
-                      <ScoreBadge rotulo="Engajamento" valor={linha.scoreEngajamento} />
+                      <ScoreBadge
+                        rotulo="Engajamento"
+                        valor={linha.scoreEngajamento}
+                        onClick={() => setSelecaoScore({ linha, tipo: "Engajamento" })}
+                      />
                     </td>
                   </tr>
                 )
@@ -491,6 +615,26 @@ export function ClienteSaudeTable({
           </table>
         </div>
       )}
+
+      <AlertaListaModal
+        aberto={!!alertaSelecionado}
+        titulo={alertaSelecionado?.titulo ?? ""}
+        descricao={alertaSelecionado?.descricao ?? ""}
+        linhas={alertaSelecionado?.linhas ?? []}
+        onClose={() => setAlertaSelecionado(null)}
+      />
+      <ConversaoModal
+        cliente={conversaoSelecionada}
+        onClose={() => setConversaoSelecionada(null)}
+      />
+      <VisitasRacModal
+        cliente={visitasSelecionadas}
+        onClose={() => setVisitasSelecionadas(null)}
+      />
+      <ScoreDetalheModal
+        selecao={selecaoScore}
+        onClose={() => setSelecaoScore(null)}
+      />
     </section>
   )
 }

@@ -97,6 +97,8 @@ const saudeLinha: ClienteSaude = {
   temContato: true,
   temProposta: true,
   temOportunidade: true,
+  propostasNegociadas: 1,
+  oportunidadesNegociadas: 1,
   valorEstimadoTotal: 125000,
   probabilidadeMedia: 60,
   statusOportunidadeDominante: "Negociada",
@@ -374,9 +376,9 @@ describe("VisitasDashboardPage", () => {
       await screen.findByRole("heading", { name: /Saúde da prospecção por cliente\/pessoa/i })
     ).toBeInTheDocument()
     expect(screen.getByText("Cliente Alpha")).toBeInTheDocument()
-    expect(screen.getByText("100%")).toBeInTheDocument()
-    expect(screen.getByText("90%")).toBeInTheDocument()
-    expect(screen.getAllByText("Esforçados").length).toBeGreaterThan(0)
+    expect(screen.getAllByText("100%").length).toBeGreaterThan(0)
+    expect(screen.getAllByText("90%").length).toBeGreaterThan(0)
+    expect(screen.getAllByText("BEC").length).toBeGreaterThan(0)
     expect(
       screen.getByRole("button", { name: /Itens de engajamento de Cliente Alpha/i })
     ).toBeInTheDocument()

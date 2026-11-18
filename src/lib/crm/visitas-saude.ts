@@ -46,6 +46,8 @@ export type ClienteSaude = {
   temContato: boolean
   temProposta: boolean
   temOportunidade: boolean
+  propostasNegociadas: number
+  oportunidadesNegociadas: number
   valorEstimadoTotal: number
   probabilidadeMedia: number
   statusOportunidadeDominante: string | null
@@ -274,6 +276,134 @@ export function obterEngajamento(cliente: ClienteSaude): {
 } {
   const itens = calcularItensEngajamento(cliente)
   return { itens, resumo: calcularResumoEngajamento(itens) }
+}
+
+export type ResumoConversao = {
+  percentual: number
+  rotulo: string
+  tom: "vermelho" | "amarelo" | "azul" | "verde"
+}
+
+export function calcularConversao(
+  cliente: Pick<ClienteSaude, "totalVisitas" | "pedidosVenda" | "faturamentos">
+): ResumoConversao {
+  const total = cliente.totalVisitas
+  const convertidos = cliente.pedidosVenda + cliente.faturamentos
+  const percentual = total > 0 ? Math.min(100, Math.round((convertidos / total) * 100)) : 0
+  const tom =
+    percentual === 0 ? "vermelho" : percentual < 25 ? "amarelo" : percentual < 50 ? "azul" : "verde"
+  const rotulo =
+    total === 0
+      ? "Sem visitas"
+      : percentual === 0
+        ? "Sem conversão"
+        : percentual < 25
+          ? "Baixa"
+          : percentual < 50
+            ? "Parcial"
+            : "Alta"
+
+  return { percentual, rotulo, tom }
+}
+
+export type TipoScore = "Esforço" | "Engajamento"
+
+export type ComponenteScore = {
+  rotulo: string
+  descricao: string
+  pontos: number
+  presente: boolean
+}
+
+export type DetalheScore = {
+  componentes: ComponenteScore[]
+  total: number
+}
+
+export function obterDetalheScore(cliente: ClienteSaude, tipo: TipoScore): DetalheScore {
+  const componentes: ComponenteScore[] =
+    tipo === "Esforço"
+      ? [
+          {
+            rotulo: "Visita realizada",
+            descricao: `${cliente.visitasRealizadas} visitas realizadas no período`,
+            pontos: cliente.visitasRealizadas > 0 ? 20 : 0,
+            presente: cliente.visitasRealizadas > 0,
+          },
+          {
+            rotulo: "Relato/ata",
+            descricao: `${cliente.visitasComRelato} visitas com relato preenchido`,
+            pontos: cliente.visitasComRelato > 0 ? 20 : 0,
+            presente: cliente.visitasComRelato > 0,
+          },
+          {
+            rotulo: "Check-in",
+            descricao: `${cliente.visitasComCheckIn} visitas com check-in/check-out`,
+            pontos: cliente.visitasComCheckIn > 0 ? 15 : 0,
+            presente: cliente.visitasComCheckIn > 0,
+          },
+          {
+            rotulo: "Contato",
+            descricao: cliente.temContato ? "Contato vinculado às visitas" : "Sem contato vinculado",
+            pontos: cliente.temContato ? 15 : 0,
+            presente: cliente.temContato,
+          },
+          {
+            rotulo: "Proposta",
+            descricao: cliente.temProposta ? "Proposta vinculada" : "Sem proposta vinculada",
+            pontos: cliente.temProposta ? 15 : 0,
+            presente: cliente.temProposta,
+          },
+          {
+            rotulo: "Oportunidade",
+            descricao: cliente.temOportunidade ? "Oportunidade vinculada" : "Sem oportunidade vinculada",
+            pontos: cliente.temOportunidade ? 15 : 0,
+            presente: cliente.temOportunidade,
+          },
+        ]
+      : [
+          {
+            rotulo: "Visita realizada",
+            descricao: `${cliente.visitasRealizadas} visitas realizadas no período`,
+            pontos: cliente.visitasRealizadas > 0 ? 20 : 0,
+            presente: cliente.visitasRealizadas > 0,
+          },
+          {
+            rotulo: "Visita agendada",
+            descricao: `${cliente.visitasAgendadas} visitas agendadas`,
+            pontos: cliente.visitasAgendadas > 0 ? 10 : 0,
+            presente: cliente.visitasAgendadas > 0,
+          },
+          {
+            rotulo: "Proposta negociada",
+            descricao: `${cliente.propostasNegociadas} propostas negociadas para frente`,
+            pontos: cliente.propostasNegociadas > 0 ? 20 : 0,
+            presente: cliente.propostasNegociadas > 0,
+          },
+          {
+            rotulo: "Oportunidade negociada",
+            descricao: `${cliente.oportunidadesNegociadas} oportunidades negociadas para frente`,
+            pontos: cliente.oportunidadesNegociadas > 0 ? 20 : 0,
+            presente: cliente.oportunidadesNegociadas > 0,
+          },
+          {
+            rotulo: "Pedido de venda",
+            descricao: `${cliente.pedidosVenda} pedidos de venda vinculados`,
+            pontos: cliente.pedidosVenda > 0 ? 15 : 0,
+            presente: cliente.pedidosVenda > 0,
+          },
+          {
+            rotulo: "Faturamento",
+            descricao: `${cliente.faturamentos} faturamentos vinculados`,
+            pontos: cliente.faturamentos > 0 ? 15 : 0,
+            presente: cliente.faturamentos > 0,
+          },
+        ]
+
+  return {
+    componentes,
+    total: Math.min(100, componentes.reduce((soma, componente) => soma + componente.pontos, 0)),
+  }
 }
 
 export function calcularScores(entrada: {

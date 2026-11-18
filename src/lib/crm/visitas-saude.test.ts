@@ -1,10 +1,12 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest"
 import {
+  calcularConversao,
   calcularDiferenca,
   calcularScores,
   classificarAlerta,
   filtrarClientesSaude,
+  obterDetalheScore,
   obterEngajamento,
   isStatusNegociado,
   labelStatusOportunidade,
@@ -34,6 +36,8 @@ function cliente(overrides: Partial<ClienteSaude> = {}): ClienteSaude {
     temContato: true,
     temProposta: true,
     temOportunidade: true,
+    propostasNegociadas: 1,
+    oportunidadesNegociadas: 1,
     valorEstimadoTotal: 1000,
     probabilidadeMedia: 50,
     statusOportunidadeDominante: "Negociada",
@@ -207,5 +211,59 @@ describe("visitas-saude", () => {
       tom: "vermelho",
     })
     expect(itens.every((item) => !item.presente)).toBe(true)
+  })
+
+  it("calcula a conversão sobre o total de visitas e limita a 100%", () => {
+    expect(calcularConversao({ totalVisitas: 4, pedidosVenda: 1, faturamentos: 1 })).toEqual({
+      percentual: 50,
+      rotulo: "Alta",
+      tom: "verde",
+    })
+    expect(calcularConversao({ totalVisitas: 5, pedidosVenda: 1, faturamentos: 0 })).toEqual({
+      percentual: 20,
+      rotulo: "Baixa",
+      tom: "amarelo",
+    })
+    expect(calcularConversao({ totalVisitas: 1, pedidosVenda: 1, faturamentos: 1 })).toMatchObject({
+      percentual: 100,
+      rotulo: "Alta",
+    })
+    expect(calcularConversao({ totalVisitas: 0, pedidosVenda: 0, faturamentos: 0 })).toEqual({
+      percentual: 0,
+      rotulo: "Sem visitas",
+      tom: "vermelho",
+    })
+  })
+
+  it("detalha os critérios que compõem cada score", () => {
+    const base = cliente()
+    const esforco = obterDetalheScore(base, "Esforço")
+    expect(esforco.total).toBe(100)
+    expect(esforco.componentes).toHaveLength(6)
+    expect(esforco.componentes.every((componente) => componente.presente)).toBe(true)
+
+    const engajamento = obterDetalheScore(base, "Engajamento")
+    expect(engajamento.total).toBe(90)
+    expect(
+      engajamento.componentes.find((componente) => componente.rotulo === "Visita agendada")?.pontos
+    ).toBe(0)
+
+    const semSinais = obterDetalheScore(
+      cliente({
+        visitasRealizadas: 0,
+        visitasComRelato: 0,
+        visitasComCheckIn: 0,
+        temContato: false,
+        temProposta: false,
+        temOportunidade: false,
+        propostasNegociadas: 0,
+        oportunidadesNegociadas: 0,
+        pedidosVenda: 0,
+        faturamentos: 0,
+      }),
+      "Engajamento"
+    )
+    expect(semSinais.total).toBe(0)
+    expect(semSinais.componentes.every((componente) => !componente.presente)).toBe(true)
   })
 })
