@@ -7,6 +7,14 @@ import VisitasDashboardPage from "./page"
 
 vi.setConfig({ testTimeout: 30000 })
 
+const { exportCSV, exportMarkdown, exportPDFRelatorio } = vi.hoisted(() => ({
+  exportCSV: vi.fn(),
+  exportMarkdown: vi.fn(),
+  exportPDFRelatorio: vi.fn(),
+}))
+
+vi.mock("@/lib/export-utils", () => ({ exportCSV, exportMarkdown, exportPDFRelatorio }))
+
 vi.mock("next-auth/react", () => ({
   useSession: () => ({ data: { user: { name: "Admin", role: "ADMIN" } }, status: "authenticated" }),
 }))
@@ -195,6 +203,10 @@ describe("VisitasDashboardPage", () => {
     expect(screen.getByText("Performance por Gerente Comercial")).toBeInTheDocument()
     expect(screen.getByText("Viagens")).toBeInTheDocument()
     expect(screen.getByText("Últimas Visitas")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Exportar últimas visitas em CSV" })).toHaveAttribute(
+      "disabled",
+      ""
+    )
     expect(screen.getByTestId("graficos")).toBeInTheDocument()
   })
 
@@ -439,5 +451,78 @@ describe("VisitasDashboardPage", () => {
       expect(findCall(fetchMock.calls, "/api/crm/visitas/dashboard/clientes")).toBeDefined()
     )
     expect(findCall(fetchMock.calls, "/api/crm/visitas/dashboard")).toBeDefined()
+  })
+
+  it("exporta últimas visitas em CSV, PDF e Markdown", async () => {
+    const payload = {
+      ...dashboardPayload(false),
+      ultimasVisitas: [
+        {
+          id: 77,
+          empresaId: 7,
+          clienteId: null,
+          dataVisita: "2026-08-10",
+          hora: "09:00",
+          tipo: "PRESENCIAL",
+          status: "REALIZADA",
+          endereco: "Rua A",
+          numero: "100",
+          complemento: null,
+          bairro: "Centro",
+          cidade: "Goiânia",
+          uf: "GO",
+        },
+      ],
+    }
+    const fetchMock = mockRoutes({
+      "GET /api/crm/visitas/dashboard?mine=true": payload,
+    })
+    vi.stubGlobal("fetch", fetchMock.fn)
+    renderPage(<VisitasDashboardPage />)
+
+    expect(await screen.findByText("Visita #77")).toBeInTheDocument()
+    fireEvent.click(screen.getByRole("button", { name: "Exportar últimas visitas em CSV" }))
+    fireEvent.click(screen.getByRole("button", { name: "Exportar últimas visitas em PDF" }))
+    fireEvent.click(screen.getByRole("button", { name: "Exportar últimas visitas em Markdown" }))
+
+    expect(exportCSV).toHaveBeenCalledWith(
+      "ultimas-visitas-dashboard",
+      [
+        "ID da visita",
+        "Data",
+        "Hora",
+        "Tipo",
+        "Status",
+        "Empresa ID",
+        "Cliente ID",
+        "Endereço",
+      ],
+      [
+        [
+          77,
+          "10/08/2026",
+          "09:00",
+          "Presencial",
+          "Realizada",
+          7,
+          "—",
+          "Rua A, 100, Centro, Goiânia, GO",
+        ],
+      ]
+    )
+    expect(exportPDFRelatorio).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: "Últimas visitas — dashboard de visitas e prospecção",
+        filename: "ultimas-visitas-dashboard",
+        orientation: "landscape",
+        stats: expect.objectContaining({ Visitas: 1, Realizadas: 1 }),
+      })
+    )
+    expect(exportMarkdown).toHaveBeenCalledWith(
+      expect.objectContaining({
+        filename: "ultimas-visitas-dashboard",
+        title: "Últimas visitas — dashboard de visitas e prospecção",
+      })
+    )
   })
 })

@@ -12,6 +12,9 @@ import {
   CheckCircle2,
   ClipboardCheck,
   Clock,
+  FileDown,
+  FileSpreadsheet,
+  FileText,
   Loader2,
   MapPin,
   Navigation,
@@ -22,6 +25,7 @@ import {
 } from "lucide-react"
 import VisitLocationModal from "@/components/crm/visit-location-modal"
 import ViagemCronogramaModal from "@/components/crm/viagem-cronograma"
+import { exportCSV, exportMarkdown, exportPDFRelatorio } from "@/lib/export-utils"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { InfoButton } from "@/components/ui/info-button"
 import { ClienteSaudeModal } from "@/components/crm/visitas/dashboard/cliente-saude-modal"
@@ -29,6 +33,7 @@ import { ClienteSaudeTable } from "@/components/crm/visitas/dashboard/cliente-sa
 import { ItensEngajamentoModal } from "@/components/crm/visitas/dashboard/itens-engajamento-modal"
 import type { ClienteSaude } from "@/lib/crm/visitas-saude"
 import { getInfoContent } from "@/lib/info-content"
+import { saudeProspeccaoInfo } from "@/lib/info-content/crm"
 import type { VisitaModalRow } from "../types"
 
 const VisitasCharts = dynamic(() => import("./charts").then((m) => m.VisitasCharts), {
@@ -96,6 +101,17 @@ const TIPO_LABELS: Record<string, string> = {
   VIDEO: "Vídeo",
   TELEFONE: "Telefone",
 }
+
+const ULTIMAS_VISITAS_CABECALHOS = [
+  "ID da visita",
+  "Data",
+  "Hora",
+  "Tipo",
+  "Status",
+  "Empresa ID",
+  "Cliente ID",
+  "Endereço",
+]
 
 const FILTROS_LABELS: Record<string, string> = {
   total: "Total de Visitas",
@@ -170,6 +186,53 @@ export default function VisitasDashboardPage() {
 
   const modalLista = modalQuery.data ?? []
   const modalLoading = modalQuery.isFetching
+  const ultimasVisitas = data?.ultimasVisitas ?? []
+
+  const ultimasVisitasExportacao = ultimasVisitas.map((visita) => [
+    visita.id,
+    fmtDataCompleta(visita.dataVisita),
+    visita.hora || "—",
+    TIPO_LABELS[visita.tipo] || visita.tipo || "—",
+    STATUS_LABELS[visita.status] || visita.status || "—",
+    visita.empresaId || "—",
+    visita.clienteId ?? "—",
+    [visita.endereco, visita.numero, visita.complemento, visita.bairro, visita.cidade, visita.uf]
+      .filter(Boolean)
+      .join(", ") || "—",
+  ])
+
+  const estatisticasUltimasVisitas = {
+    Visitas: ultimasVisitas.length,
+    Realizadas: ultimasVisitas.filter((visita) => visita.status === "REALIZADA").length,
+    Agendadas: ultimasVisitas.filter((visita) => visita.status === "AGENDADA").length,
+    Canceladas: ultimasVisitas.filter((visita) => visita.status === "CANCELADA").length,
+  }
+
+  function exportarUltimasVisitasCSV() {
+    exportCSV("ultimas-visitas-dashboard", [...ULTIMAS_VISITAS_CABECALHOS], ultimasVisitasExportacao)
+  }
+
+  function exportarUltimasVisitasMarkdown() {
+    exportMarkdown({
+      filename: "ultimas-visitas-dashboard",
+      title: "Últimas visitas — dashboard de visitas e prospecção",
+      period: "Recorte atual do dashboard",
+      stats: estatisticasUltimasVisitas,
+      headers: [...ULTIMAS_VISITAS_CABECALHOS],
+      rows: ultimasVisitasExportacao,
+    })
+  }
+
+  function exportarUltimasVisitasPDF() {
+    void exportPDFRelatorio({
+      title: "Últimas visitas — dashboard de visitas e prospecção",
+      period: "Recorte atual do dashboard",
+      stats: estatisticasUltimasVisitas,
+      tables: [{ headers: [...ULTIMAS_VISITAS_CABECALHOS], rows: ultimasVisitasExportacao }],
+      filename: "ultimas-visitas-dashboard",
+      orientation: "landscape",
+    })
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -465,17 +528,52 @@ export default function VisitasDashboardPage() {
           </div>
 
           <div className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-            <div className="flex items-center justify-between border-b border-slate-100 p-4 dark:border-slate-800">
-              <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-slate-50">
-                <Calendar size={16} className="text-amber-500" aria-hidden="true" />
-                Últimas Visitas
-              </h2>
-              <Link
-                href="/comercial/crm/visitas"
-                className="flex items-center gap-1 text-xs text-blue-600 hover:underline dark:text-blue-400"
-              >
-                Ver todas <ArrowRight size={12} aria-hidden="true" />
-              </Link>
+            <div className="flex flex-col gap-3 border-b border-slate-100 p-4 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center">
+                <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-slate-50">
+                  <Calendar size={16} className="text-amber-500" aria-hidden="true" />
+                  Últimas Visitas
+                </h2>
+                <InfoButton content={saudeProspeccaoInfo.ultimasVisitas} />
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={exportarUltimasVisitasCSV}
+                  disabled={ultimasVisitas.length === 0}
+                  aria-label="Exportar últimas visitas em CSV"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                >
+                  <FileSpreadsheet size={14} aria-hidden="true" />
+                  CSV
+                </button>
+                <button
+                  type="button"
+                  onClick={exportarUltimasVisitasPDF}
+                  disabled={ultimasVisitas.length === 0}
+                  aria-label="Exportar últimas visitas em PDF"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                >
+                  <FileDown size={14} aria-hidden="true" />
+                  PDF
+                </button>
+                <button
+                  type="button"
+                  onClick={exportarUltimasVisitasMarkdown}
+                  disabled={ultimasVisitas.length === 0}
+                  aria-label="Exportar últimas visitas em Markdown"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                >
+                  <FileText size={14} aria-hidden="true" />
+                  MD
+                </button>
+                <Link
+                  href="/comercial/crm/visitas"
+                  className="flex items-center gap-1 text-xs text-blue-600 hover:underline dark:text-blue-400"
+                >
+                  Ver todas <ArrowRight size={12} aria-hidden="true" />
+                </Link>
+              </div>
             </div>
             {data?.ultimasVisitas && data.ultimasVisitas.length > 0 ? (
               <div className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -736,6 +834,11 @@ function fmtData(dia: string): string {
   return isNaN(data.getTime())
     ? dia
     : data.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })
+}
+
+function fmtDataCompleta(dia: string): string {
+  const data = new Date(`${dia}T12:00:00`)
+  return isNaN(data.getTime()) ? dia : data.toLocaleDateString("pt-BR")
 }
 
 function fmtBRL(valor: number): string {

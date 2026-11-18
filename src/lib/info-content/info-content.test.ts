@@ -307,6 +307,7 @@ describe("getInfoContent", () => {
     expect(texto).toMatch(/BEC/i)
     expect(texto).toMatch(/10 pontos à frente/i)
     expect(texto).toMatch(/Conversão/i)
+    expect(texto).toMatch(/Últimas visitas exportam CSV, PDF e MD/i)
     expect(texto).toMatch(/Visitas R\/A\/C/i)
     expect(texto).toMatch(/Itens de engajamento/i)
     expect(texto).toMatch(/36%/i)
@@ -569,6 +570,10 @@ describe("saudeProspeccaoInfo", () => {
       /58 visitas cadastradas/i
     )
     expect(saudeProspeccaoInfo.registros.examples?.length).toBeGreaterThan(0)
+    expect(saudeProspeccaoInfo.ultimasVisitas.rules?.join(" ")).toMatch(/CSV, PDF e MD/i)
+    expect(saudeProspeccaoInfo.ultimasVisitas.columns?.map((c) => c.name).join(" ")).toMatch(
+      /Endereço/i
+    )
     expect(saudeProspeccaoInfo.engajados.examples?.length).toBeGreaterThan(0)
   })
 })

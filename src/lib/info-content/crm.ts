@@ -398,7 +398,7 @@ export const crmContent: Record<string, InfoContent> = {
       "O card Registros conta clientes/pessoas distintos do recorte, não visitas: 58 visitas cadastradas podem aparecer como 28 registros.",
       "A coluna Visitas R/A/C abre a lista de visitas; cada visita da lista é clicável e abre o cadastro da visita.",
       "Clique no nome do cliente/pessoa para abrir o modal com todas as visitas do período, contatos, propostas, oportunidades, valores, status, relato/ata, check-in e check-out.",
-      "Filtros de segmento, porte, responsável, status da visita, status da oportunidade e tipo de visita combinam com a busca. Exportações CSV, PDF e MD respeitam o recorte atual.",
+      "Filtros de segmento, porte, responsável, status da visita, status da oportunidade e tipo de visita combinam com a busca. As tabelas Saúde da prospecção e Últimas visitas exportam CSV, PDF e MD respeitando o recorte atual.",
       "O botão Todas/Minhas Visitas altera todo o dashboard e a saúde da prospecção.",
     ],
     columns: [
@@ -1420,6 +1420,28 @@ export const saudeProspeccaoInfo = {
       {
         title: "Exemplo",
         desc: "Esforço 30% e engajamento 60%: como o esforço é 30%, o registro entra em BEC (Baixo Esforço comercial).",
+      },
+    ],
+  },
+  ultimasVisitas: {
+    title: "Últimas visitas — exportação",
+    description:
+      "Visitas mais recentes do recorte atual do dashboard, com data, hora, tipo, status e endereço.",
+    rules: [
+      "Os botões CSV, PDF e MD exportam exatamente as linhas exibidas nesta seção.",
+      "O arquivo respeita o filtro Todas/Minhas Visitas aplicado ao dashboard.",
+      "Quando não há visitas no recorte, os botões de exportação ficam desabilitados.",
+    ],
+    columns: [
+      { name: "ID da visita", desc: "Identificador único da visita." },
+      { name: "Data/Hora", desc: "Data e horário da visita." },
+      { name: "Tipo/Status", desc: "Presencial, vídeo ou telefone; e situação da visita." },
+      { name: "Endereço", desc: "Logradouro, número, bairro, cidade e UF quando preenchidos." },
+    ],
+    examples: [
+      {
+        title: "Exemplo",
+        desc: "Com o filtro Minhas Visitas ativo, o arquivo traz só as visitas do usuário logado.",
       },
     ],
   },
