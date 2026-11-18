@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { NextResponse } from "next/server"
 import { requireAuth } from "@/lib/auth"
 import { ErroErp, requisitarErp } from "@/lib/erp/cliente"
+import { atualizarEspelhosErp } from "@/lib/crm/erp-espelho"
 import { POST } from "./route"
 
 vi.mock("@/lib/auth", () => ({ requireAuth: vi.fn() }))
@@ -16,15 +17,19 @@ vi.mock("@/lib/erp/cliente", () => ({
   },
   requisitarErp: vi.fn(),
 }))
+vi.mock("@/lib/crm/erp-espelho", () => ({ atualizarEspelhosErp: vi.fn() }))
 
-const resultado = { desde: "2026-11-16T00:00:00", documentos: 1, itens: 4 }
+const resultado = { desde: null, documentos: 1, itens: 4 }
+const espelhos = { verificados: 2, atualizados: 1, falhas: 0 }
 
 describe("POST /api/crm/erp/pedidos/sincronizar", () => {
   beforeEach(() => {
     vi.mocked(requireAuth).mockReset()
     vi.mocked(requisitarErp).mockReset()
+    vi.mocked(atualizarEspelhosErp).mockReset()
     vi.mocked(requireAuth).mockResolvedValue({ userId: 1 } as any)
     vi.mocked(requisitarErp).mockResolvedValue(resultado as any)
+    vi.mocked(atualizarEspelhosErp).mockResolvedValue(espelhos)
   })
 
   it("retorna 401 sem sessão", async () => {
@@ -35,11 +40,12 @@ describe("POST /api/crm/erp/pedidos/sincronizar", () => {
     expect(res.status).toBe(401)
   })
 
-  it("carrega o diferencial na api-microdata", async () => {
+  it("varre os pedidos na api-microdata e atualiza os espelhos", async () => {
     const res = await POST()
     expect(res.status).toBe(200)
-    expect(await res.json()).toEqual(resultado)
+    expect(await res.json()).toEqual({ ...resultado, espelhos })
     expect(requisitarErp).toHaveBeenCalledWith("/crm/pedidos/sincronizar", { metodo: "POST" })
+    expect(atualizarEspelhosErp).toHaveBeenCalledWith("PEDIDO")
   })
 
   it("repassa o erro da api-microdata", async () => {

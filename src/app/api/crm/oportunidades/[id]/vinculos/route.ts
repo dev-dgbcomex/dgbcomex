@@ -13,12 +13,11 @@ import { ErroErp, requisitarErp } from "@/lib/erp/cliente"
 import {
   STATUS_PEDIDO_ERP,
   statusPedidoParaCrm,
-  type DocumentoErpItem,
   type FaturamentoErp,
   type PedidoErp,
   type TipoVinculoErp,
 } from "@/lib/erp/tipos"
-import { UNIDADES_MEDIDA } from "@/lib/crm/documento-venda"
+import { itensParaCrm } from "@/lib/crm/erp-espelho"
 
 /**
  * Vincula um documento do ERP (pedido de venda ou faturamento) a uma oportunidade/pessoa.
@@ -27,29 +26,6 @@ import { UNIDADES_MEDIDA } from "@/lib/crm/documento-venda"
  * mostrar pedidos e notas no histórico da oportunidade, com `origem = "ERP"` e a chave do
  * documento em `referencia_externa` (impede o mesmo documento ser vinculado duas vezes).
  */
-
-function unidadeCrm(unidade: string | null | undefined): string {
-  const limpa = (unidade || "").trim().toUpperCase()
-  if (limpa.startsWith("MT")) return "METROS"
-  if (limpa.startsWith("KG")) return "KILOS"
-  if (limpa.startsWith("PC")) return "PECAS"
-  if (limpa.startsWith("UN")) return "UNIDADES"
-  if ((UNIDADES_MEDIDA as readonly string[]).includes(limpa)) return limpa
-  return "METROS"
-}
-
-function itensParaCrm(itens: DocumentoErpItem[] | undefined) {
-  return (itens || [])
-    .filter((item) => item && (item.produto || item.descricao))
-    .map((item) => ({
-      produto: (item.produto || item.descricao || "").trim().slice(0, 300),
-      codigo: (item.produto || "").trim().slice(0, 100) || null,
-      unidade: unidadeCrm(item.unidade),
-      quantidade: item.quantidade != null ? String(item.quantidade) : null,
-      valorUnitario: item.valor_unitario != null ? String(item.valor_unitario) : null,
-      valorTotal: item.valor_total != null ? String(item.valor_total) : null,
-    }))
-}
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {

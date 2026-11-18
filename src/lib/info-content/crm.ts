@@ -314,7 +314,7 @@ export const crmContent: Record<string, InfoContent> = {
       "Se a oportunidade estiver como FECHADO_PERDIDO, o formulário de edição também permite corrigir o motivo da perda.",
       "Os cards 'Faturamentos' e 'Pedidos de Venda' listam os documentos já vinculados à oportunidade; o botão 'Novo Faturamento'/'Novo Pedido' cria um documento manualmente no CRM.",
       "O botão 'Vincular do ERP' abre a busca de documentos do ERP (api-microdata): pedidos de venda e notas fiscais são espelhados na oportunidade, com cabeçalho e itens.",
-      "Ao abrir o modal, o sistema carrega no warehouse só o diferencial: pega a data do último documento espelhado e traz do ERP o que foi lançado depois, sem precisar de botão de recarga.",
+      "Ao abrir o modal, o sistema varre todos os pedidos e faturamentos do ERP, atualiza o warehouse e regrava os documentos já vinculados que mudaram, sem precisar de botão de recarga.",
       "A lista de pedidos mostra todos os status exceto cancelados; pedidos que já viraram nota não aparecem como pedido — vincule pelo faturamento.",
       "No modal do ERP a busca é filtrada pelo CNPJ da pessoa da oportunidade (desmarque 'Só desta pessoa' para ver todos os documentos).",
       "O mesmo documento do ERP não pode ser vinculado duas vezes: ao tentar, o sistema avisa que ele já está vinculado.",

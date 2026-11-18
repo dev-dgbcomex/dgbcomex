@@ -231,7 +231,7 @@ describe("getInfoContent", () => {
     expect(texto).toMatch(/pedido de venda|faturamento/)
     expect(texto).toMatch(/CNPJ/)
     expect(texto).toMatch(/já está vinculado/)
-    expect(texto).toMatch(/diferencial/)
+    expect(texto).toMatch(/varre todos os pedidos/)
     expect(texto).toMatch(/cancelados/)
     expect(texto).toMatch(/já viraram nota|já faturados/)
   })
