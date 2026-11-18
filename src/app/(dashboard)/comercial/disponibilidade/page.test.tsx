@@ -254,7 +254,7 @@ describe("DisponibilidadeComercialPage", () => {
     // espaço normal para nao depender do detalhe do ICU.
     const detalhe = (celula.getAttribute("title") ?? "").replace(/ /g, " ")
     expect(detalhe).toContain("PROFECTUS")
-    expect(detalhe).toContain("10.101 m")
+    expect(detalhe).toContain("10.101,00 m")
     expect(detalhe).toContain("R$ 71.396,00")
     expect(detalhe).toContain("6 pedidos")
     // O leitor de tela recebe o mesmo conteúdo, em uma linha.
@@ -280,25 +280,25 @@ describe("DisponibilidadeComercialPage", () => {
 
     const tabela = await screen.findByRole("region", { name: "Disponibilidade por produto e cor" })
     const beige = within(tabela).getByText("11 - BEIGE").closest("tr")!
-    // 91 m em estoque contra 20.099 m prometidos, com 10.640 m chegando
-    expect(beige.textContent).toContain("91 m")
-    expect(beige.textContent).toContain("20.099 m")
+    // 91,00 m em estoque contra 20.099,00 m prometidos, com 10.640,00 m chegando
+    expect(beige.textContent).toContain("91,00 m")
+    expect(beige.textContent).toContain("20.099,00 m")
     expect(beige.textContent).toContain("chega 09/11/2026")
     // Livre negativo: a carteira pediu mais do que existe
-    expect(beige.textContent).toContain("-20.008 m")
+    expect(beige.textContent).toContain("-20.008,00 m")
     // Depois da compra continua negativo: nenhuma compra cobre o que falta
-    expect(beige.textContent).toContain("-9.368 m")
+    expect(beige.textContent).toContain("-9.368,00 m")
   })
 
   it("mostra a coluna que a compra resolve", async () => {
     // 5.923 de estoque, 16.600 prometidos (falta 10.677) e 30.207 chegando:
-    // depois da compra sobra 19.530 m.
+    // depois da compra sobra 19.530,00 m.
     renderPage(<DisponibilidadeComercialPage />)
 
     const tabela = await screen.findByRole("region", { name: "Disponibilidade por produto e cor" })
     const natural = within(tabela).getByText("56 - NATURAL").closest("tr")!
-    expect(natural.textContent).toContain("-10.677 m")
-    expect(natural.textContent).toContain("19.530 m")
+    expect(natural.textContent).toContain("-10.677,00 m")
+    expect(natural.textContent).toContain("19.530,00 m")
   })
 
   it("não repete a falta em duas colunas", async () => {

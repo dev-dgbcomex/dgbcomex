@@ -13,6 +13,7 @@ vi.mock("next-auth/react", () => ({
 const dashboardPayload = {
   leads: { total: 0, esteMes: 0 },
   pessoas: { total: 185 },
+  clientes: { total: 12 },
   oportunidades: { total: 0, esteMes: 0, byStatus: [] },
   propostas: { total: 0, byStatus: [] },
   visitas: { total: 1, hoje: 0 },
@@ -40,6 +41,7 @@ describe("CrmDashboardPage", () => {
     for (const label of [
       "Leads",
       "Pessoas (Negócios)",
+      "Clientes",
       "Oportunidades",
       "Propostas",
       "Visitas",

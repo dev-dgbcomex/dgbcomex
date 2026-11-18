@@ -274,6 +274,40 @@ describe("getInfoContent", () => {
     }
   })
 
+  it("a listagem de visitas explica a visão padrão Tabela", () => {
+    const conteudo = getInfoContent("/comercial/crm/visitas")
+    const texto = (conteudo?.rules ?? []).join("\n")
+
+    expect(texto).toMatch(/abre na visão Tabela/i)
+    expect(texto).toMatch(/Calendário ou Kanban/i)
+  })
+
+  it("o dashboard de visitas explica saúde da prospecção, scores e detalhamento", () => {
+    const conteudo = getInfoContent("/comercial/crm/visitas/dashboard")
+    expect(conteudo).not.toBeNull()
+
+    const texto = [
+      conteudo?.description ?? "",
+      ...(conteudo?.rules ?? []),
+      ...(conteudo?.columns ?? []).map((c) => `${c.name}: ${c.desc}`),
+      ...(conteudo?.fields ?? []).map((f) => `${f.name}: ${f.desc}`),
+      ...(conteudo?.examples ?? []).map((e) => `${e.title}: ${e.desc}`),
+    ].join("\n")
+
+    expect(texto).toMatch(/saúde da prospecção/i)
+    expect(texto).toMatch(/ano corrente/i)
+    expect(texto).toMatch(/recorte padrão/i)
+    expect(texto).toMatch(/Esforço/i)
+    expect(texto).toMatch(/Engajamento/i)
+    expect(texto).toMatch(/Diferença/i)
+    expect(texto).toMatch(/relato\/ata/i)
+    expect(texto).toMatch(/oportunidade/i)
+    expect(texto).toMatch(/pedido/i)
+    expect(texto).toMatch(/faturamento/i)
+    expect(texto).toMatch(/CSV, PDF e MD/i)
+    expect(texto).toMatch(/modal/i)
+  })
+
   it("os relatórios do CRM explicam filtros, cards e exportações", () => {
     const telas = [
       "/comercial/crm/relatorios",
