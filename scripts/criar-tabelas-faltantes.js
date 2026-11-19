@@ -194,8 +194,10 @@ const TABELAS = [
        lembrete_dia_anterior_enviado boolean not null default false,
        lembrete_dia_acao_enviado boolean not null default false,
        created_at timestamp default now(),
-       updated_at timestamp default now()
-     )`,
+        updated_at timestamp default now()
+      )`,
+    "alter table crm_acoes_prospeccao add column if not exists origem_visita_id integer",
+    "create unique index if not exists idx_crm_acoes_prospeccao_origem_visita_id on crm_acoes_prospeccao (origem_visita_id) where origem_visita_id is not null",
     "create index if not exists idx_crm_acoes_prospeccao_empresa_id on crm_acoes_prospeccao (empresa_id)",
     "create index if not exists idx_crm_acoes_prospeccao_cliente_id on crm_acoes_prospeccao (cliente_id)",
     "create index if not exists idx_crm_acoes_prospeccao_oportunidade_id on crm_acoes_prospeccao (oportunidade_id)",

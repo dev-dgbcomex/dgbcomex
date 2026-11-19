@@ -59,6 +59,7 @@ export const crmAcoesProspeccao = pgTable("crm_acoes_prospeccao", {
   lembreteDiaAcaoEnviado: boolean("lembrete_dia_acao_enviado").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+  origemVisitaId: integer("origem_visita_id"),
 })
 
 export type CrmAcaoProspeccao = typeof crmAcoesProspeccao.$inferSelect

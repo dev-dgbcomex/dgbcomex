@@ -101,6 +101,7 @@ CREATE INDEX IF NOT EXISTS idx_user_email_config_usuario_id ON user_email_config
 CREATE INDEX IF NOT EXISTS idx_user_menus_usuario_id ON user_menus(usuario_id);
 CREATE INDEX IF NOT EXISTS idx_user_menu_itens_user_menu_id ON user_menu_itens(user_menu_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_crm_acoes_prospeccao_origem_visita_id ON crm_acoes_prospeccao(origem_visita_id) WHERE origem_visita_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_crm_acoes_prospeccao_empresa_id ON crm_acoes_prospeccao(empresa_id);
 CREATE INDEX IF NOT EXISTS idx_crm_acoes_prospeccao_cliente_id ON crm_acoes_prospeccao(cliente_id);
 CREATE INDEX IF NOT EXISTS idx_crm_acoes_prospeccao_oportunidade_id ON crm_acoes_prospeccao(oportunidade_id);

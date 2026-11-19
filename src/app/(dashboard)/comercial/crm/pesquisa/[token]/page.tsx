@@ -7,12 +7,15 @@ import { CheckCircle2, Star, Loader2 } from "lucide-react"
 
 type PesquisaData = {
   id: number
-  visitaId: number
+  origem: "acao" | "visita"
+  visitaId: number | null
+  acaoId: number | null
   email: string
   nome: string | null
   status: string
   alreadyAnswered?: boolean
   dataVisita: string | null
+  dataAcao: string | null
 }
 
 type Pergunta = {
@@ -139,6 +142,8 @@ export default function PesquisaSatisfacaoPage() {
   }
 
   const allAnswered = PERGUNTAS.every((p) => respostas[p.id]?.trim())
+  const dataReferencia = pesquisa?.dataAcao || pesquisa?.dataVisita
+  const rotuloData = pesquisa?.origem === "acao" ? "Ação" : "Visita"
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 py-8 px-4">
@@ -147,9 +152,9 @@ export default function PesquisaSatisfacaoPage() {
           <div className="bg-[#073fb8] p-6">
             <h1 className="text-xl font-bold text-white">Pesquisa de Satisfacao</h1>
             <p className="text-sm text-blue-100 mt-1">PDM PRO TEXTIL</p>
-            {pesquisa?.dataVisita && (
+            {dataReferencia && (
               <p className="text-xs text-blue-200 mt-1">
-                Visita: {new Date(pesquisa.dataVisita + "T12:00:00").toLocaleDateString("pt-BR")}
+                {rotuloData}: {new Date(dataReferencia + "T12:00:00").toLocaleDateString("pt-BR")}
               </p>
             )}
           </div>
