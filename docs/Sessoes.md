@@ -26,6 +26,16 @@
 
 > Detalhe técnico completo em [`docs/crm-cliente-e-relatorios.md`](./crm-cliente-e-relatorios.md).
 
+### Sessão 11 — Equalização do warehouse local após o backfill
+
+- **Data:** 2026-11-19
+- **Commit:** nenhum código novo; operação de dados no warehouse local registrada neste documento.
+- **Tarefa:** eliminar as divergências de contagem entre Neon e warehouse local reveladas após o backfill de visitas para ações de prospecção.
+- **Causa raiz:** o `cliente` 16 do Neon tinha o mesmo CNPJ do `cliente` 2 no local (conflito na constraint `clientes_cnpj_unique`, silenciado pelo `ON CONFLICT DO NOTHING` da réplica), o que impedia a cópia do cliente e quebrava a cadeia de FKs de contatos, oportunidades, pedidos, visitas, ações e timeline. Além disso, booleans locais com `NULL` impediam o alinhamento de `NOT NULL`.
+- **Correção aplicada apenas no warehouse local, em transação:** remapeou-se a referência local de `crm_oportunidades.cliente_id` de 2 para 16, recriou-se o cliente 16 com os dados do Neon, removeu-se o cliente 2 duplicado e preencheu-se com `false` os nulos de `crm_pessoas.promovida_cliente` e dos lembretes de `crm_visitas`. Nenhum dado do Neon foi alterado e nenhuma linha local exclusiva foi apagada.
+- **Resultado:** após `db:replicar-neon`, o local passou a conter todas as linhas do Neon. `db:verificar-local` → **0 divergências (local ⊇ Neon)**, com 7 tabelas localmente maiores permitidas pela arquitetura (`crm_acoes_prospeccao`, `crm_oportunidades`, `crm_propostas`, `crm_timeline_eventos`, `crm_visitas`, `user_menu_itens`, `marts.faturamento_detalhe`). `db:comparar` → `All databases are IDENTICAL`.
+- **Observação:** igualdade estrita de contagem exigiria remover linhas exclusivas do local; isso não foi feito porque o warehouse local é superset por projeto.
+
 ### Sessão 10 — Backfill de visitas para ações de prospecção
 
 - **Data:** 2026-11-19
