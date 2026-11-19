@@ -26,6 +26,22 @@
 
 > Detalhe técnico completo em [`docs/crm-cliente-e-relatorios.md`](./crm-cliente-e-relatorios.md).
 
+### Sessão 10 — Backfill de visitas para ações de prospecção
+
+- **Data:** 2026-11-19
+- **Commit:** `84bb87d3` — `feat(crm): backfill de visitas para acoes de prospeccao`.
+- **Tarefa:** reclassificar os registros já lançados em `Visitas` como **Ações de Prospecção**, preservando vínculos, filhas, timeline, tokens de pesquisa e `google_event_id`.
+- **Decisões aprovadas:** backfill único e idempotente; **somente INSERT** nesta entrega; módulo `Visitas` continua disponível e seus registros não foram apagados; consumidores atuais de visitas não foram alterados; limpeza dos registros duplicados fica para entrega futura.
+- **Resultado:**
+  - Migration `0071_acoes_prospeccao_origem_visita.sql`: coluna `origem_visita_id` e índice único parcial em `crm_acoes_prospeccao`. Campo sem FK de propósito para sobreviver à limpeza futura das visitas. Aplicada no Neon e replicada no warehouse local; coluna e índice confirmados nos dois bancos.
+  - `src/lib/crm/backfill-visitas-acoes.ts` centraliza o mapeamento SQL: `data_visita` → `data_acao`, `dataAcao` em metadados, `VISITA` → `ACAO_PROSPECCAO`, `acaoProspeccaoId`, lembretes, coordenadas, check-in/out, fotos, `google_event_id` e auditoria. Valores nulos em `tipo`, `status` e lembretes são normalizados com `COALESCE`.
+  - `scripts/backfill-visitas-para-acoes.js` roda nos dois bancos, valida tokens conflitantes antes de gravar, usa uma transação por banco e aceita `--db=`, `--limit=` e `--dry-run`. Preflight com rollback confirmou que todas as etapas executam sem violar constraints.
+  - Execução real: **Neon 198 visitas → 198 ações** e 51 eventos de timeline; **warehouse local 64 visitas → 64 ações** e 30 eventos de timeline. Não havia localizações, pesquisas ou respostas para copiar. `--dry-run` posterior: `pendentes=0` nos dois bancos.
+  - Pesquisa pública: `GET/POST /api/crm/pesquisa/[token]` passa a preferir token de ação de prospecção e mantém fallback para token de visita; resposta não expõe mais o token e passa a incluir `origem`, `acaoId`, `visitaId`, `dataAcao` e `dataVisita`. A tela pública mostra `Ação:` ou `Visita:` conforme a origem.
+- **Arquivos Envolvidos:** `src/lib/db/migrations/0071_acoes_prospeccao_origem_visita.sql`, `src/lib/db/schema/crm-acoes-prospeccao.ts`, `scripts/{migrate,sync-all-dbs,criar-tabelas-faltantes,add-fk-indexes,backfill-visitas-para-acoes}.js`, `src/lib/crm/backfill-visitas-acoes.ts`, `src/app/api/crm/pesquisa/[token]/route.ts`, `src/app/(dashboard)/comercial/crm/pesquisa/[token]/page.tsx`.
+- **Testes:** novos em `src/lib/crm/backfill-visitas-acoes.test.ts`, `src/app/api/crm/pesquisa/[token]/route.test.ts` e `src/app/(dashboard)/comercial/crm/pesquisa/[token]/page.test.tsx`; suíte completa `npm run test` → **438 arquivos / 2506 testes passados**.
+- **Verificação:** `tsc --noEmit` limpo, `npm run lint` sem erros (só warnings pré-existentes), `npm run build` OK com `NODE_OPTIONS=--max-old-space-size=6144` (**249/249 páginas estáticas**), `db:comparar` → `All databases are IDENTICAL`. `db:verificar-local` reportou 8 divergências de linhas: 7 pré-existentes e `crm_acoes_prospeccao` (Neon=198, local=64), esperada porque o local só espelha as 64 visitas que existem nele.
+
 ### Sessão 9 — Ações de Prospecção: clone integral do módulo Visitas com tabelas próprias
 
 - **Data:** 2026-11-19
