@@ -1,4 +1,5 @@
 export const CADASTRO_VISITA_DETALHE = "CRM_VISITA_DETALHE"
+export const CADASTRO_ACAO_PROSPECCAO_DETALHE = "CRM_ACAO_PROSPECCAO_DETALHE"
 export const CAMPO_PROPOSTA_VINCOLADA = "proposta_vinculada"
 
 export const ROLES_ADMINISTRATIVAS = ["ADMIN", "SUDO"] as const
@@ -33,6 +34,18 @@ export const CATALOGO_CAMPOS_VISIVEIS: CadastroVisibilidadeCatalogo[] = [
     cadastro: CADASTRO_VISITA_DETALHE,
     rotulo: "Detalhe da Visita",
     descricao: "Tela de detalhe de uma visita do CRM",
+    campos: [
+      {
+        campo: CAMPO_PROPOSTA_VINCOLADA,
+        rotulo: "Proposta Vinculada",
+        descricao: "Link para a proposta associada e opção de vincular ou cadastrar proposta",
+      },
+    ],
+  },
+  {
+    cadastro: CADASTRO_ACAO_PROSPECCAO_DETALHE,
+    rotulo: "Detalhe da Ação de Prospecção",
+    descricao: "Tela de detalhe de uma ação de prospecção do CRM",
     campos: [
       {
         campo: CAMPO_PROPOSTA_VINCOLADA,

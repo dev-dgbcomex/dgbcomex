@@ -6,6 +6,7 @@ type TipoEvento =
   | "LEAD"
   | "OPORTUNIDADE"
   | "VISITA"
+  | "ACAO_PROSPECCAO"
   | "TAREFA"
   | "PROPOSTA"
   | "WHATSAPP"
@@ -32,8 +33,14 @@ export async function inserirTimelineEvento(params: {
 
 export async function excluirTimelineEventosEntidade(
   params: {
-    tipo: "LEAD" | "OPORTUNIDADE" | "VISITA" | "TAREFA" | "PROPOSTA"
-    campo: "leadId" | "oportunidadeId" | "visitaId" | "tarefaId" | "propostaId"
+    tipo: "LEAD" | "OPORTUNIDADE" | "VISITA" | "ACAO_PROSPECCAO" | "TAREFA" | "PROPOSTA"
+    campo:
+      | "leadId"
+      | "oportunidadeId"
+      | "visitaId"
+      | "acaoProspeccaoId"
+      | "tarefaId"
+      | "propostaId"
     id: number
   },
   client: any = db

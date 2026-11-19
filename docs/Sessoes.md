@@ -26,6 +26,22 @@
 
 > Detalhe técnico completo em [`docs/crm-cliente-e-relatorios.md`](./crm-cliente-e-relatorios.md).
 
+### Sessão 9 — Ações de Prospecção: clone integral do módulo Visitas com tabelas próprias
+
+- **Data:** 2026-11-19
+- **Tarefa:** criar um módulo **Ações de Prospecção** idêntico a Visitas, com tabelas próprias, mantendo Visitas intacto e paralelo.
+- **Decisões aprovadas:** tabela própria, manter os dois módulos, escopo "tudo idêntico" e rota `/comercial/crm/acoes-prospeccao` com os mesmos perfis (`COMERCIAL`, `CRM`, `ADMIN`).
+- **Resultado:**
+  - Banco: `crm_acoes_prospeccao` (+ `_localizacoes`, `_pesquisas`, `_pesquisas_respostas`), migration `0070_acoes_prospeccao.sql`, status `ACAO_PROSPECCAO`, colunas `data_acao`, `acao_id` e lembretes próprios. Aplicada no Neon e replicada no warehouse local (4 tabelas criadas com FKs, constraints e índices).
+  - Mapeamento: `crmVisitas` → `crmAcoesProspeccao`, `data_visita` → `data_acao`, `visita_id` → `acao_id`, `VISITA` → `ACAO_PROSPECCAO`, `visitaId` → `acaoProspeccaoId`.
+  - Telas clonadas em `/comercial/crm/acoes-prospeccao/**` (lista, novo, detalhe, dashboard), relatório em `/comercial/crm/relatorios/acoes-prospeccao`, calendário, kanban, cronograma de viagem, mapa, fotos, localização, pesquisa de satisfação e vínculo comercial.
+  - APIs espelhadas em `/api/crm/acoes-prospeccao/**` + `/api/crm/relatorios/acoes-prospeccao`, com notificações `ACAO_PROSPECCAO_*`, timeline e visibilidade de campo própria (`CRM_ACAO_PROSPECCAO_DETALHE:proposta_vinculada`).
+  - Lógica: `acao-prospeccao-fotos.ts`, `acoes-prospeccao-saude.ts`, `consultarAcoesProspeccao`, geocodificação (`scripts/geocode-acoes-prospeccao.js`) e lembretes por e-mail na api-microdata (`lembretes_acoes_prospeccao.py` + script do Agendador).
+  - Registro: search registry, seed, menu, navegação mobile, ícones e modais de informação atualizados; `kanban-crm` e o detalhe de viagens ganharam atalhos para o novo módulo.
+- **Arquivos Envolvidos:** `src/lib/db/schema/crm-acoes-prospeccao*.ts`, `src/lib/db/migrations/0070_acoes_prospeccao.sql`, `scripts/{migrate,sync-all-dbs,criar-tabelas-faltantes,add-fk-indexes,geocode-acoes-prospeccao}.js`, `src/lib/crm/{acoes-prospeccao-saude,acao-prospeccao-fotos,relatorios,notificar-atividade}.ts`, `src/app/api/crm/acoes-prospeccao/**`, `src/app/api/crm/relatorios/acoes-prospeccao/**`, `src/app/(dashboard)/comercial/crm/acoes-prospeccao/**`, `src/components/crm/{acao,acoes}-prospeccao*`, `src/lib/{search-registry,menu-icones,dracula,campos-visiveis}.ts*`, `M:\dev\api-microdata\app\src\api\routers\lembretes_acoes_prospeccao.py`, `M:\dev\api-microdata\scripts\enviar_lembretes_acoes_prospeccao.py`.
+- **Testes:** 28 arquivos do módulo (162 testes) verdes; suíte completa `npm run test` → **435 arquivos / 2487 testes passados**.
+- **Verificação:** `tsc --noEmit` limpo (com `--max-old-space-size=6144`), `npm run lint` sem erros (só warnings, a maioria pré-existentes), `npm run build` OK com `NODE_OPTIONS=--max-old-space-size=6144` (249 páginas estáticas). `db:verificar-local` reportou **7 divergências pré-existentes** (tabelas não tocadas: `clientes`, `crm_contatos`, `crm_oportunidades`, `crm_pedido_venda*`, `crm_timeline_eventos`, `crm_visitas`); as 4 tabelas novas estão 0/0 nos dois bancos.
+
 ### Sessão 8 — Cliente com os mesmos relacionamentos da pessoa + negócio nos relatórios
 
 - **Data:** 2026-11-04

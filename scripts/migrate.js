@@ -405,6 +405,7 @@ async function migrate() {
       )
     `
     await sql`INSERT INTO campo_visibilidade (cadastro, campo, roles_ocultos) VALUES ('CRM_VISITA_DETALHE', 'proposta_vinculada', '["COMERCIAL"]'::jsonb) ON CONFLICT (cadastro, campo) DO NOTHING`
+    await sql`INSERT INTO campo_visibilidade (cadastro, campo, roles_ocultos) VALUES ('CRM_ACAO_PROSPECCAO_DETALHE', 'proposta_vinculada', '["COMERCIAL"]'::jsonb) ON CONFLICT (cadastro, campo) DO NOTHING`
     console.log("✓ Regras de visibilidade de campos verificadas")
 
     // crm_pessoas: tarja de promocao para cliente (a pessoa sai da listagem, mas
@@ -812,6 +813,20 @@ async function migrate() {
       console.log("✓ Status PROPOSTA já existem")
     }
 
+    const acaoProspeccaoAgendada =
+      await sql`SELECT id FROM status WHERE nome = 'AGENDADA' AND tipo = 'ACAO_PROSPECCAO'`
+    if (acaoProspeccaoAgendada.length === 0) {
+      await sql`INSERT INTO status (nome, rotulo, tipo, cor, ordem) VALUES
+        ('AGENDADA', 'Agendada', 'ACAO_PROSPECCAO', '#3b82f6', 1),
+        ('REALIZADA', 'Realizada', 'ACAO_PROSPECCAO', '#22c55e', 2),
+        ('CANCELADA', 'Cancelada', 'ACAO_PROSPECCAO', '#ef4444', 3),
+        ('EM_ANDAMENTO', 'Em Andamento', 'ACAO_PROSPECCAO', '#6366f1', 4)
+      `
+      console.log("✓ Status ACAO_PROSPECCAO inseridos")
+    } else {
+      console.log("✓ Status ACAO_PROSPECCAO já existem")
+    }
+
     // ==================== CRM (Fase 1) ====================
     await sql`
       CREATE TABLE IF NOT EXISTS crm_pessoas (
@@ -921,6 +936,96 @@ async function migrate() {
     // Visita pode ser de cliente (cliente_id) ou avulsa (nome_avulso): empresa_id nao e obrigatorio
     await sql`ALTER TABLE crm_visitas ALTER COLUMN empresa_id DROP NOT NULL`
     console.log("✓ crm_visitas: empresa_id pode ser nulo (visita de cliente ou avulsa)")
+
+    await sql`
+      CREATE TABLE IF NOT EXISTS crm_acoes_prospeccao (
+        id SERIAL PRIMARY KEY,
+        empresa_id INTEGER REFERENCES crm_pessoas(id),
+        cliente_id INTEGER REFERENCES clientes(id),
+        oportunidade_id INTEGER REFERENCES crm_oportunidades(id),
+        contato_id INTEGER REFERENCES crm_contatos(id),
+        viagem_id INTEGER REFERENCES crm_viagens(id),
+        representante_id INTEGER REFERENCES representantes(id),
+        representante_nome VARCHAR(300),
+        proposta_id INTEGER REFERENCES crm_propostas(id),
+        data_acao DATE NOT NULL,
+        hora VARCHAR(5),
+        tipo VARCHAR(20) NOT NULL DEFAULT 'PRESENCIAL',
+        status VARCHAR(20) NOT NULL DEFAULT 'AGENDADA',
+        endereco VARCHAR(300),
+        numero VARCHAR(20),
+        complemento VARCHAR(200),
+        bairro VARCHAR(150),
+        cidade VARCHAR(150),
+        uf VARCHAR(2),
+        cep VARCHAR(10),
+        endereco_lat DOUBLE PRECISION,
+        endereco_lng DOUBLE PRECISION,
+        motivo_cancelamento TEXT,
+        nome_avulso VARCHAR(300),
+        relato TEXT,
+        fotos JSONB DEFAULT '[]'::jsonb,
+        check_in_time TIMESTAMP,
+        check_out_time TIMESTAMP,
+        check_in_lat DOUBLE PRECISION,
+        check_in_lng DOUBLE PRECISION,
+        check_out_lat DOUBLE PRECISION,
+        check_out_lng DOUBLE PRECISION,
+        criado_por INTEGER REFERENCES usuarios(id),
+        duracao_estimada INTEGER,
+        google_event_id VARCHAR(500),
+        lembrete_dia_anterior_enviado BOOLEAN NOT NULL DEFAULT false,
+        lembrete_dia_acao_enviado BOOLEAN NOT NULL DEFAULT false,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `
+    console.log("✓ Tabela crm_acoes_prospeccao criada")
+
+    await sql`
+      CREATE TABLE IF NOT EXISTS crm_acoes_prospeccao_localizacoes (
+        id SERIAL PRIMARY KEY,
+        acao_id INTEGER NOT NULL REFERENCES crm_acoes_prospeccao(id) ON DELETE CASCADE,
+        latitude DOUBLE PRECISION NOT NULL,
+        longitude DOUBLE PRECISION NOT NULL,
+        endereco VARCHAR(500),
+        observacao TEXT,
+        foto_url VARCHAR(500),
+        tipo VARCHAR(20) NOT NULL DEFAULT 'LOCAL',
+        criado_por INTEGER REFERENCES usuarios(id),
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `
+    console.log("✓ Tabela crm_acoes_prospeccao_localizacoes criada")
+
+    await sql`
+      CREATE TABLE IF NOT EXISTS crm_acoes_prospeccao_pesquisas (
+        id SERIAL PRIMARY KEY,
+        acao_id INTEGER NOT NULL REFERENCES crm_acoes_prospeccao(id) ON DELETE CASCADE,
+        email VARCHAR(255) NOT NULL,
+        nome VARCHAR(255),
+        token VARCHAR(64) NOT NULL UNIQUE,
+        enviado_em TIMESTAMP,
+        aberto_em TIMESTAMP,
+        respondido_em TIMESTAMP,
+        status VARCHAR(20) NOT NULL DEFAULT 'PENDENTE',
+        criado_por INTEGER REFERENCES usuarios(id),
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `
+    console.log("✓ Tabela crm_acoes_prospeccao_pesquisas criada")
+
+    await sql`
+      CREATE TABLE IF NOT EXISTS crm_acoes_prospeccao_pesquisas_respostas (
+        id SERIAL PRIMARY KEY,
+        pesquisa_id INTEGER NOT NULL REFERENCES crm_acoes_prospeccao_pesquisas(id) ON DELETE CASCADE,
+        pergunta VARCHAR(200) NOT NULL,
+        tipo VARCHAR(20) NOT NULL DEFAULT 'ALTERNATIVA',
+        resposta TEXT,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `
+    console.log("✓ Tabela crm_acoes_prospeccao_pesquisas_respostas criada")
 
     await sql`
       CREATE TABLE IF NOT EXISTS crm_tarefas (

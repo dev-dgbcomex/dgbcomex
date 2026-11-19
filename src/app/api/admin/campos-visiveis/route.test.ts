@@ -68,7 +68,8 @@ describe("/api/admin/campos-visiveis", () => {
     const data = await response.json()
 
     expect(response.status).toBe(200)
-    expect(data.catalogo).toHaveLength(1)
+    expect(data.catalogo).toHaveLength(2)
+    expect(data.catalogo.some((item: { cadastro: string }) => item.cadastro === "CRM_ACAO_PROSPECCAO_DETALHE")).toBe(true)
     expect(data.regras["CRM_VISITA_DETALHE:proposta_vinculada"]).toEqual(["COMERCIAL"])
   })
 

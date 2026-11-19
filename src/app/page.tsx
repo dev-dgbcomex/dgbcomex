@@ -17,7 +17,7 @@ const DEPARTMENTS = [
     icon: Users,
     abbr: "CRM",
     label: "CRM",
-    phrase: "Pipeline de vendas, leads, propostas e visitas integradas",
+    phrase: "Pipeline de vendas, leads, propostas, visitas e ações de prospecção integradas",
   },
   {
     icon: PenTool,

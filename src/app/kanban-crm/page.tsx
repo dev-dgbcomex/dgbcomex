@@ -9,6 +9,7 @@ import OportunidadesKanban from "@/components/crm/oportunidades-kanban"
 import PessoasKanban from "@/components/crm/pessoas-kanban"
 import PropostasKanban from "@/components/crm/propostas-kanban"
 import TarefasKanban from "@/components/crm/tarefas-kanban"
+import AcoesProspeccaoKanban from "@/components/crm/acoes-prospeccao-kanban"
 import VisitasKanban from "@/components/crm/visitas-kanban"
 import CampanhasKanban from "@/components/crm/campanhas-kanban"
 import { Minimize2, Loader2 } from "lucide-react"
@@ -21,6 +22,7 @@ const TIPO_ROTULO: Record<string, string> = {
   PESSOA: "Pessoas",
   PROPOSTA: "Propostas",
   TAREFA: "Tarefas",
+  ACAO_PROSPECCAO: "Ações de Prospecção",
   VISITA: "Visitas",
   CAMPANHA: "Campanhas",
 }
@@ -31,6 +33,7 @@ const API_ENDPOINTS: Record<string, string> = {
   PESSOA: "/api/crm/pessoas",
   PROPOSTA: "/api/crm/propostas",
   TAREFA: "/api/crm/tarefas",
+  ACAO_PROSPECCAO: "/api/crm/acoes-prospeccao",
   VISITA: "/api/crm/visitas",
   CAMPANHA: "/api/crm/campanhas",
 }
@@ -107,6 +110,8 @@ function CRMKanbanStandaloneContent() {
         return <PropostasKanban propostas={data} />
       case "TAREFA":
         return <TarefasKanban tarefas={data} />
+      case "ACAO_PROSPECCAO":
+        return <AcoesProspeccaoKanban acoes={data} />
       case "VISITA":
         return <VisitasKanban visitas={data} />
       case "CAMPANHA":

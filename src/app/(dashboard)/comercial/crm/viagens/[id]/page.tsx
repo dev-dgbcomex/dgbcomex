@@ -21,6 +21,17 @@ import { ViagemForm, VIAGEM_STATUS_OPTIONS } from "@/components/crm/viagem-form"
 import { linhaParaForm, type InvestimentoLinha } from "@/lib/crm/viagem"
 import type { Viagem, Investimento, ViagemForm as ViagemFormType } from "../types"
 
+type AcaoVinculadaViagem = {
+  id: number
+  empresaNome?: string | null
+  clienteNome?: string | null
+  nomeAvulso?: string | null
+  dataAcao?: string | null
+  hora?: string | null
+  status?: string | null
+  viagemId?: number | null
+}
+
 const STATUS_CORES: Record<string, string> = {
   PLANEJADA: "text-blue-600 bg-blue-50 dark:bg-blue-950/50 dark:text-blue-400",
   EM_ANDAMENTO: "text-amber-600 bg-amber-50 dark:bg-amber-950/50 dark:text-amber-400",
@@ -38,6 +49,7 @@ export default function ViagemDetailPage() {
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState<Partial<ViagemFormType>>({})
   const [investimentos, setInvestimentos] = useState<InvestimentoLinha[]>([])
+  const [acoesVinculadas, setAcoesVinculadas] = useState<AcaoVinculadaViagem[]>([])
   const [saving, setSaving] = useState(false)
 
   function setField(field: string, value: string) {
@@ -54,6 +66,22 @@ export default function ViagemDetailPage() {
       })
       .catch(() => toast.error("Erro ao carregar viagem"))
       .finally(() => setLoading(false))
+  }, [params.id])
+
+  useEffect(() => {
+    fetch("/api/crm/acoes-prospeccao?all=true")
+      .then((r) => r.json())
+      .then((dados: unknown) => {
+        if (!Array.isArray(dados)) {
+          setAcoesVinculadas([])
+          return
+        }
+        const viagemId = Number(params.id)
+        setAcoesVinculadas(
+          (dados as AcaoVinculadaViagem[]).filter((acao) => acao.viagemId === viagemId)
+        )
+      })
+      .catch(() => setAcoesVinculadas([]))
   }, [params.id])
 
   function startEditing() {
@@ -333,6 +361,42 @@ export default function ViagemDetailPage() {
                         ? new Date(v.dataVisita + "T12:00:00").toLocaleDateString("pt-BR")
                         : ""}
                       {v.hora ? ` às ${v.hora}` : ""}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 mb-4">
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-50 mb-3">
+              Ações de Prospecção Vinculadas
+            </h2>
+            {acoesVinculadas.length === 0 ? (
+              <p className="text-sm text-slate-500 dark:text-slate-400 py-2">
+                Nenhuma ação de prospecção vinculada. Vincule ações a esta viagem pelo campo
+                &quot;Viagem&quot; ao criar/editar uma ação de prospecção.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {acoesVinculadas.map((acao) => (
+                  <Link
+                    key={acao.id}
+                    href={`/comercial/crm/acoes-prospeccao/${acao.id}`}
+                    className="flex items-center justify-between rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                  >
+                    <span className="font-medium text-slate-900 dark:text-slate-100">
+                      {acao.empresaNome ||
+                        acao.clienteNome ||
+                        acao.nomeAvulso ||
+                        `Ação de Prospecção #${acao.id}`}
+                    </span>
+                    <span className="text-xs text-slate-500">
+                      {acao.dataAcao
+                        ? new Date(acao.dataAcao + "T12:00:00").toLocaleDateString("pt-BR")
+                        : ""}
+                      {acao.hora ? ` às ${acao.hora}` : ""}
+                      {acao.status ? ` · ${acao.status}` : ""}
                     </span>
                   </Link>
                 ))}

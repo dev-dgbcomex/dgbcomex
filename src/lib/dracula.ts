@@ -156,6 +156,7 @@ const REGRAS_ICONE: { padrao: RegExp; icone: LucideIcon }[] = [
   { padrao: /clientes?/i, icone: Building2 },
   { padrao: /neg[oó]cio/i, icone: Handshake },
   { padrao: /oportunidade/i, icone: Target },
+  { padrao: /prospec[cç][aã]o/i, icone: CalendarCheck },
   { padrao: /visita/i, icone: CalendarCheck },
   { padrao: /tarefa/i, icone: ListChecks },
   { padrao: /lead/i, icone: UserPlus },

@@ -1,4 +1,4 @@
-const { Pool } = require('pg')
+﻿const { Pool } = require('pg')
 require('dotenv').config({ path: '.env.local' })
 
 const INDEXES = `
@@ -101,6 +101,16 @@ CREATE INDEX IF NOT EXISTS idx_user_email_config_usuario_id ON user_email_config
 CREATE INDEX IF NOT EXISTS idx_user_menus_usuario_id ON user_menus(usuario_id);
 CREATE INDEX IF NOT EXISTS idx_user_menu_itens_user_menu_id ON user_menu_itens(user_menu_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_crm_acoes_prospeccao_empresa_id ON crm_acoes_prospeccao(empresa_id);
+CREATE INDEX IF NOT EXISTS idx_crm_acoes_prospeccao_cliente_id ON crm_acoes_prospeccao(cliente_id);
+CREATE INDEX IF NOT EXISTS idx_crm_acoes_prospeccao_oportunidade_id ON crm_acoes_prospeccao(oportunidade_id);
+CREATE INDEX IF NOT EXISTS idx_crm_acoes_prospeccao_contato_id ON crm_acoes_prospeccao(contato_id);
+CREATE INDEX IF NOT EXISTS idx_crm_acoes_prospeccao_criado_por ON crm_acoes_prospeccao(criado_por);
+CREATE INDEX IF NOT EXISTS idx_crm_acoes_prospeccao_localizacoes_acao_id ON crm_acoes_prospeccao_localizacoes(acao_id);
+CREATE INDEX IF NOT EXISTS idx_crm_acoes_prospeccao_localizacoes_criado_por ON crm_acoes_prospeccao_localizacoes(criado_por);
+CREATE INDEX IF NOT EXISTS idx_crm_acoes_prospeccao_pesquisas_acao_id ON crm_acoes_prospeccao_pesquisas(acao_id);
+CREATE INDEX IF NOT EXISTS idx_crm_acoes_prospeccao_pesquisas_criado_por ON crm_acoes_prospeccao_pesquisas(criado_por);
+CREATE INDEX IF NOT EXISTS idx_crm_acoes_prospeccao_pesquisas_respostas_pesquisa_id ON crm_acoes_prospeccao_pesquisas_respostas(pesquisa_id);
 `
 
 async function migrateDb(name, url) {

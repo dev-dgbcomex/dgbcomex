@@ -1,0 +1,65 @@
+﻿import {
+  pgTable,
+  serial,
+  integer,
+  varchar,
+  text,
+  timestamp,
+  date,
+  jsonb,
+  doublePrecision,
+  boolean,
+} from "drizzle-orm/pg-core"
+import { crmPessoas } from "./crm-pessoas"
+import { crmOportunidades } from "./crm-oportunidades"
+import { crmContatos } from "./crm-contatos"
+import { clientes } from "./clientes"
+import { crmViagens } from "./crm-viagens"
+import { representantes } from "./representantes"
+import { crmPropostas } from "./crm-propostas"
+import { usuarios } from "./usuarios"
+
+export const crmAcoesProspeccao = pgTable("crm_acoes_prospeccao", {
+  id: serial("id").primaryKey(),
+  empresaId: integer("empresa_id").references(() => crmPessoas.id),
+  clienteId: integer("cliente_id").references(() => clientes.id),
+  oportunidadeId: integer("oportunidade_id").references(() => crmOportunidades.id),
+  contatoId: integer("contato_id").references(() => crmContatos.id),
+  viagemId: integer("viagem_id").references(() => crmViagens.id),
+  representanteId: integer("representante_id").references(() => representantes.id),
+  representanteNome: varchar("representante_nome", { length: 300 }),
+  propostaId: integer("proposta_id").references(() => crmPropostas.id),
+  dataAcao: date("data_acao").notNull(),
+  hora: varchar("hora", { length: 5 }),
+  tipo: varchar("tipo", { length: 20 }).notNull().default("PRESENCIAL"),
+  status: varchar("status", { length: 20 }).notNull().default("AGENDADA"),
+  endereco: varchar("endereco", { length: 300 }),
+  numero: varchar("numero", { length: 20 }),
+  complemento: varchar("complemento", { length: 200 }),
+  bairro: varchar("bairro", { length: 150 }),
+  cidade: varchar("cidade", { length: 150 }),
+  uf: varchar("uf", { length: 2 }),
+  cep: varchar("cep", { length: 10 }),
+  enderecoLat: doublePrecision("endereco_lat"),
+  enderecoLng: doublePrecision("endereco_lng"),
+  motivoCancelamento: text("motivo_cancelamento"),
+  nomeAvulso: varchar("nome_avulso", { length: 300 }),
+  relato: text("relato"),
+  fotos: jsonb("fotos").$type<{ url: string; descricao: string }[]>().default([]),
+  checkInTime: timestamp("check_in_time"),
+  checkOutTime: timestamp("check_out_time"),
+  checkInLat: doublePrecision("check_in_lat"),
+  checkInLng: doublePrecision("check_in_lng"),
+  checkOutLat: doublePrecision("check_out_lat"),
+  checkOutLng: doublePrecision("check_out_lng"),
+  criadoPor: integer("criado_por").references(() => usuarios.id),
+  duracaoEstimada: integer("duracao_estimada"),
+  googleEventId: varchar("google_event_id", { length: 500 }),
+  lembreteDiaAnteriorEnviado: boolean("lembrete_dia_anterior_enviado").notNull().default(false),
+  lembreteDiaAcaoEnviado: boolean("lembrete_dia_acao_enviado").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+})
+
+export type CrmAcaoProspeccao = typeof crmAcoesProspeccao.$inferSelect
+export type NewCrmAcaoProspeccao = typeof crmAcoesProspeccao.$inferInsert

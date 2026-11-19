@@ -67,6 +67,10 @@ const TITULOS_CRM = [
   "Oportunidades no período",
   "Propostas no período",
   "Visitas no período",
+  "Ações de Prospecção",
+  "Ação de Prospecção",
+  "prospecção",
+  "prospeccao",
   "Criados nos últimos 7 dias",
   "Criados no mês",
   "AEC",
@@ -150,5 +154,17 @@ describe("iconePorTitulo", () => {
     expect(iconePorTitulo("AEC")).not.toBe(iconePorTitulo("Engajados"))
     expect(iconePorTitulo("Engajados")).not.toBe(iconePorTitulo("EQL"))
     expect(iconePorTitulo("EQL")).not.toBe(iconePorTitulo("BEC"))
+  })
+
+  it("usa o ícone de calendário para as ações de prospecção", () => {
+    for (const titulo of [
+      "Ações de Prospecção",
+      "Ação de Prospecção",
+      "prospecção",
+      "prospeccao",
+      "Visitas",
+    ]) {
+      expect(iconePorTitulo(titulo)).toBe(iconePorTitulo("Visitas"))
+    }
   })
 })

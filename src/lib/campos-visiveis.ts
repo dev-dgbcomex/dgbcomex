@@ -4,6 +4,7 @@ import { campoVisibilidade } from "@/lib/db/schema/campos-visiveis"
 import {
   CAMPO_PROPOSTA_VINCOLADA,
   CADASTRO_VISITA_DETALHE,
+  CADASTRO_ACAO_PROSPECCAO_DETALHE,
   ROLES_CAMPO_VISIBILIDADE,
   chaveRegra,
   encontrarCadastro,
@@ -95,5 +96,12 @@ export async function propostaVinculadaVisivelPara(
   role: string | null | undefined
 ): Promise<boolean> {
   const resultado = await carregarCamposVisiveis(CADASTRO_VISITA_DETALHE, role)
+  return resultado.campos[CAMPO_PROPOSTA_VINCOLADA] === true
+}
+
+export async function propostaVinculadaAcaoProspeccaoVisivelPara(
+  role: string | null | undefined
+): Promise<boolean> {
+  const resultado = await carregarCamposVisiveis(CADASTRO_ACAO_PROSPECCAO_DETALHE, role)
   return resultado.campos[CAMPO_PROPOSTA_VINCOLADA] === true
 }

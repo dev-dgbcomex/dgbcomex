@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest"
 import { getInfoContent } from "./index"
-import { saudeProspeccaoInfo } from "./crm"
+import { saudeProspeccaoAcoesInfo, saudeProspeccaoInfo } from "./crm"
 
 describe("getInfoContent", () => {
   it("returns exact match for known path", () => {
@@ -331,6 +331,62 @@ describe("getInfoContent", () => {
     expect(texto).toMatch(/modal/i)
   })
 
+  it("a listagem de ações de prospecção explica a visão padrão Calendário", () => {
+    const conteudo = getInfoContent("/comercial/crm/acoes-prospeccao")
+    const texto = (conteudo?.rules ?? []).join("\n")
+
+    expect(conteudo?.title).toMatch(/Ações de Prospecção/)
+    expect(texto).toMatch(/abre na visão Calendário/i)
+    expect(texto).toMatch(/Tabela ou Kanban/i)
+  })
+
+  it("o dashboard de ações de prospecção explica saúde, scores e detalhamento", () => {
+    const conteudo = getInfoContent("/comercial/crm/acoes-prospeccao/dashboard")
+    expect(conteudo).not.toBeNull()
+    expect(conteudo?.title).toMatch(/Dashboard de Ações de Prospecção/i)
+
+    const texto = [
+      conteudo?.description ?? "",
+      ...(conteudo?.rules ?? []),
+      ...(conteudo?.columns ?? []).map((c) => `${c.name}: ${c.desc}`),
+      ...(conteudo?.fields ?? []).map((f) => `${f.name}: ${f.desc}`),
+      ...(conteudo?.examples ?? []).map((e) => `${e.title}: ${e.desc}`),
+    ].join("\n")
+
+    expect(texto).toMatch(/saúde da prospecção/i)
+    expect(texto).toMatch(/ano corrente/i)
+    expect(texto).toMatch(/Esforço/i)
+    expect(texto).toMatch(/Engajamento/i)
+    expect(texto).toMatch(/AEC/i)
+    expect(texto).toMatch(/Engajados/i)
+    expect(texto).toMatch(/EQL/i)
+    expect(texto).toMatch(/BEC/i)
+    expect(texto).toMatch(/10 pontos à frente/i)
+    expect(texto).toMatch(/Conversão/i)
+    expect(texto).toMatch(/Ações R\/A\/C/i)
+    expect(texto).toMatch(/Últimas ações exportam CSV, PDF e MD/i)
+    expect(texto).toMatch(/Itens de engajamento/i)
+    expect(texto).toMatch(/36%/i)
+    expect(texto).toMatch(/9,33%/i)
+    expect(texto).toMatch(/58 ações cadastradas/i)
+    expect(texto).toMatch(/Próxima ação/i)
+    expect(texto).toMatch(/Todas \/ Minhas Ações/i)
+    expect(texto).toMatch(/0 a 100%/i)
+    expect(texto).toMatch(/relato\/ata/i)
+    expect(texto).toMatch(/ação realizada \(\+12,5\)/i)
+    expect(texto).toMatch(/modal/i)
+  })
+
+  it("o cadastro e o detalhe da ação de prospecção explicam tipo, recorrência e relato", () => {
+    const novo = getInfoContent("/comercial/crm/acoes-prospeccao/novo")
+    const detalhe = getInfoContent("/comercial/crm/acoes-prospeccao/[id]")
+
+    expect(novo?.title).toMatch(/Nova Ação de Prospecção/)
+    expect((novo?.rules ?? []).join("\n")).toMatch(/recorrência/i)
+    expect(detalhe?.title).toMatch(/Detalhe da Ação de Prospecção/)
+    expect((detalhe?.rules ?? []).join("\n")).toMatch(/relato da ação/i)
+  })
+
   it("os relatórios do CRM explicam filtros, cards e exportações", () => {
     const telas = [
       "/comercial/crm/relatorios",
@@ -339,6 +395,7 @@ describe("getInfoContent", () => {
       "/comercial/crm/relatorios/oportunidades",
       "/comercial/crm/relatorios/propostas",
       "/comercial/crm/relatorios/visitas",
+      "/comercial/crm/relatorios/acoes-prospeccao",
       "/comercial/crm/relatorios/conversoes",
       "/comercial/crm/relatorios/clientes",
     ]
@@ -373,6 +430,7 @@ describe("getInfoContent", () => {
       "/comercial/crm/relatorios/oportunidades",
       "/comercial/crm/relatorios/propostas",
       "/comercial/crm/relatorios/visitas",
+      "/comercial/crm/relatorios/acoes-prospeccao",
       "/comercial/crm/relatorios/conversoes",
       "/comercial/crm/relatorios/clientes",
     ]
@@ -604,5 +662,49 @@ describe("saudeProspeccaoInfo", () => {
       /Endereço/i
     )
     expect(saudeProspeccaoInfo.engajados.examples?.length).toBeGreaterThan(0)
+  })
+})
+
+describe("saudeProspeccaoAcoesInfo", () => {
+  it("explica cards, tabela e conversão das ações com fórmulas e exemplos", () => {
+    expect(saudeProspeccaoAcoesInfo.tabela.rules?.join(" ")).toMatch(
+      /\(pedidos de venda \+ faturamentos\) ÷ total de ações/i
+    )
+    expect(
+      saudeProspeccaoAcoesInfo.tabela.examples
+        ?.map((exemplo) => `${exemplo.title}: ${exemplo.desc}`)
+        .join(" ")
+    ).toMatch(/4 ações, 1 pedido/i)
+    expect(saudeProspeccaoAcoesInfo.aec.rules?.join(" ")).toMatch(/Esforço > 35/i)
+    expect(saudeProspeccaoAcoesInfo.engajados.rules?.join(" ")).toMatch(
+      /Engajamento − Esforço ≥ 10/i
+    )
+    expect(saudeProspeccaoAcoesInfo.eql.rules?.join(" ")).toMatch(/\|Esforço − Engajamento\| < 20/i)
+    expect(saudeProspeccaoAcoesInfo.eql.rules?.join(" ")).toMatch(/pelo menos 10 pontos à frente/i)
+    expect(saudeProspeccaoAcoesInfo.bec.rules?.join(" ")).toMatch(/Esforço ≤ 35/i)
+    expect(saudeProspeccaoAcoesInfo.conversao.rules?.join(" ")).toMatch(/limitado a 100%/i)
+    expect(saudeProspeccaoAcoesInfo.esforco.rules?.join(" ")).toMatch(
+      /ação realizada \(\+12,5\)/i
+    )
+    expect(saudeProspeccaoAcoesInfo.esforco.rules?.join(" ")).toMatch(/proposta \(\+25\)/i)
+    expect(saudeProspeccaoAcoesInfo.engajamento.rules?.join(" ")).toMatch(
+      /ação agendada \(\+10\)/i
+    )
+    expect(saudeProspeccaoAcoesInfo.itensEngajamento.rules?.join(" ")).toMatch(
+      /Proposta e oportunidade valem 36% cada/i
+    )
+    expect(saudeProspeccaoAcoesInfo.itensEngajamento.rules?.join(" ")).toMatch(/9,33% cada/i)
+    expect(saudeProspeccaoAcoesInfo.registros.description).toMatch(
+      /não é a quantidade de ações/i
+    )
+    expect(saudeProspeccaoAcoesInfo.registros.examples?.map((e) => e.desc).join(" ")).toMatch(
+      /58 ações cadastradas/i
+    )
+    expect(saudeProspeccaoAcoesInfo.registros.examples?.length).toBeGreaterThan(0)
+    expect(saudeProspeccaoAcoesInfo.ultimasVisitas.rules?.join(" ")).toMatch(/CSV, PDF e MD/i)
+    expect(saudeProspeccaoAcoesInfo.ultimasVisitas.columns?.map((c) => c.name).join(" ")).toMatch(
+      /ID da ação/i
+    )
+    expect(saudeProspeccaoAcoesInfo.engajados.examples?.length).toBeGreaterThan(0)
   })
 })

@@ -4,7 +4,7 @@ import { NavLink } from "@/components/ui/nav-link"
 import { usePathname } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { useQuery } from "@tanstack/react-query"
-import { LayoutDashboard, Calendar, List, User, Loader2 } from "lucide-react"
+import { LayoutDashboard, Calendar, CalendarCheck, List, User, Loader2 } from "lucide-react"
 
 export function MobileBottomNav() {
   const pathname = usePathname()
@@ -23,6 +23,12 @@ export function MobileBottomNav() {
     { href: paginaInicial, icon: LayoutDashboard, label: "Início" },
     { href: "/comercial/crm/visitas/novo", icon: Calendar, label: "Nova Visita" },
     { href: "/comercial/crm/visitas", icon: List, label: "Agenda" },
+    { href: "/comercial/crm/acoes-prospeccao", icon: List, label: "Ações" },
+    {
+      href: "/comercial/crm/acoes-prospeccao/novo",
+      icon: CalendarCheck,
+      label: "Nova Ação",
+    },
     { href: "/perfil", icon: User, label: "Perfil" },
   ] as const
 

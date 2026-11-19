@@ -43,3 +43,12 @@ export async function notificarAtividadeComercial(atividade: AtividadeComercial)
     return { usuariosNotificados: 0 }
   }
 }
+
+export async function notificarAtividadeAcaoProspeccao(
+  atividade: Omit<AtividadeComercial, "entidade">
+) {
+  return notificarAtividadeComercial({
+    ...atividade,
+    entidade: "Ação de Prospecção",
+  })
+}

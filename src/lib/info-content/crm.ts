@@ -488,6 +488,156 @@ export const crmContent: Record<string, InfoContent> = {
       { name: "Próximo Passo", desc: "Ação de follow-up acordada com o cliente" },
     ],
   },
+  "/comercial/crm/acoes-prospeccao": {
+    title: "Ações de Prospecção",
+    description:
+      "Agenda de ações de prospecção comercial. Registre e acompanhe ações presenciais, videochamadas e contatos telefônicos com pessoas e clientes.",
+    rules: [
+      "Ações de prospecção podem ser presenciais, por vídeo ou telefone.",
+      "Ações FUTURAS aparecem destacadas — são compromissos agendados.",
+      "O status da ação muda automaticamente com base na data.",
+      "É possível registrar fotos da ação no detalhe.",
+      "A listagem abre na visão Calendário; alterne para Tabela ou Kanban quando quiser.",
+      "No calendário, clique em um dia para ver as ações daquele dia. Clique em uma ação para ir ao detalhe.",
+      "No Kanban, arraste os cards entre colunas para alterar o status da ação.",
+    ],
+    fields: [
+      { name: "Pessoa", desc: "Pessoa ou cliente prospectado" },
+      { name: "Data", desc: "Data e horário da ação" },
+      { name: "Tipo", desc: "Presencial, Vídeo ou Telefone" },
+      { name: "Status", desc: "Agendada, Realizada, Cancelada" },
+    ],
+  },
+  "/comercial/crm/acoes-prospeccao/dashboard": {
+    title: "Dashboard de Ações de Prospecção — saúde da prospecção",
+    description:
+      "Central de ações de prospecção do ano corrente que cruza o esforço do comercial com o engajamento do cliente. Mantém os gráficos e indicadores de ações, viagens e performance por gerente, e acrescenta a saúde da prospecção por cliente ou pessoa.",
+    rules: [
+      "O recorte padrão é o ano corrente; a listagem de ações continua em /comercial/crm/acoes-prospeccao.",
+      "Pessoa promovida a cliente é agrupada com o cliente. Quem não virou cliente aparece pelo nome da pessoa; ação avulsa aparece como pessoa.",
+      "Esforço cresce com ação realizada (+12,5), relato/ata (+12,5), check-in (+12,5), contato (+12,5), proposta (+25) e oportunidade (+25). Os quatro primeiros dividem igualmente os 50 pontos restantes. O relato precisa existir; status de ação sozinho não basta.",
+      "Engajamento cresce com ação realizada (+20), ação agendada (+10), proposta ou oportunidade negociada para frente (+20 cada), pedido de venda (+15) e faturamento (+15).",
+      "Esforço e engajamento aparecem apenas como percentual de 0 a 100%; não há mais campo de diferença.",
+      "Negociada para frente inclui NEGOCIADA, NEGOCIAÇÃO/NEGOCIANDO, ACEITA/ACEITO, FECHADO GANHO, GANHO e CONVERTIDO. Perdido não soma engajamento.",
+      "Pedidos e faturamentos entram pela OPORTUNIDADE vinculada à ação — não existe vínculo direto de pedido/faturamento com a ação. Os valores vêm dos itens.",
+      "Os cards usam os dois percentuais: esforço até 35% é BEC (Baixo Esforço comercial); esforço e engajamento acima de 35% com |diferença| < 20 pontos é EQL (Equilibrado), exceto quando o engajamento está pelo menos 10 pontos à frente (Engajados); esforço pelo menos 20 pontos à frente é AEC (Alto Esforço comercial). Clique em AEC, EQL ou BEC para ver a lista de clientes/pessoas.",
+      "Conversão = (pedidos de venda + faturamentos) ÷ total de ações da linha, arredondado e limitado a 100%. Clique no badge para ver quantidades e valores.",
+      "No badge de itens de engajamento, proposta e oportunidade valem 36% cada; ata/relato, check-in/check-out e contato dividem os 28% restantes (9,33% cada). A coluna mostra quantidade de itens presentes e o percentual ponderado; clique nela para detalhar. Esses pesos não mudam o score de engajamento nem a classificação.",
+      "O card Registros conta clientes/pessoas distintos do recorte, não ações: 58 ações cadastradas podem aparecer como 28 registros.",
+      "A coluna Ações R/A/C abre a lista de ações; cada ação da lista é clicável e abre o cadastro da ação.",
+      "Clique no nome do cliente/pessoa para abrir o modal com todas as ações do período, contatos, propostas, oportunidades, valores, status, relato/ata, check-in e check-out.",
+      "Filtros de segmento, porte, responsável, status da ação, status da oportunidade e tipo de ação combinam com a busca. As tabelas Saúde da prospecção e Últimas ações exportam CSV, PDF e MD respeitando o recorte atual.",
+      "O botão Todas/Minhas Ações altera todo o dashboard e a saúde da prospecção.",
+    ],
+    columns: [
+      { name: "Nome", desc: "Cliente/pessoa da ação. Clicável — abre o modal com todas as ações." },
+      { name: "Documento", desc: "CNPJ do cliente ou da pessoa; ação avulsa não tem documento." },
+      { name: "Segmento/Porte", desc: "Dados do cliente ou da pessoa, quando preenchidos." },
+      {
+        name: "Ações R/A/C",
+        desc: "Realizadas / agendadas / canceladas no ano corrente. Clique para listar as ações.",
+      },
+      { name: "Última ação", desc: "Data da ação mais recente já realizada no recorte." },
+      {
+        name: "Próxima ação",
+        desc: "Data da próxima ação agendada; mostra — quando não há agendamento futuro.",
+      },
+      {
+        name: "Itens de engajamento",
+        desc: "Ata/relato, check-in/check-out, contato, proposta e oportunidade: quantidade de itens presentes e percentual ponderado; clique para detalhar.",
+      },
+      {
+        name: "Status",
+        desc: "Status da oportunidade mais avançada: NEGOCIADA, ACEITA, FECHADO GANHO etc.",
+      },
+      {
+        name: "Valor estimado / Prob.",
+        desc: "Soma do valor das oportunidades e média das probabilidades.",
+      },
+      {
+        name: "Conversão",
+        desc: "Percentual de (pedidos + faturamentos) sobre o total de ações; clique para ver quantidades e valores.",
+      },
+      {
+        name: "Esforço / Engajamento",
+        desc: "Scores de 0 a 100%; clique na porcentagem para ver os critérios e pontos que compõem cada um.",
+      },
+    ],
+    fields: [
+      { name: "Buscar", desc: "Nome do cliente/pessoa, documento ou responsável." },
+      { name: "Segmento", desc: "Filtra pelo segmento do cliente/pessoa." },
+      { name: "Porte", desc: "Filtra pelo porte cadastrado." },
+      { name: "Responsável", desc: "Filtra pelo usuário que criou a ação." },
+      { name: "Status da ação", desc: "Agendada, realizada, cancelada ou em andamento." },
+      { name: "Status da oportunidade", desc: "Filtra pelo status das oportunidades vinculadas." },
+      { name: "Tipo de ação", desc: "Presencial, vídeo ou telefone." },
+      { name: "Só alertas", desc: "Mostra AEC, Engajados e BEC; esconde os registros EQL (equilibrados)." },
+      {
+        name: "Todas / Minhas Ações",
+        desc: "Alterna o recorte de todos os responsáveis para somente as ações do usuário logado.",
+      },
+    ],
+    examples: [
+      {
+        title: "AEC — Alto Esforço comercial",
+        desc: "12 ações realizadas, todas com relato e check-in, mas sem proposta, oportunidade, pedido ou faturamento: esforço alto, engajamento baixo e card AEC.",
+      },
+      {
+        title: "Engajados",
+        desc: "Poucas ações, mas com oportunidade negociada, pedido de venda e faturamento: o engajamento puxa o score para cima e o cliente entra em Engajados.",
+      },
+      {
+        title: "EQL — Equilibrado",
+        desc: "Esforço 60% e engajamento 55%: ambos acima de 35% e a diferença é 5 pontos. O cliente entra em EQL e o card abre a lista de equilibrados.",
+      },
+      {
+        title: "Conversão",
+        desc: "Cliente com 4 ações, 1 pedido e 1 faturamento: (1 + 1) ÷ 4 = 50%. O badge mostra 50% e o modal mostra as quantidades e os valores.",
+      },
+      {
+        title: "Pessoa promovida a cliente",
+        desc: "Ações feitas com a pessoa antes da promoção e ações feitas direto com o cliente aparecem juntas na linha do cliente.",
+      },
+    ],
+  },
+  "/comercial/crm/acoes-prospeccao/novo": {
+    title: "Nova Ação de Prospecção",
+    description:
+      "Agende uma ação de prospecção com uma pessoa, um cliente ou um avulso. Informe o tipo, data, contato e observações sobre o objetivo da ação.",
+    rules: [
+      "Escolha quem será prospectado: Pessoa (Negócio), Cliente ou Ação Avulsa.",
+      "Escolha o tipo: Presencial (vai até o cliente), Vídeo (chamada online) ou Telefone.",
+      "A data e horário definem quando a ação será realizada.",
+      "O contato é opcional — você pode selecionar um contato já cadastrado da pessoa ou do cliente.",
+      "O botão (+) ao lado de Contato cadastra um novo contato vinculado à pessoa ou ao cliente da ação, sem sair da tela.",
+      "Ao salvar com recorrência, a agenda cria uma ação por período definido.",
+    ],
+    fields: [
+      { name: "Pessoa / Cliente", desc: "Quem será prospectado (obrigatório, exceto na ação avulsa)" },
+      { name: "Contato", desc: "Contato da pessoa ou do cliente — pode ser cadastrado na hora" },
+      { name: "Tipo", desc: "Presencial, Vídeo ou Telefone" },
+      { name: "Data/Hora", desc: "Quando a ação será realizada" },
+      { name: "Observações", desc: "Objetivo e pauta da ação" },
+    ],
+  },
+  "/comercial/crm/acoes-prospeccao/[id]": {
+    title: "Detalhe da Ação de Prospecção",
+    description:
+      "Acompanhe os detalhes de uma ação de prospecção: dados do encontro, fotos, relato do representante e próximo passo.",
+    rules: [
+      "Ações realizadas podem ter fotos anexadas.",
+      "O relato da ação ajuda a IA a gerar resumo da pessoa.",
+      "É possível alterar o status da ação (Realizada, Cancelada).",
+      "Alguns campos podem não aparecer conforme as regras de visibilidade definidas em Admin › Configurações.",
+      "No modo de edição você pode trocar o contato da ação e cadastrar um novo contato (+) da pessoa ou do cliente vinculado.",
+    ],
+    fields: [
+      { name: "Contato", desc: "Contato da ação — pode ser alterado ou cadastrado na edição" },
+      { name: "Fotos", desc: "Imagens registradas durante a ação" },
+      { name: "Relato", desc: "Descrição do que foi tratado na ação" },
+      { name: "Próximo Passo", desc: "Ação de follow-up acordada com o cliente" },
+    ],
+  },
 
   // ==================== TAREFAS ====================
   "/comercial/crm/tarefas": {
@@ -967,6 +1117,28 @@ export const crmContent: Record<string, InfoContent> = {
       { name: "Responsável", desc: "Usuário que agendou a visita" },
       { name: "Status", desc: "Situação da visita" },
       { name: "Local", desc: "Cidade e UF da visita" },
+    ],
+  },
+  "/comercial/crm/relatorios/acoes-prospeccao": {
+    title: "Relatório de Ações de Prospecção do CRM",
+    description:
+      "Ações de prospecção do CRM realizadas ou agendadas no período, separando o tipo presencial, por vídeo e por telefone, com cidade, responsável e pessoa ou cliente prospectado.",
+    rules: [
+      "Os cards de resumo usam a cor do tema Dracula e um pequeno ícone, os dois derivados do rótulo do card: o mesmo rótulo mantém sempre a mesma cor e o mesmo ícone.",
+      "O relatório considera o registro da ação, não o relatório de campo preenchido depois.",
+      "A taxa de comparecimento compara as ações concluídas com o total do período.",
+      "O filtro Tipo separa ações presenciais, por vídeo e por telefone.",
+      "A tabela rola na vertical e na horizontal, com o cabeçalho fixo durante a navegação.",
+      "A exportação gera PDF, CSV e Markdown com os mesmos dados da tela.",
+    ],
+    fields: [
+      { name: "Data e hora", desc: "Data e hora da ação" },
+      { name: "Tipo", desc: "PRESENCIAL, VIDEO ou TELEFONE" },
+      { name: "Pessoa", desc: "Pessoa, empresa ou ação avulsa" },
+      { name: "Cliente", desc: "Cliente vinculado, quando existir" },
+      { name: "Responsável", desc: "Usuário que agendou a ação" },
+      { name: "Status", desc: "Situação da ação" },
+      { name: "Local", desc: "Cidade e UF da ação" },
     ],
   },
 
@@ -1462,6 +1634,235 @@ export const saudeProspeccaoInfo = {
       {
         title: "Sem visitas",
         desc: "Se o registro não tem visitas no período, a conversão mostra 0% e Sem visitas.",
+      },
+    ],
+  },
+} satisfies Record<string, InfoContent>
+
+export const saudeProspeccaoAcoesInfo = {
+  tabela: {
+    title: "Tabela — saúde da prospecção",
+    description:
+      "Cada linha é um cliente ou pessoa com ações de prospecção no ano corrente. A tabela cruza esforço comercial, engajamento e conversão, e respeita todos os filtros aplicados acima.",
+    rules: [
+      "Fórmula do esforço: ação realizada (+12,5) + relato/ata (+12,5) + check-in (+12,5) + contato (+12,5) + proposta (+25) + oportunidade (+25), limitado a 100%.",
+      "Fórmula do engajamento: ação realizada (+20) + ação agendada (+10) + proposta negociada (+20) + oportunidade negociada (+20) + pedido de venda (+15) + faturamento (+15), limitado a 100%.",
+      "Fórmula da conversão: (pedidos de venda + faturamentos) ÷ total de ações da linha, arredondado e limitado a 100%.",
+      "No badge de itens de engajamento, proposta e oportunidade valem 36% cada e os outros três itens dividem 28% (9,33% cada); a coluna mostra quantos itens estão presentes e o percentual ponderado.",
+      "Ações R/A/C abre a lista de ações; cada ação da lista leva ao cadastro da ação.",
+      "Clique no nome para ver todas as ações, vínculos e valores do cliente/pessoa.",
+    ],
+    columns: [
+      {
+        name: "Ações R/A/C",
+        desc: "Realizadas / agendadas / canceladas. Clique para listar as ações.",
+      },
+      {
+        name: "Última / Próxima ação",
+        desc: "Última ação já realizada e próxima ação agendada.",
+      },
+      {
+        name: "Itens de engajamento",
+        desc: "Ata, check-in/out, contato, proposta e oportunidade: quantidade, percentual e detalhe.",
+      },
+      {
+        name: "Conversão",
+        desc: "Percentual de pedidos + faturamentos sobre o total de ações; clique para ver quantidades e valores.",
+      },
+      {
+        name: "Esforço / Engajamento",
+        desc: "Scores de 0 a 100% calculados pelas fórmulas acima.",
+      },
+    ],
+    examples: [
+      {
+        title: "Conversão de 50%",
+        desc: "Cliente com 4 ações, 1 pedido de venda e 1 faturamento: (1 + 1) ÷ 4 = 50%. O badge fica verde e, ao clicar, mostra as quantidades e os valores.",
+      },
+      {
+        title: "Itens de engajamento 3/5",
+        desc: "Ação com relato, check-in e contato, mas sem proposta e sem oportunidade: 9,33% + 9,33% + 9,33% = 28% no badge.",
+      },
+    ],
+  },
+  itensEngajamento: {
+    title: "Itens de engajamento — pesos e detalhes",
+    description:
+      "Composição ponderada do badge Itens de engajamento; ela é diferente do score de engajamento usado em AEC, Engajados, EQL e BEC.",
+    rules: [
+      "Proposta e oportunidade valem 36% cada.",
+      "Ata/relato, check-in/check-out e contato dividem os 28% restantes: 9,33% cada.",
+      "O badge mostra a quantidade de itens presentes e o percentual ponderado. Esses pesos não alteram o score nem a classificação.",
+      "Clique em um registro vinculado para abrir a ação, a proposta ou a oportunidade.",
+    ],
+    columns: [
+      { name: "Item", desc: "Ata/relato, check-in/check-out, contato, proposta ou oportunidade." },
+      { name: "Peso", desc: "Percentual que o item presente soma ao badge." },
+      {
+        name: "Registros",
+        desc: "Itens vinculados ao cliente/pessoa no ano corrente.",
+      },
+    ],
+    examples: [
+      {
+        title: "Só proposta",
+        desc: "1 de 5 itens presente, mas o badge mostra 36% porque a proposta vale 36%.",
+      },
+      {
+        title: "Ata, check-in e contato",
+        desc: "3 de 5 itens presentes e 28% no badge: 9,33% + 9,33% + 9,33%.",
+      },
+    ],
+  },
+  esforco: {
+    title: "Esforço comercial — composição do score",
+    description:
+      "O score de esforço mede o trabalho comercial feito com o cliente ou pessoa no período.",
+    rules: [
+      "Fórmula: ação realizada (+12,5) + relato/ata (+12,5) + check-in (+12,5) + contato (+12,5) + proposta (+25) + oportunidade (+25).",
+      "Proposta e oportunidade valem 25 pontos cada; os outros quatro critérios dividem igualmente os 50 pontos restantes.",
+      "O total é limitado a 100%.",
+      "Clique na porcentagem na tabela para ver o detalhe de cada critério.",
+    ],
+    examples: [
+      {
+        title: "Exemplo",
+        desc: "Ação realizada com relato e check-in, sem contato, proposta ou oportunidade: 12,5 + 12,5 + 12,5 = 37,5% de esforço.",
+      },
+    ],
+  },
+  engajamento: {
+    title: "Engajamento — composição do score",
+    description:
+      "O score de engajamento mede o retorno do cliente: negociação, pedidos e faturamentos.",
+    rules: [
+      "Fórmula: ação realizada (+20) + ação agendada (+10) + proposta negociada (+20) + oportunidade negociada (+20) + pedido de venda (+15) + faturamento (+15).",
+      "O total é limitado a 100%.",
+      "Clique na porcentagem na tabela para ver o detalhe de cada critério.",
+    ],
+    examples: [
+      {
+        title: "Exemplo",
+        desc: "Ação agendada, oportunidade negociada e 1 pedido de venda: 10 + 20 + 15 = 45% de engajamento.",
+      },
+    ],
+  },
+  registros: {
+    title: "Registros — saúde da prospecção",
+    description:
+      "Quantidade de clientes e pessoas distintos que aparecem na saúde da prospecção depois dos filtros da tabela — não é a quantidade de ações.",
+    rules: [
+      "Cada cliente ou pessoa com pelo menos uma ação de prospecção no ano corrente conta como um registro, mesmo com várias ações.",
+      "Pessoa promovida a cliente é contada uma única vez, junto com o cliente.",
+      "Ação avulsa aparece como pessoa.",
+    ],
+    examples: [
+      {
+        title: "Exemplo",
+        desc: "58 ações cadastradas podem virar 28 registros quando várias ações são do mesmo cliente ou da mesma pessoa.",
+      },
+    ],
+  },
+  aec: {
+    title: "AEC — Alto Esforço comercial",
+    description:
+      "Clientes e pessoas com esforço acima de 35% e pelo menos 20 pontos à frente do engajamento.",
+    rules: [
+      "Fórmula: AEC se Esforço > 35 e Esforço − Engajamento ≥ 20.",
+      "Também entra em AEC quem tem esforço acima de 35% e engajamento de até 35%.",
+      "Clique no card para abrir a lista de clientes e pessoas desse grupo.",
+    ],
+    examples: [
+      {
+        title: "Exemplo",
+        desc: "Esforço 85% e engajamento 40%: 85 − 40 = 45. O registro entra em AEC (Alto Esforço comercial).",
+      },
+    ],
+  },
+  engajados: {
+    title: "Engajados — clientes puxando o resultado",
+    description:
+      "Clientes e pessoas com engajamento acima de 35% e pelo menos 10 pontos à frente do esforço.",
+    rules: ["Fórmula: Engajados se Engajamento > 35 e Engajamento − Esforço ≥ 10."],
+    examples: [
+      {
+        title: "Exemplo",
+        desc: "Esforço 60% e engajamento 75%: 75 − 60 = 15. O registro entra em Engajados.",
+      },
+    ],
+  },
+  eql: {
+    title: "EQL — Equilibrado",
+    description:
+      "Clientes e pessoas com esforço e engajamento acima de 35% e próximos um do outro.",
+    rules: [
+      "Fórmula: EQL se Esforço > 35, Engajamento > 35 e |Esforço − Engajamento| < 20.",
+      "Quando o engajamento fica pelo menos 10 pontos à frente, o registro vai para Engajados mesmo com diferença menor que 20.",
+      "Clique no card para abrir a lista de clientes e pessoas equilibradas.",
+    ],
+    examples: [
+      {
+        title: "Exemplo",
+        desc: "Esforço 60% e engajamento 55%: ambos acima de 35% e |60 − 55| = 5. O registro entra em EQL.",
+      },
+    ],
+  },
+  bec: {
+    title: "BEC — Baixo Esforço comercial",
+    description: "Clientes e pessoas com esforço comercial de até 35%.",
+    rules: [
+      "Fórmula: BEC se Esforço ≤ 35.",
+      "O engajamento pode ser qualquer valor; o que define o grupo é o esforço baixo.",
+      "Clique no card para abrir a lista de clientes e pessoas desse grupo.",
+    ],
+    examples: [
+      {
+        title: "Exemplo",
+        desc: "Esforço 30% e engajamento 60%: como o esforço é 30%, o registro entra em BEC (Baixo Esforço comercial).",
+      },
+    ],
+  },
+  ultimasVisitas: {
+    title: "Últimas ações — exportação",
+    description:
+      "Ações de prospecção mais recentes do recorte atual do dashboard, com data, hora, tipo, status e endereço.",
+    rules: [
+      "Os botões CSV, PDF e MD exportam exatamente as linhas exibidas nesta seção.",
+      "O arquivo respeita o filtro Todas/Minhas Ações aplicado ao dashboard.",
+      "Quando não há ações no recorte, os botões de exportação ficam desabilitados.",
+    ],
+    columns: [
+      { name: "ID da ação", desc: "Identificador único da ação." },
+      { name: "Data/Hora", desc: "Data e horário da ação." },
+      {
+        name: "Tipo/Status",
+        desc: "Presencial, vídeo ou telefone; e situação da ação.",
+      },
+      {
+        name: "Endereço",
+        desc: "Logradouro, número, bairro, cidade e UF quando preenchidos.",
+      },
+    ],
+    examples: [
+      {
+        title: "Exemplo",
+        desc: "Com o filtro Minhas Ações ativo, o arquivo traz só as ações do usuário logado.",
+      },
+    ],
+  },
+  conversao: {
+    title: "Conversão — pedidos e faturamentos",
+    description:
+      "Indicador que reúne pedidos de venda e faturamentos em um único percentual sobre o total de ações do cliente/pessoa.",
+    rules: [
+      "Fórmula: (pedidos de venda + faturamentos) ÷ ações no ano corrente.",
+      "O resultado é arredondado e limitado a 100%.",
+      "Clique no badge para ver a quantidade e o valor de pedidos e faturamentos.",
+    ],
+    examples: [
+      {
+        title: "Sem ações",
+        desc: "Se o registro não tem ações no período, a conversão mostra 0% e Sem ações.",
       },
     ],
   },

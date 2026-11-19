@@ -3,6 +3,7 @@ import { logs } from "@/lib/db/schema/logs"
 import { crmOportunidades } from "@/lib/db/schema/crm-oportunidades"
 import { crmPropostas } from "@/lib/db/schema/crm-propostas"
 import { crmVisitas } from "@/lib/db/schema/crm-visitas"
+import { crmAcoesProspeccao } from "@/lib/db/schema/crm-acoes-prospeccao"
 import { crmPessoas } from "@/lib/db/schema/crm-pessoas"
 import { crmContatos } from "@/lib/db/schema/crm-contatos"
 import { crmTarefas } from "@/lib/db/schema/crm-tarefas"
@@ -726,6 +727,85 @@ export async function consultarVisitas(filtros: FiltrosRelatorio) {
     return {
       id: l.id,
       dataHora: `${l.dataVisita}${l.hora ? ` ${l.hora}` : ""}`,
+      dataHoraIso: new Date(l.createdAt).toISOString(),
+      tipo: l.tipo,
+      status: l.status,
+      pessoa: nomes.pessoas.get(l.empresaId || 0) || l.nomeAvulso || null,
+      cliente: clienteId ? nomes.clientes.get(clienteId) || null : null,
+      responsavel: l.responsavelNome || null,
+      local: l.cidade ? `${l.cidade}${l.uf ? `/${l.uf}` : ""}` : null,
+    }
+  })
+
+  const total = dados.length
+  const porTipo = (tipo: string) => dados.filter((d) => d.tipo === tipo).length
+  const concluidas = dados.filter(
+    (d) => d.status === "CONCLUIDA" || d.status === "REALIZADA"
+  ).length
+
+  return {
+    periodo: {
+      de: intervalo.de.toISOString(),
+      ate: intervalo.ate.toISOString(),
+      rotulo: intervalo.rotulo,
+    },
+    cards: {
+      total,
+      presencial: porTipo("PRESENCIAL"),
+      video: porTipo("VIDEO"),
+      telefone: porTipo("TELEFONE"),
+      concluidas,
+      taxaComparecimento: total > 0 ? Number(((concluidas / total) * 100).toFixed(1)) : 0,
+    },
+    linhas: dados,
+  }
+}
+
+/** Relatório de ações de prospecção do CRM. */
+export async function consultarAcoesProspeccao(filtros: FiltrosRelatorio) {
+  const intervalo = resolverIntervalo(filtros.periodo, filtros.de, filtros.ate)
+
+  const condicoes = [
+    gte(crmAcoesProspeccao.createdAt, intervalo.de),
+    lte(crmAcoesProspeccao.createdAt, intervalo.ate),
+  ]
+  if (filtros.status) condicoes.push(eq(crmAcoesProspeccao.status, filtros.status))
+  if (filtros.tipo) condicoes.push(eq(crmAcoesProspeccao.tipo, filtros.tipo))
+  if (filtros.usuario) condicoes.push(eq(crmAcoesProspeccao.criadoPor, Number(filtros.usuario)))
+
+  const linhas: any[] = await db
+    .select({
+      id: crmAcoesProspeccao.id,
+      dataAcao: crmAcoesProspeccao.dataAcao,
+      hora: crmAcoesProspeccao.hora,
+      tipo: crmAcoesProspeccao.tipo,
+      status: crmAcoesProspeccao.status,
+      createdAt: crmAcoesProspeccao.createdAt,
+      cidade: crmAcoesProspeccao.cidade,
+      uf: crmAcoesProspeccao.uf,
+      nomeAvulso: crmAcoesProspeccao.nomeAvulso,
+      relato: crmAcoesProspeccao.relato,
+      empresaId: crmAcoesProspeccao.empresaId,
+      clienteId: crmAcoesProspeccao.clienteId,
+      criadoPor: crmAcoesProspeccao.criadoPor,
+      responsavelNome: usuarios.name,
+    })
+    .from(crmAcoesProspeccao)
+    .leftJoin(usuarios, eq(crmAcoesProspeccao.criadoPor, usuarios.id))
+    .where(and(...condicoes))
+    .orderBy(desc(crmAcoesProspeccao.dataAcao))
+    .limit(1000)
+
+  const nomes = await nomesPessoasEClientes(
+    linhas.map((l) => l.empresaId),
+    linhas.map((l) => l.clienteId)
+  )
+
+  const dados = linhas.map((l: any) => {
+    const clienteId = l.clienteId || nomes.clientesPorPessoa.get(l.empresaId || 0) || null
+    return {
+      id: l.id,
+      dataHora: `${l.dataAcao}${l.hora ? ` ${l.hora}` : ""}`,
       dataHoraIso: new Date(l.createdAt).toISOString(),
       tipo: l.tipo,
       status: l.status,

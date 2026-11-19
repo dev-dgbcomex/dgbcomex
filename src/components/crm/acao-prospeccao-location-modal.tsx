@@ -1,0 +1,265 @@
+"use client"
+
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useState } from "react"
+import { MapPin, Navigation, Trash2, ExternalLink, Loader2 } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+
+type Localizacao = {
+  id: number
+  acaoId: number
+  latitude: number
+  longitude: number
+  endereco: string | null
+  observacao: string | null
+  fotoUrl: string | null
+  tipo: string
+  criadoPor: number | null
+  createdAt: string | null
+}
+
+type NovaLocalizacao = {
+  latitude: number
+  longitude: number
+  endereco?: string
+  observacao?: string
+}
+
+interface AcaoProspeccaoLocationModalProps {
+  acaoId: number
+  empresaNome?: string
+  open: boolean
+  onClose: () => void
+}
+
+export default function AcaoProspeccaoLocationModal({
+  acaoId,
+  empresaNome,
+  open,
+  onClose,
+}: AcaoProspeccaoLocationModalProps) {
+  const queryClient = useQueryClient()
+  const [observacao, setObservacao] = useState("")
+  const [capturing, setCapturing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const { data: localizacoes = [], isLoading } = useQuery<Localizacao[]>({
+    queryKey: ["acoes-prospeccao-localizacoes", acaoId],
+    queryFn: async () => {
+      const res = await fetch(`/api/crm/acoes-prospeccao/${acaoId}/localizacoes`)
+      if (!res.ok) throw new Error("Erro ao carregar localizações")
+      return (await res.json()) as Localizacao[]
+    },
+    enabled: open && !!acaoId,
+  })
+
+  const addMutation = useMutation({
+    mutationFn: async (data: NovaLocalizacao) => {
+      const res = await fetch(`/api/crm/acoes-prospeccao/${acaoId}/localizacoes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      })
+      if (!res.ok) throw new Error("Erro ao salvar localização")
+      return (await res.json()) as Localizacao
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["acoes-prospeccao-localizacoes", acaoId] })
+      setObservacao("")
+      setCapturing(false)
+    },
+    onError: () => setError("Erro ao salvar localização"),
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: async (localizacaoId: number) => {
+      const res = await fetch(
+        `/api/crm/acoes-prospeccao/${acaoId}/localizacoes?localizacaoId=${localizacaoId}`,
+        { method: "DELETE" }
+      )
+      if (!res.ok) throw new Error("Erro ao excluir")
+      return (await res.json()) as { success: boolean }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["acoes-prospeccao-localizacoes", acaoId] })
+    },
+  })
+
+  function handleCaptureLocation() {
+    if (!navigator.geolocation) {
+      setError("Geolocalização não suportada pelo navegador")
+      return
+    }
+
+    setCapturing(true)
+    setError(null)
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords
+        addMutation.mutate({ latitude, longitude, observacao: observacao || undefined })
+      },
+      (err) => {
+        setCapturing(false)
+        if (err.code === 1) {
+          setError("Permissão de localização negada. Ative nas configurações do navegador.")
+        } else {
+          setError("Erro ao obter localização. Tente novamente.")
+        }
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    )
+  }
+
+  function openGoogleMaps(lat: number, lng: number) {
+    window.open(`https://www.google.com/maps?q=${lat},${lng}`, "_blank")
+  }
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) onClose()
+      }}
+    >
+      <DialogContent className="sm:max-w-lg max-h-[80vh] flex flex-col overflow-hidden p-0 gap-0">
+        <DialogHeader className="flex-row items-start justify-between gap-2 p-4 pr-12 border-b border-slate-100 dark:border-slate-800">
+          <div>
+            <DialogTitle className="text-lg font-semibold text-slate-900 dark:text-slate-50">
+              Localizações da Ação de Prospecção
+            </DialogTitle>
+            {empresaNome && (
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{empresaNome}</p>
+            )}
+          </div>
+        </DialogHeader>
+
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {isLoading ? (
+            <div role="status" className="flex justify-center py-8">
+              <Loader2 className="animate-spin text-blue-600" size={24} />
+              <span className="sr-only">Carregando localizações...</span>
+            </div>
+          ) : localizacoes.length === 0 ? (
+            <div className="text-center py-8">
+              <MapPin className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Nenhuma localização registrada
+              </p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+                Clique no botão abaixo para registrar a localização atual
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {localizacoes.map((loc) => (
+                <div
+                  key={loc.id}
+                  className="flex items-start gap-3 p-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50"
+                >
+                  <div className="rounded-lg bg-blue-100 dark:bg-blue-950/50 p-2 mt-0.5">
+                    <MapPin size={16} className="text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                      {loc.latitude.toFixed(6)}, {loc.longitude.toFixed(6)}
+                    </p>
+                    {loc.endereco && (
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                        {loc.endereco}
+                      </p>
+                    )}
+                    {loc.observacao && (
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 italic">
+                        &ldquo;{loc.observacao}&rdquo;
+                      </p>
+                    )}
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">
+                      {loc.createdAt
+                        ? new Date(loc.createdAt).toLocaleString("pt-BR", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
+                        : "—"}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => openGoogleMaps(loc.latitude, loc.longitude)}
+                      className="p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                      aria-label="Abrir no Google Maps"
+                    >
+                      <ExternalLink size={14} className="text-slate-500" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (window.confirm("Excluir esta localização?")) {
+                          deleteMutation.mutate(loc.id)
+                        }
+                      }}
+                      className="p-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-950/50 transition-colors"
+                      aria-label="Excluir localização"
+                    >
+                      <Trash2 size={14} className="text-red-500" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {error && (
+            <div
+              role="status"
+              className="p-3 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800"
+            >
+              <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+            </div>
+          )}
+        </div>
+
+        <div className="p-4 border-t border-slate-200 dark:border-slate-700 space-y-3">
+          <div>
+            <label
+              htmlFor="obs-localizacao-acao"
+              className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1"
+            >
+              Observação (opcional)
+            </label>
+            <input
+              id="obs-localizacao-acao"
+              type="text"
+              value={observacao}
+              onChange={(e) => setObservacao(e.target.value)}
+              placeholder="Ex: Estacionamento lateral, portão azul..."
+              className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={handleCaptureLocation}
+            disabled={capturing || addMutation.isPending}
+            className="w-full flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {capturing || addMutation.isPending ? (
+              <>
+                <Loader2 size={16} className="animate-spin" />
+                Capturando localização...
+              </>
+            ) : (
+              <>
+                <Navigation size={16} />
+                Registrar Localização Atual
+              </>
+            )}
+          </button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
