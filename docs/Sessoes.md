@@ -29,6 +29,7 @@
 ### Sessão 9 — Ações de Prospecção: clone integral do módulo Visitas com tabelas próprias
 
 - **Data:** 2026-11-19
+- **Commit:** `ab990f53` — `feat(crm): modulo de acoes de prospeccao com tabelas proprias` (dgbcomex); `d945c92` — `feat(cron): lembretes de acoes de prospeccao por email` (api-microdata).
 - **Tarefa:** criar um módulo **Ações de Prospecção** idêntico a Visitas, com tabelas próprias, mantendo Visitas intacto e paralelo.
 - **Decisões aprovadas:** tabela própria, manter os dois módulos, escopo "tudo idêntico" e rota `/comercial/crm/acoes-prospeccao` com os mesmos perfis (`COMERCIAL`, `CRM`, `ADMIN`).
 - **Resultado:**
@@ -40,7 +41,7 @@
   - Registro: search registry, seed, menu, navegação mobile, ícones e modais de informação atualizados; `kanban-crm` e o detalhe de viagens ganharam atalhos para o novo módulo.
 - **Arquivos Envolvidos:** `src/lib/db/schema/crm-acoes-prospeccao*.ts`, `src/lib/db/migrations/0070_acoes_prospeccao.sql`, `scripts/{migrate,sync-all-dbs,criar-tabelas-faltantes,add-fk-indexes,geocode-acoes-prospeccao}.js`, `src/lib/crm/{acoes-prospeccao-saude,acao-prospeccao-fotos,relatorios,notificar-atividade}.ts`, `src/app/api/crm/acoes-prospeccao/**`, `src/app/api/crm/relatorios/acoes-prospeccao/**`, `src/app/(dashboard)/comercial/crm/acoes-prospeccao/**`, `src/components/crm/{acao,acoes}-prospeccao*`, `src/lib/{search-registry,menu-icones,dracula,campos-visiveis}.ts*`, `M:\dev\api-microdata\app\src\api\routers\lembretes_acoes_prospeccao.py`, `M:\dev\api-microdata\scripts\enviar_lembretes_acoes_prospeccao.py`.
 - **Testes:** 28 arquivos do módulo (162 testes) verdes; suíte completa `npm run test` → **435 arquivos / 2487 testes passados**.
-- **Verificação:** `tsc --noEmit` limpo (com `--max-old-space-size=6144`), `npm run lint` sem erros (só warnings, a maioria pré-existentes), `npm run build` OK com `NODE_OPTIONS=--max-old-space-size=6144` (249 páginas estáticas). `db:verificar-local` reportou **7 divergências pré-existentes** (tabelas não tocadas: `clientes`, `crm_contatos`, `crm_oportunidades`, `crm_pedido_venda*`, `crm_timeline_eventos`, `crm_visitas`); as 4 tabelas novas estão 0/0 nos dois bancos.
+- **Verificação:** `tsc --noEmit` limpo (com `--max-old-space-size=6144`), `npm run lint` sem erros (só warnings, a maioria pré-existentes), `npm run build` OK com `NODE_OPTIONS=--max-old-space-size=6144` (240/240 páginas estáticas). `db:verificar-local` reportou **7 divergências pré-existentes** (tabelas não tocadas: `clientes`, `crm_contatos`, `crm_oportunidades`, `crm_pedido_venda*`, `crm_timeline_eventos`, `crm_visitas`); as 4 tabelas novas estão 0/0 nos dois bancos.
 
 ### Sessão 8 — Cliente com os mesmos relacionamentos da pessoa + negócio nos relatórios
 
