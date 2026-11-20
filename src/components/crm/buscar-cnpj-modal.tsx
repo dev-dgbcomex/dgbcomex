@@ -8,7 +8,7 @@ import Link from "next/link"
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
 
 interface BuscarCnpjModalProps {
-  tipo: "pessoa" | "representante"
+  tipo: "lead" | "representante"
   onClose: () => void
   onCreated?: () => void
 }
@@ -32,7 +32,7 @@ export default function BuscarCnpjModal({ tipo, onClose, onCreated }: BuscarCnpj
   const [creating, setCreating] = useState(false)
   const [consultado, setConsultado] = useState(false)
 
-  const titulo = tipo === "pessoa" ? "Pessoa (Negócio)" : "Representante"
+  const titulo = tipo === "lead" ? "Lead (Negócio)" : "Representante"
 
   async function handleConsultar() {
     const digits = cnpj.replace(/\D/g, "")
@@ -72,7 +72,7 @@ export default function BuscarCnpjModal({ tipo, onClose, onCreated }: BuscarCnpj
     setCreating(true)
     try {
       const api = apiData
-      if (tipo === "pessoa") {
+      if (tipo === "lead") {
         const body = {
           tipoPessoa: "PJ",
           razaoSocial: api.razao_social || "",
@@ -88,7 +88,7 @@ export default function BuscarCnpjModal({ tipo, onClose, onCreated }: BuscarCnpj
           segmento: api.cnae_principal_descricao || "",
           porte: api.porte_empresa || "",
         }
-        const res = await fetch("/api/crm/pessoas", {
+        const res = await fetch("/api/crm/leads", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
@@ -130,7 +130,7 @@ export default function BuscarCnpjModal({ tipo, onClose, onCreated }: BuscarCnpj
   }
 
   const jaExiste =
-    tipo === "pessoa" ? existentes.crmPessoas.length > 0 : existentes.representantes.length > 0
+    tipo === "lead" ? existentes.crmPessoas.length > 0 : existentes.representantes.length > 0
 
   return (
     <DialogPrimitive.Root
@@ -245,7 +245,7 @@ export default function BuscarCnpjModal({ tipo, onClose, onCreated }: BuscarCnpj
                     </p>
                   </div>
                   <div className="col-span-2">
-                    <p className="text-xs text-slate-500">Endereço</p>
+                    <p className="text-xs text-slate-500">Situação</p>
                     <p className="text-slate-900 dark:text-slate-200">
                       {[apiData.logradouro, apiData.numero, apiData.bairro, apiData.complemento]
                         .filter(Boolean)
@@ -261,17 +261,17 @@ export default function BuscarCnpjModal({ tipo, onClose, onCreated }: BuscarCnpj
             {jaExiste && (
               <div className="rounded-lg border border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/30 p-4">
                 <p className="text-sm font-medium text-blue-800 dark:text-blue-300 mb-2">
-                  {tipo === "pessoa" ? "Pessoa(s)" : "Representante(s)"} já cadastrado(s) com este
+                  {tipo === "lead" ? "Lead(s)" : "Representante(s)"} já cadastrado(s) com este
                   CNPJ:
                 </p>
                 <div className="space-y-2">
-                  {(tipo === "pessoa" ? existentes.crmPessoas : existentes.representantes).map(
+                  {(tipo === "lead" ? existentes.crmPessoas : existentes.representantes).map(
                     (item: any) => (
                       <Link
                         key={item.id}
                         href={
-                          tipo === "pessoa"
-                            ? `/comercial/crm/pessoas/${item.id}`
+                          tipo === "lead"
+                            ? `/comercial/crm/leads/${item.id}`
                             : `/comercial/representantes/${item.id}`
                         }
                         target="_blank"
@@ -289,7 +289,7 @@ export default function BuscarCnpjModal({ tipo, onClose, onCreated }: BuscarCnpj
               <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 p-4 text-center">
                 <Building2 size={28} className="mx-auto text-slate-300 dark:text-slate-600 mb-2" />
                 <p className="font-medium text-slate-900 dark:text-slate-200">
-                  Deseja criar {tipo === "pessoa" ? "uma nova Pessoa" : "um novo Representante"}?
+                  Deseja criar {tipo === "lead" ? "uma nova Lead" : "um novo Representante"}?
                 </p>
                 <p className="text-xs text-slate-500 mt-1 mb-3">
                   Os dados serão preenchidos automaticamente com as informações da Receita Federal.

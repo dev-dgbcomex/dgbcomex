@@ -1,7 +1,8 @@
 "use client"
 
-import { useState } from "react"
-import { Plus, Loader2 } from "lucide-react"
+import { useState, useEffect } from "react"
+import { useQuery } from "@tanstack/react-query"
+import { Plus, Loader2, Search, Check, AlertCircle } from "lucide-react"
 import { toast } from "sonner"
 import {
   Dialog,
@@ -11,23 +12,162 @@ import {
   DialogTitle,
   DialogClose,
 } from "@/components/ui/dialog"
+import { SelectUf } from "./select-uf"
+import { SelectCidade } from "./select-cidade"
+import { SelectSegmento } from "./select-segmento"
 
 type Props = {
-  empresaId?: string
-  onCreated: (id: number, nome: string) => void
+  onCreated: (id: number, razaoSocial: string) => void
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
-export function QuickCreateLead({ empresaId, onCreated }: Props) {
-  const [open, setOpen] = useState(false)
+function formatCnpj(v: string) {
+  const d = v.replace(/\D/g, "")
+  if (d.length !== 14) return v
+  return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12)}`
+}
+
+type ConsultaCnpjData = {
+  razao_social?: string
+  nome_fantasia?: string
+  cnaes?: Array<{ is_principal?: boolean; descricao?: string }>
+  cnae_principal_descricao?: string
+  porte_empresa?: string
+  logradouro?: string
+  numero?: string
+  complemento?: string
+  bairro?: string
+  municipio?: string
+  uf?: string
+  cep?: string
+  situacao_cadastral?: string
+}
+
+export function QuickCreateLead({ onCreated, open: openProp, onOpenChange }: Props) {
+  const [internalOpen, setInternalOpen] = useState(false)
+  const open = openProp ?? internalOpen
+  const isControlled = openProp !== undefined
+
+  function setOpen(v: boolean) {
+    setInternalOpen(v)
+    onOpenChange?.(v)
+  }
   const [saving, setSaving] = useState(false)
-  const [nome, setNome] = useState("")
-  const [celular, setCelular] = useState("")
-  const [origem, setOrigem] = useState("OUTRO")
+  const [tipoPessoa, setTipoLead] = useState<"PF" | "PJ">("PJ")
+  const [nomePF, setNomePF] = useState("")
+  const [cpf, setCpf] = useState("")
+  const [razaoSocial, setRazaoSocial] = useState("")
+  const [nomeFantasia, setNomeFantasia] = useState("")
+  const [cnpj, setCnpj] = useState("")
+  const [segmento, setSegmento] = useState("")
+  const [porte, setPorte] = useState("")
+  const [endereco, setEndereco] = useState("")
+  const [numero, setNumero] = useState("")
+  const [complemento, setComplemento] = useState("")
+  const [bairro, setBairro] = useState("")
+  const [cidade, setCidade] = useState("")
+  const [uf, setUf] = useState("")
+  const [cep, setCep] = useState("")
+  const [estadoId, setEstadoId] = useState<number | null>(null)
+
+  const [consulting, setConsulting] = useState(false)
+  const [consulted, setConsulted] = useState(false)
+  const [apiData, setApiData] = useState<ConsultaCnpjData | null>(null)
+
+  const { data: estados } = useQuery<{ id: number; uf: string }[]>({
+    queryKey: ["crm-estados"],
+    queryFn: async () => {
+      const res = await fetch("/api/crm/estados")
+      return res.ok ? res.json() : []
+    },
+  })
+
+  useEffect(() => {
+    if (uf) {
+      const found = estados?.find((e) => e.uf === uf)
+      setEstadoId(found ? found.id : null)
+    } else {
+      setEstadoId(null)
+    }
+  }, [uf, estados])
+
+  function resetForm() {
+    setTipoLead("PJ")
+    setNomePF("")
+    setCpf("")
+    setRazaoSocial("")
+    setNomeFantasia("")
+    setCnpj("")
+    setSegmento("")
+    setPorte("")
+    setEndereco("")
+    setNumero("")
+    setComplemento("")
+    setBairro("")
+    setCidade("")
+    setUf("")
+    setCep("")
+    setApiData(null)
+    setConsulted(false)
+  }
+
+  async function handleConsultarCnpj() {
+    const digits = cnpj.replace(/\D/g, "")
+    if (digits.length !== 14) {
+      toast.error("CNPJ deve ter 14 dígitos")
+      return
+    }
+    setConsulting(true)
+    setApiData(null)
+    setConsulted(false)
+    try {
+      const res = await fetch(`/api/crm/consulta-cnpj?cnpj=${digits}`)
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || "Erro na consulta")
+      }
+      const result = await res.json()
+      const api = result.apiData
+      if (!api) {
+        setConsulted(true)
+        toast.error("CNPJ não encontrado na Receita Federal")
+        return
+      }
+      setApiData(api)
+      setConsulted(true)
+      setRazaoSocial(api.razao_social || "")
+      setNomeFantasia(api.nome_fantasia || "")
+      setSegmento(
+        api.cnaes?.find((c: { is_principal?: boolean }) => c.is_principal)?.descricao ||
+          api.cnae_principal_descricao ||
+          ""
+      )
+      setPorte(api.porte_empresa || "")
+      setEndereco(api.logradouro || "")
+      setNumero(api.numero || "")
+      setComplemento(api.complemento || "")
+      setBairro(api.bairro || "")
+      setCidade(api.municipio || "")
+      setUf(api.uf || "")
+      setCep(api.cep || "")
+      toast.success("Dados preenchidos automaticamente")
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Erro na consulta")
+    } finally {
+      setConsulting(false)
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     e.stopPropagation()
-    if (!nome.trim()) {
+    if (tipoPessoa === "PJ") {
+      if (!razaoSocial.trim() || !cnpj.trim()) {
+        toast.error("Razão Social e CNPJ são obrigatórios")
+        return
+      }
+    } else if (!nomePF.trim()) {
       toast.error("Nome é obrigatório")
       return
     }
@@ -37,10 +177,21 @@ export function QuickCreateLead({ empresaId, onCreated }: Props) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          nome,
-          celular: celular || null,
-          origem,
-          empresaId: empresaId ? parseInt(empresaId) : null,
+          tipoPessoa,
+          nome: tipoPessoa === "PF" ? nomePF : null,
+          cpf: tipoPessoa === "PF" ? cpf : null,
+          razaoSocial: tipoPessoa === "PJ" ? razaoSocial : null,
+          nomeFantasia: tipoPessoa === "PJ" ? nomeFantasia || null : null,
+          cnpj: tipoPessoa === "PJ" ? cnpj : null,
+          segmento: segmento || null,
+          porte: porte || null,
+          endereco: endereco || null,
+          numero: numero || null,
+          complemento: complemento || null,
+          bairro: bairro || null,
+          cidade: cidade || null,
+          uf: uf || null,
+          cep: cep || null,
         }),
       })
       if (!res.ok) {
@@ -48,86 +199,299 @@ export function QuickCreateLead({ empresaId, onCreated }: Props) {
         throw new Error(err.error || "Erro ao criar lead")
       }
       const data = await res.json()
-      onCreated(data.id, data.nome)
+      onCreated(data.id, data.nome || data.razaoSocial || "")
       setOpen(false)
-      setNome("")
-      setCelular("")
-      setOrigem("OUTRO")
-      toast.success("Lead criado com sucesso")
-    } catch (err: any) {
-      toast.error(err.message)
+      resetForm()
+      toast.success("Lead criada com sucesso")
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Erro ao criar lead")
     } finally {
       setSaving(false)
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger
-        type="button"
-        className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 rounded transition-colors"
-        title="Cadastrar novo lead"
-      >
-        <Plus size={14} />
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Novo Lead</DialogTitle>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        setOpen(v)
+        if (!v) resetForm()
+      }}
+    >
+      {!isControlled && (
+        <DialogTrigger
+          type="button"
+          className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 rounded transition-colors min-w-[32px] min-h-[32px] flex items-center justify-center"
+          title="Cadastrar nova lead (negócio)"
+        >
+          <Plus size={14} />
+        </DialogTrigger>
+      )}
+      <DialogContent className="sm:max-w-2xl p-0">
+        <DialogHeader className="px-4 pt-4 sm:px-6 sm:pt-6">
+          <DialogTitle>Novo Lead (Negócio)</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-              Nome *
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-4 px-4 pb-4 sm:px-6 sm:pb-6 max-h-[80vh] overflow-y-auto"
+        >
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              Tipo de Lead
             </label>
-            <input
-              type="text"
-              value={nome}
-              onChange={(e) => setNome(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
-            />
+            <div className="flex rounded-lg bg-slate-100 dark:bg-slate-800 p-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setTipoLead("PF")
+                  setRazaoSocial("")
+                  setNomeFantasia("")
+                  setCnpj("")
+                }}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                  tipoPessoa === "PF"
+                    ? "bg-white dark:bg-slate-700 text-purple-700 dark:text-purple-300 shadow-sm"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+                }`}
+              >
+                Pessoa Física
+              </button>
+              <button
+                type="button"
+                onClick={() => setTipoLead("PJ")}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                  tipoPessoa === "PJ"
+                    ? "bg-white dark:bg-slate-700 text-cyan-700 dark:text-cyan-300 shadow-sm"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+                }`}
+              >
+                Pessoa Jurídica
+              </button>
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-              Celular
-            </label>
-            <input
-              type="text"
-              value={celular}
-              onChange={(e) => setCelular(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+          {tipoPessoa === "PJ" ? (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Razão Social *
+                </label>
+                <input
+                  type="text"
+                  value={razaoSocial}
+                  onChange={(e) => setRazaoSocial(e.target.value)}
+                  className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Nome Fantasia
+                </label>
+                <input
+                  type="text"
+                  value={nomeFantasia}
+                  onChange={(e) => setNomeFantasia(e.target.value)}
+                  className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  CNPJ *
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={cnpj}
+                    onChange={(e) => setCnpj(e.target.value)}
+                    onKeyDown={(e) =>
+                      e.key === "Enter" && (e.preventDefault(), handleConsultarCnpj())
+                    }
+                    className="flex-1 min-w-0 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                    placeholder="00.000.000/0001-00"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={handleConsultarCnpj}
+                    disabled={consulting}
+                    className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/50 dark:hover:bg-blue-950/80 border border-blue-200 dark:border-blue-800 rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    {consulting ? (
+                      <Loader2 size={14} className="animate-spin" />
+                    ) : (
+                      <Search size={14} />
+                    )}
+                    <span className="hidden sm:inline">Consultar</span>
+                  </button>
+                </div>
+              </div>
+
+              {consulted && !apiData && (
+                <div className="rounded-lg border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/30 p-3 flex items-start gap-2">
+                  <AlertCircle size={16} className="text-amber-500 mt-0.5 shrink-0" />
+                  <p className="text-sm text-amber-700 dark:text-amber-300">
+                    CNPJ {formatCnpj(cnpj)} não encontrado na Receita Federal. Preencha os dados
+                    manualmente.
+                  </p>
+                </div>
+              )}
+
+              {apiData && (
+                <div className="rounded-lg border border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/30 p-3 flex items-start gap-2">
+                  <Check size={16} className="text-emerald-500 mt-0.5 shrink-0" />
+                  <div className="text-sm">
+                    <p className="font-medium text-emerald-800 dark:text-emerald-300">
+                      {apiData.razao_social}
+                    </p>
+                    <p className="text-emerald-600 dark:text-emerald-400 text-xs mt-0.5">
+                      {apiData.nome_fantasia} — {apiData.situacao_cadastral}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="sm:col-span-2">
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Nome Completo *
+                  </label>
+                  <input
+                    type="text"
+                    value={nomePF}
+                    onChange={(e) => setNomePF(e.target.value)}
+                    className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    CPF
+                  </label>
+                  <input
+                    type="text"
+                    value={cpf}
+                    onChange={(e) => setCpf(e.target.value)}
+                    placeholder="000.000.000-00"
+                    className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+            </>
+          )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                Segmento
+              </label>
+              <SelectSegmento value={segmento} onChange={setSegmento} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                Porte
+              </label>
+              <select
+                value={porte}
+                onChange={(e) => setPorte(e.target.value)}
+                className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Selecione...</option>
+                <option value="ME">ME</option>
+                <option value="EPP">EPP</option>
+                <option value="MEDIO">Médio</option>
+                <option value="GRANDE">Grande</option>
+              </select>
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-              Origem
-            </label>
-            <select
-              value={origem}
-              onChange={(e) => setOrigem(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="SITE">Site</option>
-              <option value="INDICACAO">Indicação</option>
-              <option value="EVENTO">Evento</option>
-              <option value="PROSPECCAO">Prospecção</option>
-              <option value="LIGACAO">Ligação</option>
-              <option value="WHATSAPP">WhatsApp</option>
-              <option value="EMAIL">E-mail</option>
-              <option value="OUTRO">Outro</option>
-            </select>
+
+          <div className="border-t border-slate-100 dark:border-slate-800 pt-3">
+            <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-2">
+              Endereço
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="sm:col-span-2">
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Logradouro
+                </label>
+                <input
+                  type="text"
+                  value={endereco}
+                  onChange={(e) => setEndereco(e.target.value)}
+                  className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Número
+                </label>
+                <input
+                  type="text"
+                  value={numero}
+                  onChange={(e) => setNumero(e.target.value)}
+                  className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Complemento
+                </label>
+                <input
+                  type="text"
+                  value={complemento}
+                  onChange={(e) => setComplemento(e.target.value)}
+                  className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Bairro
+                </label>
+                <input
+                  type="text"
+                  value={bairro}
+                  onChange={(e) => setBairro(e.target.value)}
+                  className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  UF
+                </label>
+                <SelectUf value={uf} onChange={setUf} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Cidade
+                </label>
+                <SelectCidade value={cidade} onChange={setCidade} estadoId={estadoId} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  CEP
+                </label>
+                <input
+                  type="text"
+                  value={cep}
+                  onChange={(e) => setCep(e.target.value)}
+                  placeholder="00.000-000"
+                  className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
+                />
+              </div>
+            </div>
           </div>
-          <div className="flex justify-end gap-2 pt-2">
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
             <DialogClose
               type="button"
-              className="px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+              className="w-full sm:w-auto px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors text-center"
             >
               Cancelar
             </DialogClose>
             <button
               type="submit"
               disabled={saving}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-lg transition-colors"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-lg transition-colors"
             >
               {saving && <Loader2 size={14} className="animate-spin" />}
               Criar

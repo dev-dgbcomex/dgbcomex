@@ -26,6 +26,20 @@
 
 > Detalhe técnico completo em [`docs/crm-cliente-e-relatorios.md`](./crm-cliente-e-relatorios.md).
 
+### Sessão 12 — Renomeação de Pessoas para Leads e Leads para Visitantes
+
+- **Data:** 2026-11-20
+- **Tarefa:** renomear fisicamente o modelo do CRM sem perder dados: `crm_pessoas` → `crm_leads` (**Lead** = ex-Pessoa) e `crm_leads` → `crm_visitantes` (**Visitante** = ex-Lead).
+- **Decisões aprovadas:** mudança física com compatibilidade; PF/PJ continuam `Pessoa Física` / `Pessoa Jurídica`; o WhatsApp passa a criar/buscar Visitante; rotas e telas legadas de `pessoas` continuam disponíveis como reexport/redirect; registros antigos de status e logs são lidos como Lead.
+- **Resultado:**
+  - Migration `0072_pessoas_para_leads.sql` aplicada no Neon e no warehouse local; colunas, FKs, índices e sequências renomeados. Validação pós-migração: `pessoas: null`, `leads: 'crm_leads'`, `visitantes: 'crm_visitantes'`, `representantes: 'leads_representantes'`, `lead_count: 191`, `visitante_count: 0`.
+  - API e UI reorganizadas: `/api/crm/leads` (novo Lead), `/api/crm/visitantes` (Visitante), `/comercial/crm/leads`, `/comercial/crm/visitantes`, Kanban, formulários, modais, dashboard, status, menu, busca, info-content e relatórios atualizados.
+  - Compatibilidade preservada em `src/app/api/crm/pessoas/**` e `src/app/(dashboard)/comercial/crm/pessoas/**`, além dos aliases de schema e do helper `promoverLeadParaCliente`.
+  - Correções de rótulos e encoding feitas na mesma entrega: `Frequência`, PF/PJ em vez de `Pessoa Negócio`, `Novo Visitante`, `Visitante criado com sucesso`, `Selecione a Lead`, `Usuários`/`Notificações`/`Configurações`/`Integrações`/`Permissões`/`Reuniões`/`Países` no registry e `Negócios` no card de conversões.
+- **Testes:** suíte completa `npm run test` → **438 arquivos / 2506 testes passados**. Testes focados das telas alteradas e do modal de visitas/lead também passaram (12 arquivos / 82 testes).
+- **Verificação:** `tsc --noEmit --pretty false` com `NODE_OPTIONS=--max-old-space-size=6144` limpo; `npm run lint` sem erros (apenas warnings pré-existentes); `npm run build` OK; `db:replicar-neon`, `db:verificar-local` (**0 divergências**) e `db:comparar` (`All databases are IDENTICAL`).
+- **Arquivos Envolvidos:** `src/lib/db/migrations/0072_pessoas_para_leads.sql`, `src/lib/db/schema/{crm-leads,crm-visitantes,crm-oportunidades,leads-representantes}.ts`, `src/app/api/crm/{leads,visitantes,pessoas}/**`, `src/app/(dashboard)/comercial/crm/{leads,visitantes,pessoas}/**`, `src/components/crm/{quick-create-lead,quick-create-visitante,leads-kanban,visitantes-kanban,buscar-cnpj-modal}.tsx`, `src/lib/crm/{promover-cliente,status-gatilhos,relatorios}.ts`, `src/lib/info-content/{crm,comercial,info-content.test}.ts` e `src/lib/search-registry.ts`.
+
 ### Sessão 11 — Equalização do warehouse local após o backfill
 
 - **Data:** 2026-11-19

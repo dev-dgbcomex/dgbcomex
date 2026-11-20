@@ -30,6 +30,7 @@ type Notificacao = {
 
 const TIPO_ICON: Record<string, React.ReactNode> = {
   lead_novo: <UserPlus size={16} className="text-green-500" />,
+  visitante_novo: <UserPlus size={16} className="text-green-500" />,
   lead_finalizado: <CheckCheck size={16} className="text-blue-500" />,
   mensagem: <MessageSquare size={16} className="text-emerald-500" />,
   erro: <XCircle size={16} className="text-red-500" />,

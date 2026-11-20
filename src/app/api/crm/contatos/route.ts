@@ -102,7 +102,7 @@ export async function POST(req: NextRequest) {
       .returning()
 
     const linkDestino = novo.empresaId
-      ? `/comercial/crm/pessoas/${novo.empresaId}`
+      ? `/comercial/crm/leads/${novo.empresaId}`
       : novo.clienteId
         ? `/comercial/clientes/${novo.clienteId}`
         : "/comercial/crm/contatos"

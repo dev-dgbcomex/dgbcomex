@@ -1,4 +1,4 @@
-﻿// @vitest-environment jsdom
+// @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { screen, fireEvent, waitFor, within } from "@testing-library/react"
 import NovaVisitaPage from "./page"
@@ -13,7 +13,7 @@ describe("NovaVisitaPage", () => {
 
   beforeEach(() => {
     const handler = ({ method, url }: { method: string; url: string }) => {
-      if (method === "GET" && url === "/api/crm/pessoas") {
+      if (method === "GET" && url === "/api/crm/leads") {
         return { json: [{ id: 1, razaoSocial: "Tecelagem Alpha" }] }
       }
       if (method === "GET" && url === "/api/crm/oportunidades") {
@@ -49,7 +49,7 @@ describe("NovaVisitaPage", () => {
     expect(await screen.findByRole("heading", { name: "Nova Visita" })).toBeInTheDocument()
     expect(screen.getByText("Quem você vai visitar?")).toBeInTheDocument()
     expect(screen.getByRole("button", { name: /^Cliente/ })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: /^Pessoa/ })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /^Lead/ })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: /^Avulsa/ })).toBeInTheDocument()
   })
 
@@ -57,7 +57,7 @@ describe("NovaVisitaPage", () => {
     renderPage(<NovaVisitaPage />)
     await screen.findByRole("heading", { name: "Nova Visita" })
 
-    fireEvent.click(screen.getByRole("button", { name: /^Pessoa/ }))
+    fireEvent.click(screen.getByRole("button", { name: /^Lead/ }))
     expect(await screen.findByText("Visitando Pessoa (Negócio)")).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole("button", { name: "Trocar" }))
@@ -84,7 +84,7 @@ describe("NovaVisitaPage", () => {
     const { container } = renderPage(<NovaVisitaPage />)
     await screen.findByRole("heading", { name: "Nova Visita" })
 
-    fireEvent.click(screen.getByRole("button", { name: /^Pessoa/ }))
+    fireEvent.click(screen.getByRole("button", { name: /^Lead/ }))
     expect(await screen.findByText("Visitando Pessoa (Negócio)")).toBeInTheDocument()
 
     fireEvent.submit(container.querySelector("form")!)
@@ -196,7 +196,7 @@ describe("NovaVisitaPage", () => {
 
   function novoHandler(propostas: { id: number; titulo: string; oportunidadeId?: number }[]) {
     return ({ method, url }: { method: string; url: string }) => {
-      if (method === "GET" && url === "/api/crm/pessoas") {
+      if (method === "GET" && url === "/api/crm/leads") {
         return { json: [{ id: 1, razaoSocial: "Tecelagem Alpha" }] }
       }
       if (method === "GET" && url === "/api/clientes") {
@@ -234,7 +234,7 @@ describe("NovaVisitaPage", () => {
     renderPage(<NovaVisitaPage />)
 
     await screen.findByRole("heading", { name: "Nova Visita" })
-    fireEvent.click(screen.getByRole("button", { name: /^Pessoa/ }))
+    fireEvent.click(screen.getByRole("button", { name: /^Lead/ }))
     await screen.findByText("Visitando Pessoa (Negócio)")
 
     fireEvent.change(screen.getByPlaceholderText("Buscar proposta..."), {
@@ -252,7 +252,7 @@ describe("NovaVisitaPage", () => {
     renderPage(<NovaVisitaPage />)
 
     await screen.findByRole("heading", { name: "Nova Visita" })
-    fireEvent.click(screen.getByRole("button", { name: /^Pessoa/ }))
+    fireEvent.click(screen.getByRole("button", { name: /^Lead/ }))
     await screen.findByText("Visitando Pessoa (Negócio)")
 
     fireEvent.change(screen.getByPlaceholderText("Buscar proposta..."), {
@@ -277,7 +277,7 @@ describe("NovaVisitaPage", () => {
     renderPage(<NovaVisitaPage />)
 
     await screen.findByRole("heading", { name: "Nova Visita" })
-    fireEvent.click(screen.getByRole("button", { name: /^Pessoa/ }))
+    fireEvent.click(screen.getByRole("button", { name: /^Lead/ }))
     await screen.findByText("Visitando Pessoa (Negócio)")
 
     const opSelect = screen
@@ -324,7 +324,7 @@ describe("NovaVisitaPage", () => {
 
   it("cria uma proposta via quick create (PESSOA) e vincula na visita sem salvar", async () => {
     const handler = ({ method, url }: { method: string; url: string }) => {
-      if (method === "GET" && url === "/api/crm/pessoas")
+      if (method === "GET" && url === "/api/crm/leads")
         return { json: [{ id: 1, razaoSocial: "Tecelagem Alpha" }] }
       if (method === "GET" && url === "/api/crm/oportunidades") return { json: [] }
       if (method === "GET" && url === "/api/crm/viagens?all=true") return { json: [] }
@@ -340,7 +340,7 @@ describe("NovaVisitaPage", () => {
     renderPage(<NovaVisitaPage />)
 
     await screen.findByRole("heading", { name: "Nova Visita" })
-    fireEvent.click(screen.getByRole("button", { name: /^Pessoa/ }))
+    fireEvent.click(screen.getByRole("button", { name: /^Lead/ }))
     await screen.findByText("Visitando Pessoa (Negócio)")
 
     fireEvent.change(screen.getAllByRole("combobox")[0], { target: { value: "1" } })

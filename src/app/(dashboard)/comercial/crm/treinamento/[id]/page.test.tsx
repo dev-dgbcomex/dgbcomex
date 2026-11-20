@@ -32,7 +32,7 @@ const licao = {
   preRequisitos: "Cadastrar usuários antes de usar esta tela",
   linksPop: [{ label: "POP Cadastro de Leads", url: "https://exemplo.com/pop-leads" }],
   linksVideo: [{ label: "Vídeo Tutorial", url: "https://youtube.com/watch?v=abc" }],
-  pathnameRelacionado: "/comercial/crm/leads",
+  pathnameRelacionado: "/comercial/crm/visitantes",
   ordem: 2,
   ativo: true,
   createdAt: "2026-01-01",

@@ -83,7 +83,7 @@ export default function DetalheVisitaPage() {
     queryKey: ["visita-contatos-edicao", visita?.empresaId, visita?.clienteId],
     queryFn: async () => {
       if (visita?.empresaId) {
-        const res = await fetch(`/api/crm/pessoas/${visita.empresaId}`)
+        const res = await fetch(`/api/crm/leads/${visita.empresaId}`)
         const data = await res.json()
         return Array.isArray(data.contatos) ? data.contatos : []
       }
@@ -253,7 +253,7 @@ export default function DetalheVisitaPage() {
 
   async function loadEmpresaEndereco(empresaId: number): Promise<Record<string, string>> {
     try {
-      const res = await fetch(`/api/crm/pessoas/${empresaId}`)
+      const res = await fetch(`/api/crm/leads/${empresaId}`)
       const data = await res.json()
       return {
         endereco: data.endereco || "",

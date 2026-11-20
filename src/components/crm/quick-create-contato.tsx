@@ -39,7 +39,7 @@ export function QuickCreateContato({
   const { data: empresas } = useQuery<any[]>({
     queryKey: ["crm-pessoas"],
     queryFn: async () => {
-      const res = await fetch("/api/crm/pessoas")
+      const res = await fetch("/api/crm/leads")
       const data = await res.json()
       return Array.isArray(data) ? data : []
     },

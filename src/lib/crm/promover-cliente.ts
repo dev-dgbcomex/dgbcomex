@@ -32,7 +32,7 @@ export type ResultadoPromocao = {
   resumo: ResumoPromocao
 }
 
-export async function promoverPessoaParaCliente(params: {
+export async function promoverLeadParaCliente(params: {
   pessoaId: number
   usuarioId?: number | null
   usuarioNome?: string | null
@@ -43,19 +43,19 @@ export async function promoverPessoaParaCliente(params: {
   const [pessoa] = await db.select().from(crmPessoas).where(eq(crmPessoas.id, pessoaId)).limit(1)
 
   if (!pessoa) {
-    throw new PromocaoErro("Pessoa não encontrada", 404)
+    throw new PromocaoErro("Lead não encontrada", 404)
   }
 
   if (pessoa.promovidaCliente) {
-    throw new PromocaoErro("Esta pessoa já foi transformada em cliente", 409)
+    throw new PromocaoErro("Esta lead já foi transformada em cliente", 409)
   }
 
   const cnpj = (pessoa.cnpj || "").replace(/\D/g, "")
   if (!cnpj) {
-    throw new PromocaoErro("A pessoa precisa ter CNPJ cadastrado para virar cliente", 400)
+    throw new PromocaoErro("A lead precisa ter CNPJ cadastrado para virar cliente", 400)
   }
 
-  const nomePessoa = pessoa.nome || pessoa.razaoSocial || pessoa.nomeFantasia || "Pessoa"
+  const nomePessoa = pessoa.nome || pessoa.razaoSocial || pessoa.nomeFantasia || "Lead"
 
   const [oportunidades] = await db
     .select({
@@ -127,7 +127,7 @@ export async function promoverPessoaParaCliente(params: {
     .where(eq(crmPessoas.id, pessoaId))
     .returning()
 
-  // O negócio da pessoa passa a ser do cliente (oportunidades, propostas e
+  // O negócio da lead passa a ser do cliente (oportunidades, propostas e
   // visitas), para aparecer na tela do cliente e nos relatórios do CRM.
   await db
     .update(crmOportunidades)
@@ -147,8 +147,8 @@ export async function promoverPessoaParaCliente(params: {
   await registrarLog({
     tipo: "ATUALIZACAO",
     acao: "promover_cliente",
-    descricao: `Pessoa "${nomePessoa}" transformada em cliente`,
-    entidade: "CrmPessoa",
+    descricao: `Lead "${nomePessoa}" transformada em cliente`,
+    entidade: "CrmLead",
     entidadeId: pessoaId,
     usuarioId: params.usuarioId ?? null,
     usuarioNome: params.usuarioNome ?? null,
@@ -182,7 +182,7 @@ export async function promoverPessoaParaCliente(params: {
     acao: "promover_cliente",
     descricao: `Cliente "${
       pessoa.nomeFantasia || pessoa.razaoSocial || pessoa.nome || "Cliente"
-    }" criado a partir da pessoa "${nomePessoa}"`,
+    }" criado a partir da lead "${nomePessoa}"`,
     entidade: "CrmCliente",
     entidadeId: clienteId,
     usuarioId: params.usuarioId ?? null,
@@ -191,10 +191,10 @@ export async function promoverPessoaParaCliente(params: {
 
   if (params.notificarEquipe !== false) {
     await notificarAtividadeComercial({
-      acao: `transformou a pessoa "${nomePessoa}" em cliente`,
-      entidade: "Pessoa",
+      acao: `transformou a lead "${nomePessoa}" em cliente`,
+      entidade: "Lead",
       registro: nomePessoa,
-      link: `/comercial/crm/pessoas/${pessoaId}`,
+      link: `/comercial/crm/leads/${pessoaId}`,
       usuarioNome: params.usuarioNome || null,
       usuarioId: params.usuarioId ?? null,
     })
@@ -202,3 +202,5 @@ export async function promoverPessoaParaCliente(params: {
 
   return { pessoa: atualizada, clienteId, clienteCriado, resumo }
 }
+
+export const promoverPessoaParaCliente = promoverLeadParaCliente

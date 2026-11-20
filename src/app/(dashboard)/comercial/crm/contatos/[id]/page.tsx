@@ -112,7 +112,7 @@ export default function ContatoDetailPage() {
 
   useEffect(() => {
     if (!editing) return
-    fetch("/api/crm/pessoas")
+    fetch("/api/crm/leads")
       .then((r) => r.json())
       .then((data: EmpresaResumo[]) => {
         if (Array.isArray(data)) setEmpresas(data)
@@ -398,7 +398,7 @@ export default function ContatoDetailPage() {
               </p>
               {contato.empresaId ? (
                 <Link
-                  href={`/comercial/crm/pessoas/${contato.empresaId}`}
+                  href={`/comercial/crm/leads/${contato.empresaId}`}
                   className="inline-flex items-center gap-1 text-blue-600 hover:underline font-medium"
                 >
                   <Building2 size={14} />

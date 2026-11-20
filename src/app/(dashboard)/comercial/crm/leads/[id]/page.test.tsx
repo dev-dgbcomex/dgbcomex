@@ -2,162 +2,278 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { screen, fireEvent, waitFor, within } from "@testing-library/react"
 import LeadDetailPage from "./page"
-import { createFetchMock, renderPage, findCall, navMock, toastMock } from "@/test/harness"
-
-const { sessionMock } = vi.hoisted(() => ({
-  sessionMock: { data: { user: { role: "ADMIN" as string } } },
-}))
-vi.mock("next-auth/react", () => ({
-  useSession: () => sessionMock,
-}))
+import { createFetchMock, renderPage, findCall, toastMock, navMock } from "@/test/harness"
 
 const lead = {
   id: 1,
-  nome: "João Pereira",
   tipoPessoa: "PJ",
-  documento: "12.345.678/0001-90",
-  email: "joao@email.com",
-  celular: "(11) 91111-1111",
+  razaoSocial: "Tecelagem Alpha",
+  nomeFantasia: "Alpha Confecções",
+  cnpj: "12.345.678/0001-90",
+  segmento: "Têxtil",
+  porte: "ME",
+  site: "",
   telefone: "(11) 3333-3333",
-  empresaNome: "Tecelagem Alpha",
-  cargo: "Sócio",
-  origem: "SITE",
-  status: "NOVO",
-  descricao: "Interessado em tecidos premium",
+  celular: "",
+  email: "contato@alpha.com",
+  emailNf: "",
+  endereco: "Rua das Rosas",
+  numero: "100",
+  complemento: "",
+  bairro: "Centro",
+  cidade: "São Paulo",
+  uf: "SP",
+  cep: "01000-000",
+  observacoes: "",
+  status: "QUALIFICADO",
+  resumoIa: null,
+  sugestaoIa: null,
+  createdAt: "2026-07-01T10:00:00Z",
+  contatos: [
+    { id: 3, nome: "Carlos Silva", cargo: "Comprador", email: "carlos@alpha.com", principal: true },
+  ],
 }
 
-const mensagens = [
+const representantes = [
   {
-    id: 1,
-    mensagem: "Olá, gostaria de um orçamento",
-    tipo: "RECEBIDA",
-    status: "RECEBIDA",
-    createdAt: "2026-07-01T10:00:00Z",
+    id: 5,
+    nome: "Representante Beta",
+    cnpj: "11.222.333/0001-44",
+    email: "beta@rep.com",
+    telefone: "(11) 9999-9999",
+    cidade: "Campinas",
+    uf: "SP",
   },
 ]
 
+const leads = [
+  {
+    id: 10,
+    nome: "Pedro Souza",
+    celular: "(11) 97777-0001",
+    cargo: "Gerente",
+    origem: "OUTRO",
+    status: "NOVO",
+    empresaId: 1,
+  },
+]
+
+const oportunidades = [
+  { id: 20, titulo: "Oportunidade Grande", valorEstimado: 5000, status: "Novo", empresaId: 1 },
+]
+
+const propostas = [
+  { id: 30, titulo: "Proposta Tecido", valor: 1200, status: "ENVIADA", empresaId: 1 },
+]
+
+const orfaos = [{ id: 9, nome: "Contato Órfão", email: "orfao@x.com" }]
+
 describe("LeadDetailPage", () => {
+  let fetchMock: ReturnType<typeof createFetchMock>
+
   beforeEach(() => {
-    navMock.setPathname("/comercial/crm/leads/1")
-    navMock.setParams({ id: "1" })
-    sessionMock.data.user.role = "ADMIN"
+    const handler = ({ method, url }: { method: string; url: string }) => {
+      if (method === "GET" && url === "/api/crm/leads/1") return { json: lead }
+      if (method === "GET" && url === "/api/crm/leads/1/representantes")
+        return { json: representantes }
+      if (method === "GET" && url === "/api/crm/visitantes?empresaId=1") return { json: leads }
+      if (method === "GET" && url === "/api/crm/oportunidades?empresaId=1")
+        return { json: oportunidades }
+      if (method === "GET" && url === "/api/crm/propostas?empresaId=1") return { json: propostas }
+      if (method === "POST" && url === "/api/crm/visitantes") {
+        return { json: { id: 99, nome: "Novo Lead Teste", empresaId: 1 } }
+      }
+      if (method === "GET" && url === "/api/crm/estados") {
+        return { json: [{ id: 35, uf: "SP", nome: "São Paulo" }] }
+      }
+      if (method === "GET" && url === "/api/crm/cidades?estadoId=35") {
+        return { json: [{ id: 1, nome: "São Paulo", estadoId: 35 }] }
+      }
+      if (method === "GET" && url === "/api/crm/timeline?pessoaId=1") return { json: [] }
+      if (method === "GET" && url === "/api/crm/whatsapp?empresaId=1") return { json: [] }
+      if (method === "PUT" && url === "/api/crm/leads/1") return { json: { ...lead } }
+      if (method === "POST" && url === "/api/crm/leads/1/promover-cliente") {
+        return {
+          json: {
+            lead: { ...lead, promovidaCliente: true, status: "CONVERTIDO_CLIENTE" },
+            clienteId: 5,
+            clienteCriado: true,
+            resumo: {
+              oportunidades: 1,
+              propostas: 1,
+              visitas: 0,
+              valorPropostas: 0,
+              valorOportunidades: 0,
+            },
+          },
+        }
+      }
+      if (method === "GET" && url === "/api/crm/contatos?orfao=true") return { json: orfaos }
+      if (method === "PUT" && url === "/api/crm/contatos/9")
+        return {
+          json: {
+            id: 9,
+            nome: "Contato Órfão",
+            email: "orfao@x.com",
+            empresaId: 1,
+            clienteId: null,
+          },
+        }
+      if (method === "PUT" && url === "/api/crm/contatos/3")
+        return {
+          json: {
+            id: 3,
+            nome: "Carlos Silva",
+            email: "carlos@alpha.com",
+            empresaId: null,
+            clienteId: null,
+          },
+        }
+      return { json: null }
+    }
+    fetchMock = createFetchMock(handler)
+    vi.stubGlobal("fetch", fetchMock.fn)
   })
 
-  it("carrega e exibe os dados do lead e as mensagens", async () => {
-    const fetchMock = createFetchMock(({ method, url }) => {
-      if (method === "GET" && url === "/api/crm/leads/1") return { json: lead }
-      if (method === "GET" && url === "/api/crm/leads/1/whatsapp") return { json: mensagens }
-      return { json: null }
-    })
-    vi.stubGlobal("fetch", fetchMock.fn)
+  it("exibe os dados da lead com contatos, representantes, leads, oportunidades e propostas", async () => {
+    navMock.setParams({ id: "1" })
+    navMock.setPathname("/comercial/crm/leads/1")
     renderPage(<LeadDetailPage />)
 
-    expect(await screen.findByRole("heading", { name: "João Pereira" })).toBeInTheDocument()
-    expect(screen.getAllByText("NOVO").length).toBeGreaterThan(0)
-    expect(screen.getAllByText("Tecelagem Alpha").length).toBeGreaterThan(0)
-    expect(screen.getByText("joao@email.com")).toBeInTheDocument()
-    expect(screen.getByRole("heading", { name: "WhatsApp" })).toBeInTheDocument()
-    expect(await screen.findByText("Olá, gostaria de um orçamento")).toBeInTheDocument()
+    expect(await screen.findByRole("heading", { name: /Tecelagem Alpha/ })).toBeInTheDocument()
+    expect(screen.getByText("PJ")).toBeInTheDocument()
+    expect(screen.getAllByText("QUALIFICADO").length).toBeGreaterThan(0)
+
+    expect(await screen.findByText("Carlos Silva")).toBeInTheDocument()
+    expect(screen.getByText("Comprador")).toBeInTheDocument()
+    expect(screen.getByText("Principal")).toBeInTheDocument()
+
+    expect(await screen.findByText("Representante Beta")).toBeInTheDocument()
+    expect(screen.getByText("11.222.333/0001-44")).toBeInTheDocument()
+
+    expect(await screen.findByText("Pedro Souza")).toBeInTheDocument()
+    expect(screen.getByText("Oportunidade Grande")).toBeInTheDocument()
+    expect(screen.getByText("Proposta Tecido")).toBeInTheDocument()
+    expect(await screen.findByText("Nenhuma mensagem")).toBeInTheDocument()
   })
 
-  it("edita e salva via PUT", async () => {
-    const fetchMock = createFetchMock(({ method, url }) => {
-      if (method === "GET" && url === "/api/crm/leads/1") return { json: lead }
-      if (method === "GET" && url === "/api/crm/leads/1/whatsapp") return { json: [] }
-      if (method === "PUT" && url === "/api/crm/leads/1")
-        return { json: { ...lead, nome: "João Pereira Junior" } }
-      return { json: null }
+  it("cria um visitante vinculado à lead pelo card de visitantes", async () => {
+    navMock.setParams({ id: "1" })
+    navMock.setPathname("/comercial/crm/leads/1")
+    renderPage(<LeadDetailPage />)
+
+    fireEvent.click(await screen.findByTitle("Cadastrar novo visitante"))
+
+    const dialog = screen.getByRole("dialog", { name: "Novo Visitante" })
+    fireEvent.change(within(dialog).getAllByRole("textbox")[0], {
+      target: { value: "Novo Visitante Teste" },
     })
-    vi.stubGlobal("fetch", fetchMock.fn)
+    fireEvent.click(within(dialog).getByRole("button", { name: "Criar" }))
+
+    await waitFor(() => {
+      const call = findCall(fetchMock.calls, "/api/crm/visitantes", "POST")
+      expect(call).toBeDefined()
+      expect(call!.body).toEqual(
+        expect.objectContaining({ nome: "Novo Visitante Teste", empresaId: 1 })
+      )
+    })
+    await waitFor(() =>
+      expect(toastMock.success).toHaveBeenCalledWith("Visitante criado com sucesso")
+    )
+  })
+
+  it("edita a lead via PUT", async () => {
+    navMock.setParams({ id: "1" })
+    navMock.setPathname("/comercial/crm/leads/1")
     renderPage(<LeadDetailPage />)
 
     fireEvent.click(await screen.findByRole("button", { name: "Editar" }))
-    const nomeInput = screen.getByDisplayValue("João Pereira")
-    fireEvent.change(nomeInput, { target: { value: "João Pereira Junior" } })
+
+    const razaoInput = await screen.findByDisplayValue("Tecelagem Alpha")
+    fireEvent.change(razaoInput, { target: { value: "Tecelagem Alpha Atualizada" } })
+
     fireEvent.click(screen.getByRole("button", { name: "Salvar" }))
 
     await waitFor(() => {
       const call = findCall(fetchMock.calls, "/api/crm/leads/1", "PUT")
       expect(call).toBeDefined()
-      expect(call!.body.nome).toBe("João Pereira Junior")
+      expect(call!.body).toEqual(
+        expect.objectContaining({ razaoSocial: "Tecelagem Alpha Atualizada" })
+      )
     })
-    await waitFor(() => expect(toastMock.success).toHaveBeenCalledWith("Lead atualizado"))
+    await waitFor(() => expect(toastMock.success).toHaveBeenCalledWith("Lead atualizada"))
   })
 
-  it("exclui o lead via modal de confirmação", async () => {
-    const fetchMock = createFetchMock(({ method, url }) => {
-      if (method === "GET" && url === "/api/crm/leads/1") return { json: lead }
-      if (method === "GET" && url === "/api/crm/leads/1/whatsapp") return { json: [] }
-      if (method === "DELETE" && url === "/api/crm/leads/1") return { json: { ok: true } }
-      return { json: null }
-    })
-    vi.stubGlobal("fetch", fetchMock.fn)
+  it("transforma a lead em cliente após confirmar o aviso", async () => {
+    navMock.setParams({ id: "1" })
+    navMock.setPathname("/comercial/crm/leads/1")
     renderPage(<LeadDetailPage />)
 
-    fireEvent.click(await screen.findByRole("button", { name: "Excluir" }))
-    const dialog = screen.getByRole("dialog", { name: "Excluir lead?" })
-    fireEvent.click(within(dialog).getByRole("button", { name: "Excluir" }))
+    fireEvent.click(await screen.findByRole("button", { name: "Tornar cliente" }))
 
-    await waitFor(() =>
-      expect(findCall(fetchMock.calls, "/api/crm/leads/1", "DELETE")).toBeDefined()
-    )
-    await waitFor(() => expect(toastMock.success).toHaveBeenCalledWith("Lead excluído"))
-    expect(navMock.router.push).toHaveBeenCalledWith("/comercial/crm/leads")
-  })
-
-  it("envia uma mensagem pelo WhatsApp", async () => {
-    const fetchMock = createFetchMock(({ method, url }) => {
-      if (method === "GET" && url === "/api/crm/leads/1") return { json: lead }
-      if (method === "GET" && url === "/api/crm/leads/1/whatsapp") return { json: mensagens }
-      if (method === "POST" && url === "/api/crm/leads/1/whatsapp") {
-        return {
-          status: 201,
-          json: {
-            id: 2,
-            mensagem: "Olá!",
-            tipo: "ENVIADA",
-            status: "ENVIADA",
-            createdAt: "2026-07-01T11:00:00Z",
-          },
-        }
-      }
-      return { json: null }
-    })
-    vi.stubGlobal("fetch", fetchMock.fn)
-    renderPage(<LeadDetailPage />)
-
-    const input = await screen.findByPlaceholderText("Digite uma mensagem...")
-    await screen.findByText("Olá, gostaria de um orçamento")
-    fireEvent.change(input, { target: { value: "Olá!" } })
-    fireEvent.keyDown(input, { key: "Enter" })
+    const dialog = screen.getByRole("dialog", { name: "Transformar em cliente?" })
+    expect(dialog).toHaveTextContent("será arquivada")
+    fireEvent.click(within(dialog).getByRole("button", { name: "Transformar em cliente" }))
 
     await waitFor(() => {
-      const call = findCall(fetchMock.calls, "/api/crm/leads/1/whatsapp", "POST")
+      const call = findCall(fetchMock.calls, "/api/crm/leads/1/promover-cliente", "POST")
       expect(call).toBeDefined()
-      expect(call!.body).toEqual({ mensagem: "Olá!" })
     })
-    expect(await screen.findByText("Olá!")).toBeInTheDocument()
+    await waitFor(() => expect(toastMock.success).toHaveBeenCalled())
   })
 
-  it("mostra mensagem quando o lead não é encontrado", async () => {
-    const fetchMock = createFetchMock(() => ({ json: null }))
-    vi.stubGlobal("fetch", fetchMock.fn)
+  it("não oferece exclusão da lead", async () => {
+    navMock.setParams({ id: "1" })
+    navMock.setPathname("/comercial/crm/leads/1")
     renderPage(<LeadDetailPage />)
 
-    expect(await screen.findByText("Lead não encontrado")).toBeInTheDocument()
-  })
-
-  it("não mostra o botão de excluir para não-administradores", async () => {
-    sessionMock.data.user.role = "VENDEDOR"
-    const fetchMock = createFetchMock(({ method, url }) => {
-      if (method === "GET" && url === "/api/crm/leads/1") return { json: lead }
-      if (method === "GET" && url === "/api/crm/leads/1/whatsapp") return { json: [] }
-      return { json: null }
-    })
-    vi.stubGlobal("fetch", fetchMock.fn)
-    renderPage(<LeadDetailPage />)
-
-    await screen.findByRole("heading", { name: "João Pereira" })
+    await screen.findByRole("heading", { name: /Tecelagem Alpha/ })
     expect(screen.queryByRole("button", { name: "Excluir" })).not.toBeInTheDocument()
+  })
+
+  it("vincular um contato órfão à lead", async () => {
+    navMock.setParams({ id: "1" })
+    navMock.setPathname("/comercial/crm/leads/1")
+    renderPage(<LeadDetailPage />)
+
+    const select = await screen.findByLabelText("Contatos sem vínculo")
+    fireEvent.change(select, { target: { value: "9" } })
+    fireEvent.click(screen.getByRole("button", { name: "Vincular" }))
+
+    await waitFor(() => {
+      const call = findCall(fetchMock.calls, "/api/crm/contatos/9", "PUT")
+      expect(call).toBeDefined()
+      expect(call!.body).toEqual({ empresaId: 1 })
+    })
+    await waitFor(() => expect(toastMock.success).toHaveBeenCalledWith("Contato vinculado"))
+    expect(await screen.findByText("Contato Órfão")).toBeInTheDocument()
+  })
+
+  it("desvincula um contato da lead", async () => {
+    navMock.setParams({ id: "1" })
+    navMock.setPathname("/comercial/crm/leads/1")
+    renderPage(<LeadDetailPage />)
+
+    fireEvent.click(await screen.findByTitle("Desvincular contato"))
+
+    await waitFor(() => {
+      const call = findCall(fetchMock.calls, "/api/crm/contatos/3", "PUT")
+      expect(call).toBeDefined()
+      expect(call!.body).toEqual({ empresaId: null, clienteId: null })
+    })
+    await waitFor(() => expect(toastMock.success).toHaveBeenCalledWith("Contato desvinculado"))
+    await waitFor(() => expect(screen.queryByText("Carlos Silva")).not.toBeInTheDocument())
+  })
+
+  it("mostra lead não encontrada", async () => {
+    navMock.setParams({ id: "999" })
+    navMock.setPathname("/comercial/crm/leads/999")
+    renderPage(<LeadDetailPage />)
+
+    expect(await screen.findByText("Lead não encontrada")).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "Voltar" })).toHaveAttribute(
+      "href",
+      "/comercial/crm/leads"
+    )
   })
 })

@@ -1,6 +1,6 @@
-import { AlertTriangle, Building2, Repeat, User, UserCheck } from "lucide-react"
+﻿import { AlertTriangle, Building2, Repeat, User, UserCheck } from "lucide-react"
 import { toast } from "sonner"
-import { QuickCreatePessoa } from "@/components/crm/quick-create-pessoa"
+import { QuickCreateLead } from "@/components/crm/quick-create-lead"
 import { QuickCreateCliente } from "@/components/crm/quick-create-cliente"
 import { QuickCreateContato } from "@/components/crm/quick-create-contato"
 import { QuickCreateOportunidade } from "@/components/crm/quick-create-oportunidade"
@@ -72,7 +72,7 @@ export function FormFields({
       ? "Prospecção de Cliente"
       : tipoEntidade === "AVULSA"
         ? "Ação Avulsa"
-        : "Prospecção de Pessoa (Negócio)"
+        : "Prospecção de Lead (Negócio)"
 
   return (
     <>
@@ -147,8 +147,8 @@ export function FormFields({
               htmlFor="acao-pessoa"
               className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1"
             >
-              Pessoa (Negócio) *
-              <QuickCreatePessoa onCreated={onEmpresaCreated} />
+              Lead (Negócio) *
+              <QuickCreateLead onCreated={onEmpresaCreated} />
             </label>
             <select
               id="acao-pessoa"

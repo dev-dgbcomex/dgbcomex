@@ -72,7 +72,7 @@ function NovaVisitaPageContent() {
 
   const { data: empresas = [] } = useQuery<EmpresaResult[]>({
     queryKey: ["crm-pessoas"],
-    queryFn: () => fetch("/api/crm/pessoas").then((r) => r.json()),
+    queryFn: () => fetch("/api/crm/leads").then((r) => r.json()),
   })
 
   const { data: oportunidades = [] } = useQuery<OportunidadeResumo[]>({
@@ -94,7 +94,7 @@ function NovaVisitaPageContent() {
     queryKey: ["visita-contatos", tipoEntidade, form.empresaId, form.clienteId],
     queryFn: async () => {
       if (tipoEntidade === "PESSOA" && form.empresaId) {
-        const res = await fetch(`/api/crm/pessoas/${form.empresaId}`)
+        const res = await fetch(`/api/crm/leads/${form.empresaId}`)
         const data = await res.json()
         return Array.isArray(data.contatos) ? data.contatos : []
       }
@@ -114,7 +114,7 @@ function NovaVisitaPageContent() {
     queryKey: ["visita-endereco", tipoEntidade, form.empresaId, form.clienteId],
     queryFn: async () => {
       if (tipoEntidade === "PESSOA" && form.empresaId) {
-        const res = await fetch(`/api/crm/pessoas/${form.empresaId}`)
+        const res = await fetch(`/api/crm/leads/${form.empresaId}`)
         const data = await res.json()
         return {
           endereco: data.endereco || "",

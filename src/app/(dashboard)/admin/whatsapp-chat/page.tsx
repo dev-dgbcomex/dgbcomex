@@ -318,7 +318,7 @@ export default function WhatsAppChatPage() {
               <div className="flex items-center gap-2">
                 {lead && (
                   <a
-                    href={`/comercial/crm/leads/${lead.id}`}
+                    href={`/comercial/crm/visitantes/${lead.id}`}
                     target="_blank"
                     className="text-xs text-blue-600 hover:underline hidden sm:inline"
                   >

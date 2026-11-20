@@ -14,18 +14,18 @@ type PessoaPromocao = {
 }
 
 interface PromoverClienteBotaoProps {
-  pessoa: PessoaPromocao
+  lead: PessoaPromocao
   onPromovido?: (resultado: any) => void
   className?: string
   compact?: boolean
 }
 
-export function nomeExibicaoPessoa(pessoa: PessoaPromocao) {
-  return pessoa.nome || pessoa.razaoSocial || pessoa.nomeFantasia || "Pessoa"
+export function nomeExibicaoLead(lead: PessoaPromocao) {
+  return lead.nome || lead.razaoSocial || lead.nomeFantasia || "Lead"
 }
 
 export function PromoverClienteBotao({
-  pessoa,
+  lead,
   onPromovido,
   className = "",
   compact = false,
@@ -33,12 +33,12 @@ export function PromoverClienteBotao({
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
 
-  const nome = nomeExibicaoPessoa(pessoa)
+  const nome = nomeExibicaoLead(lead)
 
   async function confirmar() {
     setLoading(true)
     try {
-      const res = await fetch(`/api/crm/pessoas/${pessoa.id}/promover-cliente`, {
+      const res = await fetch(`/api/crm/leads/${lead.id}/promover-cliente`, {
         method: "POST",
       })
       const data = await res.json().catch(() => null)
@@ -75,7 +75,7 @@ export function PromoverClienteBotao({
       <ConfirmModal
         open={open}
         title="Transformar em cliente?"
-        message={`Ao transformar "${nome}" em cliente, a pessoa será arquivada e não aparecerá mais na listagem de pessoas.`}
+        message={`Ao transformar "${nome}" em cliente, a lead será arquivada e não aparecerá mais na listagem de leads.`}
         subMessage="Tudo o que foi feito no cadastro (oportunidades, propostas e visitas) continua disponível nos relatórios e no histórico do cliente. Esta ação não pode ser desfeita."
         confirmLabel="Transformar em cliente"
         cancelLabel="Cancelar"

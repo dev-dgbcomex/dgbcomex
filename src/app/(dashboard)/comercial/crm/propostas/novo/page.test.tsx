@@ -12,7 +12,7 @@ describe("NovaPropostaPage", () => {
       if (method === "GET" && url === "/api/crm/estados") {
         return { json: [{ id: 35, uf: "SP", nome: "São Paulo" }] }
       }
-      if (method === "GET" && url === "/api/crm/pessoas") {
+      if (method === "GET" && url === "/api/crm/leads") {
         return { json: [{ id: 1, razaoSocial: "Tecelagem Alpha" }] }
       }
       if (method === "GET" && url === "/api/crm/oportunidades") {
@@ -30,13 +30,13 @@ describe("NovaPropostaPage", () => {
     vi.stubGlobal("fetch", fetchMock.fn)
   })
 
-  it("renderiza o seletor de tipo de vínculo (Cliente/Pessoa/Avulso)", async () => {
+  it("renderiza o seletor de tipo de vínculo (Cliente/Lead/Avulso)", async () => {
     renderPage(<NovaPropostaPage />)
 
     expect(await screen.findByRole("heading", { name: "Nova Proposta" })).toBeInTheDocument()
     expect(screen.getByText("Para quem é esta proposta?")).toBeInTheDocument()
     expect(screen.getByRole("button", { name: /Cliente/i })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: /Pessoa/i })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /Lead/i })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: /Avulso/i })).toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Criar Proposta" })).not.toBeInTheDocument()
   })
@@ -45,7 +45,7 @@ describe("NovaPropostaPage", () => {
     renderPage(<NovaPropostaPage />)
     await screen.findByRole("heading", { name: "Nova Proposta" })
 
-    fireEvent.click(screen.getByRole("button", { name: /Pessoa/i }))
+    fireEvent.click(screen.getByRole("button", { name: /Lead/i }))
     fireEvent.change(screen.getByPlaceholderText("Ex: Proposta Comercial - Tecido X"), {
       target: { value: "Proposta Comercial - Tecido X" },
     })
@@ -101,7 +101,7 @@ describe("NovaPropostaPage", () => {
       if (method === "GET" && url === "/api/crm/oportunidades") {
         return { json: [{ id: 3, titulo: "Oportunidade Expansão", empresaId: 1 }] }
       }
-      if (method === "GET" && url === "/api/crm/pessoas") {
+      if (method === "GET" && url === "/api/crm/leads") {
         return { json: [{ id: 1, razaoSocial: "Tecelagem Alpha" }] }
       }
       return { json: null }

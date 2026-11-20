@@ -137,7 +137,7 @@ export default function ConsultaCnpjPage() {
         segmento: api.cnae_principal_descricao || pessoa.segmento,
         porte: api.porte_empresa || pessoa.porte,
       }
-      const res = await fetch(`/api/crm/pessoas/${pessoa.id}`, {
+      const res = await fetch(`/api/crm/leads/${pessoa.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -204,7 +204,7 @@ export default function ConsultaCnpjPage() {
         segmento: api.cnae_principal_descricao || "",
         porte: api.porte_empresa || "",
       }
-      const res = await fetch("/api/crm/pessoas", {
+      const res = await fetch("/api/crm/leads", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -379,7 +379,7 @@ export default function ConsultaCnpjPage() {
                   </p>
                 </div>
                 <div className="col-span-2 sm:col-span-3">
-                  <p className="text-xs text-slate-500 mb-0.5">Endereço</p>
+                  <p className="text-xs text-slate-500 mb-0.5">Situação</p>
                   <p className="text-slate-900 dark:text-slate-200">
                     {[apiData.logradouro, apiData.numero, apiData.bairro, apiData.complemento]
                       .filter(Boolean)
@@ -427,7 +427,7 @@ export default function ConsultaCnpjPage() {
                   >
                     <div className="flex items-center justify-between">
                       <Link
-                        href={`/comercial/crm/pessoas/${pessoa.id}`}
+                        href={`/comercial/crm/leads/${pessoa.id}`}
                         className="text-sm font-medium text-blue-600 hover:underline inline-flex items-center gap-1"
                       >
                         {pessoa.razaoSocial || pessoa.nome} <ExternalLink size={12} />

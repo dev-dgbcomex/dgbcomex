@@ -1,4 +1,4 @@
-import { Building2, User, UserCheck } from "lucide-react"
+﻿import { Building2, User, UserCheck } from "lucide-react"
 
 interface TipoEntidadeSelectorProps {
   onSelect: (tipo: "CLIENTE" | "PESSOA" | "AVULSA") => void
@@ -36,7 +36,7 @@ export function TipoEntidadeSelector({ onSelect }: TipoEntidadeSelectorProps) {
             <UserCheck size={28} className="text-blue-600 dark:text-blue-400" />
           </div>
           <div className="text-center">
-            <p className="font-semibold text-slate-900 dark:text-slate-100">Pessoa</p>
+            <p className="font-semibold text-slate-900 dark:text-slate-100">Lead</p>
             <p className="text-xs text-slate-500 mt-1">Futuro cliente (negócio)</p>
           </div>
         </button>

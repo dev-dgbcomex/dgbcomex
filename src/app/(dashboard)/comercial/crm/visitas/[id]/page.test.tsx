@@ -94,7 +94,7 @@ function buildHandler(data: Partial<VisitaDetalhe>) {
     if (method === "GET" && url === "/api/crm/cidades?estadoId=35") {
       return { json: [{ id: 1, nome: "São Paulo", estadoId: 35 }] }
     }
-    if (method === "GET" && url === "/api/crm/pessoas/1") {
+    if (method === "GET" && url === "/api/crm/leads/1") {
       return {
         json: {
           id: 1,
@@ -119,7 +119,7 @@ function buildHandler(data: Partial<VisitaDetalhe>) {
         },
       }
     }
-    if (method === "GET" && url === "/api/crm/pessoas") {
+    if (method === "GET" && url === "/api/crm/leads") {
       return { json: [{ id: 1, razaoSocial: "Tecelagem Alpha" }] }
     }
     if (method === "GET" && url.startsWith("/api/crm/visitas/conflictos?")) {
@@ -160,7 +160,7 @@ describe("DetalheVisitaPage", () => {
     expect(screen.getByText("30 min")).toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Tecelagem Alpha" })).toHaveAttribute(
       "href",
-      "/comercial/crm/pessoas/1"
+      "/comercial/crm/leads/1"
     )
     expect(screen.getByText("Venda de malha")).toBeInTheDocument()
     expect(screen.getByText("Rua das Rosas")).toBeInTheDocument()
@@ -288,7 +288,7 @@ describe("DetalheVisitaPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Vincular" }))
 
     const dialog = await screen.findByRole("dialog", { name: "Vincular Visita Avulsa" })
-    fireEvent.click(within(dialog).getByRole("button", { name: /^Pessoa/ }))
+    fireEvent.click(within(dialog).getByRole("button", { name: /^Lead/ }))
 
     await waitFor(() =>
       expect(within(dialog).getByRole("option", { name: "Tecelagem Alpha" })).toBeInTheDocument()
@@ -426,7 +426,7 @@ describe("DetalheVisitaPage", () => {
       if (method === "GET" && url === "/api/crm/cidades?estadoId=35") {
         return { json: [{ id: 1, nome: "São Paulo", estadoId: 35 }] }
       }
-      if (method === "GET" && url === "/api/crm/pessoas/1") {
+      if (method === "GET" && url === "/api/crm/leads/1") {
         return {
           json: {
             id: 1,
@@ -437,7 +437,7 @@ describe("DetalheVisitaPage", () => {
           },
         }
       }
-      if (method === "GET" && url === "/api/crm/pessoas") {
+      if (method === "GET" && url === "/api/crm/leads") {
         return { json: [{ id: 1, razaoSocial: "Tecelagem Alpha" }] }
       }
       if (method === "GET" && url.startsWith("/api/crm/visitas/conflictos?")) {
@@ -497,9 +497,9 @@ describe("DetalheVisitaPage", () => {
       if (method === "GET" && url === "/api/crm/visitas/1") return { json: visita }
       if (method === "GET" && url === "/api/crm/cidades?estadoId=35")
         return { json: [{ id: 1, nome: "São Paulo", estadoId: 35 }] }
-      if (method === "GET" && url === "/api/crm/pessoas/1")
+      if (method === "GET" && url === "/api/crm/leads/1")
         return { json: { id: 1, razaoSocial: "Tecelagem Alpha", uf: "SP", cidade: "São Paulo" } }
-      if (method === "GET" && url === "/api/crm/pessoas")
+      if (method === "GET" && url === "/api/crm/leads")
         return { json: [{ id: 1, razaoSocial: "Tecelagem Alpha" }] }
       if (method === "GET" && url.startsWith("/api/crm/visitas/conflictos?"))
         return { json: { conflictos: [] } }
@@ -555,7 +555,7 @@ describe("DetalheVisitaPage", () => {
       if (method === "GET" && url === "/api/crm/visitas/1") return { json: visita }
       if (method === "GET" && url === "/api/crm/cidades?estadoId=35")
         return { json: [{ id: 1, nome: "São Paulo", estadoId: 35 }] }
-      if (method === "GET" && url === "/api/crm/pessoas/1")
+      if (method === "GET" && url === "/api/crm/leads/1")
         return {
           json: {
             id: 1,
@@ -565,7 +565,7 @@ describe("DetalheVisitaPage", () => {
             contatos: [{ id: 7, nome: "Ana Souza", cargo: "Compradora" }],
           },
         }
-      if (method === "GET" && url === "/api/crm/pessoas")
+      if (method === "GET" && url === "/api/crm/leads")
         return { json: [{ id: 1, razaoSocial: "Tecelagem Alpha" }] }
       if (method === "GET" && url.startsWith("/api/crm/visitas/conflictos?"))
         return { json: { conflictos: [] } }

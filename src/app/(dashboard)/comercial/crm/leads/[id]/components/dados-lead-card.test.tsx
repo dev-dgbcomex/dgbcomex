@@ -2,10 +2,10 @@
 import { describe, it, expect } from "vitest"
 import { screen } from "@testing-library/react"
 import { renderPage } from "@/test/harness"
-import { DadosPessoaCard } from "./dados-pessoa-card"
-import type { Pessoa } from "../../types"
+import { DadosLeadCard } from "./dados-lead-card"
+import type { Lead } from "../../types"
 
-const pessoaLonga = {
+const leadLonga = {
   id: 185,
   tipoPessoa: "PJ",
   razaoSocial: "Comercialização de Tecidos e Confecções do Vale do Paraíba Ltda",
@@ -28,27 +28,27 @@ const pessoaLonga = {
   observacoes: "",
   status: "QUALIFICADO",
   contatos: [],
-} as unknown as Pessoa
+} as unknown as Lead
 
 function renderCard() {
   return renderPage(
-    <DadosPessoaCard
-      pessoa={pessoaLonga}
+    <DadosLeadCard
+      lead={leadLonga}
       form={{}}
       setForm={() => {}}
       editing={false}
       tipoPessoa="PJ"
-      setTipoPessoa={() => {}}
+      setTipoLead={() => {}}
       estadoId={null}
     />
   )
 }
 
-describe("DadosPessoaCard", () => {
+describe("DadosLeadCard", () => {
   it("envolve valores longos dentro do card (break-words) sem vazar", () => {
     renderCard()
 
-    const card = screen.getByRole("heading", { name: "Dados da Pessoa (Negócio)" }).closest("div")
+    const card = screen.getByRole("heading", { name: "Dados da Lead (Negócio)" }).closest("div")
     expect(card).toHaveClass("min-w-0")
 
     const grade = screen.getByText("Razão Social").closest("div.grid")

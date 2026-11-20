@@ -112,7 +112,7 @@ function NovaLicaoPageContent() {
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-              Título *
+              Módulo *
             </label>
             <input
               value={form.titulo}
@@ -141,7 +141,7 @@ function NovaLicaoPageContent() {
               value={form.pathnameRelacionado}
               onChange={(e) => setForm({ ...form, pathnameRelacionado: e.target.value })}
               className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-800"
-              placeholder="/comercial/crm/leads"
+              placeholder="/comercial/crm/visitantes"
             />
           </div>
         </div>

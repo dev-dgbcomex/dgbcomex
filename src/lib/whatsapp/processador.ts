@@ -1654,7 +1654,7 @@ async function processarConversa(params: {
         : `${aiResult.provedor} (${aiResult.modelo})`
       const scoreTexto = `Score: ${leadScore.score}/100 (${leadScore.prioridade})`
       const textoNotificacao = [
-        "*Novo lead cadastrado no CRM*",
+        "*Novo visitante cadastrado no CRM*",
         "",
         `Nome: ${nomeLead}`,
         `WhatsApp: https://wa.me/${numero}`,
@@ -1678,10 +1678,10 @@ async function processarConversa(params: {
         .join("\n")
 
       await db.insert(crmNotificacoes).values({
-        titulo: "Novo lead cadastrado via WhatsApp",
+        titulo: "Novo visitante cadastrado via WhatsApp",
         mensagem: textoNotificacao,
-        tipo: "lead_novo",
-        link: "/comercial/crm/leads",
+        tipo: "visitante_novo",
+        link: "/comercial/crm/visitantes",
         metadados: {
           leadId: novo.id,
           remoteJid,
@@ -1698,7 +1698,7 @@ async function processarConversa(params: {
       }
 
       const emailHtml = [
-        `<p><strong>Novo lead cadastrado no CRM</strong></p>`,
+        `<p><strong>Novo visitante cadastrado no CRM</strong></p>`,
         `<p><strong>Nome:</strong> ${escapeHtml(nomeLead)}</p>`,
         `<p><strong>WhatsApp:</strong> <a href="https://wa.me/${numero}">${numero}</a></p>`,
         `<p><strong>Tipo:</strong> ${tipoLabelLead}</p>`,
@@ -1714,7 +1714,7 @@ async function processarConversa(params: {
           : "",
         `<p><strong>Score:</strong> ${leadScore.score}/100 (${leadScore.prioridade})</p>`,
         ``,
-        `<p><a href="${BASE_URL}/comercial/crm/leads">Abrir lead no CRM</a></p>`,
+        `<p><a href="${BASE_URL}/comercial/crm/visitantes">Abrir visitante no CRM</a></p>`,
       ]
         .filter(Boolean)
         .join("\n")

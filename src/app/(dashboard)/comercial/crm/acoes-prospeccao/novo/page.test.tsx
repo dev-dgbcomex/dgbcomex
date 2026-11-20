@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+﻿// @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { screen, fireEvent, waitFor } from "@testing-library/react"
 import NovaAcaoProspeccaoPage from "./page"
@@ -49,8 +49,8 @@ vi.mock("@/components/ui/creatable-select", () => ({
   ),
 }))
 
-vi.mock("@/components/crm/quick-create-pessoa", () => ({
-  QuickCreatePessoa: () => <button type="button">Nova Pessoa</button>,
+vi.mock("@/components/crm/quick-create-lead", () => ({
+  QuickCreateLead: () => <button type="button">Nova Lead</button>,
 }))
 vi.mock("@/components/crm/quick-create-cliente", () => ({
   QuickCreateCliente: () => <button type="button">Novo Cliente</button>,
@@ -79,7 +79,7 @@ function makeFetchMock(options?: { status?: number; total?: number }) {
     if (method === "GET" && url.startsWith("/api/crm/acoes-prospeccao/conflictos?")) {
       return { json: { conflictos: [] } }
     }
-    if (method === "GET" && url === "/api/crm/pessoas") return { json: [{ id: 1, razaoSocial: "Alpha" }] }
+    if (method === "GET" && url === "/api/crm/leads") return { json: [{ id: 1, razaoSocial: "Alpha" }] }
     if (method === "GET" && url === "/api/clientes") return { json: [{ id: 2, nome: "Lima" }] }
     if (method === "GET" && url === "/api/crm/oportunidades") return { json: [] }
     if (method === "GET" && url === "/api/crm/estados") return { json: [{ id: 1, uf: "SP" }] }
@@ -97,7 +97,7 @@ describe("NovaAcaoProspeccaoPage", () => {
     renderPage(<NovaAcaoProspeccaoPage />)
 
     expect(await screen.findByRole("heading", { name: "Quem você vai prospectar?" })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: /Pessoa/ })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /Lead/ })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: /Cliente/ })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: /Avulsa/ })).toBeInTheDocument()
   })
@@ -106,9 +106,9 @@ describe("NovaAcaoProspeccaoPage", () => {
     vi.stubGlobal("fetch", makeFetchMock().fn)
     renderPage(<NovaAcaoProspeccaoPage />)
 
-    fireEvent.click(screen.getByRole("button", { name: /Pessoa/ }))
+    fireEvent.click(screen.getByRole("button", { name: /Lead/ }))
 
-    expect(await screen.findByText("Pessoa (Negócio) *")).toBeInTheDocument()
+    expect(await screen.findByText("Lead (Negócio) *")).toBeInTheDocument()
     expect(screen.getByLabelText("Data da Ação")).toBeInTheDocument()
     expect(screen.getByLabelText("Hora")).toBeInTheDocument()
     expect(screen.getByLabelText("Tipo")).toBeInTheDocument()
@@ -117,7 +117,7 @@ describe("NovaAcaoProspeccaoPage", () => {
     expect(screen.getByText("Fotos da Ação")).toBeInTheDocument()
 
     fireEvent.submit(document.querySelector("form")!)
-    await waitFor(() => expect(toastMock.error).toHaveBeenCalledWith("Pessoa é obrigatória"))
+    await waitFor(() => expect(toastMock.error).toHaveBeenCalledWith("Lead é obrigatória"))
   })
 
   it("cria ação avulsa via POST", async () => {

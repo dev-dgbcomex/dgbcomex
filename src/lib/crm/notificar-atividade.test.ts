@@ -22,7 +22,7 @@ describe("notificarAtividadeComercial", () => {
       acao: "cadastrou a pessoa",
       entidade: "Pessoa",
       registro: "Maria Souza",
-      link: "/comercial/crm/pessoas/10",
+      link: "/comercial/crm/leads/10",
       usuarioNome: "Tiago",
       usuarioId: 5,
     })
@@ -30,7 +30,7 @@ describe("notificarAtividadeComercial", () => {
     expect(notificar).toHaveBeenCalledWith(
       TIPO_ATIVIDADE_COMERCIAL,
       expect.stringContaining("Tiago cadastrou a pessoa"),
-      "/comercial/crm/pessoas/10",
+      "/comercial/crm/leads/10",
       "Tiago",
       undefined,
       { excluirUsuarioId: 5 }

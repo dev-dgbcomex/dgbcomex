@@ -56,7 +56,7 @@ const payload = {
 specRelatorioCrm(
   {
     titulo: "Pessoas",
-    endpoint: "/api/crm/relatorios/pessoas",
+    endpoint: "/api/crm/relatorios/leads",
     payload,
     textos: [
       "Pessoas no período",
@@ -70,10 +70,10 @@ specRelatorioCrm(
   RelatorioPessoasPage
 )
 
-describe("Relatório de Pessoas - tarja de cliente", () => {
+describe("Relatório de Leads - tarja de cliente", () => {
   it("mostra a tarja, a data da conversão e quem promovou", async () => {
     const fetchMock = createFetchMock(({ url }) => {
-      if (url.startsWith("/api/crm/relatorios/pessoas")) return { status: 200, json: payload }
+      if (url.startsWith("/api/crm/relatorios/leads")) return { status: 200, json: payload }
       return { status: 404, json: { error: "Rota não mockada" } }
     })
     vi.stubGlobal("fetch", fetchMock.fn)
@@ -89,7 +89,7 @@ describe("Relatório de Pessoas - tarja de cliente", () => {
 
   it("filtra por tarja de cliente", async () => {
     const fetchMock = createFetchMock(({ url }) => {
-      if (url.startsWith("/api/crm/relatorios/pessoas")) return { status: 200, json: payload }
+      if (url.startsWith("/api/crm/relatorios/leads")) return { status: 200, json: payload }
       return { status: 404, json: { error: "Rota não mockada" } }
     })
     vi.stubGlobal("fetch", fetchMock.fn)

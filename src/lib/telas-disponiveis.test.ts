@@ -59,6 +59,13 @@ describe("telas disponiveis", () => {
     "/kanban-amostras-standalone",
     "/comercial/crm/treinamento/admin/novo",
     "/comercial/crm/treinamento/exportar-pdf",
+    "/comercial/crm/leads",
+    "/comercial/crm/leads/novo",
+    "/comercial/crm/leads/[id]",
+    "/comercial/crm/pessoas",
+    "/comercial/crm/pessoas/novo",
+    "/comercial/crm/pessoas/[id]",
+    "/comercial/crm/relatorios/pessoas",
     "/processos/treinamento/admin/novo",
     "/processos/treinamento/exportar-pdf",
   ])
@@ -76,7 +83,7 @@ describe("telas disponiveis", () => {
     const relatorios = [
       "/comercial/crm/relatorios",
       "/comercial/crm/relatorios/atividades",
-      "/comercial/crm/relatorios/pessoas",
+      "/comercial/crm/relatorios/leads",
       "/comercial/crm/relatorios/oportunidades",
       "/comercial/crm/relatorios/propostas",
       "/comercial/crm/relatorios/visitas",

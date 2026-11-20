@@ -11,8 +11,8 @@ vi.mock("next-auth/react", () => ({
 }))
 
 const dashboardPayload = {
-  leads: { total: 0, esteMes: 0 },
-  pessoas: { total: 185 },
+  visitantes: { total: 0, esteMes: 0 },
+  leads: { total: 185 },
   clientes: { total: 12 },
   oportunidades: { total: 0, esteMes: 0, byStatus: [] },
   propostas: { total: 0, byStatus: [] },
@@ -39,8 +39,8 @@ describe("CrmDashboardPage", () => {
     expect(screen.getByRole("heading", { name: "CRM" })).toBeInTheDocument()
 
     for (const label of [
-      "Leads",
-      "Pessoas (Negócios)",
+      "Visitantes",
+      "Leads (Negócios)",
       "Clientes",
       "Oportunidades",
       "Propostas",
@@ -56,11 +56,11 @@ describe("CrmDashboardPage", () => {
   it("contém o texto dos cards dentro do card (truncate) e link correto", async () => {
     setup()
 
-    const label = await screen.findByText("Pessoas (Negócios)")
+    const label = await screen.findByText("Leads (Negócios)")
     expect(label).toHaveClass("truncate")
 
-    const card = screen.getByTitle("Pessoas (Negócios)")
-    expect(card).toHaveAttribute("href", "/comercial/crm/pessoas")
+    const card = screen.getByTitle("Leads (Negócios)")
+    expect(card).toHaveAttribute("href", "/comercial/crm/leads")
     expect(card).toHaveClass("overflow-hidden")
   })
 })

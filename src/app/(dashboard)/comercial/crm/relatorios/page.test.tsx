@@ -48,7 +48,7 @@ describe("CrmRelatoriosPage", () => {
     )
     const linkPessoas = screen
       .getAllByRole("link")
-      .find((a) => a.getAttribute("href") === "/comercial/crm/relatorios/pessoas")
+      .find((a) => a.getAttribute("href") === "/comercial/crm/relatorios/leads")
     expect(linkPessoas).toBeDefined()
     expect(screen.getByText("Conversões")).toBeInTheDocument()
     const linkConversoes = screen

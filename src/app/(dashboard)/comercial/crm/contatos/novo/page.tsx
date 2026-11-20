@@ -37,7 +37,7 @@ function NovoContatoPageContent() {
   })
 
   useEffect(() => {
-    fetch("/api/crm/pessoas")
+    fetch("/api/crm/leads")
       .then((r) => r.json())
       .then((data: EmpresaResumo[]) => {
         if (Array.isArray(data)) setEmpresas(data)
@@ -139,7 +139,7 @@ function NovoContatoPageContent() {
           description="Selecione o tipo de vínculo para cadastrar o contato."
           labels={{
             clienteDesc: "Vincular a uma empresa cliente",
-            pessoaDesc: "Vincular a uma pessoa (negócio)",
+            leadDesc: "Vincular a uma lead (negócio)",
             avulsa: "Avulso",
             avulsaDesc: "Contato sem vínculo inicial",
           }}

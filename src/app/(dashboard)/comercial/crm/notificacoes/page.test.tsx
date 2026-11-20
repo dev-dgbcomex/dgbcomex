@@ -21,7 +21,7 @@ const notificacoes = [
     mensagem: "Venda concluída",
     tipo: "lead_finalizado",
     lida: false,
-    link: "/comercial/crm/leads/2",
+    link: "/comercial/crm/visitantes/2",
     metadados: null,
     createdAt: "2024-01-06T10:00:00",
   },

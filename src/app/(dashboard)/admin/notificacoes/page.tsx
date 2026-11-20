@@ -47,6 +47,8 @@ const TIPO_LABEL: Record<string, string> = {
   REQUISICAO_CORTE_STATUS: "Requisição de Corte — Status Alterado",
   LEAD_CRIADO: "Lead Criado",
   LEAD_ATUALIZADO: "Lead Atualizado",
+  VISITANTE_CRIADO: "Visitante Criado",
+  VISITANTE_ATUALIZADO: "Visitante Atualizado",
   OPORTUNIDADE_CRIADA: "Oportunidade Criada",
   OPORTUNIDADE_ATUALIZADA: "Oportunidade Atualizada",
   OPORTUNIDADE_STATUS: "Oportunidade — Status Alterado",

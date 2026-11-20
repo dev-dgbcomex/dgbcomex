@@ -8,7 +8,7 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation"
 import { Loader2, ArrowLeft, Building2, User, UserCheck } from "lucide-react"
 import { PageSkeleton } from "@/components/ui/page-skeleton"
 import Link from "next/link"
-import { QuickCreatePessoa } from "@/components/crm/quick-create-pessoa"
+import { QuickCreateLead } from "@/components/crm/quick-create-lead"
 import { QuickCreateCliente } from "@/components/crm/quick-create-cliente"
 import { QuickCreateOportunidade } from "@/components/crm/quick-create-oportunidade"
 import { SelectCliente } from "@/components/crm/select-cliente"
@@ -17,7 +17,7 @@ import type { Proposta, PropostaCreate } from "../types"
 import type { EmpresaResumo, Oportunidade } from "../../oportunidades/types"
 
 async function fetchEmpresas() {
-  const res = await fetch("/api/crm/pessoas")
+  const res = await fetch("/api/crm/leads")
   if (!res.ok) throw new Error("Falha ao carregar")
   return res.json() as Promise<EmpresaResumo[]>
 }
@@ -154,7 +154,7 @@ function NovaPropostaContent() {
           description="Selecione o tipo de cliente para iniciar a proposta."
           labels={{
             clienteDesc: "Vincular a uma empresa cliente",
-            pessoaDesc: "Vincular a uma pessoa (negócio)",
+            leadDesc: "Vincular a uma lead (negócio)",
             avulsa: "Avulso",
             avulsaDesc: "Sem vínculo obrigatório (pode vincular)",
           }}
@@ -204,7 +204,7 @@ function NovaPropostaContent() {
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                     Pessoa (Negócio)
-                    <QuickCreatePessoa onCreated={handleEmpresaCreated} />
+                    <QuickCreateLead onCreated={handleEmpresaCreated} />
                   </label>
                   <select
                     value={empresaId}
@@ -239,7 +239,7 @@ function NovaPropostaContent() {
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                   Pessoa (Negócio) *
-                  <QuickCreatePessoa onCreated={handleEmpresaCreated} />
+                  <QuickCreateLead onCreated={handleEmpresaCreated} />
                 </label>
                 <select
                   value={empresaId}
@@ -321,7 +321,7 @@ function NovaPropostaContent() {
 
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-              Descrição
+              Título
             </label>
             <textarea
               value={descricao}

@@ -202,7 +202,7 @@ describe("EditarClientePage", () => {
     expect(screen.getByText("Transformada em cliente")).toBeInTheDocument()
     expect(screen.getByRole("link", { name: "TecMais Ltda" })).toHaveAttribute(
       "href",
-      "/comercial/crm/pessoas/7"
+      "/comercial/crm/leads/7"
     )
     expect(screen.getByText("Por Tiago")).toBeInTheDocument()
     expect(screen.getAllByText("R$ 5.000,00").length).toBeGreaterThan(0)

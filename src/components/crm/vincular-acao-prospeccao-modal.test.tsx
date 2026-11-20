@@ -11,7 +11,7 @@ function setup() {
     if (method === "GET" && url === "/api/clientes") {
       return { status: 200, json: [{ id: 1, nome: "Cliente Alpha" }] }
     }
-    if (method === "GET" && url === "/api/crm/pessoas") {
+    if (method === "GET" && url === "/api/crm/leads") {
       return { status: 200, json: [{ id: 2, razaoSocial: "Pessoa Beta" }] }
     }
     if (method === "GET" && url === "/api/crm/estados") {
@@ -48,12 +48,12 @@ describe("VincularAcaoProspeccaoModal", () => {
     expect(onClose).toHaveBeenCalled()
   })
 
-  it("vincula uma pessoa existente à ação avulsa", async () => {
+  it("vincula uma lead existente à ação avulsa", async () => {
     const { fetchMock } = setup()
 
-    fireEvent.click(screen.getByRole("button", { name: /Vincular a uma pessoa/ }))
+    fireEvent.click(screen.getByRole("button", { name: /Vincular a uma lead/ }))
     await screen.findByText("Pessoa Beta")
-    fireEvent.change(screen.getByRole("combobox", { name: "Selecione a Pessoa" }), {
+    fireEvent.change(screen.getByRole("combobox", { name: "Selecione a Lead" }), {
       target: { value: "2" },
     })
     fireEvent.click(screen.getByRole("button", { name: "Vincular" }))

@@ -9,14 +9,14 @@ describe("NovoContatoPage", () => {
     navMock.setPathname("/comercial/crm/contatos/novo")
   })
 
-  it("renderiza o seletor de tipo de vínculo (Cliente/Pessoa/Avulso)", () => {
+  it("renderiza o seletor de tipo de vínculo (Cliente/Lead/Avulso)", () => {
     vi.stubGlobal("fetch", createFetchMock(() => ({ json: null })).fn)
     renderPage(<NovoContatoPage />)
 
     expect(screen.getByRole("heading", { name: "Novo Contato" })).toBeInTheDocument()
     expect(screen.getByText("A quem este contato pertence?")).toBeInTheDocument()
     expect(screen.getByRole("button", { name: /Cliente/i })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: /Pessoa/i })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /Lead/i })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: /Avulso/i })).toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Criar Contato" })).not.toBeInTheDocument()
   })
@@ -35,7 +35,7 @@ describe("NovoContatoPage", () => {
 
   it("cria contato avulso (sem vínculo) via POST", async () => {
     const fetchMock = createFetchMock(({ method, url }) => {
-      if (method === "GET" && url === "/api/crm/pessoas") return { json: [] }
+      if (method === "GET" && url === "/api/crm/leads") return { json: [] }
       if (method === "GET" && url === "/api/clientes") return { json: [] }
       if (method === "POST" && url === "/api/crm/contatos") return { status: 201, json: { id: 5 } }
       return { status: 404, json: { error: "Rota não mockada" } }
@@ -67,7 +67,7 @@ describe("NovoContatoPage", () => {
 
   it("cria contato vinculado a uma pessoa", async () => {
     const fetchMock = createFetchMock(({ method, url }) => {
-      if (method === "GET" && url === "/api/crm/pessoas")
+      if (method === "GET" && url === "/api/crm/leads")
         return { json: [{ id: 1, razaoSocial: "Tecelagem Alpha" }] }
       if (method === "GET" && url === "/api/clientes") return { json: [] }
       if (method === "POST" && url === "/api/crm/contatos") return { status: 201, json: { id: 5 } }
@@ -76,7 +76,7 @@ describe("NovoContatoPage", () => {
     vi.stubGlobal("fetch", fetchMock.fn)
     renderPage(<NovoContatoPage />)
 
-    fireEvent.click(screen.getByRole("button", { name: /Pessoa/i }))
+    fireEvent.click(screen.getByRole("button", { name: /Lead/i }))
     await screen.findByRole("option", { name: "Tecelagem Alpha" })
     fireEvent.change(screen.getAllByRole("combobox")[0], { target: { value: "1" } })
     fireEvent.change(screen.getAllByRole("textbox")[0], { target: { value: "Carlos Silva" } })
@@ -92,7 +92,7 @@ describe("NovoContatoPage", () => {
 
   it("cria contato vinculado a um cliente", async () => {
     const fetchMock = createFetchMock(({ method, url }) => {
-      if (method === "GET" && url === "/api/crm/pessoas") return { json: [] }
+      if (method === "GET" && url === "/api/crm/leads") return { json: [] }
       if (method === "GET" && url === "/api/clientes")
         return { json: [{ id: 9, nome: "Cliente SP" }] }
       if (method === "POST" && url === "/api/crm/contatos") return { status: 201, json: { id: 5 } }

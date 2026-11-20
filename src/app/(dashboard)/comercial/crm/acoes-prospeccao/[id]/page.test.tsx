@@ -164,7 +164,7 @@ function buildHandler() {
     if (method === "PUT" && url === "/api/crm/acoes-prospeccao/42") return { json: acao }
     if (method === "DELETE" && url === "/api/crm/acoes-prospeccao/42") return { json: { ok: true } }
     if (method === "POST" && url === "/api/crm/acoes-prospeccao/42/check") return { json: acao }
-    if (method === "GET" && url.startsWith("/api/crm/pessoas/7")) {
+    if (method === "GET" && url.startsWith("/api/crm/leads/7")) {
       return { json: { contatos: [{ id: 8, nome: "Ana" }] } }
     }
     if (method === "GET" && url.startsWith("/api/crm/acoes-prospeccao/conflictos?")) {

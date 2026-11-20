@@ -19,8 +19,8 @@ import { ChartTooltip } from "@/components/ui/chart-tooltip"
 import { AnimatedLine } from "@/components/ui/animated-line"
 
 type CrmDashboardData = {
-  leads: { total: number; esteMes: number }
-  pessoas: { total: number }
+  visitantes: { total: number; esteMes: number }
+  leads: { total: number }
   oportunidades: {
     total: number
     esteMes: number
@@ -55,7 +55,7 @@ function formatCurrency(value: number) {
 
 export function CrmCharts({ data }: { data: CrmDashboardData | undefined }) {
   const pipelineData = [
-    { name: "Leads", value: data?.leads.total ?? 0 },
+    { name: "Visitantes", value: data?.visitantes.total ?? 0 },
     { name: "Oportunidades", value: data?.oportunidades.total ?? 0 },
     { name: "Propostas", value: data?.propostas.total ?? 0 },
     { name: "Convertidas", value: data?.conversao.oportunidadesConvertidas ?? 0 },

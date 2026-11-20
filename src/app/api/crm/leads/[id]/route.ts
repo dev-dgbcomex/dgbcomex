@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireAuth } from "@/lib/auth"
 import { db } from "@/lib/db"
-import { crmVisitantes } from "@/lib/db/schema/crm-visitantes"
-import { crmPessoas } from "@/lib/db/schema/crm-pessoas"
-import { eq } from "drizzle-orm"
-import { registrarLog, notificar, notificarDelecao } from "@/lib/notificar"
-import { inserirTimelineEvento, excluirTimelineEventosEntidade } from "@/lib/crm-timeline"
-import { handleApiError } from "@/lib/api-error"
-import { excluirOportunidadeCascade } from "@/lib/crm-cascade"
+import { crmLeads } from "@/lib/db/schema/crm-leads"
+import { clientes } from "@/lib/db/schema/clientes"
+import { crmContatos } from "@/lib/db/schema/crm-contatos"
 import { crmOportunidades } from "@/lib/db/schema/crm-oportunidades"
+import { crmPropostas } from "@/lib/db/schema/crm-propostas"
+import { crmVisitas } from "@/lib/db/schema/crm-visitas"
+import { eq, and, ne, sql } from "drizzle-orm"
+import { registrarLog, notificar } from "@/lib/notificar"
+import { promoverLeadParaCliente } from "@/lib/crm/promover-cliente"
+import { handleApiError } from "@/lib/api-error"
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -16,17 +18,62 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     if (auth instanceof NextResponse) return auth
 
     const { id } = await params
-    const [lead] = await db
+    const [empresa] = await db
       .select()
-      .from(crmVisitantes)
-      .where(eq(crmVisitantes.id, parseInt(id)))
+      .from(crmLeads)
+      .where(eq(crmLeads.id, parseInt(id)))
       .limit(1)
 
-    if (!lead) {
-      return NextResponse.json({ error: "Lead não encontrado" }, { status: 404 })
+    if (!empresa) {
+      return NextResponse.json({ error: "Lead não encontrada" }, { status: 404 })
     }
 
-    return NextResponse.json(lead)
+    const contatos = await db
+      .select()
+      .from(crmContatos)
+      .where(eq(crmContatos.empresaId, empresa.id))
+
+    const [cliente] = empresa.clienteId
+      ? await db
+          .select({ id: clientes.id, nome: clientes.nome, cnpj: clientes.cnpj })
+          .from(clientes)
+          .where(eq(clientes.id, empresa.clienteId))
+          .limit(1)
+      : []
+
+    const [oportunidades] = await db
+      .select({
+        total: sql<number>`count(*)::int`,
+        valor: sql<number>`coalesce(sum(${crmOportunidades.valorEstimado}), 0)`,
+      })
+      .from(crmOportunidades)
+      .where(eq(crmOportunidades.empresaId, empresa.id))
+
+    const [propostas] = await db
+      .select({
+        total: sql<number>`count(*)::int`,
+        valor: sql<number>`coalesce(sum(${crmPropostas.valor}), 0)`,
+      })
+      .from(crmPropostas)
+      .where(eq(crmPropostas.empresaId, empresa.id))
+
+    const [visitas] = await db
+      .select({ total: sql<number>`count(*)::int` })
+      .from(crmVisitas)
+      .where(eq(crmVisitas.empresaId, empresa.id))
+
+    return NextResponse.json({
+      ...empresa,
+      contatos,
+      cliente: cliente || null,
+      resumo: {
+        oportunidades: oportunidades?.total || 0,
+        valorOportunidades: Number(oportunidades?.valor || 0),
+        propostas: propostas?.total || 0,
+        valorPropostas: Number(propostas?.valor || 0),
+        visitas: visitas?.total || 0,
+      },
+    })
   } catch (error) {
     return handleApiError(error, "GET /api/crm/leads/[id]")
   }
@@ -43,102 +90,96 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
     const [existente] = await db
       .select()
-      .from(crmVisitantes)
-      .where(eq(crmVisitantes.id, parseInt(id)))
+      .from(crmLeads)
+      .where(eq(crmLeads.id, parseInt(id)))
       .limit(1)
 
     if (!existente) {
-      return NextResponse.json({ error: "Lead não encontrado" }, { status: 404 })
+      return NextResponse.json({ error: "Lead não encontrada" }, { status: 404 })
+    }
+
+    const cnpj = body.cnpj ? body.cnpj.replace(/[^a-zA-Z0-9]/g, "") : undefined
+    const cpf = body.cpf ? body.cpf.replace(/[^0-9]/g, "") : undefined
+
+    if (cnpj) {
+      const [duplicado] = await db
+        .select({ id: crmLeads.id })
+        .from(crmLeads)
+        .where(and(eq(crmLeads.cnpj, cnpj), ne(crmLeads.id, parseInt(id))))
+        .limit(1)
+      if (duplicado) {
+        return NextResponse.json({ error: "CNPJ já cadastrado" }, { status: 409 })
+      }
     }
 
     const values: Record<string, any> = { updatedAt: new Date() }
-    if (body.nome !== undefined) values.nome = body.nome
-    if (body.email !== undefined) values.email = body.email || null
+    if (body.tipoPessoa !== undefined) values.tipoPessoa = body.tipoPessoa
+    if (body.nome !== undefined) values.nome = body.nome || null
+    if (body.razaoSocial !== undefined) values.razaoSocial = body.razaoSocial || null
+    if (body.nomeFantasia !== undefined) values.nomeFantasia = body.nomeFantasia || null
+    if (body.cpf !== undefined) values.cpf = cpf || null
+    if (body.cnpj !== undefined) values.cnpj = cnpj || null
+    if (body.segmento !== undefined) values.segmento = body.segmento || null
+    if (body.porte !== undefined) values.porte = body.porte || null
+    if (body.site !== undefined) values.site = body.site || null
     if (body.telefone !== undefined) values.telefone = body.telefone || null
     if (body.celular !== undefined) values.celular = body.celular || null
-    if (body.empresaNome !== undefined) values.empresaNome = body.empresaNome || null
-    if (body.cargo !== undefined) values.cargo = body.cargo || null
-    if (body.origem !== undefined) values.origem = body.origem
-    if (body.documento !== undefined) values.documento = body.documento || null
+    if (body.email !== undefined) values.email = body.email || null
+    if (body.emailNf !== undefined) values.emailNf = body.emailNf || null
+    if (body.endereco !== undefined) values.endereco = body.endereco || null
+    if (body.numero !== undefined) values.numero = body.numero || null
+    if (body.complemento !== undefined) values.complemento = body.complemento || null
+    if (body.bairro !== undefined) values.bairro = body.bairro || null
+    if (body.cidade !== undefined) values.cidade = body.cidade || null
+    if (body.uf !== undefined) values.uf = body.uf || null
+    if (body.cep !== undefined) values.cep = body.cep || null
+    if (body.observacoes !== undefined) values.observacoes = body.observacoes || null
     if (body.status !== undefined) values.status = body.status
-    if (body.descricao !== undefined) values.descricao = body.descricao || null
     if (body.responsavelId !== undefined) values.responsavelId = body.responsavelId
-    if (body.empresaId !== undefined) values.empresaId = body.empresaId
-    if (body.pessoaId !== undefined) values.pessoaId = body.pessoaId
+    if (body.ativo !== undefined) values.ativo = body.ativo
 
-    const [atualizado] = await db
-      .update(crmVisitantes)
+    const [atualizada] = await db
+      .update(crmLeads)
       .set(values)
-      .where(eq(crmVisitantes.id, parseInt(id)))
+      .where(eq(crmLeads.id, parseInt(id)))
       .returning()
+
+    const nomeLead = atualizada.nome || atualizada.razaoSocial || "Lead"
+
+    if (
+      body.status === "CONVERTIDO_CLIENTE" &&
+      existente.status !== "CONVERTIDO_CLIENTE" &&
+      !atualizada.promovidaCliente
+    ) {
+      try {
+        await promoverLeadParaCliente({
+          pessoaId: atualizada.id,
+          usuarioId: auth.userId,
+          usuarioNome: session.user.name,
+          notificarEquipe: false,
+        })
+      } catch (err) {
+        console.error("[sync-cliente]", err)
+      }
+    }
 
     await registrarLog({
       tipo: "ATUALIZACAO",
       acao: "atualizar",
-      descricao: `Lead atualizado: ${atualizado.nome}`,
-      entidade: "CrmVisitante",
-      entidadeId: atualizado.id,
+      descricao: `Lead atualizada: ${nomeLead}`,
+      entidade: "CrmLead",
+      entidadeId: atualizada.id,
       usuarioNome: session.user.name,
     })
 
-    if (body.status && body.status !== existente.status && atualizado.empresaId) {
-      await inserirTimelineEvento({
-        empresaId: atualizado.empresaId,
-        tipo: "LEAD",
-        descricao: `Lead "${atualizado.nome}" mudou para "${body.status}"`,
-        metadados: {
-          leadId: atualizado.id,
-          statusAnterior: existente.status,
-          statusNovo: body.status,
-        },
-      })
-    }
-
-    // Se mudou para CONVERTIDO, criar pessoa automaticamente (só se não veio pessoaId no body)
-    if (body.status === "CONVERTIDO" && body.status !== existente.status && !body.pessoaId) {
-      const pessoaData: Record<string, any> = {
-        nome: atualizado.nome || existente.nome,
-        email: atualizado.email || existente.email,
-        telefone: atualizado.telefone || existente.telefone,
-        celular: atualizado.celular || existente.celular,
-        responsavelId: atualizado.responsavelId || existente.responsavelId,
-        tipoPessoa: atualizado.tipoPessoa || existente.tipoPessoa || "PF",
-      }
-
-      const doc = atualizado.documento || existente.documento
-      if (doc) {
-        if (pessoaData.tipoPessoa === "PF") pessoaData.cpf = doc
-        else pessoaData.cnpj = doc
-      }
-
-      if (atualizado.empresaNome || existente.empresaNome) {
-        pessoaData.razaoSocial = atualizado.empresaNome || existente.empresaNome
-      }
-
-      const [pessoa] = await db.insert(crmPessoas).values(pessoaData).returning()
-
-      // Vincular a pessoa criada ao lead
-      await db
-        .update(crmVisitantes)
-        .set({ pessoaId: pessoa.id, updatedAt: new Date() })
-        .where(eq(crmVisitantes.id, atualizado.id))
-
-      await inserirTimelineEvento({
-        empresaId: atualizado.empresaId!,
-        tipo: "LEAD",
-        descricao: `Lead "${atualizado.nome}" convertido em pessoa (ID ${pessoa.id})`,
-        metadados: { leadId: atualizado.id, pessoaId: pessoa.id },
-      })
-    }
-
     await notificar(
       "LEAD_ATUALIZADO",
-      `Lead atualizado: ${atualizado.nome}`,
-      `/comercial/crm/leads/${atualizado.id}`,
+      `Lead atualizada: ${nomeLead}`,
+      `/comercial/crm/leads/${atualizada.id}`,
       session.user.name
     )
 
-    return NextResponse.json(atualizado)
+    return NextResponse.json(atualizada)
   } catch (error) {
     return handleApiError(error, "PUT /api/crm/leads/[id]")
   }
@@ -148,27 +189,15 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   try {
     const auth = await requireAuth()
     if (auth instanceof NextResponse) return auth
-    if ((auth.session.user?.role ?? "") !== "ADMIN" && (auth.session.user?.role ?? "") !== "SUDO") {
-      return NextResponse.json({ error: "Apenas administradores podem excluir" }, { status: 403 })
-    }
 
-    const { id } = await params
-    const leadId = parseInt(id)
-    await db.transaction(async (tx: any) => {
-      const opors = await tx
-        .select({ id: crmOportunidades.id })
-        .from(crmOportunidades)
-        .where(eq(crmOportunidades.leadId, leadId))
-      for (const o of opors) {
-        await excluirOportunidadeCascade(tx, o.id)
-      }
-      await excluirTimelineEventosEntidade({ tipo: "LEAD", campo: "leadId", id: leadId }, tx)
-      await tx.delete(crmVisitantes).where(eq(crmVisitantes.id, leadId))
-    })
-
-    await notificarDelecao("Lead CRM", id, auth.session.user.name)
-
-    return NextResponse.json({ success: true })
+    return NextResponse.json(
+      {
+        error:
+          "Leads não podem ser excluídas: o cadastro é referenciado por veículos, oportunidades, propostas e visitas. Para arquivar, transforme a lead em cliente.",
+        fkError: true,
+      },
+      { status: 403 }
+    )
   } catch (error) {
     return handleApiError(error, "DELETE /api/crm/leads/[id]")
   }

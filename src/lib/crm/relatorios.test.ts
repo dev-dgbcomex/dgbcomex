@@ -102,7 +102,7 @@ describe("consultarClientes", () => {
     expect(relatorio.cards.propostas).toBe(1)
     expect(relatorio.cards.valorPropostas).toBe(5000)
     expect(relatorio.cards.visitas).toBe(3)
-    expect(relatorio.cards.pessoas).toBe(1)
+    expect(relatorio.cards.leads).toBe(1)
 
     const linha = relatorio.linhas.find((l: any) => l.id === 5)!
     expect(linha.oportunidades).toBe(2)

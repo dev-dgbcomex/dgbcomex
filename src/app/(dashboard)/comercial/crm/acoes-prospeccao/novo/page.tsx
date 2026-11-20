@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { Suspense, useState, useEffect, useRef } from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
@@ -72,7 +72,7 @@ function NovaAcaoProspeccaoPageContent() {
 
   const { data: empresas = [] } = useQuery<EmpresaResult[]>({
     queryKey: ["crm-pessoas"],
-    queryFn: () => fetch("/api/crm/pessoas").then((r) => r.json()),
+    queryFn: () => fetch("/api/crm/leads").then((r) => r.json()),
   })
 
   const { data: oportunidades = [] } = useQuery<OportunidadeResumo[]>({
@@ -94,7 +94,7 @@ function NovaAcaoProspeccaoPageContent() {
     queryKey: ["acao-prospeccao-contatos", tipoEntidade, form.empresaId, form.clienteId],
     queryFn: async () => {
       if (tipoEntidade === "PESSOA" && form.empresaId) {
-        const res = await fetch(`/api/crm/pessoas/${form.empresaId}`)
+        const res = await fetch(`/api/crm/leads/${form.empresaId}`)
         const data = await res.json()
         return Array.isArray(data.contatos) ? data.contatos : []
       }
@@ -114,7 +114,7 @@ function NovaAcaoProspeccaoPageContent() {
     queryKey: ["acao-prospeccao-endereco", tipoEntidade, form.empresaId, form.clienteId],
     queryFn: async () => {
       if (tipoEntidade === "PESSOA" && form.empresaId) {
-        const res = await fetch(`/api/crm/pessoas/${form.empresaId}`)
+        const res = await fetch(`/api/crm/leads/${form.empresaId}`)
         const data = await res.json()
         return {
           endereco: data.endereco || "",
@@ -274,7 +274,7 @@ function NovaAcaoProspeccaoPageContent() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (tipoEntidade === "PESSOA" && !form.empresaId) {
-      toast.error("Pessoa é obrigatória")
+      toast.error("Lead é obrigatória")
       return
     }
     if (tipoEntidade === "CLIENTE" && !form.clienteId) {

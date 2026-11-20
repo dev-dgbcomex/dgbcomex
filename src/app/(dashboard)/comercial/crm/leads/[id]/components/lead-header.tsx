@@ -2,10 +2,10 @@ import { ArrowLeft, Check, X, Pencil, Archive, Building2 } from "lucide-react"
 import { InfoButton } from "@/components/ui/info-button"
 import type { InfoContent } from "@/lib/info-content"
 import { STATUS_CORES } from "./constants"
-import type { Pessoa } from "../../types"
+import type { Lead } from "../../types"
 
-interface PessoaHeaderProps {
-  pessoa: Pessoa
+interface LeadHeaderProps {
+  lead: Lead
   info: InfoContent | null
   editing: boolean
   onBack: () => void
@@ -15,8 +15,8 @@ interface PessoaHeaderProps {
   onPromover?: () => void
 }
 
-export function PessoaHeader({
-  pessoa,
+export function LeadHeader({
+  lead,
   info,
   editing,
   onBack,
@@ -24,7 +24,7 @@ export function PessoaHeader({
   onCancel,
   onEdit,
   onPromover,
-}: PessoaHeaderProps) {
+}: LeadHeaderProps) {
   return (
     <div className="flex items-center gap-3">
       <button
@@ -36,32 +36,32 @@ export function PessoaHeader({
       <div className="flex-1">
         <div className="flex items-center gap-2">
           <h1 className="text-xl font-bold text-slate-900 dark:text-slate-50">
-            {pessoa.tipoPessoa === "PF" ? pessoa.nome || pessoa.razaoSocial : pessoa.razaoSocial}
+            {lead.tipoPessoa === "PF" ? lead.nome || lead.razaoSocial : lead.razaoSocial}
             {info && <InfoButton content={info} />}
           </h1>
-          {pessoa.tipoPessoa && (
+          {lead.tipoPessoa && (
             <span
               className={`inline-flex text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
-                pessoa.tipoPessoa === "PF"
+                lead.tipoPessoa === "PF"
                   ? "text-purple-600 bg-purple-50 dark:bg-purple-950/50 dark:text-purple-400"
                   : "text-cyan-600 bg-cyan-50 dark:bg-cyan-950/50 dark:text-cyan-400"
               }`}
             >
-              {pessoa.tipoPessoa === "PF" ? "PF" : "PJ"}
+              {lead.tipoPessoa === "PF" ? "PF" : "PJ"}
             </span>
           )}
           <span
-            className={`inline-flex text-[10px] px-2 py-0.5 rounded-full font-medium ${STATUS_CORES[pessoa.status ?? ""] || ""}`}
+            className={`inline-flex text-[10px] px-2 py-0.5 rounded-full font-medium ${STATUS_CORES[lead.status ?? ""] || ""}`}
           >
-            {pessoa.status}
+            {lead.status}
           </span>
-          {pessoa.promovidaCliente && (
+          {lead.promovidaCliente && (
             <span
               className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-medium text-emerald-700 bg-emerald-50 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900"
               title={
-                pessoa.promovidoEm
-                  ? `Transformada em cliente em ${new Date(pessoa.promovidoEm).toLocaleString("pt-BR")}${
-                      pessoa.promovidoPorNome ? ` por ${pessoa.promovidoPorNome}` : ""
+                lead.promovidoEm
+                  ? `Transformada em cliente em ${new Date(lead.promovidoEm).toLocaleString("pt-BR")}${
+                      lead.promovidoPorNome ? ` por ${lead.promovidoPorNome}` : ""
                     }`
                   : "Transformada em cliente"
               }
@@ -70,8 +70,8 @@ export function PessoaHeader({
             </span>
           )}
         </div>
-        {pessoa.tipoPessoa === "PJ" && pessoa.nomeFantasia && (
-          <p className="text-sm text-slate-500">{pessoa.nomeFantasia}</p>
+        {lead.tipoPessoa === "PJ" && lead.nomeFantasia && (
+          <p className="text-sm text-slate-500">{lead.nomeFantasia}</p>
         )}
       </div>
       <div className="flex gap-2">
@@ -98,7 +98,7 @@ export function PessoaHeader({
             >
               <Pencil size={14} /> Editar
             </button>
-            {!pessoa.promovidaCliente && onPromover && (
+            {!lead.promovidaCliente && onPromover && (
               <button
                 onClick={onPromover}
                 className="flex items-center gap-1 text-xs font-medium text-emerald-600 hover:underline"

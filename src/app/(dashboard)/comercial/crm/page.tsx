@@ -29,8 +29,8 @@ import {
 const CrmCharts = dynamic(() => import("./charts").then((m) => m.CrmCharts), { ssr: false })
 
 type CrmDashboardData = {
-  leads: { total: number; esteMes: number }
-  pessoas: { total: number }
+  visitantes: { total: number; esteMes: number }
+  leads: { total: number }
   clientes: { total: number }
   oportunidades: {
     total: number
@@ -149,19 +149,19 @@ export default function CrmDashboardPage() {
           {/* Linha 1: Cards de resumo */}
           <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-8">
             <SummaryCard
-              href="/comercial/crm/leads"
+              href="/comercial/crm/visitantes"
               icon={<UserPlus size={20} />}
-              value={data?.leads.total ?? 0}
-              label="Leads"
-              sub={`${data?.leads.esteMes ?? 0} este mês`}
+              value={data?.visitantes.total ?? 0}
+              label="Visitantes"
+              sub={`${data?.visitantes.esteMes ?? 0} este mês`}
               bgColor="bg-emerald-100 dark:bg-emerald-950/50"
               iconColor="text-emerald-600 dark:text-emerald-400"
             />
             <SummaryCard
-              href="/comercial/crm/pessoas"
+              href="/comercial/crm/leads"
               icon={<Building2 size={20} />}
-              value={data?.pessoas.total ?? 0}
-              label="Pessoas (Negócios)"
+              value={data?.leads.total ?? 0}
+              label="Leads (Negócios)"
               bgColor="bg-blue-100 dark:bg-blue-950/50"
               iconColor="text-blue-600 dark:text-blue-400"
             />
@@ -233,17 +233,17 @@ export default function CrmDashboardPage() {
             <CrmCharts data={data} />
           </div>
 
-          {/* Linha 3: Top Pessoas + Atividades Recentes */}
+          {/* Linha 3: Top Leads + Atividades Recentes */}
           <div className="grid gap-6 md:grid-cols-2">
-            {/* Top Pessoas */}
+            {/* Top Leads */}
             <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
               <div className="flex items-center justify-between p-4 border-b border-slate-100 dark:border-slate-800">
                 <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-50 flex items-center gap-2">
                   <Building2 size={16} className="text-blue-500" />
-                  Top Pessoas (Negócios)
+                  Top Leads (Negócios)
                 </h2>
                 <Link
-                  href="/comercial/crm/pessoas"
+                  href="/comercial/crm/leads"
                   className="text-xs text-blue-600 hover:underline flex items-center gap-1"
                 >
                   Ver todas <ArrowRight size={12} />
@@ -323,16 +323,16 @@ export default function CrmDashboardPage() {
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-9 gap-3">
               <QuickAction
-                href="/comercial/crm/leads/novo"
+                href="/comercial/crm/visitantes/novo"
                 icon={<UserPlus size={18} />}
                 label="Novo Lead"
                 color="text-emerald-600"
                 bg="bg-emerald-100 dark:bg-emerald-950/50"
               />
               <QuickAction
-                href="/comercial/crm/pessoas/novo"
+                href="/comercial/crm/leads/novo"
                 icon={<Building2 size={18} />}
-                label="Nova Pessoa (Negócio)"
+                label="Novo Lead (Negócio)"
                 color="text-blue-600"
                 bg="bg-blue-100 dark:bg-blue-950/50"
               />

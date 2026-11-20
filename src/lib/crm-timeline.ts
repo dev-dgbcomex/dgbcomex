@@ -4,6 +4,7 @@ import { crmTimelineEventos } from "@/lib/db/schema/crm-timeline-eventos"
 
 type TipoEvento =
   | "LEAD"
+  | "VISITANTE"
   | "OPORTUNIDADE"
   | "VISITA"
   | "ACAO_PROSPECCAO"
@@ -33,9 +34,10 @@ export async function inserirTimelineEvento(params: {
 
 export async function excluirTimelineEventosEntidade(
   params: {
-    tipo: "LEAD" | "OPORTUNIDADE" | "VISITA" | "ACAO_PROSPECCAO" | "TAREFA" | "PROPOSTA"
+    tipo: "LEAD" | "VISITANTE" | "OPORTUNIDADE" | "VISITA" | "ACAO_PROSPECCAO" | "TAREFA" | "PROPOSTA"
     campo:
       | "leadId"
+      | "visitanteId"
       | "oportunidadeId"
       | "visitaId"
       | "acaoProspeccaoId"

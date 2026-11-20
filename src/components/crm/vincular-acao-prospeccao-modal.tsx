@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useEffect } from "react"
 import { useQuery } from "@tanstack/react-query"
@@ -6,7 +6,7 @@ import { Loader2, Link as LinkIcon, Plus } from "lucide-react"
 import { toast } from "sonner"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { QuickCreateCliente } from "./quick-create-cliente"
-import { QuickCreatePessoa } from "./quick-create-pessoa"
+import { QuickCreateLead } from "./quick-create-lead"
 
 type TipoVinculo = "CLIENTE" | "PESSOA" | ""
 type ClienteOpcao = { id: number; nome?: string | null }
@@ -47,7 +47,7 @@ export default function VincularAcaoProspeccaoModal({ acaoId, open, onClose, onL
   } = useQuery<Array<ClienteOpcao | PessoaOpcao>>({
     queryKey: ["vincular-acao-prospeccao-lista", tipo],
     queryFn: async () => {
-      const url = tipo === "CLIENTE" ? "/api/clientes" : "/api/crm/pessoas"
+      const url = tipo === "CLIENTE" ? "/api/clientes" : "/api/crm/leads"
       const res = await fetch(url)
       const data: unknown = await res.json()
       return Array.isArray(data) ? (data as Array<ClienteOpcao | PessoaOpcao>) : []
@@ -151,9 +151,9 @@ export default function VincularAcaoProspeccaoModal({ acaoId, open, onClose, onL
               onClick={() => setTipo("PESSOA")}
               className="flex-1 flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-slate-200 dark:border-slate-700 hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/20 transition-all"
             >
-              <span className="text-sm font-semibold text-blue-600">Pessoa</span>
+              <span className="text-sm font-semibold text-blue-600">Lead</span>
               <span className="text-xs text-slate-500 text-center">
-                Vincular a uma pessoa (negócio)
+                Vincular a uma lead (negócio)
               </span>
             </button>
           </div>
@@ -161,7 +161,7 @@ export default function VincularAcaoProspeccaoModal({ acaoId, open, onClose, onL
           <div className="space-y-4 pt-2">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                {tipo === "CLIENTE" ? "Selecione o Cliente" : "Selecione a Pessoa"}
+                {tipo === "CLIENTE" ? "Selecione o Cliente" : "Selecione a Lead"}
               </span>
               <button
                 type="button"
@@ -181,7 +181,7 @@ export default function VincularAcaoProspeccaoModal({ acaoId, open, onClose, onL
               </div>
             ) : (
               <select
-                aria-label={tipo === "CLIENTE" ? "Selecione o Cliente" : "Selecione a Pessoa"}
+                aria-label={tipo === "CLIENTE" ? "Selecione o Cliente" : "Selecione a Lead"}
                 value={selectedId}
                 onChange={(e) => setSelectedId(e.target.value)}
                 className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -235,9 +235,9 @@ export default function VincularAcaoProspeccaoModal({ acaoId, open, onClose, onL
                   className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/30 px-3 py-2 text-sm font-medium text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-950/50 transition-colors"
                 >
                   <Plus size={14} />
-                  Criar nova pessoa
+                  Criar nova lead
                 </button>
-                <QuickCreatePessoa
+                <QuickCreateLead
                   open={createOpenPessoa}
                   onOpenChange={setCreateOpenPessoa}
                   onCreated={handlePessoaCreated}

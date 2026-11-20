@@ -2,71 +2,48 @@
 
 import { useQuery } from "@tanstack/react-query"
 import Link from "next/link"
-import { Suspense, useState } from "react"
+import { Suspense, useMemo, useState } from "react"
 import { usePathname, useSearchParams } from "next/navigation"
 import { InfoButton } from "@/components/ui/info-button"
 import { getInfoContent } from "@/lib/info-content"
 import {
   PlusCircle,
-  UserPlus,
-  Search,
-  Phone,
-  Star,
-  Building2,
-  XCircle,
-  Trash2,
+  UserCircle,
   Table,
   Columns,
+  Database,
+  Building2,
+  Eye,
+  Pencil,
+  ExternalLink,
+  Archive,
 } from "lucide-react"
-import { toast } from "sonner"
-import { useSession } from "next-auth/react"
-import type { Session } from "next-auth"
-import { FloatableKanban } from "@/components/crm/floatable-kanban"
 import LeadsKanban from "@/components/crm/leads-kanban"
-import { ConfirmModal } from "@/components/ui/confirm-modal"
+import { FloatableKanban } from "@/components/crm/floatable-kanban"
+import ImportarApiModal from "@/components/integracao/ImportarApiModal"
+import BuscarCnpjModal from "@/components/crm/buscar-cnpj-modal"
+import { Button } from "@/components/ui/button"
 import ListFilters, { useListFilters } from "@/components/ui/list-filters"
 import { PageSkeleton } from "@/components/ui/page-skeleton"
+import { ExportarRelatorio } from "@/components/crm/relatorios/exportar-relatorio"
+import { PromoverClienteBotao } from "@/components/crm/promover-cliente-botao"
+import type { Lead } from "./types"
 
-async function fetchLeads(): Promise<Lead[]> {
+async function fetchEmpresas(): Promise<Lead[]> {
   const res = await fetch("/api/crm/leads")
   if (!res.ok) throw new Error("Falha ao carregar")
   return res.json()
 }
 
-interface Lead {
-  id: number
-  nome: string
-  email: string | null
-  celular: string | null
-  empresaNome: string | null
-  empresaRazaoSocial: string | null
-  empresaId: number | null
-  tipoPessoa: "PF" | "PJ" | null
-  score: number | null
-  origem: string | null
-  responsavelNome: string | null
-  status: string
-  createdAt: string
-}
-
 const STATUS_CORES: Record<string, string> = {
   NOVO: "text-blue-600 bg-blue-50 dark:bg-blue-950/50 dark:text-blue-400",
-  CONTATADO: "text-amber-600 bg-amber-50 dark:bg-amber-950/50 dark:text-amber-400",
   QUALIFICADO: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/50 dark:text-emerald-400",
-  CONVERTIDO: "text-green-600 bg-green-50 dark:bg-green-950/50 dark:text-green-400",
+  CONVERTIDO_CLIENTE: "text-green-600 bg-green-50 dark:bg-green-950/50 dark:text-green-400",
   PERDIDO: "text-red-600 bg-red-50 dark:bg-red-950/50 dark:text-red-400",
+  INATIVO: "text-slate-400 bg-slate-100 dark:bg-slate-800 dark:text-slate-500",
 }
 
-const ORIGEM_LABELS: Record<string, string> = {
-  SITE: "Site",
-  INDICACAO: "Indicação",
-  EVENTO: "Evento",
-  PROSPECCAO: "Prospecção",
-  LIGACAO: "Ligação",
-  WHATSAPP: "WhatsApp",
-  EMAIL: "E-mail",
-  OUTRO: "Outro",
-}
+type TarjaFiltro = "sem" | "com" | "todos"
 
 function CrmLeadsPageContent() {
   const pathname = usePathname()
@@ -75,128 +52,138 @@ function CrmLeadsPageContent() {
   const [modo, setModo] = useState<"tabela" | "kanban">(
     searchParams.get("view") === "kanban" ? "kanban" : "tabela"
   )
-  const [leadToPerder, setLeadToPerder] = useState<Lead | null>(null)
-  const [leadToExcluir, setLeadToExcluir] = useState<Lead | null>(null)
-  const { data: session } = useSession()
-  const role = (session?.user as Session["user"] | undefined)?.role
-  const isAdmin = role === "ADMIN" || role === "SUDO"
+  const [showApiImport, setShowApiImport] = useState(false)
+  const [showCnpjSearch, setShowCnpjSearch] = useState(false)
+  const [tarjaFiltro, setTarjaFiltro] = useState<TarjaFiltro>("sem")
 
   const {
-    data: leads,
+    data: empresas,
     isLoading,
     refetch,
-  } = useQuery({
+  } = useQuery<Lead[]>({
     queryKey: ["crm-leads"],
-    queryFn: fetchLeads,
+    queryFn: fetchEmpresas,
     retry: 1,
   })
 
   const filterState = useListFilters(
     {
-      searchFields: ["nome", "email", "empresaNome", "responsavelNome", "origem", "tipoPessoa"],
+      searchFields: ["nome", "razaoSocial", "cpf", "cnpj", "segmento", "responsavelNome"],
       statusOptions: [
         { value: "NOVO", label: "Novo" },
-        { value: "CONTATADO", label: "Contatado" },
         { value: "QUALIFICADO", label: "Qualificado" },
-        { value: "CONVERTIDO", label: "Convertido" },
+        { value: "CONVERTIDO_CLIENTE", label: "Convertido" },
         { value: "PERDIDO", label: "Perdido" },
+        { value: "INATIVO", label: "Inativo" },
       ],
       dateField: "createdAt",
     },
-    leads || []
+    empresas || []
   )
-  const filteredData = filterState.filtered
 
-  async function converterParaEmpresa(lead: Lead) {
-    const isPF = lead.tipoPessoa === "PF"
-    const label = isPF ? "Nome completo" : "Razão social"
-    const valor = prompt(`${label}:`, lead.empresaNome || lead.nome)
-    if (!valor) return
+  const filtradasPorTarja = useMemo(() => {
+    const lista = filterState.filtered
+    if (tarjaFiltro === "todos") return lista
+    return lista.filter((p) => Boolean(p.promovidaCliente) === (tarjaFiltro === "com"))
+  }, [filterState.filtered, tarjaFiltro])
 
-    try {
-      const body: Record<string, unknown> = isPF
-        ? { tipoPessoa: "PF", nome: valor }
-        : { tipoPessoa: "PJ", razaoSocial: valor }
+  const filteredData = filtradasPorTarja
 
-      const res = await fetch("/api/crm/pessoas", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      })
-      if (!res.ok) throw new Error("Erro ao criar pessoa")
-      const pessoa = await res.json()
-
-      await fetch(`/api/crm/leads/${lead.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "CONVERTIDO", pessoaId: pessoa.id }),
-      })
-
-      toast.success(`Lead convertido para pessoa "${valor}"`)
-      refetch()
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Erro ao converter")
-    }
+  function nomeExibicao(p: Lead) {
+    if (p.tipoPessoa === "PF") return p.nome || "—"
+    return p.razaoSocial || "—"
   }
 
-  async function mudarStatus(lead: Lead, status: string) {
-    try {
-      await fetch(`/api/crm/leads/${lead.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
-      })
-      toast.success(`Lead alterado para ${status}`)
-      refetch()
-    } catch {
-      toast.error("Erro ao atualizar status")
-    }
+  function documento(p: Lead) {
+    if (p.tipoPessoa === "PF") return p.cpf || "—"
+    return p.cnpj || "—"
   }
 
-  async function excluirLead(lead: Lead) {
-    try {
-      const res = await fetch(`/api/crm/leads/${lead.id}`, { method: "DELETE" })
-      if (!res.ok) {
-        const err = await res.json().catch(() => null)
-        throw new Error(err?.error || "Erro ao excluir")
-      }
-      toast.success(`Lead "${lead.nome}" excluído`)
-      refetch()
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Erro ao excluir")
-    } finally {
-      setLeadToExcluir(null)
-    }
+  function mapsUrl(p: Lead) {
+    const parts = [p.endereco, p.numero, p.bairro, p.cidade, p.uf, p.cep].filter(Boolean)
+    if (parts.length === 0) return null
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(parts.join(", "))}`
   }
 
-  function formatDateTime(dateStr: string) {
-    if (!dateStr) return "—"
-    return new Date(dateStr).toLocaleString("pt-BR", {
-      day: "2-digit",
-      month: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    })
-  }
+  const dadosExportacao = useMemo(
+    () => ({
+      filename: "leads-crm",
+      title: "Relatório de Leads (Negócios)",
+      period: `${filtradasPorTarja.length} registro(s)${
+        tarjaFiltro === "com" ? " com tarja de cliente" : tarjaFiltro === "sem" ? " sem tarja" : ""
+      }`,
+      headers: ["Nome", "Documento", "Tipo", "Segmento", "Status", "Tarja", "Data"],
+      rows: filtradasPorTarja.map((p) => [
+        nomeExibicao(p),
+        documento(p),
+        p.tipoPessoa || "—",
+        p.segmento || "—",
+        p.status || "—",
+        p.promovidaCliente ? "Sim" : "Não",
+        p.createdAt ? new Date(p.createdAt).toLocaleDateString("pt-BR") : "—",
+      ]),
+      stats: {
+        Total: filtradasPorTarja.length,
+        "Com tarja": filtradasPorTarja.filter((p) => p.promovidaCliente).length,
+        "Sem tarja": filtradasPorTarja.filter((p) => !p.promovidaCliente).length,
+      },
+    }),
+    [filtradasPorTarja, tarjaFiltro]
+  )
 
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-50">
-            Leads{info && <InfoButton content={info} />}
+            Leads (Negócios){info && <InfoButton content={info} />}
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
             {isLoading
               ? "Carregando..."
-              : `${filteredData.length} de ${(leads || []).length} total`}
+              : `${filteredData.length} de ${(empresas || []).length} total`}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-0.5 shadow-sm">
             <button
+              onClick={() => setTarjaFiltro("sem")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                tarjaFiltro === "sem"
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
+              }`}
+              title="Mostrar apenas leads que ainda não viraram cliente"
+            >
+              Sem tarja
+            </button>
+            <button
+              onClick={() => setTarjaFiltro("com")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                tarjaFiltro === "com"
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
+              }`}
+              title="Mostrar apenas leads que já viraram cliente"
+            >
+              <Archive size={14} />
+              Com tarja
+            </button>
+            <button
+              onClick={() => setTarjaFiltro("todos")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                tarjaFiltro === "todos"
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
+              }`}
+              title="Mostrar todas as leads"
+            >
+              Todos
+            </button>
+          </div>
+          <div className="flex rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-0.5 shadow-sm">
+            <button
               onClick={() => setModo("tabela")}
-              aria-pressed={modo === "tabela"}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                 modo === "tabela"
                   ? "bg-blue-600 text-white shadow-sm"
@@ -208,7 +195,6 @@ function CrmLeadsPageContent() {
             </button>
             <button
               onClick={() => setModo("kanban")}
-              aria-pressed={modo === "kanban"}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                 modo === "kanban"
                   ? "bg-blue-600 text-white shadow-sm"
@@ -219,6 +205,24 @@ function CrmLeadsPageContent() {
               Kanban
             </button>
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowCnpjSearch(true)}
+            className="gap-1.5"
+          >
+            <Building2 size={14} />
+            Buscar CNPJ
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowApiImport(true)}
+            className="gap-1.5"
+          >
+            <Database size={14} />
+            Importar via API
+          </Button>
           <Link
             href="/comercial/crm/leads/novo"
             className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 transition-colors shadow-sm"
@@ -226,22 +230,23 @@ function CrmLeadsPageContent() {
             <PlusCircle size={14} />
             Novo Lead
           </Link>
+          <ExportarRelatorio dados={dadosExportacao} disabled={isLoading} />
         </div>
       </div>
 
       <ListFilters
         config={{
-          searchFields: ["nome", "email", "empresaNome", "responsavelNome", "origem", "tipoPessoa"],
+          searchFields: ["nome", "razaoSocial", "cpf", "cnpj", "segmento", "responsavelNome"],
           statusOptions: [
             { value: "NOVO", label: "Novo" },
-            { value: "CONTATADO", label: "Contatado" },
             { value: "QUALIFICADO", label: "Qualificado" },
-            { value: "CONVERTIDO", label: "Convertido" },
+            { value: "CONVERTIDO_CLIENTE", label: "Convertido" },
             { value: "PERDIDO", label: "Perdido" },
+            { value: "INATIVO", label: "Inativo" },
           ],
           dateField: "createdAt",
         }}
-        data={leads || []}
+        data={empresas || []}
         filterState={filterState}
         placeholder="Buscar leads..."
       />
@@ -255,9 +260,9 @@ function CrmLeadsPageContent() {
               </div>
             ) : filteredData.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 text-center">
-                <UserPlus className="w-12 h-12 text-slate-300 dark:text-slate-700 mb-3" />
+                <UserCircle className="w-12 h-12 text-slate-300 dark:text-slate-700 mb-3" />
                 <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                  Nenhum lead encontrado
+                  Nenhum lead encontrada
                 </p>
               </div>
             ) : (
@@ -266,163 +271,125 @@ function CrmLeadsPageContent() {
                   <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
                     <tr>
                       <th className="px-2 py-2 md:px-4 md:py-3 text-left text-[10px] md:text-xs font-medium text-slate-500 dark:text-slate-400 uppercase whitespace-nowrap">
+                        Tipo
+                      </th>
+                      <th className="px-2 py-2 md:px-4 md:py-3 text-left text-[10px] md:text-xs font-medium text-slate-500 dark:text-slate-400 uppercase whitespace-nowrap">
                         Nome
                       </th>
                       <th className="px-2 py-2 md:px-4 md:py-3 text-left text-[10px] md:text-xs font-medium text-slate-500 dark:text-slate-400 uppercase whitespace-nowrap hidden sm:table-cell">
-                        Contato
+                        Documento
+                      </th>
+                      <th className="px-2 py-2 md:px-4 md:py-3 text-left text-[10px] md:text-xs font-medium text-slate-500 dark:text-slate-400 uppercase whitespace-nowrap hidden lg:table-cell">
+                        Segmento
                       </th>
                       <th className="px-2 py-2 md:px-4 md:py-3 text-left text-[10px] md:text-xs font-medium text-slate-500 dark:text-slate-400 uppercase whitespace-nowrap hidden md:table-cell">
-                        Pessoa
-                      </th>
-                      <th className="px-2 py-2 md:px-4 md:py-3 text-left text-[10px] md:text-xs font-medium text-slate-500 dark:text-slate-400 uppercase whitespace-nowrap hidden sm:table-cell">
-                        Score
-                      </th>
-                      <th className="px-2 py-2 md:px-4 md:py-3 text-left text-[10px] md:text-xs font-medium text-slate-500 dark:text-slate-400 uppercase whitespace-nowrap hidden lg:table-cell">
-                        Origem
-                      </th>
-                      <th className="px-2 py-2 md:px-4 md:py-3 text-left text-[10px] md:text-xs font-medium text-slate-500 dark:text-slate-400 uppercase whitespace-nowrap hidden lg:table-cell">
                         Responsável
                       </th>
                       <th className="px-2 py-2 md:px-4 md:py-3 text-left text-[10px] md:text-xs font-medium text-slate-500 dark:text-slate-400 uppercase whitespace-nowrap">
                         Status
                       </th>
                       <th className="px-2 py-2 md:px-4 md:py-3 text-left text-[10px] md:text-xs font-medium text-slate-500 dark:text-slate-400 uppercase whitespace-nowrap hidden sm:table-cell">
-                        Criado
+                        Data
                       </th>
-                      <th className="px-2 py-2 md:px-4 md:py-3 text-left text-[10px] md:text-xs font-medium text-slate-500 dark:text-slate-400 uppercase whitespace-nowrap">
-                        Ações
+                      <th className="px-2 py-2 md:px-4 md:py-3 text-right text-[10px] md:text-xs font-medium text-slate-500 dark:text-slate-400 uppercase whitespace-nowrap">
+                        Responsável
                       </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                    {filteredData.map((lead: Lead) => (
-                      <tr key={lead.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                        <td className="px-2 py-2 md:px-4 md:py-3 text-xs md:text-sm font-medium whitespace-nowrap">
-                          <Link
-                            href={`/comercial/crm/leads/${lead.id}`}
-                            className="text-slate-900 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400"
-                          >
-                            {lead.nome}
-                          </Link>
-                        </td>
-                        <td className="px-2 py-2 md:px-4 md:py-3 text-xs md:text-sm text-slate-500 hidden sm:table-cell">
-                          {lead.email && <div className="truncate max-w-[180px]">{lead.email}</div>}
-                          {lead.celular && <div className="text-xs">{lead.celular}</div>}
-                          {!lead.email && !lead.celular && "—"}
-                        </td>
-                        <td className="px-2 py-2 md:px-4 md:py-3 text-xs md:text-sm text-slate-500 hidden md:table-cell">
-                          <div className="flex items-center gap-2">
-                            {lead.empresaNome ||
-                              (lead.empresaRazaoSocial ? (
-                                <Link
-                                  href={`/comercial/crm/pessoas/${lead.empresaId}`}
-                                  className="text-blue-600 hover:underline"
-                                >
-                                  {lead.empresaRazaoSocial}
-                                </Link>
-                              ) : (
-                                "—"
-                              ))}
-                            {lead.tipoPessoa && (
-                              <span
-                                className={`inline-flex text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
-                                  lead.tipoPessoa === "PF"
-                                    ? "text-purple-600 bg-purple-50 dark:bg-purple-950/50 dark:text-purple-400"
-                                    : "text-cyan-600 bg-cyan-50 dark:bg-cyan-950/50 dark:text-cyan-400"
-                                }`}
-                              >
-                                {lead.tipoPessoa === "PF" ? "PF" : "PJ"}
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-2 py-2 md:px-4 md:py-3 hidden sm:table-cell">
-                          {lead.score != null ? (
+                    {filteredData.map((emp: Lead) => (
+                      <tr
+                        key={emp.id}
+                        className="hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer"
+                      >
+                        <td className="px-2 py-2 md:px-4 md:py-3">
+                          {emp.tipoPessoa ? (
                             <span
-                              className={`inline-flex text-[10px] px-1.5 md:px-2 py-0.5 rounded-full font-medium ${
-                                lead.score >= 70
-                                  ? "text-green-600 bg-green-50 dark:bg-green-950/50 dark:text-green-400"
-                                  : lead.score >= 40
-                                    ? "text-amber-600 bg-amber-50 dark:bg-amber-950/50 dark:text-amber-400"
-                                    : "text-red-600 bg-red-50 dark:bg-red-950/50 dark:text-red-400"
+                              className={`inline-flex text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                                emp.tipoPessoa === "PF"
+                                  ? "text-purple-600 bg-purple-50 dark:bg-purple-950/50 dark:text-purple-400"
+                                  : "text-cyan-600 bg-cyan-50 dark:bg-cyan-950/50 dark:text-cyan-400"
                               }`}
                             >
-                              {lead.score}%
+                              {emp.tipoPessoa === "PF" ? "PF" : "PJ"}
                             </span>
                           ) : (
-                            <span className="text-[10px] text-slate-400">—</span>
+                            "—"
                           )}
                         </td>
-                        <td className="px-2 py-2 md:px-4 md:py-3 hidden lg:table-cell">
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 font-medium">
-                            {lead.origem ? ORIGEM_LABELS[lead.origem] || lead.origem : "—"}
-                          </span>
+                        <td className="px-2 py-2 md:px-4 md:py-3 text-xs md:text-sm font-medium text-slate-900 dark:text-slate-200 whitespace-nowrap">
+                          <Link
+                            href={`/comercial/crm/leads/${emp.id}`}
+                            className="hover:underline"
+                          >
+                            {nomeExibicao(emp)}
+                          </Link>
+                        </td>
+                        <td className="px-2 py-2 md:px-4 md:py-3 text-xs md:text-sm font-mono text-slate-500 hidden sm:table-cell">
+                          {documento(emp)}
                         </td>
                         <td className="px-2 py-2 md:px-4 md:py-3 text-xs md:text-sm text-slate-500 hidden lg:table-cell">
-                          {lead.responsavelNome || "—"}
+                          {emp.segmento || "—"}
+                        </td>
+                        <td className="px-2 py-2 md:px-4 md:py-3 text-xs md:text-sm text-slate-500 hidden md:table-cell">
+                          {emp.responsavelNome || "—"}
                         </td>
                         <td className="px-2 py-2 md:px-4 md:py-3">
                           <span
-                            className={`inline-flex text-[10px] px-1.5 md:px-2 py-0.5 rounded-full font-medium ${STATUS_CORES[lead.status] || ""}`}
+                            className={`inline-flex text-[10px] px-1.5 md:px-2 py-0.5 rounded-full font-medium ${STATUS_CORES[emp.status ?? ""] || "text-slate-600 bg-slate-100"}`}
                           >
-                            {lead.status}
+                            {emp.status}
                           </span>
                         </td>
                         <td className="px-2 py-2 md:px-4 md:py-3 text-xs md:text-sm text-slate-500 whitespace-nowrap hidden sm:table-cell">
-                          {formatDateTime(lead.createdAt)}
+                          {emp.createdAt
+                            ? new Date(emp.createdAt).toLocaleDateString("pt-BR")
+                            : "—"}
                         </td>
-                        <td className="px-2 py-2 md:px-4 md:py-3">
-                          <div className="flex items-center gap-2">
-                            {lead.status === "NOVO" && (
-                              <button
-                                onClick={() => mudarStatus(lead, "CONTATADO")}
-                                title="Contatar"
-                                aria-label={`Contatar ${lead.nome}`}
-                                className="p-1.5 rounded-lg text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30"
+                        <td
+                          className="px-2 py-2 md:px-4 md:py-3 text-right"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <div className="flex items-center justify-end gap-1">
+                            <Link
+                              href={`/comercial/crm/leads/${emp.id}`}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/50 transition-colors"
+                              title="Ver detalhes"
+                            >
+                              <Eye size={14} />
+                            </Link>
+                            <Link
+                              href={`/comercial/crm/leads/${emp.id}?edit=true`}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/50 transition-colors"
+                              title="Editar"
+                            >
+                              <Pencil size={14} />
+                            </Link>
+                            {mapsUrl(emp) && (
+                              <a
+                                href={mapsUrl(emp)!}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 transition-colors"
+                                title="Abrir no Google Maps"
                               >
-                                <Phone size={15} />
-                              </button>
+                                <ExternalLink size={14} />
+                              </a>
                             )}
-                            {lead.status === "CONTATADO" && (
-                              <button
-                                onClick={() => mudarStatus(lead, "QUALIFICADO")}
-                                title="Qualificar"
-                                aria-label={`Qualificar ${lead.nome}`}
-                                className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+                            {emp.promovidaCliente ? (
+                              <span
+                                className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-medium text-emerald-700 bg-emerald-50 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900"
+                                title={`Virou cliente${emp.promovidoEm ? ` em ${new Date(emp.promovidoEm).toLocaleDateString("pt-BR")}` : ""}`}
                               >
-                                <Star size={15} />
-                              </button>
-                            )}
-                            {(lead.status === "QUALIFICADO" || lead.status === "NOVO") &&
-                              !lead.empresaId && (
-                                <button
-                                  onClick={() => converterParaEmpresa(lead)}
-                                  title="Converter para Pessoa (Negócio)"
-                                  aria-label={`Converter ${lead.nome} para pessoa`}
-                                  className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30"
-                                >
-                                  <Building2 size={15} />
-                                </button>
-                              )}
-                            {lead.status !== "PERDIDO" && lead.status !== "CONVERTIDO" && (
-                              <button
-                                onClick={() => setLeadToPerder(lead)}
-                                title="Perder"
-                                aria-label={`Marcar ${lead.nome} como perdido`}
-                                className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
-                              >
-                                <XCircle size={15} />
-                              </button>
-                            )}
-                            {isAdmin && (
-                              <button
-                                onClick={() => setLeadToExcluir(lead)}
-                                title="Excluir lead"
-                                aria-label={`Excluir ${lead.nome}`}
-                                className="p-1.5 rounded-lg text-slate-500 hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-600"
-                              >
-                                <Trash2 size={15} />
-                              </button>
+                                <Archive size={12} />
+                                Cliente
+                              </span>
+                            ) : (
+                              <PromoverClienteBotao
+                                lead={emp}
+                                compact
+                                onPromovido={() => refetch()}
+                              />
                             )}
                           </div>
                         </td>
@@ -442,35 +409,28 @@ function CrmLeadsPageContent() {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
           </div>
         ) : (
-          <FloatableKanban tipo="LEAD">
+          <FloatableKanban tipo="PESSOA">
             <LeadsKanban leads={filteredData} />
           </FloatableKanban>
         ))}
 
-      <ConfirmModal
-        open={!!leadToPerder}
-        title="Marcar lead como perdido?"
-        message={`O lead "${leadToPerder?.nome}" será marcado como PERDIDO.`}
-        subMessage="Esta ação não pode ser desfeita facilmente."
-        variant="danger"
-        confirmLabel="Marcar como Perdido"
-        onConfirm={() => {
-          if (leadToPerder) {
-            mudarStatus(leadToPerder, "PERDIDO")
-            setLeadToPerder(null)
-          }
-        }}
-        onCancel={() => setLeadToPerder(null)}
-      />
-      <ConfirmModal
-        open={!!leadToExcluir}
-        title="Excluir lead?"
-        message={`Tem certeza que deseja excluir "${leadToExcluir?.nome}"? Oportunidades vinculadas e a timeline também serão removidos. Esta ação não pode ser desfeita.`}
-        confirmLabel="Excluir"
-        variant="danger"
-        onConfirm={() => leadToExcluir && excluirLead(leadToExcluir)}
-        onCancel={() => setLeadToExcluir(null)}
-      />
+      {showApiImport && (
+        <ImportarApiModal
+          tela="leads"
+          existingRecords={empresas || []}
+          existingKey="idIntegracao"
+          onImportado={() => window.location.reload()}
+          onClose={() => setShowApiImport(false)}
+        />
+      )}
+
+      {showCnpjSearch && (
+        <BuscarCnpjModal
+          tipo="lead"
+          onCreated={() => window.location.reload()}
+          onClose={() => setShowCnpjSearch(false)}
+        />
+      )}
     </div>
   )
 }

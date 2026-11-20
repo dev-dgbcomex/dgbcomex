@@ -14,7 +14,7 @@ type TarefaCreate = {
 }
 
 async function fetchEmpresas() {
-  const res = await fetch("/api/crm/pessoas")
+  const res = await fetch("/api/crm/leads")
   if (!res.ok) throw new Error("Falha ao carregar empresas")
   return res.json()
 }
@@ -101,7 +101,7 @@ export default function CriarTarefaDialog({ open, onClose }: Props) {
 
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-              Descrição
+              Título
             </label>
             <textarea
               value={descricao}

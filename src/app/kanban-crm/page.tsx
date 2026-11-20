@@ -4,9 +4,9 @@ import { Suspense, useEffect, useRef, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { useStatuses } from "@/hooks/use-statuses"
 import { KanbanSkeleton } from "@/components/crm/kanban-column"
-import LeadsKanban from "@/components/crm/leads-kanban"
+import VisitantesKanban from "@/components/crm/visitantes-kanban"
 import OportunidadesKanban from "@/components/crm/oportunidades-kanban"
-import PessoasKanban from "@/components/crm/pessoas-kanban"
+import LeadsKanban from "@/components/crm/leads-kanban"
 import PropostasKanban from "@/components/crm/propostas-kanban"
 import TarefasKanban from "@/components/crm/tarefas-kanban"
 import AcoesProspeccaoKanban from "@/components/crm/acoes-prospeccao-kanban"
@@ -17,9 +17,10 @@ import { Minimize2, Loader2 } from "lucide-react"
 const CHANNEL = "kanban-crm-sync"
 
 const TIPO_ROTULO: Record<string, string> = {
-  LEAD: "Leads",
+  LEAD: "Visitantes",
+  VISITANTE: "Visitantes",
   OPORTUNIDADE: "Oportunidades",
-  PESSOA: "Pessoas",
+  PESSOA: "Leads",
   PROPOSTA: "Propostas",
   TAREFA: "Tarefas",
   ACAO_PROSPECCAO: "Ações de Prospecção",
@@ -28,9 +29,10 @@ const TIPO_ROTULO: Record<string, string> = {
 }
 
 const API_ENDPOINTS: Record<string, string> = {
-  LEAD: "/api/crm/leads",
+  LEAD: "/api/crm/visitantes",
+  VISITANTE: "/api/crm/visitantes",
   OPORTUNIDADE: "/api/crm/oportunidades",
-  PESSOA: "/api/crm/pessoas",
+  PESSOA: "/api/crm/leads",
   PROPOSTA: "/api/crm/propostas",
   TAREFA: "/api/crm/tarefas",
   ACAO_PROSPECCAO: "/api/crm/acoes-prospeccao",
@@ -101,11 +103,12 @@ function CRMKanbanStandaloneContent() {
       )
     switch (tipo) {
       case "LEAD":
-        return <LeadsKanban leads={data} />
+      case "VISITANTE":
+        return <VisitantesKanban visitantes={data} />
       case "OPORTUNIDADE":
         return <OportunidadesKanban oportunidades={data} />
       case "PESSOA":
-        return <PessoasKanban pessoas={data} />
+        return <LeadsKanban leads={data} />
       case "PROPOSTA":
         return <PropostasKanban propostas={data} />
       case "TAREFA":

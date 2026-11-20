@@ -33,7 +33,7 @@ const RELATORIOS = [
     icon: Activity,
   },
   {
-    href: "/comercial/crm/relatorios/pessoas",
+    href: "/comercial/crm/relatorios/leads",
     label: "Pessoas",
     desc: "Cadastro de pessoas do CRM por período, responsável e conversão",
     icon: Users,
@@ -65,7 +65,7 @@ const RELATORIOS = [
   {
     href: "/comercial/crm/relatorios/clientes",
     label: "Clientes",
-    desc: "Negócio de cada cliente, direto ou herdado das pessoas promovidas",
+    desc: "Negócio de cada cliente, direto ou herdado das leads promovidas",
     icon: Building2,
   },
 ]

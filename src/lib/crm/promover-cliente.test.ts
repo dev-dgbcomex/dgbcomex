@@ -10,9 +10,9 @@ import { db } from "@/lib/db"
 import { registrarLog } from "@/lib/notificar"
 import { inserirTimelineEvento } from "@/lib/crm-timeline"
 import { createQueryBuilder } from "@/test/route-db-mock"
-import { promoverPessoaParaCliente } from "./promover-cliente"
+import { promoverLeadParaCliente } from "./promover-cliente"
 
-describe("promoverPessoaParaCliente", () => {
+describe("promoverLeadParaCliente", () => {
   beforeEach(() => {
     vi.mocked(registrarLog).mockReset()
     vi.mocked(inserirTimelineEvento).mockReset()
@@ -51,7 +51,7 @@ describe("promoverPessoaParaCliente", () => {
   })
 
   it("passa o negócio da pessoa para o cliente", async () => {
-    const resultado = await promoverPessoaParaCliente({
+    const resultado = await promoverLeadParaCliente({
       pessoaId: 7,
       usuarioId: 1,
       usuarioNome: "Tiago",

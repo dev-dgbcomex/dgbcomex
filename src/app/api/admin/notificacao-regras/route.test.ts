@@ -57,7 +57,7 @@ describe("GET /api/admin/notificacao-regras", () => {
     expect(res.status).toBe(200)
 
     const data = await res.json()
-    expect(data.regras).toHaveLength(38)
+    expect(data.regras).toHaveLength(40)
     expect(data.regras.find((r: any) => r.tipo === "SOLICITACAO_CRIADA").roles).toEqual([
       "COMERCIAL",
     ])

@@ -60,7 +60,7 @@ export default function RelatorioClientesPage() {
       l.cnpj || "—",
       l.segmento || "—",
       l.local || "—",
-      l.pessoas || 0,
+      l.leads || 0,
       l.oportunidades || 0,
       l.oportunidadesEmAberto || 0,
       moeda.format(l.valorOportunidades || 0),
@@ -201,7 +201,7 @@ export default function RelatorioClientesPage() {
               </CelulaRelatorio>
               <CelulaRelatorio>{l.segmento || "—"}</CelulaRelatorio>
               <CelulaRelatorio className="whitespace-nowrap">{l.local || "—"}</CelulaRelatorio>
-              <CelulaRelatorio className="tabular-nums">{l.pessoas || 0}</CelulaRelatorio>
+              <CelulaRelatorio className="tabular-nums">{l.leads || 0}</CelulaRelatorio>
               <CelulaRelatorio className="tabular-nums">{l.oportunidades || 0}</CelulaRelatorio>
               <CelulaRelatorio className="tabular-nums">
                 {l.oportunidadesEmAberto || 0}

@@ -15,7 +15,7 @@ function req(url: string) {
   return new NextRequest(`http://localhost${url}`)
 }
 
-describe("/api/crm/relatorios/pessoas", () => {
+describe("/api/crm/relatorios/leads", () => {
   beforeEach(() => {
     vi.mocked(requireAuth).mockReset()
     vi.mocked(consultarPessoas).mockReset()
@@ -42,12 +42,12 @@ describe("/api/crm/relatorios/pessoas", () => {
     vi.mocked(requireAuth).mockResolvedValue(
       new NextResponse(JSON.stringify({ error: "Não autorizado" }), { status: 401 }) as any
     )
-    const res = await GET(req("/api/crm/relatorios/pessoas"))
+    const res = await GET(req("/api/crm/relatorios/leads"))
     expect(res.status).toBe(401)
   })
 
   it("devolve o relatório com a lista de usuários", async () => {
-    const res = await GET(req("/api/crm/relatorios/pessoas?periodo=semana"))
+    const res = await GET(req("/api/crm/relatorios/leads?periodo=semana"))
     expect(res.status).toBe(200)
     const data = await res.json()
     expect(data.cards.total).toBe(1)
@@ -58,7 +58,7 @@ describe("/api/crm/relatorios/pessoas", () => {
   it("repassa os filtros da query string", async () => {
     await GET(
       req(
-        "/api/crm/relatorios/pessoas?periodo=periodo&de=2026-11-01&ate=2026-11-03&segmento=T%C3%AAxtil&usuario=7&tarja=com"
+        "/api/crm/relatorios/leads?periodo=periodo&de=2026-11-01&ate=2026-11-03&segmento=T%C3%AAxtil&usuario=7&tarja=com"
       )
     )
     expect(consultarPessoas).toHaveBeenCalledWith({

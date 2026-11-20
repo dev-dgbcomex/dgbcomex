@@ -75,7 +75,7 @@ export function VisualizacaoCard({
               </span>
               {visita.empresaId ? (
                 <Link
-                  href={`/comercial/crm/pessoas/${visita.empresaId}`}
+                  href={`/comercial/crm/leads/${visita.empresaId}`}
                   className="text-blue-600 hover:underline inline-flex items-center gap-1"
                 >
                   {visita.empresaNome} <ExternalLink size={12} />

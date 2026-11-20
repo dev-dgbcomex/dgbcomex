@@ -36,10 +36,10 @@ describe("NovaOportunidadePage", () => {
           ],
         }
       }
-      if (method === "GET" && url === "/api/crm/pessoas") {
+      if (method === "GET" && url === "/api/crm/leads") {
         return { json: [{ id: 1, razaoSocial: "Tecelagem Alpha" }] }
       }
-      if (method === "GET" && url === "/api/crm/leads") {
+      if (method === "GET" && url === "/api/crm/visitantes") {
         return { json: [{ id: 2, nome: "Carlos Lead" }] }
       }
       if (method === "GET" && url === "/api/usuarios/ativos?role=COMERCIAL,ADMIN,SUDO") {
@@ -54,13 +54,13 @@ describe("NovaOportunidadePage", () => {
     vi.stubGlobal("fetch", fetchMock.fn)
   })
 
-  it("renderiza o seletor de tipo de vínculo (Cliente/Pessoa/Avulso)", async () => {
+  it("renderiza o seletor de tipo de vínculo (Cliente/Lead/Avulso)", async () => {
     renderPage(<NovaOportunidadePage />)
 
     expect(await screen.findByRole("heading", { name: "Nova Oportunidade" })).toBeInTheDocument()
     expect(screen.getByText("A quem pertence esta oportunidade?")).toBeInTheDocument()
     expect(screen.getByRole("button", { name: /Cliente/i })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: /Pessoa/i })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /Lead/i })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: /Avulso/i })).toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Salvar" })).not.toBeInTheDocument()
   })
@@ -68,7 +68,7 @@ describe("NovaOportunidadePage", () => {
   it("carrega todos os usuários do comercial no campo Responsável", async () => {
     renderPage(<NovaOportunidadePage />)
     await screen.findByRole("heading", { name: "Nova Oportunidade" })
-    fireEvent.click(screen.getByRole("button", { name: /Pessoa/i }))
+    fireEvent.click(screen.getByRole("button", { name: /Lead/i }))
 
     expect(
       findCall(fetchMock.calls, "/api/usuarios/ativos?role=COMERCIAL,ADMIN,SUDO", "GET")
@@ -81,7 +81,7 @@ describe("NovaOportunidadePage", () => {
   it("valida Título obrigatório", async () => {
     const { container } = renderPage(<NovaOportunidadePage />)
     await screen.findByRole("heading", { name: "Nova Oportunidade" })
-    fireEvent.click(screen.getByRole("button", { name: /Pessoa/i }))
+    fireEvent.click(screen.getByRole("button", { name: /Lead/i }))
 
     fireEvent.submit(container.querySelector("form")!)
     await waitFor(() => expect(toastMock.error).toHaveBeenCalledWith("Título é obrigatório"))
@@ -90,7 +90,7 @@ describe("NovaOportunidadePage", () => {
   it("cria oportunidade via POST e navega para a lista", async () => {
     const { container } = renderPage(<NovaOportunidadePage />)
     await screen.findByRole("heading", { name: "Nova Oportunidade" })
-    fireEvent.click(screen.getByRole("button", { name: /Pessoa/i }))
+    fireEvent.click(screen.getByRole("button", { name: /Lead/i }))
 
     fireEvent.change(screen.getByPlaceholderText("Ex: Venda de malha 100% algodão"), {
       target: { value: "Venda de malha 100% algodão" },

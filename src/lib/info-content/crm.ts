@@ -96,9 +96,9 @@ export const crmContent: Record<string, InfoContent> = {
   "/comercial/crm": {
     title: "Dashboard CRM",
     description:
-      "Visão geral do CRM com métricas de leads, pessoas, pipeline comercial, atividades recentes e previsão de receita. Central de comando para o time comercial.",
+      "Visão geral do CRM com métricas de leads, visitantes, pipeline comercial, atividades recentes e previsão de receita. Central de comando para o time comercial.",
     rules: [
-      "Os cards de resumo (Leads, Pessoas, Oportunidades) são clicáveis — levam direto para a lista correspondente.",
+      "Os cards de resumo (Leads, Visitantes, Oportunidades) são clicáveis — levam direto para a lista correspondente.",
       "O funil mostra a quantidade de oportunidades em cada etapa do pipeline.",
       "A previsão de receita é calculada com base no valor estimado das oportunidades em aberto.",
       "O gráfico de previsão mensal é atualizado automaticamente com dados da IA Comercial.",
@@ -110,34 +110,34 @@ export const crmContent: Record<string, InfoContent> = {
         desc: "Quantidade de oportunidades por estágio (Novo → Qualificação → Proposta → Negociação → Fechado)",
       },
       { name: "Previsão de Receita", desc: "Soma dos valores estimados das oportunidades abertas" },
-      { name: "Top Pessoas", desc: "5 pessoas com maior valor total em pipeline" },
+      { name: "Top Leads", desc: "5 leads com maior valor total em pipeline" },
       { name: "Atividades Recentes", desc: "Últimas 10 movimentações registradas na timeline" },
     ],
   },
 
   // ==================== LEADS ====================
-  "/comercial/crm/leads": {
-    title: "Leads",
+  "/comercial/crm/visitantes": {
+    title: "Visitantes",
     description:
-      "Lista de leads captados por diferentes origens: site, WhatsApp, indicação, prospecção ativa ou eventos. Aqui você gerencia o primeiro contato com potenciais clientes.",
+      "Lista de visitantes captados por diferentes origens: site, WhatsApp, indicação, prospecção ativa ou eventos. Aqui você gerencia o primeiro contato com potenciais clientes.",
     rules: [
-      "Leads NOVOS devem ser contatados em até 24h para maior taxa de conversão.",
+      "Visitantes NOVOS devem ser contatados em até 24h para maior taxa de conversão.",
       "O score IA (0-100) é preenchido automaticamente pela inteligência artificial, indicando a probabilidade de conversão.",
-      "Lead QUALIFICADO pode ser convertido em Pessoa — isso cria um registro de pessoa no CRM.",
-      "Lead PERDIDO pode ser reativado automaticamente após 90 dias pela IA Comercial.",
+      "Visitante QUALIFICADO pode ser convertido em Lead — isso cria um cadastro de lead no CRM.",
+      "Visitante PERDIDO pode ser reativado automaticamente após 90 dias pela IA Comercial.",
       "A coluna Score IA mostra: verde (≥70), amarelo (40-69), vermelho (<40).",
     ],
     fields: [
       { name: "Nome", desc: "Nome completo do contato" },
-      { name: "Contato", desc: "E-mail e telefone do lead" },
-      { name: "Empresa", desc: "Empresa onde o lead trabalha (se informado)" },
+      { name: "Contato", desc: "E-mail e telefone do visitante" },
+      { name: "Empresa", desc: "Empresa onde o visitante trabalha (se informado)" },
       {
         name: "Score IA",
         desc: "Pontuação de 0-100 calculada pela IA Comercial — quanto maior, maior a chance de conversão",
       },
       {
         name: "Origem",
-        desc: "Como o lead foi captado: Site, WhatsApp, Indicação, Prospecção, Evento, Ligação, E-mail",
+        desc: "Como o visitante foi captado: Site, WhatsApp, Indicação, Prospecção, Evento, Ligação, E-mail",
       },
       {
         name: "Status",
@@ -145,46 +145,46 @@ export const crmContent: Record<string, InfoContent> = {
       },
     ],
   },
-  "/comercial/crm/leads/novo": {
-    title: "Novo Lead",
+  "/comercial/crm/visitantes/novo": {
+    title: "Novo Visitante",
     description:
-      "Cadastre manualmente um lead captado por qualquer canal. Quanto mais informações preencher, melhor a IA poderá classificar o lead automaticamente.",
+      "Cadastre manualmente um visitante captado por qualquer canal. Quanto mais informações preencher, melhor a IA poderá classificar o visitante automaticamente.",
     rules: [
       "Apenas o nome é obrigatório — os demais campos podem ser preenchidos depois.",
-      "Se o lead já tiver um CNPJ, é melhor cadastrá-lo direto como Pessoa.",
-      "Todo lead inicia com status NOVO.",
+      "Se o visitante já tiver um CNPJ, é melhor cadastrá-lo direto como Lead.",
+      "Todo visitante inicia com status NOVO.",
       "O responsável padrão é o usuário logado, mas pode ser alterado.",
     ],
     fields: [
       { name: "Nome", desc: "Nome completo do contato (obrigatório)" },
       { name: "E-mail / Telefone", desc: "Canais de contato principais" },
-      { name: "Origem", desc: "Selecione como o lead foi captado" },
+      { name: "Origem", desc: "Selecione como o visitante foi captado" },
       { name: "Responsável", desc: "Quem vai fazer o primeiro contato" },
     ],
   },
 
   // ==================== PESSOAS ====================
-  "/comercial/crm/pessoas": {
-    title: "Pessoas",
+  "/comercial/crm/leads": {
+    title: "Leads",
     description:
-      "Cadastro de pessoas no CRM. Cada pessoa pode ter múltiplos contatos, oportunidades, propostas, visitas e um histórico completo na timeline.",
+      "Cadastro de leads no CRM. Cada lead pode ter múltiplos contatos, oportunidades, propostas, visitas e um histórico completo na timeline.",
     rules: [
-      "O CNPJ é único — não é possível cadastrar duas pessoas com o mesmo CNPJ.",
-      "Pessoas podem ser criadas manualmente ou convertidas de leads qualificados.",
-      "Pessoas não podem ser excluídas: o cadastro é referenciado por contatos, oportunidades, propostas, visitas e timeline. Use 'Tornar cliente' para arquivar.",
-      "O botão 'Tornar cliente' cria (ou reaproveita) o cadastro de Clientes pelo CNPJ, marca a pessoa com tarja de cliente e preserva todo o histórico (oportunidades, propostas e visitas) nos relatórios. A ação não pode ser desfeita.",
-      "A listagem esconde por padrão as pessoas com tarja. Use o filtro 'Sem tarja / Com tarja / Todos' para alternar a visibilidade.",
-      "Pessoas com tarja continuam acessíveis pelo detalhe (link direto) e pelo relatório de Conversões.",
-      "Ao clicar no nome da pessoa, você abre o detalhe completo com timeline, WhatsApp e resumo IA.",
+      "O CNPJ é único — não é possível cadastrar duas leads com o mesmo CNPJ.",
+      "Leads podem ser criadas manualmente ou convertidas de leads qualificados.",
+      "Leads não podem ser excluídas: o cadastro é referenciado por contatos, oportunidades, propostas, visitas e timeline. Use 'Tornar cliente' para arquivar.",
+      "O botão 'Tornar cliente' cria (ou reaproveita) o cadastro de Clientes pelo CNPJ, marca a lead com tarja de cliente e preserva todo o histórico (oportunidades, propostas e visitas) nos relatórios. A ação não pode ser desfeita.",
+      "A listagem esconde por padrão as leads com tarja. Use o filtro 'Sem tarja / Com tarja / Todos' para alternar a visibilidade.",
+      "Leads com tarja continuam acessíveis pelo detalhe (link direto) e pelo relatório de Conversões.",
+      "Ao clicar no nome da lead, você abre o detalhe completo com timeline, WhatsApp e resumo IA.",
     ],
     fields: [
-      { name: "Razão Social", desc: "Nome jurídico da pessoa (obrigatório)" },
+      { name: "Razão Social", desc: "Nome jurídico da lead (obrigatório)" },
       { name: "CNPJ", desc: "Formato XX.XXX.XXX/XXXX-XX — valida duplicidade" },
-      { name: "Segmento", desc: "Ramo de atuação da pessoa" },
+      { name: "Segmento", desc: "Ramo de atuação da lead" },
       { name: "Status", desc: "Novo, Qualificado, Convertido Cliente, Perdido, Inativo" },
       {
         name: "Tarja de cliente",
-        desc: "Marca as pessoas já transformadas em cliente (arquivadas)",
+        desc: "Marca as leads já transformadas em cliente (arquivadas)",
       },
     ],
     columns: [
@@ -199,48 +199,48 @@ export const crmContent: Record<string, InfoContent> = {
     examples: [
       {
         title: "Promoção",
-        desc: "Clica em 'Tornar cliente', confirma o aviso e a pessoa passa a ter tarja",
+        desc: "Clica em 'Tornar cliente', confirma o aviso e a lead passa a ter tarja",
       },
       {
-        title: "Exportação",
+        title: "Promoção",
         desc: "Os botões PDF, CSV e MD exportam exatamente o que está filtrado na tela",
       },
     ],
   },
-  "/comercial/crm/pessoas/novo": {
-    title: "Nova Pessoa",
+  "/comercial/crm/leads/novo": {
+    title: "Novo Lead",
     description:
-      "Cadastre uma nova pessoa no CRM. O cadastro pode ser feito manualmente ou através da conversão de um lead qualificado.",
+      "Cadastre uma nova lead no CRM. O cadastro pode ser feito manualmente ou através da conversão de um lead qualificado.",
     rules: [
       "A razão social é obrigatória; o CNPJ é recomendado para evitar duplicidade.",
-      "Pessoas sem CNPJ podem ser cadastradas, mas a validação de unicidade não será aplicada.",
+      "Leads sem CNPJ podem ser cadastradas, mas a validação de unicidade não será aplicada.",
       "Após criar, você pode adicionar contatos, oportunidades e visitas.",
     ],
     fields: [
-      { name: "Razão Social", desc: "Nome jurídico da pessoa (obrigatório)" },
+      { name: "Razão Social", desc: "Nome jurídico da lead (obrigatório)" },
       { name: "CNPJ", desc: "Cadastro Nacional de Pessoa Jurídica" },
       { name: "Segmento", desc: "Ramo de atuação (ex: Confecção, Estamparia, Têxtil)" },
       { name: "Responsável", desc: "Representante comercial responsável pela conta" },
     ],
   },
-  "/comercial/crm/pessoas/[id]": {
-    title: "Detalhe da Pessoa",
+  "/comercial/crm/leads/[id]": {
+    title: "Detalhe da Lead",
     description:
-      "Visão completa de uma pessoa no CRM: dados cadastrais, contatos, timeline, WhatsApp, histórico de conversão em cliente e resumo gerado por IA. Tudo que você precisa saber sobre a conta.",
+      "Visão completa de uma lead no CRM: dados cadastrais, contatos, timeline, WhatsApp, histórico de conversão em cliente e resumo gerado por IA. Tudo que você precisa saber sobre a conta.",
     rules: [
       "A Timeline mostra todo o histórico de interações: leads, oportunidades, visitas, tarefas, propostas e mensagens WhatsApp.",
       "O WhatsApp permite enviar e receber mensagens diretamente pelo sistema (integrado com Evolution API + n8n).",
-      "O Resumo IA é gerado automaticamente, consolidando as informações mais relevantes da pessoa.",
+      "O Resumo IA é gerado automaticamente, consolidando as informações mais relevantes da lead.",
       "Para editar os dados, clique em Editar no topo da página.",
-      "Não há exclusão de pessoa: o cadastro é referenciado por veículos, oportunidades, propostas e visitas. O botão 'Tornar cliente' faz a promoção (cria ou reaproveita o cliente pelo CNPJ) e preserva o histórico.",
-      "Promovida, a pessoa recebe a tarja 'Cliente' no topo e some da listagem padrão — o histórico continua aqui e nos relatórios.",
-      "O card 'Histórico de conversão em cliente' mostra quando a pessoa virou cliente, quem promoveu, o cliente vinculado e o total de oportunidades, propostas e visitas acumulados.",
+      "Não há exclusão de lead: o cadastro é referenciado por veículos, oportunidades, propostas e visitas. O botão 'Tornar cliente' faz a promoção (cria ou reaproveita o cliente pelo CNPJ) e preserva o histórico.",
+      "Promovida, a lead recebe a tarja 'Cliente' no topo e some da listagem padrão — o histórico continua aqui e nos relatórios.",
+      "O card 'Histórico de conversão em cliente' mostra quando a lead virou cliente, quem promoveu, o cliente vinculado e o total de oportunidades, propostas e visitas acumulados.",
     ],
     fields: [
-      { name: "Timeline", desc: "Histórico completo de eventos da pessoa em ordem cronológica" },
-      { name: "WhatsApp", desc: "Painel de conversas WhatsApp vinculadas à pessoa" },
+      { name: "Timeline", desc: "Histórico completo de eventos da lead em ordem cronológica" },
+      { name: "WhatsApp", desc: "Painel de conversas WhatsApp vinculadas à lead" },
       { name: "Resumo IA", desc: "Resumo inteligente com sugestões geradas pela IA Comercial" },
-      { name: "Contatos", desc: "Pessoas de contato da pessoa com cargo, e-mail e telefone" },
+      { name: "Contatos", desc: "Leads de contato da lead com cargo, e-mail e telefone" },
       {
         name: "Histórico de conversão",
         desc: "Data, responsável, cliente vinculado e indicadores do período",
@@ -252,13 +252,13 @@ export const crmContent: Record<string, InfoContent> = {
   "/comercial/crm/oportunidades": {
     title: "Oportunidades",
     description:
-      "Lista de oportunidades comerciais em andamento. Cada oportunidade representa uma negociação em potencial com uma pessoa, com valor estimado e estágio no pipeline.",
+      "Lista de oportunidades comerciais em andamento. Cada oportunidade representa uma negociação em potencial com uma lead, com valor estimado e estágio no pipeline.",
     rules: [
       "O pipeline segue o fluxo: Novo → Qualificação → Proposta → Negociação → Fechado Ganho/Perdido.",
       "Os estágios e rótulos vêm do cadastro de Status (Admin → Configurações → Status, tipo Oportunidade): um novo status ativo já aparece aqui e vira coluna no Kanban.",
       "Use o Kanban para arrastar oportunidades entre estágios do pipeline.",
       "Oportunidades FECHADO_PERDIDO podem ser reativadas pela IA após 90 dias.",
-      "Ao fechar como GANHO, a pessoa é automaticamente sincronizada como Cliente no PDM.",
+      "Ao fechar como GANHO, a lead é automaticamente sincronizada como Cliente no PDM.",
       "O lápis da linha abre a oportunidade já em modo de edição (o mesmo que o botão 'Editar' do detalhe).",
       'Oportunidade (crm_oportunidades): é a negociação em si, o "deal" no pipeline de vendas. Avança por etapas (Novo → Qualificação → Proposta → Negociação → Ganho/Perdido) e guarda valorEstimado, probabilidade, responsável, previsão de fechamento, motivo da perda. É usada na previsão de vendas.',
       "Proposta (crm_propostas): é o documento comercial formal enviado ao cliente (o orçamento/PDF). Vinculada a uma oportunidade (oportunidadeId), guarda valor, condições de pagamento, prazo de entrega, link do PDF e status (Enviada → Aceita/Recusada/Em revisão).",
@@ -266,7 +266,7 @@ export const crmContent: Record<string, InfoContent> = {
     ],
     fields: [
       { name: "Título", desc: "Nome da oportunidade (ex: Venda de 500m de malha)" },
-      { name: "Pessoa", desc: "Pessoa vinculada à oportunidade" },
+      { name: "Lead", desc: "Lead vinculada à oportunidade" },
       { name: "Valor Estimado", desc: "Valor potencial da negociação" },
       {
         name: "Status",
@@ -287,16 +287,16 @@ export const crmContent: Record<string, InfoContent> = {
   "/comercial/crm/oportunidades/novo": {
     title: "Nova Oportunidade",
     description:
-      "Registre uma nova oportunidade de negócio. Toda oportunidade deve estar vinculada a uma pessoa existente no CRM.",
+      "Registre uma nova oportunidade de negócio. Toda oportunidade deve estar vinculada a uma lead existente no CRM.",
     rules: [
-      "A pessoa deve estar cadastrada no CRM antes de criar a oportunidade.",
+      "A lead deve estar cadastrada no CRM antes de criar a oportunidade.",
       "O valor estimado é opcional, mas recomendado para cálculo de forecast.",
       "A oportunidade inicia como NOVO e segue o pipeline até o fechamento.",
       "É possível vincular a oportunidade a um lead de origem.",
     ],
     fields: [
       { name: "Título", desc: "Descrição resumida da oportunidade (obrigatório)" },
-      { name: "Pessoa", desc: "Pessoa vinculada (autocomplete)" },
+      { name: "Lead", desc: "Lead vinculada (autocomplete)" },
       { name: "Valor Estimado", desc: "Valor potencial da negociação" },
       { name: "Probabilidade", desc: "Chance estimada de fechamento (0-100%)" },
     ],
@@ -316,7 +316,7 @@ export const crmContent: Record<string, InfoContent> = {
       "O botão 'Vincular do ERP' abre a busca de documentos do ERP (api-microdata): pedidos de venda e notas fiscais são espelhados na oportunidade, com cabeçalho e itens.",
       "Ao abrir o modal, o sistema varre todos os pedidos e faturamentos do ERP, atualiza o warehouse e regrava os documentos já vinculados que mudaram, sem precisar de botão de recarga.",
       "A lista de pedidos mostra todos os status exceto cancelados; pedidos que já viraram nota não aparecem como pedido — vincule pelo faturamento.",
-      "No modal do ERP a busca é filtrada pelo CNPJ da pessoa da oportunidade (desmarque 'Só desta pessoa' para ver todos os documentos).",
+      "No modal do ERP a busca é filtrada pelo CNPJ da lead da oportunidade (desmarque 'Só desta lead' para ver todos os documentos).",
       "O mesmo documento do ERP não pode ser vinculado duas vezes: ao tentar, o sistema avisa que ele já está vinculado.",
     ],
     fields: [
@@ -345,7 +345,7 @@ export const crmContent: Record<string, InfoContent> = {
       "As colunas vêm do cadastro de Status (Admin → Configurações → Status, tipo Oportunidade): cada status ativo com 'Exibir no Kanban' marcado vira uma coluna, na ordem configurada.",
       "Ao arrastar para FECHADO_PERDIDO, um modal solicitará o motivo da perda.",
       "Apenas usuários com permissão podem mover cards entre estágios.",
-      "Cada card mostra o título, pessoa, valor e probabilidade da oportunidade.",
+      "Cada card mostra o título, lead, valor e probabilidade da oportunidade.",
       "Clique no card para ver detalhes completos.",
     ],
     fields: [
@@ -365,7 +365,7 @@ export const crmContent: Record<string, InfoContent> = {
   "/comercial/crm/visitas": {
     title: "Visitas",
     description:
-      "Agenda de visitas comerciais. Registre e acompanhe visitas presenciais, videochamadas e contatos telefônicos com pessoas.",
+      "Agenda de visitas comerciais. Registre e acompanhe visitas presenciais, videochamadas e contatos telefônicos com leads.",
     rules: [
       "Visitas podem ser presenciais, por vídeo ou telefone.",
       "Visitas FUTURAS aparecem destacadas — são compromissos agendados.",
@@ -376,7 +376,7 @@ export const crmContent: Record<string, InfoContent> = {
       "No Kanban, arraste os cards entre colunas para alterar o status da visita.",
     ],
     fields: [
-      { name: "Pessoa", desc: "Pessoa visitada" },
+      { name: "Lead", desc: "Lead visitada" },
       { name: "Data", desc: "Data e horário da visita" },
       { name: "Tipo", desc: "Presencial, Vídeo ou Telefone" },
       { name: "Status", desc: "Agendada, Realizada, Cancelada" },
@@ -385,28 +385,28 @@ export const crmContent: Record<string, InfoContent> = {
   "/comercial/crm/visitas/dashboard": {
     title: "Dashboard de Visitas e Prospecção — saúde da prospecção",
     description:
-      "Central de visitas do ano corrente que cruza o esforço do comercial com o engajamento do cliente. Mantém os gráficos e indicadores de visitas, viagens e performance por gerente, e acrescenta a saúde da prospecção por cliente ou pessoa.",
+      "Central de visitas do ano corrente que cruza o esforço do comercial com o engajamento do cliente. Mantém os gráficos e indicadores de visitas, viagens e performance por gerente, e acrescenta a saúde da prospecção por cliente ou lead.",
     rules: [
       "O recorte padrão é o ano corrente; a listagem de visitas continua em /comercial/crm/visitas.",
-      "Pessoa promovida a cliente é agrupada com o cliente. Quem não virou cliente aparece pelo nome da pessoa; visita avulsa aparece como pessoa.",
+      "Lead promovida a cliente é agrupada com o cliente. Quem não virou cliente aparece pelo nome da lead; visita avulsa aparece como lead.",
       "Esforço cresce com visita realizada (+12,5), relato/ata (+12,5), check-in (+12,5), contato (+12,5), proposta (+25) e oportunidade (+25). Os quatro primeiros dividem igualmente os 50 pontos restantes. O relato precisa existir; status de visita sozinho não basta.",
       "Engajamento cresce com visita realizada (+20), visita agendada (+10), proposta ou oportunidade negociada para frente (+20 cada), pedido de venda (+15) e faturamento (+15).",
       "Esforço e engajamento aparecem apenas como percentual de 0 a 100%; não há mais campo de diferença.",
       "Negociada para frente inclui NEGOCIADA, NEGOCIAÇÃO/NEGOCIANDO, ACEITA/ACEITO, FECHADO GANHO, GANHO e CONVERTIDO. Perdido não soma engajamento.",
       "Pedidos e faturamentos entram pela OPORTUNIDADE vinculada à visita — não existe vínculo direto de pedido/faturamento com a visita. Os valores vêm dos itens.",
-      "Os cards usam os dois percentuais: esforço até 35% é BEC (Baixo Esforço comercial); esforço e engajamento acima de 35% com |diferença| < 20 pontos é EQL (Equilibrado), exceto quando o engajamento está pelo menos 10 pontos à frente (Engajados); esforço pelo menos 20 pontos à frente é AEC (Alto Esforço comercial). Clique em AEC, EQL ou BEC para ver a lista de clientes/pessoas.",
+      "Os cards usam os dois percentuais: esforço até 35% é BEC (Baixo Esforço comercial); esforço e engajamento acima de 35% com |diferença| < 20 pontos é EQL (Equilibrado), exceto quando o engajamento está pelo menos 10 pontos à frente (Engajados); esforço pelo menos 20 pontos à frente é AEC (Alto Esforço comercial). Clique em AEC, EQL ou BEC para ver a lista de clientes/leads.",
       "Conversão = (pedidos de venda + faturamentos) ÷ total de visitas da linha, arredondado e limitado a 100%. Clique no badge para ver quantidades e valores.",
       "No badge de itens de engajamento, proposta e oportunidade valem 36% cada; ata/relato, check-in/check-out e contato dividem os 28% restantes (9,33% cada). A coluna mostra quantidade de itens presentes e o percentual ponderado; clique nela para detalhar. Esses pesos não mudam o score de engajamento nem a classificação.",
-      "O card Registros conta clientes/pessoas distintos do recorte, não visitas: 58 visitas cadastradas podem aparecer como 28 registros.",
+      "O card Registros conta clientes/leads distintos do recorte, não visitas: 58 visitas cadastradas podem aparecer como 28 registros.",
       "A coluna Visitas R/A/C abre a lista de visitas; cada visita da lista é clicável e abre o cadastro da visita.",
-      "Clique no nome do cliente/pessoa para abrir o modal com todas as visitas do período, contatos, propostas, oportunidades, valores, status, relato/ata, check-in e check-out.",
+      "Clique no nome do cliente/lead para abrir o modal com todas as visitas do período, contatos, propostas, oportunidades, valores, status, relato/ata, check-in e check-out.",
       "Filtros de segmento, porte, responsável, status da visita, status da oportunidade e tipo de visita combinam com a busca. As tabelas Saúde da prospecção e Últimas visitas exportam CSV, PDF e MD respeitando o recorte atual.",
       "O botão Todas/Minhas Visitas altera todo o dashboard e a saúde da prospecção.",
     ],
     columns: [
-      { name: "Nome", desc: "Cliente/pessoa da visita. Clicável — abre o modal com todas as visitas." },
-      { name: "Documento", desc: "CNPJ do cliente ou da pessoa; visita avulsa não tem documento." },
-      { name: "Segmento/Porte", desc: "Dados do cliente ou da pessoa, quando preenchidos." },
+      { name: "Nome", desc: "Cliente/lead da visita. Clicável — abre o modal com todas as visitas." },
+      { name: "Documento", desc: "CNPJ do cliente ou da lead; visita avulsa não tem documento." },
+      { name: "Segmento/Porte", desc: "Dados do cliente ou da lead, quando preenchidos." },
       { name: "Visitas R/A/C", desc: "Realizadas / agendadas / canceladas no ano corrente. Clique para listar as visitas." },
       { name: "Última visita", desc: "Data da visita mais recente já realizada no recorte." },
       { name: "Próxima visita", desc: "Data da próxima visita agendada; mostra — quando não há agendamento futuro." },
@@ -417,8 +417,8 @@ export const crmContent: Record<string, InfoContent> = {
       { name: "Esforço / Engajamento", desc: "Scores de 0 a 100%; clique na porcentagem para ver os critérios e pontos que compõem cada um." },
     ],
     fields: [
-      { name: "Buscar", desc: "Nome do cliente/pessoa, documento ou responsável." },
-      { name: "Segmento", desc: "Filtra pelo segmento do cliente/pessoa." },
+      { name: "Buscar", desc: "Nome do cliente/lead, documento ou responsável." },
+      { name: "Segmento", desc: "Filtra pelo segmento do cliente/lead." },
       { name: "Porte", desc: "Filtra pelo porte cadastrado." },
       { name: "Responsável", desc: "Filtra pelo usuário que criou a visita." },
       { name: "Status da visita", desc: "Agendada, realizada, cancelada ou em andamento." },
@@ -441,30 +441,30 @@ export const crmContent: Record<string, InfoContent> = {
         desc: "Esforço 60% e engajamento 55%: ambos acima de 35% e a diferença é 5 pontos. O cliente entra em EQL e o card abre a lista de equilibrados.",
       },
       {
-        title: "Conversão",
+        title: "Promoção",
         desc: "Cliente com 4 visitas, 1 pedido e 1 faturamento: (1 + 1) ÷ 4 = 50%. O badge mostra 50% e o modal mostra as quantidades e os valores.",
       },
       {
-        title: "Pessoa promovida a cliente",
-        desc: "Visitas feitas com a pessoa antes da promoção e visitas feitas direto com o cliente aparecem juntas na linha do cliente.",
+        title: "Lead promovida a cliente",
+        desc: "Visitas feitas com a lead antes da promoção e visitas feitas direto com o cliente aparecem juntas na linha do cliente.",
       },
     ],
   },
   "/comercial/crm/visitas/novo": {
     title: "Nova Visita",
     description:
-      "Agende uma visita a uma pessoa, a um cliente ou a um avulso. Informe o tipo, data, contato e observações sobre o objetivo da visita.",
+      "Agende uma visita a uma lead, a um cliente ou a um avulso. Informe o tipo, data, contato e observações sobre o objetivo da visita.",
     rules: [
-      "Escolha quem será visitado: Pessoa (Negócio), Cliente ou Visita Avulsa.",
+      "Escolha quem será visitado: Lead (Negócio), Cliente ou Visita Avulsa.",
       "Escolha o tipo: Presencial (vai até o cliente), Vídeo (chamada online) ou Telefone.",
       "A data e horário definem quando a visita será realizada.",
-      "O contato é opcional — você pode selecionar um contato já cadastrado da pessoa ou do cliente.",
-      "O botão (+) ao lado de Contato cadastra um novo contato vinculado à pessoa ou ao cliente da visita, sem sair da tela.",
+      "O contato é opcional — você pode selecionar um contato já cadastrado da lead ou do cliente.",
+      "O botão (+) ao lado de Contato cadastra um novo contato vinculado à lead ou ao cliente da visita, sem sair da tela.",
       "Ao salvar com recorrência, a agenda cria uma visita por período definido.",
     ],
     fields: [
-      { name: "Pessoa / Cliente", desc: "Quem será visitado (obrigatório, exceto na visita avulsa)" },
-      { name: "Contato", desc: "Contato da pessoa ou do cliente — pode ser cadastrado na hora" },
+      { name: "Lead / Cliente", desc: "Quem será visitado (obrigatório, exceto na visita avulsa)" },
+      { name: "Contato", desc: "Contato da lead ou do cliente — pode ser cadastrado na hora" },
       { name: "Tipo", desc: "Presencial, Vídeo ou Telefone" },
       { name: "Data/Hora", desc: "Quando a visita será realizada" },
       { name: "Observações", desc: "Objetivo e pauta da visita" },
@@ -476,10 +476,10 @@ export const crmContent: Record<string, InfoContent> = {
       "Acompanhe os detalhes de uma visita: dados do encontro, fotos, relato do representante e próximo passo.",
     rules: [
       "Visitas realizadas podem ter fotos anexadas.",
-      "O relato da visita ajuda a IA a gerar resumo da pessoa.",
+      "O relato da visita ajuda a IA a gerar resumo da lead.",
       "É possível alterar o status da visita (Realizada, Cancelada).",
       "Alguns campos podem não aparecer conforme as regras de visibilidade definidas em Admin › Configurações.",
-      "No modo de edição você pode trocar o contato da visita e cadastrar um novo contato (+) da pessoa ou do cliente vinculado.",
+      "No modo de edição você pode trocar o contato da visita e cadastrar um novo contato (+) da lead ou do cliente vinculado.",
     ],
     fields: [
       { name: "Contato", desc: "Contato da visita — pode ser alterado ou cadastrado na edição" },
@@ -491,7 +491,7 @@ export const crmContent: Record<string, InfoContent> = {
   "/comercial/crm/acoes-prospeccao": {
     title: "Ações de Prospecção",
     description:
-      "Agenda de ações de prospecção comercial. Registre e acompanhe ações presenciais, videochamadas e contatos telefônicos com pessoas e clientes.",
+      "Agenda de ações de prospecção comercial. Registre e acompanhe ações presenciais, videochamadas e contatos telefônicos com leads e clientes.",
     rules: [
       "Ações de prospecção podem ser presenciais, por vídeo ou telefone.",
       "Ações FUTURAS aparecem destacadas — são compromissos agendados.",
@@ -502,7 +502,7 @@ export const crmContent: Record<string, InfoContent> = {
       "No Kanban, arraste os cards entre colunas para alterar o status da ação.",
     ],
     fields: [
-      { name: "Pessoa", desc: "Pessoa ou cliente prospectado" },
+      { name: "Lead", desc: "Lead ou cliente prospectado" },
       { name: "Data", desc: "Data e horário da ação" },
       { name: "Tipo", desc: "Presencial, Vídeo ou Telefone" },
       { name: "Status", desc: "Agendada, Realizada, Cancelada" },
@@ -511,28 +511,28 @@ export const crmContent: Record<string, InfoContent> = {
   "/comercial/crm/acoes-prospeccao/dashboard": {
     title: "Dashboard de Ações de Prospecção — saúde da prospecção",
     description:
-      "Central de ações de prospecção do ano corrente que cruza o esforço do comercial com o engajamento do cliente. Mantém os gráficos e indicadores de ações, viagens e performance por gerente, e acrescenta a saúde da prospecção por cliente ou pessoa.",
+      "Central de ações de prospecção do ano corrente que cruza o esforço do comercial com o engajamento do cliente. Mantém os gráficos e indicadores de ações, viagens e performance por gerente, e acrescenta a saúde da prospecção por cliente ou lead.",
     rules: [
       "O recorte padrão é o ano corrente; a listagem de ações continua em /comercial/crm/acoes-prospeccao.",
-      "Pessoa promovida a cliente é agrupada com o cliente. Quem não virou cliente aparece pelo nome da pessoa; ação avulsa aparece como pessoa.",
+      "Lead promovida a cliente é agrupada com o cliente. Quem não virou cliente aparece pelo nome da lead; ação avulsa aparece como lead.",
       "Esforço cresce com ação realizada (+12,5), relato/ata (+12,5), check-in (+12,5), contato (+12,5), proposta (+25) e oportunidade (+25). Os quatro primeiros dividem igualmente os 50 pontos restantes. O relato precisa existir; status de ação sozinho não basta.",
       "Engajamento cresce com ação realizada (+20), ação agendada (+10), proposta ou oportunidade negociada para frente (+20 cada), pedido de venda (+15) e faturamento (+15).",
       "Esforço e engajamento aparecem apenas como percentual de 0 a 100%; não há mais campo de diferença.",
       "Negociada para frente inclui NEGOCIADA, NEGOCIAÇÃO/NEGOCIANDO, ACEITA/ACEITO, FECHADO GANHO, GANHO e CONVERTIDO. Perdido não soma engajamento.",
       "Pedidos e faturamentos entram pela OPORTUNIDADE vinculada à ação — não existe vínculo direto de pedido/faturamento com a ação. Os valores vêm dos itens.",
-      "Os cards usam os dois percentuais: esforço até 35% é BEC (Baixo Esforço comercial); esforço e engajamento acima de 35% com |diferença| < 20 pontos é EQL (Equilibrado), exceto quando o engajamento está pelo menos 10 pontos à frente (Engajados); esforço pelo menos 20 pontos à frente é AEC (Alto Esforço comercial). Clique em AEC, EQL ou BEC para ver a lista de clientes/pessoas.",
+      "Os cards usam os dois percentuais: esforço até 35% é BEC (Baixo Esforço comercial); esforço e engajamento acima de 35% com |diferença| < 20 pontos é EQL (Equilibrado), exceto quando o engajamento está pelo menos 10 pontos à frente (Engajados); esforço pelo menos 20 pontos à frente é AEC (Alto Esforço comercial). Clique em AEC, EQL ou BEC para ver a lista de clientes/leads.",
       "Conversão = (pedidos de venda + faturamentos) ÷ total de ações da linha, arredondado e limitado a 100%. Clique no badge para ver quantidades e valores.",
       "No badge de itens de engajamento, proposta e oportunidade valem 36% cada; ata/relato, check-in/check-out e contato dividem os 28% restantes (9,33% cada). A coluna mostra quantidade de itens presentes e o percentual ponderado; clique nela para detalhar. Esses pesos não mudam o score de engajamento nem a classificação.",
-      "O card Registros conta clientes/pessoas distintos do recorte, não ações: 58 ações cadastradas podem aparecer como 28 registros.",
+      "O card Registros conta clientes/leads distintos do recorte, não ações: 58 ações cadastradas podem aparecer como 28 registros.",
       "A coluna Ações R/A/C abre a lista de ações; cada ação da lista é clicável e abre o cadastro da ação.",
-      "Clique no nome do cliente/pessoa para abrir o modal com todas as ações do período, contatos, propostas, oportunidades, valores, status, relato/ata, check-in e check-out.",
+      "Clique no nome do cliente/lead para abrir o modal com todas as ações do período, contatos, propostas, oportunidades, valores, status, relato/ata, check-in e check-out.",
       "Filtros de segmento, porte, responsável, status da ação, status da oportunidade e tipo de ação combinam com a busca. As tabelas Saúde da prospecção e Últimas ações exportam CSV, PDF e MD respeitando o recorte atual.",
       "O botão Todas/Minhas Ações altera todo o dashboard e a saúde da prospecção.",
     ],
     columns: [
-      { name: "Nome", desc: "Cliente/pessoa da ação. Clicável — abre o modal com todas as ações." },
-      { name: "Documento", desc: "CNPJ do cliente ou da pessoa; ação avulsa não tem documento." },
-      { name: "Segmento/Porte", desc: "Dados do cliente ou da pessoa, quando preenchidos." },
+      { name: "Nome", desc: "Cliente/lead da ação. Clicável — abre o modal com todas as ações." },
+      { name: "Documento", desc: "CNPJ do cliente ou da lead; ação avulsa não tem documento." },
+      { name: "Segmento/Porte", desc: "Dados do cliente ou da lead, quando preenchidos." },
       {
         name: "Ações R/A/C",
         desc: "Realizadas / agendadas / canceladas no ano corrente. Clique para listar as ações.",
@@ -564,8 +564,8 @@ export const crmContent: Record<string, InfoContent> = {
       },
     ],
     fields: [
-      { name: "Buscar", desc: "Nome do cliente/pessoa, documento ou responsável." },
-      { name: "Segmento", desc: "Filtra pelo segmento do cliente/pessoa." },
+      { name: "Buscar", desc: "Nome do cliente/lead, documento ou responsável." },
+      { name: "Segmento", desc: "Filtra pelo segmento do cliente/lead." },
       { name: "Porte", desc: "Filtra pelo porte cadastrado." },
       { name: "Responsável", desc: "Filtra pelo usuário que criou a ação." },
       { name: "Status da ação", desc: "Agendada, realizada, cancelada ou em andamento." },
@@ -591,30 +591,30 @@ export const crmContent: Record<string, InfoContent> = {
         desc: "Esforço 60% e engajamento 55%: ambos acima de 35% e a diferença é 5 pontos. O cliente entra em EQL e o card abre a lista de equilibrados.",
       },
       {
-        title: "Conversão",
+        title: "Promoção",
         desc: "Cliente com 4 ações, 1 pedido e 1 faturamento: (1 + 1) ÷ 4 = 50%. O badge mostra 50% e o modal mostra as quantidades e os valores.",
       },
       {
-        title: "Pessoa promovida a cliente",
-        desc: "Ações feitas com a pessoa antes da promoção e ações feitas direto com o cliente aparecem juntas na linha do cliente.",
+        title: "Lead promovida a cliente",
+        desc: "Ações feitas com a lead antes da promoção e ações feitas direto com o cliente aparecem juntas na linha do cliente.",
       },
     ],
   },
   "/comercial/crm/acoes-prospeccao/novo": {
     title: "Nova Ação de Prospecção",
     description:
-      "Agende uma ação de prospecção com uma pessoa, um cliente ou um avulso. Informe o tipo, data, contato e observações sobre o objetivo da ação.",
+      "Agende uma ação de prospecção com uma lead, um cliente ou um avulso. Informe o tipo, data, contato e observações sobre o objetivo da ação.",
     rules: [
-      "Escolha quem será prospectado: Pessoa (Negócio), Cliente ou Ação Avulsa.",
+      "Escolha quem será prospectado: Lead (Negócio), Cliente ou Ação Avulsa.",
       "Escolha o tipo: Presencial (vai até o cliente), Vídeo (chamada online) ou Telefone.",
       "A data e horário definem quando a ação será realizada.",
-      "O contato é opcional — você pode selecionar um contato já cadastrado da pessoa ou do cliente.",
-      "O botão (+) ao lado de Contato cadastra um novo contato vinculado à pessoa ou ao cliente da ação, sem sair da tela.",
+      "O contato é opcional — você pode selecionar um contato já cadastrado da lead ou do cliente.",
+      "O botão (+) ao lado de Contato cadastra um novo contato vinculado à lead ou ao cliente da ação, sem sair da tela.",
       "Ao salvar com recorrência, a agenda cria uma ação por período definido.",
     ],
     fields: [
-      { name: "Pessoa / Cliente", desc: "Quem será prospectado (obrigatório, exceto na ação avulsa)" },
-      { name: "Contato", desc: "Contato da pessoa ou do cliente — pode ser cadastrado na hora" },
+      { name: "Lead / Cliente", desc: "Quem será prospectado (obrigatório, exceto na ação avulsa)" },
+      { name: "Contato", desc: "Contato da lead ou do cliente — pode ser cadastrado na hora" },
       { name: "Tipo", desc: "Presencial, Vídeo ou Telefone" },
       { name: "Data/Hora", desc: "Quando a ação será realizada" },
       { name: "Observações", desc: "Objetivo e pauta da ação" },
@@ -626,10 +626,10 @@ export const crmContent: Record<string, InfoContent> = {
       "Acompanhe os detalhes de uma ação de prospecção: dados do encontro, fotos, relato do representante e próximo passo.",
     rules: [
       "Ações realizadas podem ter fotos anexadas.",
-      "O relato da ação ajuda a IA a gerar resumo da pessoa.",
+      "O relato da ação ajuda a IA a gerar resumo da lead.",
       "É possível alterar o status da ação (Realizada, Cancelada).",
       "Alguns campos podem não aparecer conforme as regras de visibilidade definidas em Admin › Configurações.",
-      "No modo de edição você pode trocar o contato da ação e cadastrar um novo contato (+) da pessoa ou do cliente vinculado.",
+      "No modo de edição você pode trocar o contato da ação e cadastrar um novo contato (+) da lead ou do cliente vinculado.",
     ],
     fields: [
       { name: "Contato", desc: "Contato da ação — pode ser alterado ou cadastrado na edição" },
@@ -665,7 +665,7 @@ export const crmContent: Record<string, InfoContent> = {
     description:
       "Lista de propostas comerciais enviadas. Acompanhe o status de cada proposta: enviada, aceita, recusada ou em revisão.",
     rules: [
-      "Cada proposta está vinculada a uma pessoa e opcionalmente a uma oportunidade.",
+      "Cada proposta está vinculada a uma lead e opcionalmente a uma oportunidade.",
       "Ao ACEITAR uma proposta, a oportunidade vinculada avança no pipeline.",
       "Propostas podem ser impressas em PDF diretamente do sistema.",
       "O lápis da linha abre a proposta já em modo de edição (o mesmo que o botão 'Editar' do detalhe).",
@@ -675,7 +675,7 @@ export const crmContent: Record<string, InfoContent> = {
       "Por que ambas têm valor? São números de naturezas diferentes: a oportunidade guarda o valor estimado do negócio (projeção/previsão), e a proposta guarda o valor efetivamente cotado/oferecido ao cliente. Os dois são legítimos e complementares para acompanhar o funil.",
     ],
     fields: [
-      { name: "Pessoa", desc: "Pessoa destinatária da proposta" },
+      { name: "Lead", desc: "Lead destinatária da proposta" },
       { name: "Valor Total", desc: "Valor total da proposta" },
       { name: "Status", desc: "Enviada, Aceita, Recusada ou Em Revisão" },
       { name: "Validade", desc: "Prazo de validade da proposta" },
@@ -694,15 +694,15 @@ export const crmContent: Record<string, InfoContent> = {
   "/comercial/crm/propostas/novo": {
     title: "Nova Proposta",
     description:
-      "Crie uma proposta comercial para uma pessoa. Preencha os dados, valores, condições e itens da proposta.",
+      "Crie uma proposta comercial para uma lead. Preencha os dados, valores, condições e itens da proposta.",
     rules: [
-      "A pessoa é obrigatória — a oportunidade é opcional.",
+      "A lead é obrigatória — a oportunidade é opcional.",
       "O prazo de validade define até quando a proposta pode ser aceita.",
       "Após criar, você pode imprimir em PDF.",
       "Propostas podem ser revisadas e reenviadas.",
     ],
     fields: [
-      { name: "Pessoa", desc: "Pessoa destinatária (obrigatório)" },
+      { name: "Lead", desc: "Lead destinatária (obrigatório)" },
       { name: "Oportunidade", desc: "Oportunidade vinculada (opcional)" },
       { name: "Valor Total", desc: "Valor comercial da proposta" },
       { name: "Validade", desc: "Prazo para aceitação da proposta" },
@@ -830,7 +830,7 @@ export const crmContent: Record<string, InfoContent> = {
 
   // ==================== REGIÕES ====================
   "/comercial/crm/regioes": {
-    title: "Regiões",
+    title: "Promoção",
     description:
       "Cadastro de regiões comerciais. Organize o território de vendas por regiões geográficas com gerentes responsáveis.",
     rules: [
@@ -917,7 +917,7 @@ export const crmContent: Record<string, InfoContent> = {
     ],
   },
 
-  // ==================== RELATÓRIOS ====================
+  // ==================== REGIÕES ====================
   "/comercial/crm/relatorios": {
     title: "Relatórios CRM",
     description:
@@ -928,7 +928,7 @@ export const crmContent: Record<string, InfoContent> = {
       "Use os gráficos para identificar gargalos no pipeline.",
       "A taxa de conversão considera apenas oportunidades fechadas (ganhas vs perdidas).",
       "Os relatórios ajudam a IA Comercial a gerar previsões mais precisas.",
-      "Na parte inferior estão os relatórios detalhados: Atividades, Pessoas, Oportunidades, Propostas, Visitas, Conversões e Clientes.",
+      "Na parte inferior estão os relatórios detalhados: Atividades, Leads, Oportunidades, Propostas, Visitas, Conversões e Clientes.",
       "Cada relatório detalhado tem filtros por período, cards de resumo, listagem completa e exportação em PDF, CSV e Markdown.",
     ],
     fields: [
@@ -946,7 +946,7 @@ export const crmContent: Record<string, InfoContent> = {
   "/comercial/crm/relatorios/atividades": {
     title: "Relatório de Atividades do CRM",
     description:
-      "Mostra tudo que as contas comerciais fizeram no CRM: registros criados por pessoa, cliente, oportunidade, proposta, visita, tarefa, lead e contato, com data, hora e pessoa ou cliente envolvida.",
+      "Mostra tudo que as contas comerciais fizeram no CRM: registros criados por lead, cliente, oportunidade, proposta, visita, tarefa, lead e contato, com data, hora e lead ou cliente envolvida.",
     rules: [
       "Os cards de resumo usam a cor do tema Dracula e um pequeno ícone, os dois derivados do rótulo do card: o mesmo rótulo mantém sempre a mesma cor e o mesmo ícone.",
       "A base do relatório é a tabela de logs: cada ação registrada no CRM aparece aqui.",
@@ -962,34 +962,34 @@ export const crmContent: Record<string, InfoContent> = {
       { name: "Usuário", desc: "Conta comercial que realizou a ação" },
       { name: "Ação", desc: "O que foi feito (criar, mover, atualizar, excluir)" },
       { name: "Entidade", desc: "Registro do CRM afetado" },
-      { name: "Pessoa", desc: "Pessoa ou empresa envolvida na atividade" },
+      { name: "Lead", desc: "Lead ou empresa envolvida na atividade" },
       { name: "Cliente", desc: "Cliente vinculado, quando existir" },
     ],
   },
 
-  "/comercial/crm/relatorios/pessoas": {
-    title: "Relatório de Pessoas do CRM",
+  "/comercial/crm/relatorios/leads": {
+    title: "Relatório de Leads do CRM",
     description:
-      "Relatório do cadastro de pessoas do CRM criado no período, com tipo de pessoa, documento, segmento, cidade, responsável, vínculo com cliente e a tarja de cliente (promoção).",
+      "Relatório do cadastro de leads do CRM criado no período, com tipo de lead, documento, segmento, cidade, responsável, vínculo com cliente e a tarja de cliente (promoção).",
     rules: [
       "Os cards de resumo usam a cor do tema Dracula e um pequeno ícone, os dois derivados do rótulo do card: o mesmo rótulo mantém sempre a mesma cor e o mesmo ícone.",
       "O período padrão é os últimos 7 dias; troque para Hoje, Mês ou um período personalizado.",
       "PF e PJ são separados nos cards de resumo.",
-      "Pessoas convertidas em cliente são as que já possuem vínculo na tabela de Clientes.",
+      "Leads convertidas em cliente são as que já possuem vínculo na tabela de Clientes.",
       "A tarja de cliente marca quem foi promovido pelo botão 'Tornar cliente': o filtro 'Tarja de cliente' separa o que já virou cliente (Com tarja) do que ainda não virou (Sem tarja).",
       "Quem tem tarja também mostra a data da conversão e quem promoveu.",
       "A tabela rola na vertical e na horizontal, com o cabeçalho fixo durante a navegação.",
       "A exportação gera PDF, CSV e Markdown com os mesmos dados da tela.",
     ],
     fields: [
-      { name: "Data e hora", desc: "Momento do cadastro da pessoa" },
+      { name: "Data e hora", desc: "Momento do cadastro da lead" },
       { name: "Nome", desc: "Nome da pessoa física ou razão social" },
       { name: "Tipo", desc: "PF (pessoa física) ou PJ (pessoa jurídica)" },
       { name: "Documento", desc: "CPF ou CNPJ" },
-      { name: "Segmento", desc: "Segmento comercial da pessoa" },
+      { name: "Segmento", desc: "Segmento comercial da lead" },
       { name: "Responsável", desc: "Conta comercial responsável pelo cadastro" },
-      { name: "Cliente", desc: "Sim quando a pessoa já está convertida em cliente" },
-      { name: "Tarja", desc: "Sim quando a pessoa foi promovida a cliente" },
+      { name: "Cliente", desc: "Sim quando a lead já está convertida em cliente" },
+      { name: "Tarja", desc: "Sim quando a lead foi promovida a cliente" },
       { name: "Virou cliente em", desc: "Data e hora da promoção" },
       { name: "Promovido por", desc: "Quem realizou a promoção" },
     ],
@@ -998,10 +998,10 @@ export const crmContent: Record<string, InfoContent> = {
   "/comercial/crm/relatorios/conversoes": {
     title: "Relatório de Conversões do CRM",
     description:
-      "Pessoas que viraram cliente (tarja de cliente) no período, com o cliente vinculado, quem promoveu e o negócio gerado por cada uma (oportunidades, propostas e visitas).",
+      "Leads que viraram cliente (tarja de cliente) no período, com o cliente vinculado, quem promoveu e o negócio gerado por cada uma (oportunidades, propostas e visitas).",
     rules: [
       "Os cards de resumo usam a cor do tema Dracula e um pequeno ícone, os dois derivados do rótulo do card: o mesmo rótulo mantém sempre a mesma cor e o mesmo ícone.",
-      "Só entram no relatório as pessoas promovidas a cliente com a ação 'Tornar cliente'.",
+      "Só entram no relatório as leads promovidas a cliente com a ação 'Tornar cliente'.",
       "O período padrão é os últimos 7 dias; troque para Hoje, Mês ou um período personalizado.",
       "O filtro Usuário mostra quem fez cada promoção.",
       "Os cards mostram o total de conversões e o negócio gerado (oportunidades, propostas, visitas e valores).",
@@ -1011,26 +1011,26 @@ export const crmContent: Record<string, InfoContent> = {
     ],
     fields: [
       { name: "Data da conversão", desc: "Data e hora da promoção a cliente" },
-      { name: "Pessoa", desc: "Pessoa que virou cliente" },
+      { name: "Lead", desc: "Lead que virou cliente" },
       { name: "Cliente", desc: "Cliente vinculado pela promoção" },
       { name: "Promovido por", desc: "Usuário que realizou a promoção" },
-      { name: "Oportunidades", desc: "Quantidade de oportunidades da pessoa" },
-      { name: "Propostas", desc: "Quantidade de propostas da pessoa" },
-      { name: "Visitas", desc: "Quantidade de visitas da pessoa" },
-      { name: "Valor das propostas", desc: "Soma do valor das propostas da pessoa" },
+      { name: "Oportunidades", desc: "Quantidade de oportunidades da lead" },
+      { name: "Propostas", desc: "Quantidade de propostas da lead" },
+      { name: "Visitas", desc: "Quantidade de visitas da lead" },
+      { name: "Valor das propostas", desc: "Soma do valor das propostas da lead" },
     ],
   },
 
   "/comercial/crm/relatorios/clientes": {
     title: "Relatório de Clientes do CRM",
     description:
-      "Visão consolidada de cada cliente com o negócio do período: pessoas promovidas, oportunidades (em aberto e valor), propostas e visitas — incluindo o que foi feito nas pessoas do CRM que viraram o cliente.",
+      "Visão consolidada de cada cliente com o negócio do período: leads promovidas, oportunidades (em aberto e valor), propostas e visitas — incluindo o que foi feito nas leads do CRM que viraram o cliente.",
     rules: [
       "Os cards de resumo usam a cor do tema Dracula e um pequeno ícone, os dois derivados do rótulo do card: o mesmo rótulo mantém sempre a mesma cor e o mesmo ícone.",
       "O período padrão é os últimos 7 dias; troque para Hoje, Mês ou um período personalizado.",
       "O filtro Segmento separa os clientes por ramo de atividade.",
       "O card 'Clientes com negócio' mostra quem teve oportunidade, proposta ou visita no período.",
-      "O negócio herdado das pessoas promovidas aparece junto do negócio lançado direto no cliente.",
+      "O negócio herdado das leads promovidas aparece junto do negócio lançado direto no cliente.",
       "O nome do cliente é um link para a tela do cliente, com todos os relacionamentos do CRM.",
       "A tabela rola na vertical e na horizontal, com o cabeçalho fixo durante a navegação.",
       "A exportação gera PDF, CSV e Markdown com os mesmos dados da tela.",
@@ -1040,7 +1040,7 @@ export const crmContent: Record<string, InfoContent> = {
       { name: "CNPJ", desc: "CNPJ do cliente" },
       { name: "Segmento", desc: "Segmento comercial do cliente" },
       { name: "Cidade/UF", desc: "Local do cliente" },
-      { name: "Pessoas", desc: "Pessoas do CRM promovidas a este cliente" },
+      { name: "Leads", desc: "Leads do CRM promovidas a este cliente" },
       { name: "Oportunidades", desc: "Oportunidades do cliente no período" },
       { name: "Em aberto", desc: "Oportunidades que ainda não foram fechadas" },
       { name: "Valor das oportunidades", desc: "Soma do valor estimado das oportunidades" },
@@ -1053,7 +1053,7 @@ export const crmContent: Record<string, InfoContent> = {
   "/comercial/crm/relatorios/oportunidades": {
     title: "Relatório de Oportunidades do CRM",
     description:
-      "Oportunidades criadas no período com status, valor estimado, probabilidade, responsável e a pessoa ou cliente relacionada.",
+      "Oportunidades criadas no período com status, valor estimado, probabilidade, responsável e a lead ou cliente relacionada.",
     rules: [
       "Os cards de resumo usam a cor do tema Dracula e um pequeno ícone, os dois derivados do rótulo do card: o mesmo rótulo mantém sempre a mesma cor e o mesmo ícone.",
       "Os cards mostram o total, as em aberto, as ganhas, as perdidas e a taxa de conversão.",
@@ -1065,7 +1065,7 @@ export const crmContent: Record<string, InfoContent> = {
     fields: [
       { name: "Data e hora", desc: "Momento da criação da oportunidade" },
       { name: "Título", desc: "Nome da oportunidade" },
-      { name: "Pessoa", desc: "Pessoa ou empresa da oportunidade" },
+      { name: "Lead", desc: "Lead ou empresa da oportunidade" },
       { name: "Cliente", desc: "Cliente vinculado, quando existir" },
       { name: "Responsável", desc: "Conta comercial responsável" },
       { name: "Status", desc: "Estágio atual da oportunidade" },
@@ -1077,7 +1077,7 @@ export const crmContent: Record<string, InfoContent> = {
   "/comercial/crm/relatorios/propostas": {
     title: "Relatório de Propostas do CRM",
     description:
-      "Propostas do CRM criadas no período, com valor, status (enviada, aceita, recusada ou em revisão), responsável e a pessoa ou cliente atendida.",
+      "Propostas do CRM criadas no período, com valor, status (enviada, aceita, recusada ou em revisão), responsável e a lead ou cliente atendida.",
     rules: [
       "Os cards de resumo usam a cor do tema Dracula e um pequeno ícone, os dois derivados do rótulo do card: o mesmo rótulo mantém sempre a mesma cor e o mesmo ícone.",
       "A taxa de aceitação considera as propostas aceitas sobre o total do período.",
@@ -1089,7 +1089,7 @@ export const crmContent: Record<string, InfoContent> = {
     fields: [
       { name: "Data e hora", desc: "Momento da criação da proposta" },
       { name: "Título", desc: "Título da proposta" },
-      { name: "Pessoa", desc: "Pessoa ou empresa atendida" },
+      { name: "Lead", desc: "Lead ou empresa atendida" },
       { name: "Cliente", desc: "Cliente vinculado, quando existir" },
       { name: "Responsável", desc: "Usuário que criou a proposta" },
       { name: "Status", desc: "ENVIADA, ACEITA, RECUSADA ou REVISAO" },
@@ -1100,7 +1100,7 @@ export const crmContent: Record<string, InfoContent> = {
   "/comercial/crm/relatorios/visitas": {
     title: "Relatório de Visitas do CRM",
     description:
-      "Visitas do CRM realizadas ou agendadas no período, separando o tipo presencial, por vídeo e por telefone, com cidade, responsável e pessoa ou cliente atendido.",
+      "Visitas do CRM realizadas ou agendadas no período, separando o tipo presencial, por vídeo e por telefone, com cidade, responsável e lead ou cliente atendido.",
     rules: [
       "Os cards de resumo usam a cor do tema Dracula e um pequeno ícone, os dois derivados do rótulo do card: o mesmo rótulo mantém sempre a mesma cor e o mesmo ícone.",
       "O relatório considera o registro da visita, não o relatório de campo preenchido depois.",
@@ -1112,7 +1112,7 @@ export const crmContent: Record<string, InfoContent> = {
     fields: [
       { name: "Data e hora", desc: "Data e hora da visita" },
       { name: "Tipo", desc: "PRESENCIAL, VIDEO ou TELEFONE" },
-      { name: "Pessoa", desc: "Pessoa, empresa ou visita avulsa" },
+      { name: "Lead", desc: "Lead, empresa ou visita avulsa" },
       { name: "Cliente", desc: "Cliente vinculado, quando existir" },
       { name: "Responsável", desc: "Usuário que agendou a visita" },
       { name: "Status", desc: "Situação da visita" },
@@ -1122,7 +1122,7 @@ export const crmContent: Record<string, InfoContent> = {
   "/comercial/crm/relatorios/acoes-prospeccao": {
     title: "Relatório de Ações de Prospecção do CRM",
     description:
-      "Ações de prospecção do CRM realizadas ou agendadas no período, separando o tipo presencial, por vídeo e por telefone, com cidade, responsável e pessoa ou cliente prospectado.",
+      "Ações de prospecção do CRM realizadas ou agendadas no período, separando o tipo presencial, por vídeo e por telefone, com cidade, responsável e lead ou cliente prospectado.",
     rules: [
       "Os cards de resumo usam a cor do tema Dracula e um pequeno ícone, os dois derivados do rótulo do card: o mesmo rótulo mantém sempre a mesma cor e o mesmo ícone.",
       "O relatório considera o registro da ação, não o relatório de campo preenchido depois.",
@@ -1134,7 +1134,7 @@ export const crmContent: Record<string, InfoContent> = {
     fields: [
       { name: "Data e hora", desc: "Data e hora da ação" },
       { name: "Tipo", desc: "PRESENCIAL, VIDEO ou TELEFONE" },
-      { name: "Pessoa", desc: "Pessoa, empresa ou ação avulsa" },
+      { name: "Lead", desc: "Lead, empresa ou ação avulsa" },
       { name: "Cliente", desc: "Cliente vinculado, quando existir" },
       { name: "Responsável", desc: "Usuário que agendou a ação" },
       { name: "Status", desc: "Situação da ação" },
@@ -1183,14 +1183,14 @@ export const crmContent: Record<string, InfoContent> = {
       { name: "Ordem", desc: "Posição da lição dentro do módulo" },
       {
         name: "Pathname relacionado",
-        desc: "Caminho da tela CRM relacionada (ex: /comercial/crm/leads)",
+        desc: "Caminho da tela CRM relacionada (ex: /comercial/crm/visitantes)",
       },
       {
         name: "Pré-requisitos",
         desc: "Lista de cadastros indispensáveis para usar a tela documentada",
       },
       {
-        name: "Conteúdo",
+        name: "Conversão",
         desc: "Documentação em markdown. Use ## para títulos, **negrito**, - listas",
       },
       { name: "Links POP", desc: "Links para Procedimentos Operacionais Padrão relacionados" },
@@ -1257,7 +1257,7 @@ export const crmContent: Record<string, InfoContent> = {
       { name: "Razão Social", desc: "Razão social completa" },
       { name: "Email", desc: "Email de contato" },
       { name: "Telefone", desc: "Telefone de contato" },
-      { name: "Contato", desc: "Nome da pessoa de contato" },
+      { name: "Contato", desc: "Nome da lead de contato" },
       { name: "Endereço", desc: "Endereço completo" },
       { name: "Cidade", desc: "Cidade onde está localizado" },
       { name: "UF", desc: "Estado onde está localizado" },
@@ -1271,7 +1271,7 @@ export const crmContent: Record<string, InfoContent> = {
       { name: "Nome", desc: "Nome fantasia do representante (obrigatório)" },
       { name: "CNPJ", desc: "CNPJ do representante (obrigatório, único)" },
       { name: "Razão Social", desc: "Razão social completa" },
-      { name: "Contato", desc: "Nome da pessoa de contato" },
+      { name: "Contato", desc: "Nome da lead de contato" },
       { name: "Email", desc: "Email de contato" },
       { name: "Telefone", desc: "Telefone de contato" },
       { name: "Endereço", desc: "Endereço completo" },
@@ -1289,7 +1289,7 @@ export const crmContent: Record<string, InfoContent> = {
       { name: "Razão Social", desc: "Razão social completa" },
       { name: "Email", desc: "Email de contato" },
       { name: "Telefone", desc: "Telefone de contato" },
-      { name: "Contato", desc: "Nome da pessoa de contato" },
+      { name: "Contato", desc: "Nome da lead de contato" },
       { name: "Endereço", desc: "Endereço completo" },
       { name: "Cidade", desc: "Cidade onde está localizado" },
       { name: "UF", desc: "Estado onde está localizado" },
@@ -1317,9 +1317,9 @@ export const crmContent: Record<string, InfoContent> = {
     ],
   },
 
-  // ==================== NOTIFICAÇÕES ====================
+  // ==================== REGIÕES ====================
   "/comercial/crm/notificacoes": {
-    title: "Notificações",
+    title: "Promoção",
     description:
       "Central de notificações do CRM. Aqui você encontra alertas automáticos do sistema, como novos leads cadastrados via WhatsApp.",
     rules: [
@@ -1378,12 +1378,12 @@ export const crmContent: Record<string, InfoContent> = {
   "/comercial/crm/contatos": {
     title: "Contatos",
     description:
-      "Base de contatos do CRM (pessoas ligadas a clientes/empresas). Use para centralizar e-mails, telefones e o relacionamento comercial.",
+      "Base de contatos do CRM (leads ligadas a clientes/empresas). Use para centralizar e-mails, telefones e o relacionamento comercial.",
     rules: [
-      "Cada contato pode ser vinculado a uma Pessoa (Negócio), a um Cliente ou ficar avulso (sem vínculo).",
-      "A ficha do contato (clique na linha da listagem) mostra os dados completos e permite trocar o vínculo entre pessoa, cliente ou avulso.",
+      "Cada contato pode ser vinculado a uma Lead (Negócio), a um Cliente ou ficar avulso (sem vínculo).",
+      "A ficha do contato (clique na linha da listagem) mostra os dados completos e permite trocar o vínculo entre lead, cliente ou avulso.",
       "O contato principal recebe destaque com estrela e pode ser marcado na edição.",
-      "Salvar as alterações recarrega a ficha com o vínculo atual — o nome da pessoa ou do cliente aparece sempre atualizado.",
+      "Salvar as alterações recarrega a ficha com o vínculo atual — o nome da lead ou do cliente aparece sempre atualizado.",
       "Use a busca por nome, e-mail, cargo ou empresa para localizar rapidamente.",
       "Excluir um contato não remove o cliente/empresa vinculado.",
       "A exclusão de contato é exclusiva de ADMIN e SUDO.",
@@ -1396,8 +1396,8 @@ export const crmContent: Record<string, InfoContent> = {
       { name: "Telefone / Celular / WhatsApp", desc: "Canais de acesso do contato" },
       { name: "Principal", desc: "Contato principal do vínculo (estrela na listagem)" },
       { name: "Observações", desc: "Anotações livres sobre o contato" },
-      { name: "Vínculo", desc: "Pessoa (Negócio), Cliente ou Sem vínculo (órfão)" },
-      { name: "Empresa", desc: "Razão social ou nome fantasia da pessoa vinculada" },
+      { name: "Vínculo", desc: "Lead (Negócio), Cliente ou Sem vínculo (órfão)" },
+      { name: "Empresa", desc: "Razão social ou nome fantasia da lead vinculada" },
     ],
   },
 
@@ -1419,7 +1419,7 @@ export const crmContent: Record<string, InfoContent> = {
 
   // ==================== PAÍSES (CONFIG) ====================
   "/comercial/crm/configuracoes/paises": {
-    title: "Países",
+    title: "Promoção",
     description:
       "Cadastro de países usados nas transações e requisições do módulo comercial (código + nome).",
     rules: [
@@ -1438,14 +1438,14 @@ export const saudeProspeccaoInfo = {
   tabela: {
     title: "Tabela — saúde da prospecção",
     description:
-      "Cada linha é um cliente ou pessoa com visitas no ano corrente. A tabela cruza esforço comercial, engajamento e conversão, e respeita todos os filtros aplicados acima.",
+      "Cada linha é um cliente ou lead com visitas no ano corrente. A tabela cruza esforço comercial, engajamento e conversão, e respeita todos os filtros aplicados acima.",
     rules: [
       "Fórmula do esforço: visita realizada (+12,5) + relato/ata (+12,5) + check-in (+12,5) + contato (+12,5) + proposta (+25) + oportunidade (+25), limitado a 100%.",
       "Fórmula do engajamento: visita realizada (+20) + visita agendada (+10) + proposta negociada (+20) + oportunidade negociada (+20) + pedido de venda (+15) + faturamento (+15), limitado a 100%.",
       "Fórmula da conversão: (pedidos de venda + faturamentos) ÷ total de visitas da linha, arredondado e limitado a 100%.",
       "No badge de itens de engajamento, proposta e oportunidade valem 36% cada e os outros três itens dividem 28% (9,33% cada); a coluna mostra quantos itens estão presentes e o percentual ponderado.",
       "Visitas R/A/C abre a lista de visitas; cada visita da lista leva ao cadastro da visita.",
-      "Clique no nome para ver todas as visitas, vínculos e valores do cliente/pessoa.",
+      "Clique no nome para ver todas as visitas, vínculos e valores do cliente/lead.",
     ],
     columns: [
       { name: "Visitas R/A/C", desc: "Realizadas / agendadas / canceladas. Clique para listar as visitas." },
@@ -1478,7 +1478,7 @@ export const saudeProspeccaoInfo = {
     columns: [
       { name: "Item", desc: "Ata/relato, check-in/check-out, contato, proposta ou oportunidade." },
       { name: "Peso", desc: "Percentual que o item presente soma ao badge." },
-      { name: "Registros", desc: "Itens vinculados ao cliente/pessoa no ano corrente." },
+      { name: "Registros", desc: "Itens vinculados ao cliente/lead no ano corrente." },
     ],
     examples: [
       {
@@ -1494,7 +1494,7 @@ export const saudeProspeccaoInfo = {
   esforco: {
     title: "Esforço comercial — composição do score",
     description:
-      "O score de esforço mede o trabalho comercial feito com o cliente ou pessoa no período.",
+      "O score de esforço mede o trabalho comercial feito com o cliente ou lead no período.",
     rules: [
       "Fórmula: visita realizada (+12,5) + relato/ata (+12,5) + check-in (+12,5) + contato (+12,5) + proposta (+25) + oportunidade (+25).",
       "Proposta e oportunidade valem 25 pontos cada; os outros quatro critérios dividem igualmente os 50 pontos restantes.",
@@ -1527,27 +1527,27 @@ export const saudeProspeccaoInfo = {
   registros: {
     title: "Registros — saúde da prospecção",
     description:
-      "Quantidade de clientes e pessoas distintos que aparecem na saúde da prospecção depois dos filtros da tabela — não é a quantidade de visitas.",
+      "Quantidade de clientes e leads distintos que aparecem na saúde da prospecção depois dos filtros da tabela — não é a quantidade de visitas.",
     rules: [
-      "Cada cliente ou pessoa com pelo menos uma visita no ano corrente conta como um registro, mesmo com várias visitas.",
-      "Pessoa promovida a cliente é contada uma única vez, junto com o cliente.",
-      "Visita avulsa aparece como pessoa.",
+      "Cada cliente ou lead com pelo menos uma visita no ano corrente conta como um registro, mesmo com várias visitas.",
+      "Lead promovida a cliente é contada uma única vez, junto com o cliente.",
+      "Visita avulsa aparece como lead.",
     ],
     examples: [
       {
         title: "Exemplo",
-        desc: "58 visitas cadastradas podem virar 28 registros quando várias visitas são do mesmo cliente ou da mesma pessoa.",
+        desc: "58 visitas cadastradas podem virar 28 registros quando várias visitas são do mesmo cliente ou da mesma lead.",
       },
     ],
   },
   aec: {
     title: "AEC — Alto Esforço comercial",
     description:
-      "Clientes e pessoas com esforço acima de 35% e pelo menos 20 pontos à frente do engajamento.",
+      "Clientes e leads com esforço acima de 35% e pelo menos 20 pontos à frente do engajamento.",
     rules: [
       "Fórmula: AEC se Esforço > 35 e Esforço − Engajamento ≥ 20.",
       "Também entra em AEC quem tem esforço acima de 35% e engajamento de até 35%.",
-      "Clique no card para abrir a lista de clientes e pessoas desse grupo.",
+      "Clique no card para abrir a lista de clientes e leads desse grupo.",
     ],
     examples: [
       {
@@ -1559,7 +1559,7 @@ export const saudeProspeccaoInfo = {
   engajados: {
     title: "Engajados — clientes puxando o resultado",
     description:
-      "Clientes e pessoas com engajamento acima de 35% e pelo menos 10 pontos à frente do esforço.",
+      "Clientes e leads com engajamento acima de 35% e pelo menos 10 pontos à frente do esforço.",
     rules: ["Fórmula: Engajados se Engajamento > 35 e Engajamento − Esforço ≥ 10."],
     examples: [
       {
@@ -1571,11 +1571,11 @@ export const saudeProspeccaoInfo = {
   eql: {
     title: "EQL — Equilibrado",
     description:
-      "Clientes e pessoas com esforço e engajamento acima de 35% e próximos um do outro.",
+      "Clientes e leads com esforço e engajamento acima de 35% e próximos um do outro.",
     rules: [
       "Fórmula: EQL se Esforço > 35, Engajamento > 35 e |Esforço − Engajamento| < 20.",
       "Quando o engajamento fica pelo menos 10 pontos à frente, o registro vai para Engajados mesmo com diferença menor que 20.",
-      "Clique no card para abrir a lista de clientes e pessoas equilibradas.",
+      "Clique no card para abrir a lista de clientes e leads equilibradas.",
     ],
     examples: [
       {
@@ -1586,11 +1586,11 @@ export const saudeProspeccaoInfo = {
   },
   bec: {
     title: "BEC — Baixo Esforço comercial",
-    description: "Clientes e pessoas com esforço comercial de até 35%.",
+    description: "Clientes e leads com esforço comercial de até 35%.",
     rules: [
       "Fórmula: BEC se Esforço ≤ 35.",
       "O engajamento pode ser qualquer valor; o que define o grupo é o esforço baixo.",
-      "Clique no card para abrir a lista de clientes e pessoas desse grupo.",
+      "Clique no card para abrir a lista de clientes e leads desse grupo.",
     ],
     examples: [
       {
@@ -1624,7 +1624,7 @@ export const saudeProspeccaoInfo = {
   conversao: {
     title: "Conversão — pedidos e faturamentos",
     description:
-      "Indicador que reúne pedidos de venda e faturamentos em um único percentual sobre o total de visitas do cliente/pessoa.",
+      "Indicador que reúne pedidos de venda e faturamentos em um único percentual sobre o total de visitas do cliente/lead.",
     rules: [
       "Fórmula: (pedidos de venda + faturamentos) ÷ visitas no ano corrente.",
       "O resultado é arredondado e limitado a 100%.",
@@ -1643,14 +1643,14 @@ export const saudeProspeccaoAcoesInfo = {
   tabela: {
     title: "Tabela — saúde da prospecção",
     description:
-      "Cada linha é um cliente ou pessoa com ações de prospecção no ano corrente. A tabela cruza esforço comercial, engajamento e conversão, e respeita todos os filtros aplicados acima.",
+      "Cada linha é um cliente ou lead com ações de prospecção no ano corrente. A tabela cruza esforço comercial, engajamento e conversão, e respeita todos os filtros aplicados acima.",
     rules: [
       "Fórmula do esforço: ação realizada (+12,5) + relato/ata (+12,5) + check-in (+12,5) + contato (+12,5) + proposta (+25) + oportunidade (+25), limitado a 100%.",
       "Fórmula do engajamento: ação realizada (+20) + ação agendada (+10) + proposta negociada (+20) + oportunidade negociada (+20) + pedido de venda (+15) + faturamento (+15), limitado a 100%.",
       "Fórmula da conversão: (pedidos de venda + faturamentos) ÷ total de ações da linha, arredondado e limitado a 100%.",
       "No badge de itens de engajamento, proposta e oportunidade valem 36% cada e os outros três itens dividem 28% (9,33% cada); a coluna mostra quantos itens estão presentes e o percentual ponderado.",
       "Ações R/A/C abre a lista de ações; cada ação da lista leva ao cadastro da ação.",
-      "Clique no nome para ver todas as ações, vínculos e valores do cliente/pessoa.",
+      "Clique no nome para ver todas as ações, vínculos e valores do cliente/lead.",
     ],
     columns: [
       {
@@ -1700,7 +1700,7 @@ export const saudeProspeccaoAcoesInfo = {
       { name: "Peso", desc: "Percentual que o item presente soma ao badge." },
       {
         name: "Registros",
-        desc: "Itens vinculados ao cliente/pessoa no ano corrente.",
+        desc: "Itens vinculados ao cliente/lead no ano corrente.",
       },
     ],
     examples: [
@@ -1717,7 +1717,7 @@ export const saudeProspeccaoAcoesInfo = {
   esforco: {
     title: "Esforço comercial — composição do score",
     description:
-      "O score de esforço mede o trabalho comercial feito com o cliente ou pessoa no período.",
+      "O score de esforço mede o trabalho comercial feito com o cliente ou lead no período.",
     rules: [
       "Fórmula: ação realizada (+12,5) + relato/ata (+12,5) + check-in (+12,5) + contato (+12,5) + proposta (+25) + oportunidade (+25).",
       "Proposta e oportunidade valem 25 pontos cada; os outros quatro critérios dividem igualmente os 50 pontos restantes.",
@@ -1750,27 +1750,27 @@ export const saudeProspeccaoAcoesInfo = {
   registros: {
     title: "Registros — saúde da prospecção",
     description:
-      "Quantidade de clientes e pessoas distintos que aparecem na saúde da prospecção depois dos filtros da tabela — não é a quantidade de ações.",
+      "Quantidade de clientes e leads distintos que aparecem na saúde da prospecção depois dos filtros da tabela — não é a quantidade de ações.",
     rules: [
-      "Cada cliente ou pessoa com pelo menos uma ação de prospecção no ano corrente conta como um registro, mesmo com várias ações.",
-      "Pessoa promovida a cliente é contada uma única vez, junto com o cliente.",
-      "Ação avulsa aparece como pessoa.",
+      "Cada cliente ou lead com pelo menos uma ação de prospecção no ano corrente conta como um registro, mesmo com várias ações.",
+      "Lead promovida a cliente é contada uma única vez, junto com o cliente.",
+      "Ação avulsa aparece como lead.",
     ],
     examples: [
       {
         title: "Exemplo",
-        desc: "58 ações cadastradas podem virar 28 registros quando várias ações são do mesmo cliente ou da mesma pessoa.",
+        desc: "58 ações cadastradas podem virar 28 registros quando várias ações são do mesmo cliente ou da mesma lead.",
       },
     ],
   },
   aec: {
     title: "AEC — Alto Esforço comercial",
     description:
-      "Clientes e pessoas com esforço acima de 35% e pelo menos 20 pontos à frente do engajamento.",
+      "Clientes e leads com esforço acima de 35% e pelo menos 20 pontos à frente do engajamento.",
     rules: [
       "Fórmula: AEC se Esforço > 35 e Esforço − Engajamento ≥ 20.",
       "Também entra em AEC quem tem esforço acima de 35% e engajamento de até 35%.",
-      "Clique no card para abrir a lista de clientes e pessoas desse grupo.",
+      "Clique no card para abrir a lista de clientes e leads desse grupo.",
     ],
     examples: [
       {
@@ -1782,7 +1782,7 @@ export const saudeProspeccaoAcoesInfo = {
   engajados: {
     title: "Engajados — clientes puxando o resultado",
     description:
-      "Clientes e pessoas com engajamento acima de 35% e pelo menos 10 pontos à frente do esforço.",
+      "Clientes e leads com engajamento acima de 35% e pelo menos 10 pontos à frente do esforço.",
     rules: ["Fórmula: Engajados se Engajamento > 35 e Engajamento − Esforço ≥ 10."],
     examples: [
       {
@@ -1794,11 +1794,11 @@ export const saudeProspeccaoAcoesInfo = {
   eql: {
     title: "EQL — Equilibrado",
     description:
-      "Clientes e pessoas com esforço e engajamento acima de 35% e próximos um do outro.",
+      "Clientes e leads com esforço e engajamento acima de 35% e próximos um do outro.",
     rules: [
       "Fórmula: EQL se Esforço > 35, Engajamento > 35 e |Esforço − Engajamento| < 20.",
       "Quando o engajamento fica pelo menos 10 pontos à frente, o registro vai para Engajados mesmo com diferença menor que 20.",
-      "Clique no card para abrir a lista de clientes e pessoas equilibradas.",
+      "Clique no card para abrir a lista de clientes e leads equilibradas.",
     ],
     examples: [
       {
@@ -1809,11 +1809,11 @@ export const saudeProspeccaoAcoesInfo = {
   },
   bec: {
     title: "BEC — Baixo Esforço comercial",
-    description: "Clientes e pessoas com esforço comercial de até 35%.",
+    description: "Clientes e leads com esforço comercial de até 35%.",
     rules: [
       "Fórmula: BEC se Esforço ≤ 35.",
       "O engajamento pode ser qualquer valor; o que define o grupo é o esforço baixo.",
-      "Clique no card para abrir a lista de clientes e pessoas desse grupo.",
+      "Clique no card para abrir a lista de clientes e leads desse grupo.",
     ],
     examples: [
       {
@@ -1839,7 +1839,7 @@ export const saudeProspeccaoAcoesInfo = {
         desc: "Presencial, vídeo ou telefone; e situação da ação.",
       },
       {
-        name: "Endereço",
+        name: "Conversão",
         desc: "Logradouro, número, bairro, cidade e UF quando preenchidos.",
       },
     ],
@@ -1853,7 +1853,7 @@ export const saudeProspeccaoAcoesInfo = {
   conversao: {
     title: "Conversão — pedidos e faturamentos",
     description:
-      "Indicador que reúne pedidos de venda e faturamentos em um único percentual sobre o total de ações do cliente/pessoa.",
+      "Indicador que reúne pedidos de venda e faturamentos em um único percentual sobre o total de ações do cliente/lead.",
     rules: [
       "Fórmula: (pedidos de venda + faturamentos) ÷ ações no ano corrente.",
       "O resultado é arredondado e limitado a 100%.",

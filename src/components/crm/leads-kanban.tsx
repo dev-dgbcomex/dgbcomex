@@ -16,38 +16,34 @@ import { DroppableColumn, KanbanSkeleton } from "./kanban-column"
 
 interface LeadCard {
   id: number
-  nome: string
-  email: string | null
-  celular: string | null
-  empresaNome: string | null
-  score: number | null
-  origem: string
+  tipoPessoa: string
+  nome: string | null
+  razaoSocial: string | null
+  cpf: string | null
+  cnpj: string | null
+  segmento: string | null
+  responsavelNome: string | null
   status: string
-}
-
-const ORIGEM_LABELS: Record<string, string> = {
-  SITE: "Site",
-  INDICACAO: "Indicação",
-  EVENTO: "Evento",
-  PROSPECCAO: "Prospecção",
-  LIGACAO: "Ligação",
-  WHATSAPP: "WhatsApp",
-  EMAIL: "Email",
-  OUTRO: "Outro",
 }
 
 const DEFAULT_STATUSES = [
   { nome: "NOVO", rotulo: "Novo", cor: "#3b82f6", ativo: true },
-  { nome: "CONTATADO", rotulo: "Contatado", cor: "#f59e0b", ativo: true },
   { nome: "QUALIFICADO", rotulo: "Qualificado", cor: "#10b981", ativo: true },
-  { nome: "CONVERTIDO", rotulo: "Convertido", cor: "#22c55e", ativo: true },
+  { nome: "CONVERTIDO_CLIENTE", rotulo: "Cliente", cor: "#22c55e", ativo: true },
   { nome: "PERDIDO", rotulo: "Perdido", cor: "#ef4444", ativo: true },
+  { nome: "INATIVO", rotulo: "Inativo", cor: "#94a3b8", ativo: true },
 ]
+
+function formatarDocumento(lead: LeadCard) {
+  if (lead.cnpj) return `CNPJ: ${lead.cnpj}`
+  if (lead.cpf) return `CPF: ${lead.cpf}`
+  return null
+}
 
 function DraggableCard({ lead }: { lead: LeadCard }) {
   const router = useRouter()
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id: `lead-${lead.id}`,
+    id: `pes-${lead.id}`,
     data: { lead },
   })
 
@@ -62,12 +58,12 @@ function DraggableCard({ lead }: { lead: LeadCard }) {
     router.push(`/comercial/crm/leads/${lead.id}`)
   }
 
-  function getScoreColor(score: number | null) {
-    if (score == null) return "text-slate-400"
-    if (score >= 70) return "text-green-600 dark:text-green-400"
-    if (score >= 40) return "text-amber-600 dark:text-amber-400"
-    return "text-red-600 dark:text-red-400"
-  }
+  const nomeExibido = lead.nome || lead.razaoSocial || "Sem nome"
+  const documento = formatarDocumento(lead)
+  const tipoBadge =
+    lead.tipoPessoa === "PF"
+      ? "text-purple-600 bg-purple-50 dark:bg-purple-950/50 dark:text-purple-400"
+      : "text-cyan-600 bg-cyan-50 dark:bg-cyan-950/50 dark:text-cyan-400"
 
   return (
     <div
@@ -81,30 +77,26 @@ function DraggableCard({ lead }: { lead: LeadCard }) {
       }`}
     >
       <div className="flex items-start justify-between gap-2">
-        <span className="text-sm font-medium text-slate-900 dark:text-slate-100 leading-snug line-clamp-1">
-          {lead.nome}
+        <span
+          className={`inline-flex text-[10px] px-1.5 py-0.5 rounded-full font-medium ${tipoBadge}`}
+        >
+          {lead.tipoPessoa}
         </span>
-        {lead.score != null && (
-          <span className={`text-[10px] font-bold shrink-0 ${getScoreColor(lead.score)}`}>
-            {lead.score}%
-          </span>
+        {lead.responsavelNome && (
+          <span className="text-[10px] text-slate-400">{lead.responsavelNome}</span>
         )}
       </div>
-      {lead.empresaNome && (
-        <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">{lead.empresaNome}</p>
-      )}
-      <div className="flex items-center gap-2 mt-1.5">
-        {lead.email && <p className="text-[10px] text-slate-400 truncate">{lead.email}</p>}
-        <span className="text-[10px] text-slate-400 ml-auto">
-          {ORIGEM_LABELS[lead.origem] || lead.origem}
-        </span>
-      </div>
+      <p className="text-sm font-medium text-slate-900 dark:text-slate-100 mt-1 leading-snug line-clamp-2">
+        {nomeExibido}
+      </p>
+      {documento && <p className="text-xs text-slate-500 mt-0.5">{documento}</p>}
+      {lead.segmento && <p className="text-xs text-slate-400 mt-1">{lead.segmento}</p>}
     </div>
   )
 }
 
 export default function LeadsKanban({ leads }: { leads: LeadCard[] }) {
-  const { statuses, loading: statusLoading } = useStatuses("LEAD")
+  const { statuses, loading: statusLoading } = useStatuses("PESSOA")
   const [activeCard, setActiveCard] = useState<LeadCard | null>(null)
   const [cards, setCards] = useState<LeadCard[]>(leads || [])
 
@@ -126,19 +118,11 @@ export default function LeadsKanban({ leads }: { leads: LeadCard[] }) {
     return DEFAULT_STATUSES.find((s: any) => s.nome === nome)?.rotulo || nome
   }
 
-  const getColor = (nome: string) => {
-    if (hasStatuses) {
-      const s = statuses.find((s: any) => s.nome === nome)
-      return s?.cor || "#94a3b8"
-    }
-    return DEFAULT_STATUSES.find((s: any) => s.nome === nome)?.cor || "#94a3b8"
-  }
-
   const colunas = effectiveStatuses
     .filter((s: any) => s.ativo !== false)
     .map((col: any) => ({
       ...col,
-      cards: cards.filter((l: any) => l.status === col.nome),
+      cards: cards.filter((p: any) => p.status === col.nome),
     }))
 
   const handleDragStart = (event: any) => {
@@ -160,7 +144,9 @@ export default function LeadsKanban({ leads }: { leads: LeadCard[] }) {
 
     const statusAntigo = lead.status
 
-    setCards((prev) => prev.map((l: any) => (l.id === lead.id ? { ...l, status: novoStatus } : l)))
+    setCards((prev) =>
+      prev.map((p: any) => (p.id === lead.id ? { ...p, status: novoStatus } : p))
+    )
 
     try {
       const res = await fetch(`/api/crm/leads/${lead.id}`, {
@@ -172,10 +158,10 @@ export default function LeadsKanban({ leads }: { leads: LeadCard[] }) {
         const err = await res.json()
         throw new Error(err.error || "Erro ao alterar status")
       }
-      toast.success(`Lead movido para ${getLabel(novoStatus)}`)
+      toast.success(`Lead movida para ${getLabel(novoStatus)}`)
     } catch (err: any) {
       setCards((prev) =>
-        prev.map((l: any) => (l.id === lead.id ? { ...l, status: statusAntigo } : l))
+        prev.map((p: any) => (p.id === lead.id ? { ...p, status: statusAntigo } : p))
       )
       toast.error(err.message)
     }
@@ -198,7 +184,7 @@ export default function LeadsKanban({ leads }: { leads: LeadCard[] }) {
               count={col.cards.length}
             >
               {col.cards.map((card: any) => (
-                <DraggableCard key={`lead-${card.id}`} lead={card} />
+                <DraggableCard key={`pes-${card.id}`} lead={card} />
               ))}
             </DroppableColumn>
           ))}
@@ -207,10 +193,9 @@ export default function LeadsKanban({ leads }: { leads: LeadCard[] }) {
         {activeCard && (
           <DragOverlay>
             <div className="bg-white dark:bg-slate-800 rounded-lg border border-blue-400 shadow-xl p-3 w-72 opacity-90">
-              <p className="text-sm font-medium text-slate-900">{activeCard.nome}</p>
-              {activeCard.empresaNome && (
-                <p className="text-xs text-slate-500 mt-0.5">{activeCard.empresaNome}</p>
-              )}
+              <p className="text-sm font-medium text-slate-900">
+                {activeCard.nome || activeCard.razaoSocial || "Sem nome"}
+              </p>
             </div>
           </DragOverlay>
         )}

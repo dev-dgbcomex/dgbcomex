@@ -41,7 +41,7 @@ export function HistoricoConversaoCard({ historico, carregando }: Props) {
                   <Link2 size={13} />
                   Veio da pessoa{" "}
                   <Link
-                    href={`/comercial/crm/pessoas/${historico.pessoaId}`}
+                    href={`/comercial/crm/leads/${historico.pessoaId}`}
                     className="underline hover:no-underline"
                   >
                     {historico.nomePessoa}

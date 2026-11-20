@@ -14,37 +14,41 @@ import {
 import { useStatuses } from "@/hooks/use-statuses"
 import { DroppableColumn, KanbanSkeleton } from "./kanban-column"
 
-interface PessoaCard {
+interface VisitanteCard {
   id: number
-  tipoPessoa: string
-  nome: string | null
-  razaoSocial: string | null
-  cpf: string | null
-  cnpj: string | null
-  segmento: string | null
-  responsavelNome: string | null
+  nome: string
+  email: string | null
+  celular: string | null
+  empresaNome: string | null
+  score: number | null
+  origem: string
   status: string
+}
+
+const ORIGEM_LABELS: Record<string, string> = {
+  SITE: "Site",
+  INDICACAO: "Indicação",
+  EVENTO: "Evento",
+  PROSPECCAO: "Prospecção",
+  LIGACAO: "Ligação",
+  WHATSAPP: "WhatsApp",
+  EMAIL: "Email",
+  OUTRO: "Outro",
 }
 
 const DEFAULT_STATUSES = [
   { nome: "NOVO", rotulo: "Novo", cor: "#3b82f6", ativo: true },
+  { nome: "CONTATADO", rotulo: "Contatado", cor: "#f59e0b", ativo: true },
   { nome: "QUALIFICADO", rotulo: "Qualificado", cor: "#10b981", ativo: true },
-  { nome: "CONVERTIDO_CLIENTE", rotulo: "Cliente", cor: "#22c55e", ativo: true },
+  { nome: "CONVERTIDO", rotulo: "Convertido", cor: "#22c55e", ativo: true },
   { nome: "PERDIDO", rotulo: "Perdido", cor: "#ef4444", ativo: true },
-  { nome: "INATIVO", rotulo: "Inativo", cor: "#94a3b8", ativo: true },
 ]
 
-function formatarDocumento(pessoa: PessoaCard) {
-  if (pessoa.cnpj) return `CNPJ: ${pessoa.cnpj}`
-  if (pessoa.cpf) return `CPF: ${pessoa.cpf}`
-  return null
-}
-
-function DraggableCard({ pessoa }: { pessoa: PessoaCard }) {
+function DraggableCard({ visitante }: { visitante: VisitanteCard }) {
   const router = useRouter()
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id: `pes-${pessoa.id}`,
-    data: { pessoa },
+    id: `visitante-${visitante.id}`,
+    data: { visitante },
   })
 
   const style = transform
@@ -55,15 +59,15 @@ function DraggableCard({ pessoa }: { pessoa: PessoaCard }) {
     : undefined
 
   const handleClick = () => {
-    router.push(`/comercial/crm/pessoas/${pessoa.id}`)
+    router.push(`/comercial/crm/visitantes/${visitante.id}`)
   }
 
-  const nomeExibido = pessoa.nome || pessoa.razaoSocial || "Sem nome"
-  const documento = formatarDocumento(pessoa)
-  const tipoBadge =
-    pessoa.tipoPessoa === "PF"
-      ? "text-purple-600 bg-purple-50 dark:bg-purple-950/50 dark:text-purple-400"
-      : "text-cyan-600 bg-cyan-50 dark:bg-cyan-950/50 dark:text-cyan-400"
+  function getScoreColor(score: number | null) {
+    if (score == null) return "text-slate-400"
+    if (score >= 70) return "text-green-600 dark:text-green-400"
+    if (score >= 40) return "text-amber-600 dark:text-amber-400"
+    return "text-red-600 dark:text-red-400"
+  }
 
   return (
     <div
@@ -77,32 +81,36 @@ function DraggableCard({ pessoa }: { pessoa: PessoaCard }) {
       }`}
     >
       <div className="flex items-start justify-between gap-2">
-        <span
-          className={`inline-flex text-[10px] px-1.5 py-0.5 rounded-full font-medium ${tipoBadge}`}
-        >
-          {pessoa.tipoPessoa}
+        <span className="text-sm font-medium text-slate-900 dark:text-slate-100 visitanteing-snug line-clamp-1">
+          {visitante.nome}
         </span>
-        {pessoa.responsavelNome && (
-          <span className="text-[10px] text-slate-400">{pessoa.responsavelNome}</span>
+        {visitante.score != null && (
+          <span className={`text-[10px] font-bold shrink-0 ${getScoreColor(visitante.score)}`}>
+            {visitante.score}%
+          </span>
         )}
       </div>
-      <p className="text-sm font-medium text-slate-900 dark:text-slate-100 mt-1 leading-snug line-clamp-2">
-        {nomeExibido}
-      </p>
-      {documento && <p className="text-xs text-slate-500 mt-0.5">{documento}</p>}
-      {pessoa.segmento && <p className="text-xs text-slate-400 mt-1">{pessoa.segmento}</p>}
+      {visitante.empresaNome && (
+        <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">{visitante.empresaNome}</p>
+      )}
+      <div className="flex items-center gap-2 mt-1.5">
+        {visitante.email && <p className="text-[10px] text-slate-400 truncate">{visitante.email}</p>}
+        <span className="text-[10px] text-slate-400 ml-auto">
+          {ORIGEM_LABELS[visitante.origem] || visitante.origem}
+        </span>
+      </div>
     </div>
   )
 }
 
-export default function PessoasKanban({ pessoas }: { pessoas: PessoaCard[] }) {
-  const { statuses, loading: statusLoading } = useStatuses("PESSOA")
-  const [activeCard, setActiveCard] = useState<PessoaCard | null>(null)
-  const [cards, setCards] = useState<PessoaCard[]>(pessoas || [])
+export default function VisitantesKanban({ visitantes }: { visitantes: VisitanteCard[] }) {
+  const { statuses, loading: statusLoading } = useStatuses("VISITANTE")
+  const [activeCard, setActiveCard] = useState<VisitanteCard | null>(null)
+  const [cards, setCards] = useState<VisitanteCard[]>(visitantes || [])
 
   useEffect(() => {
-    setCards(pessoas || [])
-  }, [pessoas])
+    setCards(visitantes || [])
+  }, [visitantes])
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
@@ -118,15 +126,23 @@ export default function PessoasKanban({ pessoas }: { pessoas: PessoaCard[] }) {
     return DEFAULT_STATUSES.find((s: any) => s.nome === nome)?.rotulo || nome
   }
 
+  const getColor = (nome: string) => {
+    if (hasStatuses) {
+      const s = statuses.find((s: any) => s.nome === nome)
+      return s?.cor || "#94a3b8"
+    }
+    return DEFAULT_STATUSES.find((s: any) => s.nome === nome)?.cor || "#94a3b8"
+  }
+
   const colunas = effectiveStatuses
     .filter((s: any) => s.ativo !== false)
     .map((col: any) => ({
       ...col,
-      cards: cards.filter((p: any) => p.status === col.nome),
+      cards: cards.filter((l: any) => l.status === col.nome),
     }))
 
   const handleDragStart = (event: any) => {
-    const card = event.active.data.current?.pessoa
+    const card = event.active.data.current?.visitante
     if (card) setActiveCard(card)
   }
 
@@ -136,20 +152,18 @@ export default function PessoasKanban({ pessoas }: { pessoas: PessoaCard[] }) {
     const { active, over } = event
     if (!over || active.id === over.id) return
 
-    const pessoa = active.data.current?.pessoa as PessoaCard | undefined
-    if (!pessoa) return
+    const visitante = active.data.current?.visitante as VisitanteCard | undefined
+    if (!visitante) return
 
     const novoStatus = over.id as string
-    if (pessoa.status === novoStatus) return
+    if (visitante.status === novoStatus) return
 
-    const statusAntigo = pessoa.status
+    const statusAntigo = visitante.status
 
-    setCards((prev) =>
-      prev.map((p: any) => (p.id === pessoa.id ? { ...p, status: novoStatus } : p))
-    )
+    setCards((prev) => prev.map((l: any) => (l.id === visitante.id ? { ...l, status: novoStatus } : l)))
 
     try {
-      const res = await fetch(`/api/crm/pessoas/${pessoa.id}`, {
+      const res = await fetch(`/api/crm/visitantes/${visitante.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: novoStatus }),
@@ -158,10 +172,10 @@ export default function PessoasKanban({ pessoas }: { pessoas: PessoaCard[] }) {
         const err = await res.json()
         throw new Error(err.error || "Erro ao alterar status")
       }
-      toast.success(`Pessoa movida para ${getLabel(novoStatus)}`)
+      toast.success(`Visitante movido para ${getLabel(novoStatus)}`)
     } catch (err: any) {
       setCards((prev) =>
-        prev.map((p: any) => (p.id === pessoa.id ? { ...p, status: statusAntigo } : p))
+        prev.map((l: any) => (l.id === visitante.id ? { ...l, status: statusAntigo } : l))
       )
       toast.error(err.message)
     }
@@ -184,7 +198,7 @@ export default function PessoasKanban({ pessoas }: { pessoas: PessoaCard[] }) {
               count={col.cards.length}
             >
               {col.cards.map((card: any) => (
-                <DraggableCard key={`pes-${card.id}`} pessoa={card} />
+                <DraggableCard key={`visitante-${card.id}`} visitante={card} />
               ))}
             </DroppableColumn>
           ))}
@@ -193,9 +207,10 @@ export default function PessoasKanban({ pessoas }: { pessoas: PessoaCard[] }) {
         {activeCard && (
           <DragOverlay>
             <div className="bg-white dark:bg-slate-800 rounded-lg border border-blue-400 shadow-xl p-3 w-72 opacity-90">
-              <p className="text-sm font-medium text-slate-900">
-                {activeCard.nome || activeCard.razaoSocial || "Sem nome"}
-              </p>
+              <p className="text-sm font-medium text-slate-900">{activeCard.nome}</p>
+              {activeCard.empresaNome && (
+                <p className="text-xs text-slate-500 mt-0.5">{activeCard.empresaNome}</p>
+              )}
             </div>
           </DragOverlay>
         )}

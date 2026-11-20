@@ -52,10 +52,10 @@ async function seed() {
 
   await db.insert(userMenuItens).values([
     { userMenuId: menuCrm.id, titulo: "Dashboard", url: "/comercial/crm", ordem: 0 },
-    { userMenuId: menuCrm.id, titulo: "Pessoas", url: "/comercial/crm/pessoas", ordem: 1 },
+    { userMenuId: menuCrm.id, titulo: "Leads", url: "/comercial/crm/leads", ordem: 1 },
     { userMenuId: menuCrm.id, titulo: "Segmentos", url: "/comercial/crm/segmentos", ordem: 2 },
     { userMenuId: menuCrm.id, titulo: "Contatos", url: "/comercial/crm/contatos", ordem: 3 },
-    { userMenuId: menuCrm.id, titulo: "Leads", url: "/comercial/crm/leads", ordem: 4 },
+    { userMenuId: menuCrm.id, titulo: "Visitantes", url: "/comercial/crm/visitantes", ordem: 4 },
     {
       userMenuId: menuCrm.id,
       titulo: "Oportunidades",
@@ -108,9 +108,9 @@ async function seed() {
 
   await db.insert(userMenuItens).values([
     { userMenuId: menuCrmRole.id, titulo: "Dashboard", url: "/comercial/crm", ordem: 0 },
-    { userMenuId: menuCrmRole.id, titulo: "Pessoas", url: "/comercial/crm/pessoas", ordem: 1 },
+    { userMenuId: menuCrmRole.id, titulo: "Leads", url: "/comercial/crm/leads", ordem: 1 },
     { userMenuId: menuCrmRole.id, titulo: "Segmentos", url: "/comercial/crm/segmentos", ordem: 2 },
-    { userMenuId: menuCrmRole.id, titulo: "Leads", url: "/comercial/crm/leads", ordem: 3 },
+    { userMenuId: menuCrmRole.id, titulo: "Visitantes", url: "/comercial/crm/visitantes", ordem: 3 },
     { userMenuId: menuCrmRole.id, titulo: "Contatos", url: "/comercial/crm/contatos", ordem: 4 },
     {
       userMenuId: menuCrmRole.id,
@@ -151,7 +151,7 @@ async function seed() {
     },
     {
       userMenuId: menuCrmRole.id,
-      titulo: "Relatórios",
+      titulo: "Notificações",
       url: "/comercial/crm/relatorios",
       ordem: 17,
     },
@@ -169,10 +169,10 @@ async function seed() {
 
   await db.insert(userMenuItens).values([
     { userMenuId: menuCrmAdmin.id, titulo: "Dashboard", url: "/comercial/crm", ordem: 0 },
-    { userMenuId: menuCrmAdmin.id, titulo: "Pessoas", url: "/comercial/crm/pessoas", ordem: 1 },
+    { userMenuId: menuCrmAdmin.id, titulo: "Leads", url: "/comercial/crm/leads", ordem: 1 },
     { userMenuId: menuCrmAdmin.id, titulo: "Segmentos", url: "/comercial/crm/segmentos", ordem: 2 },
     { userMenuId: menuCrmAdmin.id, titulo: "Contatos", url: "/comercial/crm/contatos", ordem: 3 },
-    { userMenuId: menuCrmAdmin.id, titulo: "Leads", url: "/comercial/crm/leads", ordem: 4 },
+    { userMenuId: menuCrmAdmin.id, titulo: "Visitantes", url: "/comercial/crm/visitantes", ordem: 4 },
     {
       userMenuId: menuCrmAdmin.id,
       titulo: "Oportunidades",
@@ -222,7 +222,7 @@ async function seed() {
     },
     {
       userMenuId: menuCrmAdmin.id,
-      titulo: "Relatórios",
+      titulo: "Notificações",
       url: "/comercial/crm/relatorios",
       ordem: 17,
     },

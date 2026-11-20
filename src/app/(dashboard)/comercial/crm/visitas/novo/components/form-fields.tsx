@@ -1,6 +1,6 @@
 import { AlertTriangle, Building2, Repeat, User, UserCheck } from "lucide-react"
 import { toast } from "sonner"
-import { QuickCreatePessoa } from "@/components/crm/quick-create-pessoa"
+import { QuickCreateLead } from "@/components/crm/quick-create-lead"
 import { QuickCreateCliente } from "@/components/crm/quick-create-cliente"
 import { QuickCreateContato } from "@/components/crm/quick-create-contato"
 import { QuickCreateOportunidade } from "@/components/crm/quick-create-oportunidade"
@@ -137,7 +137,7 @@ export function FormFields({
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
               Pessoa (Negócio) *
-              <QuickCreatePessoa onCreated={onEmpresaCreated} />
+              <QuickCreateLead onCreated={onEmpresaCreated} />
             </label>
             <select
               value={form.empresaId}

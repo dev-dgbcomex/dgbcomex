@@ -58,7 +58,7 @@ function buildHandler() {
       return { json: tarefasConcluidas }
     if (method === "GET" && url === "/api/crm/tarefas?hoje=true&mine=true")
       return { json: tarefasPendentes }
-    if (method === "GET" && url === "/api/crm/pessoas")
+    if (method === "GET" && url === "/api/crm/leads")
       return { json: [{ id: 1, razaoSocial: "Tecidos Silva" }] }
     if (method === "PUT" && url === "/api/crm/tarefas/1") return { json: {} }
     if (method === "PUT" && url === "/api/crm/tarefas/3") return { json: {} }

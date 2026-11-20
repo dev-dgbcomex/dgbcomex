@@ -1,58 +1,218 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { screen, fireEvent, waitFor } from "@testing-library/react"
-import NovoLeadPage from "./page"
-import { createFetchMock, renderPage, findCall, navMock, toastMock } from "@/test/harness"
+import NovaLeadPage from "./page"
+import { createFetchMock, renderPage, findCall, toastMock, navMock } from "@/test/harness"
 
-describe("NovoLeadPage", () => {
+describe("NovaLeadPage", () => {
+  let fetchMock: ReturnType<typeof createFetchMock>
+
   beforeEach(() => {
-    navMock.setPathname("/comercial/crm/leads/novo")
+    const handler = ({ method, url }: { method: string; url: string }) => {
+      if (method === "GET" && url === "/api/crm/segmentos") {
+        return { json: [{ id: 1, nome: "Tecelagem", ativo: true }] }
+      }
+      if (method === "GET" && url === "/api/crm/estados") {
+        return { json: [{ id: 35, uf: "SP", nome: "São Paulo" }] }
+      }
+      if (method === "GET" && url === "/api/crm/cidades?estadoId=35") {
+        return { json: [{ id: 1, nome: "São Paulo", estadoId: 35 }] }
+      }
+      if (method === "GET" && url === "/api/crm/consulta-cnpj?cnpj=12345678000190") {
+        return {
+          json: {
+            apiData: {
+              razao_social: "Tecelagem Alpha Ltda",
+              nome_fantasia: "Alpha Confecções",
+              situacao_cadastral: "Ativa",
+              cnae_principal: "1412601",
+              cnaes: [
+                {
+                  codigo: "1412601",
+                  descricao: "Confecção de peças do vestuário",
+                  is_principal: true,
+                },
+              ],
+              logradouro: "Rua das Flores",
+              numero: "100",
+              complemento: "",
+              bairro: "Centro",
+              municipio: "São Paulo",
+              uf: "SP",
+              cep: "01000000",
+              telefones: [{ ddd: "11", numero: "99999999", is_fax: false }],
+            },
+          },
+        }
+      }
+      if (method === "GET" && url === "/api/crm/consulta-cnpj?cnpj=00000000000000") {
+        return { json: { apiData: null } }
+      }
+      if (method === "POST" && url === "/api/crm/leads") {
+        return { json: { id: 5 } }
+      }
+      if (method === "GET" && url.startsWith("/api/representantes?q=")) {
+        return { json: [{ id: 1, nome: "Carlos Representante" }] }
+      }
+      if (method === "POST" && url === "/api/crm/leads/5/representantes") {
+        return { json: { id: 9 } }
+      }
+      return { json: null }
+    }
+    fetchMock = createFetchMock(handler)
+    vi.stubGlobal("fetch", fetchMock.fn)
   })
 
-  it("renderiza o formulário de criação", () => {
-    vi.stubGlobal("fetch", createFetchMock(() => ({ json: null })).fn)
-    renderPage(<NovoLeadPage />)
+  it("renderiza o formulário com Pessoa Jurídica padrão", async () => {
+    renderPage(<NovaLeadPage />)
 
-    expect(screen.getByRole("heading", { name: "Novo Lead" })).toBeInTheDocument()
+    expect(
+      await screen.findByRole("heading", { name: "Novo Lead (Negócio)" })
+    ).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Pessoa Jurídica" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Pessoa Física" })).toBeInTheDocument()
+    expect(screen.getByText(/Razão Social/)).toBeInTheDocument()
+    expect(screen.getByPlaceholderText("00.000.000/0000-00")).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Salvar" })).toBeInTheDocument()
   })
 
-  it("valida o nome obrigatório antes de salvar", async () => {
-    const fetchMock = createFetchMock(() => ({ json: null }))
-    vi.stubGlobal("fetch", fetchMock.fn)
-    const ui = renderPage(<NovoLeadPage />)
+  it("valida Razão Social (PJ) e Nome (PF) obrigatórios", async () => {
+    const { container } = renderPage(<NovaLeadPage />)
+    await screen.findByRole("heading", { name: "Novo Lead (Negócio)" })
 
-    fireEvent.submit(ui.container.querySelector("form")!)
+    const form = container.querySelector("form")!
+    fireEvent.submit(form)
+    await waitFor(() => expect(toastMock.error).toHaveBeenCalledWith("Razão Social é obrigatória"))
 
+    fireEvent.click(screen.getByRole("button", { name: "Pessoa Física" }))
+    fireEvent.submit(form)
     await waitFor(() => expect(toastMock.error).toHaveBeenCalledWith("Nome é obrigatório"))
-    expect(findCall(fetchMock.calls, "/api/crm/leads", "POST")).toBeUndefined()
   })
 
-  it("cria via POST e redireciona para a lista", async () => {
-    const fetchMock = createFetchMock(({ method, url }) => {
-      if (method === "POST" && url === "/api/crm/leads") return { status: 201, json: { id: 1 } }
-      return { status: 404, json: { error: "Rota não mockada" } }
-    })
-    vi.stubGlobal("fetch", fetchMock.fn)
-    renderPage(<NovoLeadPage />)
+  it("cria pessoa jurídica via POST com UF e cidade", async () => {
+    const { container } = renderPage(<NovaLeadPage />)
+    await screen.findByRole("heading", { name: "Novo Lead (Negócio)" })
 
-    fireEvent.change(screen.getAllByRole("textbox")[0], { target: { value: "João Pereira" } })
-    fireEvent.change(screen.getAllByRole("combobox")[1], { target: { value: "WHATSAPP" } })
-    fireEvent.click(screen.getByRole("button", { name: "Salvar" }))
+    const textboxes = screen.getAllByRole("textbox")
+    fireEvent.change(textboxes[0], { target: { value: "Tecelagem Beta Ltda" } })
+    fireEvent.change(textboxes[1], { target: { value: "Beta Confecções" } })
+    fireEvent.change(textboxes[2], { target: { value: "12.345.678/0001-90" } })
+    fireEvent.change(textboxes[6], { target: { value: "contato@beta.com" } })
+
+    const comboboxes = screen.getAllByRole("combobox")
+    await waitFor(() =>
+      expect(screen.getByRole("option", { name: "Tecelagem" })).toBeInTheDocument()
+    )
+    fireEvent.change(comboboxes[0], { target: { value: "Tecelagem" } })
+    fireEvent.change(comboboxes[1], { target: { value: "ME" } })
+    fireEvent.change(comboboxes[2], { target: { value: "SP" } })
+
+    await waitFor(() =>
+      expect(screen.getByRole("option", { name: "São Paulo" })).toBeInTheDocument()
+    )
+    const comboboxesApos = screen.getAllByRole("combobox")
+    fireEvent.change(comboboxesApos[3], { target: { value: "São Paulo" } })
+
+    fireEvent.submit(container.querySelector("form")!)
 
     await waitFor(() => {
       const call = findCall(fetchMock.calls, "/api/crm/leads", "POST")
       expect(call).toBeDefined()
-      expect(call!.body).toMatchObject({
-        nome: "João Pereira",
-        tipoPessoa: "",
-        origem: "WHATSAPP",
-        email: "",
-        empresaNome: "",
-        descricao: "",
+      expect(call!.body).toEqual({
+        tipoPessoa: "PJ",
+        nome: "",
+        cpf: "",
+        razaoSocial: "Tecelagem Beta Ltda",
+        nomeFantasia: "Beta Confecções",
+        cnpj: "12.345.678/0001-90",
+        segmento: "Tecelagem",
+        porte: "ME",
+        site: "",
+        telefone: "",
+        celular: "",
+        email: "contato@beta.com",
+        emailNf: "",
+        endereco: "",
+        numero: "",
+        complemento: "",
+        bairro: "",
+        cidade: "São Paulo",
+        uf: "SP",
+        cep: "",
+        observacoes: "",
       })
     })
-    await waitFor(() => expect(toastMock.success).toHaveBeenCalledWith("Lead criado com sucesso"))
-    expect(navMock.router.push).toHaveBeenCalledWith("/comercial/crm/leads")
+    await waitFor(() =>
+      expect(toastMock.success).toHaveBeenCalledWith("Lead cadastrado com sucesso")
+    )
+    expect(navMock.router.push).toHaveBeenCalledWith("/comercial/crm/leads/5")
+  })
+
+  it("consulta CNPJ e preenche os campos automaticamente (PJ)", async () => {
+    renderPage(<NovaLeadPage />)
+    await screen.findByRole("heading", { name: "Novo Lead (Negócio)" })
+
+    const textboxes = screen.getAllByRole("textbox")
+    fireEvent.change(textboxes[2], { target: { value: "12.345.678/0001-90" } })
+    fireEvent.click(screen.getByRole("button", { name: "Consultar" }))
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue("Tecelagem Alpha Ltda")).toBeInTheDocument()
+      expect(screen.getByDisplayValue("Alpha Confecções")).toBeInTheDocument()
+    })
+    expect(screen.getByDisplayValue("Confecção de peças do vestuário")).toBeInTheDocument()
+    expect(screen.getByDisplayValue("Rua das Flores")).toBeInTheDocument()
+    expect(screen.getByDisplayValue("São Paulo")).toBeInTheDocument()
+    expect(screen.getByDisplayValue("01000000")).toBeInTheDocument()
+    expect(screen.getByText("Tecelagem Alpha Ltda")).toBeInTheDocument()
+    expect(screen.getByText(/Ativa/)).toBeInTheDocument()
+    await waitFor(() =>
+      expect(toastMock.success).toHaveBeenCalledWith("Dados preenchidos automaticamente")
+    )
+  })
+
+  it("mostra aviso quando o CNPJ não é encontrado", async () => {
+    renderPage(<NovaLeadPage />)
+    await screen.findByRole("heading", { name: "Novo Lead (Negócio)" })
+
+    const textboxes = screen.getAllByRole("textbox")
+    fireEvent.change(textboxes[2], { target: { value: "00.000.000/0000-00" } })
+    fireEvent.click(screen.getByRole("button", { name: "Consultar" }))
+
+    await waitFor(() =>
+      expect(screen.getByText(/não encontrado na Receita Federal/)).toBeInTheDocument()
+    )
+    await waitFor(() =>
+      expect(toastMock.error).toHaveBeenCalledWith("CNPJ não encontrado na Receita Federal")
+    )
+  })
+
+  it("vincula representante e envia vínculo na criação", async () => {
+    const { container } = renderPage(<NovaLeadPage />)
+    await screen.findByRole("heading", { name: "Novo Lead (Negócio)" })
+
+    const search = screen.getByPlaceholderText("Buscar representante pelo nome...")
+    fireEvent.change(search, { target: { value: "Carlos" } })
+
+    fireEvent.click(await screen.findByText("Carlos Representante"))
+    expect(screen.getByText("Carlos Representante")).toBeInTheDocument()
+
+    const textboxes = screen.getAllByRole("textbox")
+    fireEvent.change(textboxes[0], { target: { value: "Tecelagem Beta Ltda" } })
+    fireEvent.submit(container.querySelector("form")!)
+
+    await waitFor(() => {
+      const call = findCall(fetchMock.calls, "/api/crm/leads", "POST")
+      expect(call).toBeDefined()
+    })
+    await waitFor(() => {
+      const call = findCall(fetchMock.calls, "/api/crm/leads/5/representantes", "POST")
+      expect(call).toBeDefined()
+      expect(call!.body).toEqual({ representanteId: 1 })
+    })
+    await waitFor(() =>
+      expect(toastMock.success).toHaveBeenCalledWith("Lead cadastrado com sucesso")
+    )
+    expect(navMock.router.push).toHaveBeenCalledWith("/comercial/crm/leads/5")
   })
 })

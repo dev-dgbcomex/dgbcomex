@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+﻿// @vitest-environment jsdom
 import { describe, it, expect, vi } from "vitest"
 import { fireEvent, screen, waitFor } from "@testing-library/react"
 import VincularVisitaModal from "./vincular-visita-modal"
@@ -11,7 +11,7 @@ function setup() {
     if (method === "GET" && url === "/api/clientes") {
       return { status: 200, json: [{ id: 1, nome: "Cliente Alpha" }] }
     }
-    if (method === "GET" && url === "/api/crm/pessoas") {
+    if (method === "GET" && url === "/api/crm/leads") {
       return { status: 200, json: [{ id: 1, razaoSocial: "Pessoa Beta" }] }
     }
     if (method === "GET" && url === "/api/crm/estados") {
@@ -20,8 +20,8 @@ function setup() {
     if (method === "POST" && url === "/api/clientes") {
       return { status: 201, json: { id: 2, nome: "Novo Cliente Ltda" } }
     }
-    if (method === "POST" && url === "/api/crm/pessoas") {
-      return { status: 201, json: { id: 3, razaoSocial: "Nova Pessoa Ltda" } }
+    if (method === "POST" && url === "/api/crm/leads") {
+      return { status: 201, json: { id: 3, razaoSocial: "Nova Lead Ltda" } }
     }
     if (method === "PUT" && url === "/api/crm/visitas/8") {
       return { status: 200, json: { id: 8 } }
@@ -41,8 +41,8 @@ async function openClienteStep() {
 }
 
 async function openPessoaStep() {
-  fireEvent.click(screen.getByRole("button", { name: /Pessoa/ }))
-  await screen.findByRole("button", { name: /Criar nova pessoa/i })
+  fireEvent.click(screen.getByRole("button", { name: /Lead/ }))
+  await screen.findByRole("button", { name: /Criar nova lead/i })
 }
 
 describe("VincularVisitaModal", () => {
@@ -91,29 +91,29 @@ describe("VincularVisitaModal", () => {
     expect(onClose).toHaveBeenCalled()
   })
 
-  it("mostra a opção de criar nova pessoa ao escolher Pessoa", async () => {
+  it("mostra a opção de criar nova lead ao escolher Lead", async () => {
     setup()
     await openPessoaStep()
   })
 
-  it("cria a pessoa e vincula a visita avulsa automaticamente", async () => {
+  it("cria a lead e vincula a visita avulsa automaticamente", async () => {
     const { onClose, onLinked, fetchMock } = setup()
     await openPessoaStep()
 
-    fireEvent.click(screen.getByRole("button", { name: /Criar nova pessoa/i }))
-    await screen.findByRole("heading", { name: "Nova Pessoa (Negócio)" })
+    fireEvent.click(screen.getByRole("button", { name: /Criar nova lead/i }))
+    await screen.findByRole("heading", { name: "Novo Lead (Negócio)" })
 
     const form = document.querySelector("form")!
     const [razaoInput, , cnpjInput] = form.querySelectorAll("input")
-    fireEvent.change(razaoInput, { target: { value: "Nova Pessoa Ltda" } })
+    fireEvent.change(razaoInput, { target: { value: "Nova Lead Ltda" } })
     fireEvent.change(cnpjInput, { target: { value: "12.345.678/0001-90" } })
 
     fireEvent.click(screen.getByRole("button", { name: "Criar" }))
 
     await waitFor(() => {
-      const post = findCall(fetchMock.calls, "/api/crm/pessoas", "POST")
+      const post = findCall(fetchMock.calls, "/api/crm/leads", "POST")
       expect(post?.body).toMatchObject({
-        razaoSocial: "Nova Pessoa Ltda",
+        razaoSocial: "Nova Lead Ltda",
         cnpj: "12.345.678/0001-90",
       })
       const link = findCall(fetchMock.calls, "/api/crm/visitas/8", "PUT")
@@ -123,7 +123,7 @@ describe("VincularVisitaModal", () => {
     expect(onClose).toHaveBeenCalled()
   })
 
-  it("vincula pessoa existente selecionada no select", async () => {
+  it("vincula lead existente selecionada no select", async () => {
     const { onClose, onLinked, fetchMock } = setup()
     await openPessoaStep()
 

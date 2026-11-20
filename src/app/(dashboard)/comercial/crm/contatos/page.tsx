@@ -181,7 +181,7 @@ export default function CrmContatosPage() {
                     <td className="px-4 py-3">
                       {c.empresaId ? (
                         <Link
-                          href={`/comercial/crm/pessoas/${c.empresaId}`}
+                          href={`/comercial/crm/leads/${c.empresaId}`}
                           onClick={(e) => e.stopPropagation()}
                           className="inline-flex items-center gap-1 text-sm text-blue-600 hover:underline"
                         >

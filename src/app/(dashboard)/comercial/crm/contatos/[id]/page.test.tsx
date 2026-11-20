@@ -48,7 +48,7 @@ describe("ContatoDetailPage", () => {
     expect(screen.getByText("carlos@alpha.com")).toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Tecelagem Alpha" })).toHaveAttribute(
       "href",
-      "/comercial/crm/pessoas/1"
+      "/comercial/crm/leads/1"
     )
   })
 
@@ -78,7 +78,7 @@ describe("ContatoDetailPage", () => {
   it("edita e salva via PUT", async () => {
     const fetchMock = createFetchMock(({ method, url }) => {
       if (method === "GET" && url === "/api/crm/contatos/1") return { json: contato }
-      if (method === "GET" && url === "/api/crm/pessoas") return { json: empresas }
+      if (method === "GET" && url === "/api/crm/leads") return { json: empresas }
       if (method === "PUT" && url === "/api/crm/contatos/1")
         return { json: { ...contato, nome: "Carlos Silva Jr" } }
       return { json: null }
@@ -103,7 +103,7 @@ describe("ContatoDetailPage", () => {
   it("desvincula o contato ao escolher 'Sem vínculo'", async () => {
     const fetchMock = createFetchMock(({ method, url }) => {
       if (method === "GET" && url === "/api/crm/contatos/1") return { json: contato }
-      if (method === "GET" && url === "/api/crm/pessoas") return { json: empresas }
+      if (method === "GET" && url === "/api/crm/leads") return { json: empresas }
       if (method === "PUT" && url === "/api/crm/contatos/1")
         return { json: { ...contato, empresaId: null } }
       return { json: null }
@@ -126,7 +126,7 @@ describe("ContatoDetailPage", () => {
   it("vincula o contato a um cliente ao salvar", async () => {
     const fetchMock = createFetchMock(({ method, url }) => {
       if (method === "GET" && url === "/api/crm/contatos/1") return { json: contato }
-      if (method === "GET" && url === "/api/crm/pessoas") return { json: empresas }
+      if (method === "GET" && url === "/api/crm/leads") return { json: empresas }
       if (method === "GET" && url === "/api/clientes")
         return { json: [{ id: 9, nome: "Cliente SP" }] }
       if (method === "PUT" && url === "/api/crm/contatos/1")

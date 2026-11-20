@@ -301,8 +301,8 @@ export async function GET() {
     const totalConvertidas = getCount(oportunidadesFechadoGanho)
 
     return NextResponse.json({
-      leads: { total: getCount(leadsTotal), esteMes: getCount(leadsMes) },
-      pessoas: { total: getCount(empresasTotal) },
+      visitantes: { total: getCount(leadsTotal), esteMes: getCount(leadsMes) },
+      leads: { total: getCount(empresasTotal) },
       clientes: { total: getCount(clientesTotal) },
       oportunidades: {
         total: getCount(oportunidadesTotal),

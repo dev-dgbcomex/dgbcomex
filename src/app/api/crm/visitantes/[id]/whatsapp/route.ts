@@ -29,7 +29,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       .limit(1)
 
     if (!lead) {
-      return NextResponse.json({ error: "Lead não encontrado" }, { status: 404 })
+      return NextResponse.json({ error: "Visitante não encontrado" }, { status: 404 })
     }
 
     let remoteJid = extractRemoteJid(lead.idIntegracao)
@@ -70,7 +70,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
     return NextResponse.json(mensagens)
   } catch (error) {
-    return handleApiError(error, "GET /api/crm/leads/[id]/whatsapp")
+    return handleApiError(error, "GET /api/crm/visitantes/[id]/whatsapp")
   }
 }
 
@@ -87,7 +87,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       .limit(1)
 
     if (!lead) {
-      return NextResponse.json({ error: "Lead não encontrado" }, { status: 404 })
+      return NextResponse.json({ error: "Visitante não encontrado" }, { status: 404 })
     }
 
     const body = await req.json()
@@ -154,13 +154,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       await inserirTimelineEvento({
         empresaId: lead.empresaId,
         tipo: "WHATSAPP",
-        descricao: `Mensagem enviada para lead "${lead.nome}": "${texto.substring(0, 100)}"`,
-        metadados: { leadId: lead.id, whatsappId: nova.id, status: statusEnvio },
+        descricao: `Mensagem enviada para visitante "${lead.nome}": "${texto.substring(0, 100)}"`,
+        metadados: { visitanteId: lead.id, whatsappId: nova.id, status: statusEnvio },
       })
     }
 
     return NextResponse.json({ ...nova, status: statusEnvio }, { status: 201 })
   } catch (error) {
-    return handleApiError(error, "POST /api/crm/leads/[id]/whatsapp")
+    return handleApiError(error, "POST /api/crm/visitantes/[id]/whatsapp")
   }
 }

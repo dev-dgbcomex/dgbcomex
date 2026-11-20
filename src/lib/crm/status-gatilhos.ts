@@ -7,7 +7,7 @@ import { crmTimelineEventos } from "@/lib/db/schema/crm-timeline-eventos"
 import { and, eq } from "drizzle-orm"
 import { registrarLog } from "@/lib/log"
 import { acaoPorValor } from "./status-acoes"
-import { promoverPessoaParaCliente } from "./promover-cliente"
+import { promoverLeadParaCliente } from "./promover-cliente"
 
 export type ContextoGatilho = {
   tipo: "OPORTUNIDADE" | "PROPOSTA"
@@ -36,7 +36,7 @@ export async function vincularEmpresaComoCliente(
   if (empresa.promovidaCliente) return true
 
   try {
-    await promoverPessoaParaCliente({
+    await promoverLeadParaCliente({
       pessoaId: empresaId,
       usuarioId: contexto?.usuarioId ?? null,
       usuarioNome: contexto?.usuarioNome ?? null,

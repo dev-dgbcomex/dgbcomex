@@ -75,7 +75,7 @@ export default function DetalheAcaoProspeccaoPage() {
     queryKey: ["acao-prospeccao-contatos-edicao", acao?.empresaId, acao?.clienteId],
     queryFn: async () => {
       if (acao?.empresaId) {
-        const res = await fetch(`/api/crm/pessoas/${acao.empresaId}`)
+        const res = await fetch(`/api/crm/leads/${acao.empresaId}`)
         const data = await res.json()
         return Array.isArray(data.contatos) ? data.contatos : []
       }
@@ -262,7 +262,7 @@ export default function DetalheAcaoProspeccaoPage() {
 
   async function loadEmpresaEndereco(empresaId: number): Promise<Record<string, string>> {
     try {
-      const res = await fetch(`/api/crm/pessoas/${empresaId}`)
+      const res = await fetch(`/api/crm/leads/${empresaId}`)
       const data = await res.json()
       return {
         endereco: data.endereco || "",

@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireAuth } from "@/lib/auth"
 import { db } from "@/lib/db"
-import { crmVisitantes } from "@/lib/db/schema/crm-visitantes"
-import { crmPessoas } from "@/lib/db/schema/crm-pessoas"
+import { crmLeads } from "@/lib/db/schema/crm-leads"
 import { usuarios } from "@/lib/db/schema/usuarios"
 import { eq, desc, like, or, sql } from "drizzle-orm"
 import { registrarLog, notificar } from "@/lib/notificar"
 import { notificarAtividadeComercial } from "@/lib/crm/notificar-atividade"
-import { inserirTimelineEvento } from "@/lib/crm-timeline"
 
 export async function GET(req: NextRequest) {
   try {
@@ -16,21 +14,21 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const search = searchParams.get("search")
     const status = searchParams.get("status")
-    const empresaId = searchParams.get("empresaId")
+    const tarja = searchParams.get("tarja")
 
     let conditions = []
-    if (status) conditions.push(eq(crmVisitantes.status, status))
-    if (empresaId) {
-      conditions.push(
-        or(eq(crmVisitantes.empresaId, parseInt(empresaId)), eq(crmVisitantes.pessoaId, parseInt(empresaId)))
-      )
-    }
+
+    if (status) conditions.push(eq(crmLeads.status, status))
+    if (tarja === "com") conditions.push(eq(crmLeads.promovidaCliente, true))
+    if (tarja === "sem") conditions.push(eq(crmLeads.promovidaCliente, false))
     if (search) {
       conditions.push(
         or(
-          like(crmVisitantes.nome, `%${search}%`),
-          like(crmVisitantes.email, `%${search}%`),
-          like(crmVisitantes.empresaNome, `%${search}%`)
+          like(crmLeads.razaoSocial, `%${search}%`),
+          like(crmLeads.nome, `%${search}%`),
+          like(crmLeads.nomeFantasia, `%${search}%`),
+          like(crmLeads.cnpj, `%${search}%`),
+          like(crmLeads.cpf, `%${search}%`)
         )
       )
     }
@@ -42,43 +40,41 @@ export async function GET(req: NextRequest) {
 
     const lista = await db
       .select({
-        id: crmVisitantes.id,
-        nome: crmVisitantes.nome,
-        email: crmVisitantes.email,
-        telefone: crmVisitantes.telefone,
-        celular: crmVisitantes.celular,
-        empresaNome: crmVisitantes.empresaNome,
-        cargo: crmVisitantes.cargo,
-        tipoPessoa: crmVisitantes.tipoPessoa,
-        documento: crmVisitantes.documento,
-        origem: crmVisitantes.origem,
-        status: crmVisitantes.status,
-        descricao: crmVisitantes.descricao,
-        score: crmVisitantes.score,
-        segmentoIa: crmVisitantes.segmentoIa,
-        porteIa: crmVisitantes.porteIa,
-        dataClassificacaoIa: crmVisitantes.dataClassificacaoIa,
-        responsavelId: crmVisitantes.responsavelId,
+        id: crmLeads.id,
+        tipoPessoa: crmLeads.tipoPessoa,
+        nome: crmLeads.nome,
+        razaoSocial: crmLeads.razaoSocial,
+        nomeFantasia: crmLeads.nomeFantasia,
+        cpf: crmLeads.cpf,
+        cnpj: crmLeads.cnpj,
+        segmento: crmLeads.segmento,
+        porte: crmLeads.porte,
+        status: crmLeads.status,
+        responsavelId: crmLeads.responsavelId,
         responsavelNome: usuarios.name,
-        empresaId: crmVisitantes.empresaId,
-        pessoaId: crmVisitantes.pessoaId,
-        empresaNomeFantasia: crmPessoas.nomeFantasia,
-        empresaRazaoSocial: crmPessoas.razaoSocial,
-        createdAt: crmVisitantes.createdAt,
-        updatedAt: crmVisitantes.updatedAt,
+        clienteId: crmLeads.clienteId,
+        promovidaCliente: crmLeads.promovidaCliente,
+        promovidoEm: crmLeads.promovidoEm,
+        promovidoPor: crmLeads.promovidoPor,
+        promovidoPorNome: crmLeads.promovidoPorNome,
+        endereco: crmLeads.endereco,
+        numero: crmLeads.numero,
+        bairro: crmLeads.bairro,
+        cidade: crmLeads.cidade,
+        uf: crmLeads.uf,
+        cep: crmLeads.cep,
+        ativo: crmLeads.ativo,
+        createdAt: crmLeads.createdAt,
+        updatedAt: crmLeads.updatedAt,
       })
-      .from(crmVisitantes)
-      .leftJoin(usuarios, eq(crmVisitantes.responsavelId, usuarios.id))
-      .leftJoin(
-        crmPessoas,
-        sql`${crmPessoas.id} = COALESCE(${crmVisitantes.pessoaId}, ${crmVisitantes.empresaId})`
-      )
+      .from(crmLeads)
+      .leftJoin(usuarios, eq(crmLeads.responsavelId, usuarios.id))
       .where(where)
-      .orderBy(desc(crmVisitantes.createdAt))
+      .orderBy(desc(crmLeads.createdAt))
 
     return NextResponse.json(lista)
   } catch (error) {
-    console.error("[GET /api/crm/leads]", error)
+    console.error("[GET /api/crm/empresas]", error)
     return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 })
   }
 }
@@ -91,21 +87,46 @@ export async function POST(req: NextRequest) {
     const userId = auth.userId
 
     const body = await req.json()
+    const tipoPessoa = body.tipoPessoa || "PJ"
+    const cnpj = body.cnpj?.replace(/[^a-zA-Z0-9]/g, "") || null
+    const cpf = body.cpf?.replace(/[^0-9]/g, "") || null
 
-    const [novo] = await db
-      .insert(crmVisitantes)
+    if (cnpj) {
+      const [existente] = await db
+        .select({ id: crmLeads.id })
+        .from(crmLeads)
+        .where(eq(crmLeads.cnpj, cnpj))
+        .limit(1)
+      if (existente) {
+        return NextResponse.json({ error: "CNPJ já cadastrado" }, { status: 409 })
+      }
+    }
+
+    const [nova] = await db
+      .insert(crmLeads)
       .values({
-        nome: body.nome,
-        email: body.email || null,
+        tipoPessoa,
+        nome: tipoPessoa === "PF" ? body.nome : null,
+        razaoSocial: tipoPessoa === "PJ" ? body.razaoSocial : null,
+        nomeFantasia: tipoPessoa === "PJ" ? body.nomeFantasia || null : null,
+        cpf: tipoPessoa === "PF" ? cpf : null,
+        cnpj: tipoPessoa === "PJ" ? cnpj : null,
+        segmento: body.segmento || null,
+        porte: body.porte || null,
+        site: body.site || null,
         telefone: body.telefone || null,
         celular: body.celular || null,
-        empresaNome: body.empresaNome || null,
-        cargo: body.cargo || null,
-        origem: body.origem || "OUTRO",
-        documento: body.documento || null,
-        descricao: body.descricao || null,
+        email: body.email || null,
+        emailNf: body.emailNf || null,
+        endereco: body.endereco || null,
+        numero: body.numero || null,
+        complemento: body.complemento || null,
+        bairro: body.bairro || null,
+        cidade: body.cidade || null,
+        uf: body.uf || null,
+        cep: body.cep || null,
+        observacoes: body.observacoes || null,
         responsavelId: body.responsavelId || userId,
-        empresaId: body.empresaId || null,
         status: "NOVO",
       })
       .returning()
@@ -113,40 +134,35 @@ export async function POST(req: NextRequest) {
     await registrarLog({
       tipo: "CADASTRO",
       acao: "criar",
-      descricao: `Lead criado: ${novo.nome}`,
-      entidade: "CrmVisitante",
-      entidadeId: novo.id,
+      descricao: `Lead ${tipoPessoa === "PF" ? "Física" : "Jurídica"} criada: ${nova.nome || nova.razaoSocial}`,
+      entidade: "CrmLead",
+      entidadeId: nova.id,
       usuarioNome: session.user.name,
     })
 
-    if (novo.empresaId) {
-      await inserirTimelineEvento({
-        empresaId: novo.empresaId,
-        tipo: "LEAD",
-        descricao: `Lead "${novo.nome}" foi vinculado a esta empresa`,
-        metadados: { leadId: novo.id },
-      })
-    }
-
+    const nomeLead = nova.nome || nova.razaoSocial || "Lead"
     await notificar(
       "LEAD_CRIADO",
-      `Lead criado: ${novo.nome}`,
-      `/comercial/crm/leads/${novo.id}`,
+      `Lead ${nova.tipoPessoa === "PF" ? "Física" : "Jurídica"} criada: ${nomeLead}`,
+      `/comercial/crm/leads/${nova.id}`,
       session.user.name
     )
 
     await notificarAtividadeComercial({
-      acao: "cadastrou o lead",
+      acao: "cadastrou a lead",
       entidade: "Lead",
-      registro: novo.nome,
-      link: `/comercial/crm/leads/${novo.id}`,
+      registro: nomeLead,
+      link: `/comercial/crm/leads/${nova.id}`,
       usuarioNome: session.user.name,
       usuarioId: userId,
     })
 
-    return NextResponse.json(novo, { status: 201 })
-  } catch (error) {
-    console.error("[POST /api/crm/leads]", error)
+    return NextResponse.json(nova, { status: 201 })
+  } catch (error: any) {
+    if (error?.code === "23505") {
+      return NextResponse.json({ error: "Documento já cadastrado" }, { status: 409 })
+    }
+    console.error("[POST /api/crm/empresas]", error)
     return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 })
   }
 }

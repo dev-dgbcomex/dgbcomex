@@ -63,10 +63,10 @@ export const comercialContent: Record<string, InfoContent> = {
       "O card 'Histórico de conversão em cliente' mostra de qual pessoa do CRM o cliente veio, quando virou cliente, quem promoveu e o negócio acumulado (oportunidades, propostas e visitas).",
       "Clientes cadastrados manualmente (sem origem no CRM) aparece no histórico com a mensagem de que não vieram de uma pessoa do CRM.",
       "Na seção 'Relacionamentos do CRM' o cliente tem os mesmos cards da pessoa do CRM: Oportunidades, Propostas, Timeline e WhatsApp.",
-      "Os cards do cliente somam o negócio lançado direto nele e o negócio herdado das pessoas do CRM que foram promovidas a este cliente.",
+      "Os cards do cliente somam o negócio lançado direto nele e o negócio herdado das leads do CRM que foram promovidas a este cliente.",
       "O botão '+' nos cards de Oportunidades e Propostas cria o registro já vinculado ao cliente.",
-      "Na timeline do cliente aparecem os eventos do próprio cliente e os eventos das pessoas promovidas (conversão, negócio, WhatsApp).",
-      "No WhatsApp do cliente vale a conversa dos contatos do cliente e das pessoas promovidas; o envio usa o contato principal com WhatsApp cadastrado.",
+      "Na timeline do cliente aparecem os eventos do próprio cliente e os eventos das leads promovidas (conversão, negócio, WhatsApp).",
+      "No WhatsApp do cliente vale a conversa dos contatos do cliente e das leads promovidas; o envio usa o contato principal com WhatsApp cadastrado.",
     ],
     fields: [
       { name: "Nome / Fantasia", desc: "Nome do cliente (obrigatório)" },
@@ -76,14 +76,14 @@ export const comercialContent: Record<string, InfoContent> = {
       { name: "Contatos", desc: "Contatos vinculados ou sem vínculo no CRM" },
       {
         name: "Histórico de conversão",
-        desc: "Pessoa de origem, data da conversão, quem promovou e números do funil",
+        desc: "Lead de origem, data da conversão, quem promovou e números do funil",
       },
       {
         name: "Oportunidades / Propostas",
-        desc: "Negócio do cliente no período, direto ou herdado das pessoas promovidas",
+        desc: "Negócio do cliente no período, direto ou herdado das leads promovidas",
       },
-      { name: "Timeline", desc: "Histórico de eventos do cliente e das pessoas promovidas" },
-      { name: "WhatsApp", desc: "Conversa com os contatos do cliente e das pessoas promovidas" },
+      { name: "Timeline", desc: "Histórico de eventos do cliente e das leads promovidas" },
+      { name: "WhatsApp", desc: "Conversa com os contatos do cliente e das leads promovidas" },
     ],
   },
   "/comercial/requisicoes-amostra-comercial": {

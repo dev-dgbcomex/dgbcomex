@@ -7,8 +7,8 @@ interface TipoEntidadeSelectorProps {
   labels?: {
     cliente?: string
     clienteDesc?: string
-    pessoa?: string
-    pessoaDesc?: string
+    lead?: string
+    leadDesc?: string
     avulsa?: string
     avulsaDesc?: string
   }
@@ -23,8 +23,8 @@ export function TipoEntidadeSelector({
   const t = {
     cliente: labels?.cliente ?? "Cliente",
     clienteDesc: labels?.clienteDesc ?? "Empresa já cadastrada no sistema",
-    pessoa: labels?.pessoa ?? "Pessoa",
-    pessoaDesc: labels?.pessoaDesc ?? "Futuro cliente (negócio)",
+    lead: labels?.lead ?? "Lead",
+    leadDesc: labels?.leadDesc ?? "Futuro cliente (negócio)",
     avulsa: labels?.avulsa ?? "Avulsa",
     avulsaDesc: labels?.avulsaDesc ?? "Visita sem vínculo inicial",
   }
@@ -60,8 +60,8 @@ export function TipoEntidadeSelector({
             <UserCheck size={28} className="text-blue-600 dark:text-blue-400" />
           </div>
           <div className="text-center">
-            <p className="font-semibold text-slate-900 dark:text-slate-100">{t.pessoa}</p>
-            <p className="text-xs text-slate-500 mt-1">{t.pessoaDesc}</p>
+            <p className="font-semibold text-slate-900 dark:text-slate-100">{t.lead}</p>
+            <p className="text-xs text-slate-500 mt-1">{t.leadDesc}</p>
           </div>
         </button>
         <button

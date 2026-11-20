@@ -13,7 +13,7 @@ const licao = {
   preRequisitos: "Cadastro de leads",
   linksPop: [{ label: "POP", url: "https://exemplo.com/pop" }],
   linksVideo: [],
-  pathnameRelacionado: "/comercial/crm/leads",
+  pathnameRelacionado: "/comercial/crm/visitantes",
   ordem: 2,
   ativo: true,
 }
@@ -77,7 +77,7 @@ describe("EditarLicaoPage", () => {
         preRequisitos: "Cadastro de leads",
         linksPop: [{ label: "POP", url: "https://exemplo.com/pop" }],
         linksVideo: [],
-        pathnameRelacionado: "/comercial/crm/leads",
+        pathnameRelacionado: "/comercial/crm/visitantes",
         ordem: 2,
         ativo: true,
       })

@@ -29,13 +29,14 @@ export const PERIODOS: { value: PeriodoKey; label: string }[] = [
 ]
 
 export const CATEGORIAS_CRM = [
-  { value: "pessoas", label: "Pessoas", entidade: "CrmPessoa" },
+  { value: "leads", label: "Leads", entidade: "CrmLead" },
+  { value: "leads", label: "Leads", entidade: "CrmPessoa" },
   { value: "clientes", label: "Clientes", entidade: "CrmCliente" },
   { value: "oportunidades", label: "Oportunidades", entidade: "CrmOportunidade" },
   { value: "propostas", label: "Propostas", entidade: "CrmProposta" },
   { value: "visitas", label: "Visitas", entidade: "CrmVisita" },
   { value: "tarefas", label: "Tarefas", entidade: "CrmTarefa" },
-  { value: "leads", label: "Leads", entidade: "CrmVisitante" },
+  { value: "visitantes", label: "Visitantes", entidade: "CrmVisitante" },
   { value: "contatos", label: "Contatos", entidade: "CrmContato" },
 ] as const
 
@@ -123,13 +124,13 @@ function categoriaDaEntidade(entidade: string | null): CategoriaCrm | null {
 }
 
 export type ContagemAtividades = {
-  pessoas: number
+  leads: number
+  visitantes: number
   clientes: number
   oportunidades: number
   propostas: number
   visitas: number
   tarefas: number
-  leads: number
   contatos: number
   total: number
 }
@@ -148,13 +149,13 @@ export type LinhaAtividade = {
 
 function contagemVazia(): ContagemAtividades {
   return {
-    pessoas: 0,
+    leads: 0,
+    visitantes: 0,
     clientes: 0,
     oportunidades: 0,
     propostas: 0,
     visitas: 0,
     tarefas: 0,
-    leads: 0,
     contatos: 0,
     total: 0,
   }
@@ -287,7 +288,7 @@ async function enriquecerEntidades(registros: any[]) {
       .filter((r) => r.entidade === entidade && r.entidadeId)
       .map((r) => r.entidadeId as number)
 
-  const idsPessoa = ids("CrmPessoa")
+  const idsPessoa = [...ids("CrmLead"), ...ids("CrmPessoa")]
   if (idsPessoa.length > 0) {
     const pessoas: any[] = await db
       .select({
@@ -308,10 +309,10 @@ async function enriquecerEntidades(registros: any[]) {
       : []
     const mapaClientes = new Map<number, string>(nomesClientes.map((c) => [c.id, c.nome as string]))
     for (const pessoa of pessoas) {
-      mapa.set(`CrmPessoa:${pessoa.id}`, {
-        pessoa: (pessoa.nome || pessoa.nomeFantasia || pessoa.razaoSocial || "Pessoa") as string,
-        cliente: pessoa.clienteId ? mapaClientes.get(pessoa.clienteId) || null : null,
-      })
+      const nome = (pessoa.nome || pessoa.nomeFantasia || pessoa.razaoSocial || "Lead") as string
+      const cliente = pessoa.clienteId ? mapaClientes.get(pessoa.clienteId) || null : null
+      mapa.set(`CrmLead:${pessoa.id}`, { pessoa: nome, cliente })
+      mapa.set(`CrmPessoa:${pessoa.id}`, { pessoa: nome, cliente })
     }
   }
 
@@ -1044,7 +1045,7 @@ export async function consultarClientes(filtros: FiltrosRelatorio) {
     )
     .groupBy(clienteDaVisita)
 
-  const pessoas: any[] = await db
+  const leads: any[] = await db
     .select({
       clienteId: crmPessoas.clienteId,
       total: sql<number>`count(*)::int`,
@@ -1056,13 +1057,13 @@ export async function consultarClientes(filtros: FiltrosRelatorio) {
   const mapaOportunidades = new Map<number, any>(oportunidades.map((o) => [o.clienteId, o]))
   const mapaPropostas = new Map<number, any>(propostas.map((p) => [p.clienteId, p]))
   const mapaVisitas = new Map<number, any>(visitas.map((v) => [v.clienteId, v]))
-  const mapaPessoas = new Map<number, any>(pessoas.map((p) => [p.clienteId, p]))
+  const mapaLeads = new Map<number, any>(leads.map((p) => [p.clienteId, p]))
 
   const dados = listaClientes.map((c: any) => {
     const opp = mapaOportunidades.get(c.id)
     const prop = mapaPropostas.get(c.id)
     const vis = mapaVisitas.get(c.id)
-    const pes = mapaPessoas.get(c.id)
+    const pes = mapaLeads.get(c.id)
 
     return {
       id: c.id,
@@ -1071,7 +1072,7 @@ export async function consultarClientes(filtros: FiltrosRelatorio) {
       segmento: c.segmento || null,
       local: c.cidade ? `${c.cidade}${c.uf ? `/${c.uf}` : ""}` : null,
       criadoEm: c.createdAt ? new Date(c.createdAt).toISOString() : null,
-      pessoas: pes?.total || 0,
+      leads: pes?.total || 0,
       oportunidades: opp?.total || 0,
       oportunidadesEmAberto: opp?.emAberto || 0,
       valorOportunidades: Number(opp?.valor || 0),
@@ -1095,7 +1096,7 @@ export async function consultarClientes(filtros: FiltrosRelatorio) {
       total: dados.length,
       comNegocio: comNegocio.length,
       semNegocio: dados.length - comNegocio.length,
-      pessoas: dados.reduce((acc, d) => acc + d.pessoas, 0),
+      leads: dados.reduce((acc, d) => acc + d.leads, 0),
       oportunidades: dados.reduce((acc, d) => acc + d.oportunidades, 0),
       valorOportunidades: dados.reduce((acc, d) => acc + d.valorOportunidades, 0),
       propostas: dados.reduce((acc, d) => acc + d.propostas, 0),

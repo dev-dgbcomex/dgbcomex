@@ -1,18 +1,18 @@
 import { Archive, Building2, CalendarClock, History, User } from "lucide-react"
 import Link from "next/link"
-import type { Pessoa } from "../../types"
+import type { Lead } from "../../types"
 
 type Props = {
-  pessoa: Pessoa
+  lead: Lead
 }
 
 function numero(valor: number | undefined | null) {
   return (valor || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
 }
 
-export function HistoricoConversaoCard({ pessoa }: Props) {
-  const resumo = pessoa.resumo
-  const promovido = Boolean(pessoa.promovidaCliente)
+export function HistoricoConversaoCard({ lead }: Props) {
+  const resumo = lead.resumo
+  const promovido = Boolean(lead.promovidaCliente)
 
   return (
     <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
@@ -30,27 +30,27 @@ export function HistoricoConversaoCard({ pessoa }: Props) {
               <Archive size={14} /> Transformada em cliente
             </p>
             <div className="mt-2 space-y-1 text-xs text-emerald-700 dark:text-emerald-400">
-              {pessoa.promovidoEm && (
+              {lead.promovidoEm && (
                 <p className="flex items-center gap-1.5">
                   <CalendarClock size={13} />
-                  {new Date(pessoa.promovidoEm).toLocaleString("pt-BR")}
+                  {new Date(lead.promovidoEm).toLocaleString("pt-BR")}
                 </p>
               )}
-              {pessoa.promovidoPorNome && (
+              {lead.promovidoPorNome && (
                 <p className="flex items-center gap-1.5">
                   <User size={13} />
-                  Por {pessoa.promovidoPorNome}
+                  Por {lead.promovidoPorNome}
                 </p>
               )}
-              {pessoa.cliente && (
+              {lead.cliente && (
                 <p className="flex items-center gap-1.5">
                   <Building2 size={13} />
                   Cliente{" "}
                   <Link
-                    href={`/comercial/clientes/${pessoa.cliente.id}`}
+                    href={`/comercial/clientes/${lead.cliente.id}`}
                     className="underline hover:no-underline"
                   >
-                    #{pessoa.cliente.id} — {pessoa.cliente.nome}
+                    #{lead.cliente.id} — {lead.cliente.nome}
                   </Link>
                 </p>
               )}
@@ -58,7 +58,7 @@ export function HistoricoConversaoCard({ pessoa }: Props) {
           </div>
         ) : (
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Esta pessoa ainda não foi transformada em cliente. Ao virar cliente, o histórico
+            Esta lead ainda não foi transformada em cliente. Ao virar cliente, o histórico
             acumulado abaixo será preservado e continua acessível nos relatórios.
           </p>
         )}

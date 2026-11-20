@@ -3,7 +3,7 @@ import { requireAuth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { crmWhatsappMensagens } from "@/lib/db/schema/crm-whatsapp"
 import { crmVisitantes } from "@/lib/db/schema/crm-visitantes"
-import { crmPessoas } from "@/lib/db/schema/crm-pessoas"
+import { crmLeads } from "@/lib/db/schema/crm-leads"
 import { crmContatos } from "@/lib/db/schema/crm-contatos"
 import { desc, sql, and, eq, or, isNotNull } from "drizzle-orm"
 
@@ -68,10 +68,10 @@ export async function GET(req: NextRequest) {
         nome: crmContatos.nome,
         whatsapp: crmContatos.whatsapp,
         empresaId: crmContatos.empresaId,
-        empresaNome: crmPessoas.razaoSocial,
+        empresaNome: crmLeads.razaoSocial,
       })
       .from(crmContatos)
-      .leftJoin(crmPessoas, eq(crmContatos.empresaId, crmPessoas.id))
+      .leftJoin(crmLeads, eq(crmContatos.empresaId, crmLeads.id))
       .where(
         remoteJids.length > 0
           ? sql`${crmContatos.whatsapp} IN (${sql.join(
@@ -91,9 +91,9 @@ export async function GET(req: NextRequest) {
         c.remoteJid?.split("@")[0] ||
         "Desconhecido"
       const link = lead
-        ? `/comercial/crm/leads/${lead.id}`
+        ? `/comercial/crm/visitantes/${lead.id}`
         : contato?.empresaId
-          ? `/comercial/crm/pessoas/${contato.empresaId}`
+          ? `/comercial/crm/leads/${contato.empresaId}`
           : null
 
       return {

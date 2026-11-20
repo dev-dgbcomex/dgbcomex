@@ -14,7 +14,7 @@ const conversas = [
     naoLidas: 2,
     total: 5,
     leadId: 1,
-    link: "/comercial/crm/leads/1",
+    link: "/comercial/crm/visitantes/1",
   },
   {
     remoteJid: "5511888881111",

@@ -391,7 +391,7 @@ describe("getInfoContent", () => {
     const telas = [
       "/comercial/crm/relatorios",
       "/comercial/crm/relatorios/atividades",
-      "/comercial/crm/relatorios/pessoas",
+      "/comercial/crm/relatorios/leads",
       "/comercial/crm/relatorios/oportunidades",
       "/comercial/crm/relatorios/propostas",
       "/comercial/crm/relatorios/visitas",
@@ -426,7 +426,7 @@ describe("getInfoContent", () => {
       "/bi/integracoes/custos-administrativos-anual",
       "/comercial/crm/relatorios",
       "/comercial/crm/relatorios/atividades",
-      "/comercial/crm/relatorios/pessoas",
+      "/comercial/crm/relatorios/leads",
       "/comercial/crm/relatorios/oportunidades",
       "/comercial/crm/relatorios/propostas",
       "/comercial/crm/relatorios/visitas",
@@ -451,12 +451,12 @@ describe("getInfoContent", () => {
     }
   })
 
-  it("as telas de relatório do CRM registram data/hora e pessoa ou cliente envolvida", () => {
+  it("as telas de relatório do CRM registram data/hora e lead ou cliente envolvida", () => {
     const atividades = getInfoContent("/comercial/crm/relatorios/atividades")
-    const pessoas = getInfoContent("/comercial/crm/relatorios/pessoas")
+    const leads = getInfoContent("/comercial/crm/relatorios/leads")
     const conversoes = getInfoContent("/comercial/crm/relatorios/conversoes")
 
-    const texto = [atividades, pessoas, conversoes]
+    const texto = [atividades, leads, conversoes]
       .flatMap((item) => [
         item?.description ?? "",
         ...(item?.rules ?? []),
@@ -465,7 +465,7 @@ describe("getInfoContent", () => {
       .join("\n")
 
     expect(texto).toMatch(/Data e hora/)
-    expect(texto).toMatch(/Pessoa/)
+    expect(texto).toMatch(/Lead/)
     expect(texto).toMatch(/Cliente/)
   })
 
@@ -481,7 +481,7 @@ describe("getInfoContent", () => {
     ].join("\n")
 
     expect(texto).toMatch(/Histórico de conversão/)
-    expect(texto).toMatch(/pessoa/i)
+    expect(texto).toMatch(/lead/i)
     expect(texto).toMatch(/oportunidades/i)
   })
 
@@ -502,7 +502,7 @@ describe("getInfoContent", () => {
     expect(texto).toMatch(/promovid/i)
   })
 
-  it("o relatório de clientes explica o negócio herdado das pessoas promovidas", () => {
+  it("o relatório de clientes explica o negócio herdado das leads promovidas", () => {
     const clientes = getInfoContent("/comercial/crm/relatorios/clientes")
 
     expect(clientes).not.toBeNull()
@@ -520,11 +520,11 @@ describe("getInfoContent", () => {
     expect(texto).toMatch(/Segmento/i)
   })
 
-  it("os relatórios de pessoas e conversões explicam a tarja de cliente", () => {
-    const pessoas = getInfoContent("/comercial/crm/relatorios/pessoas")
+  it("os relatórios de leads e conversões explicam a tarja de cliente", () => {
+    const leads = getInfoContent("/comercial/crm/relatorios/leads")
     const conversoes = getInfoContent("/comercial/crm/relatorios/conversoes")
 
-    const texto = [pessoas, conversoes]
+    const texto = [leads, conversoes]
       .flatMap((item) => [
         item?.description ?? "",
         ...(item?.rules ?? []),
@@ -537,9 +537,9 @@ describe("getInfoContent", () => {
     expect(texto).toMatch(/Promovido por|Virou cliente em/)
   })
 
-  it("as telas de pessoas explicam a tarja de cliente e a promoção", () => {
-    const listagem = getInfoContent("/comercial/crm/pessoas")
-    const detalhe = getInfoContent("/comercial/crm/pessoas/[id]")
+  it("as telas de leads explicam a tarja de cliente e a promoção", () => {
+    const listagem = getInfoContent("/comercial/crm/leads")
+    const detalhe = getInfoContent("/comercial/crm/leads/[id]")
 
     for (const conteudo of [listagem, detalhe]) {
       expect(conteudo).not.toBeNull()
@@ -568,7 +568,7 @@ describe("getInfoContent", () => {
       ...(conteudo?.columns ?? []).map((c) => `${c.name}: ${c.desc}`),
     ].join("\n")
 
-    expect(texto).toMatch(/Pessoa \(Negócio\)/)
+    expect(texto).toMatch(/Lead \(Negócio\)/)
     expect(texto).toMatch(/Cliente/)
     expect(texto).toMatch(/avulso|órfão/i)
     expect(texto).toMatch(/ficha/i)

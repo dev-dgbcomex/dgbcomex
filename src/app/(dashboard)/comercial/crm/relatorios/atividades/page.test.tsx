@@ -3,12 +3,12 @@ import { specRelatorioCrm } from "@/test/relatorio-page-spec"
 import RelatorioAtividadesPage from "./page"
 
 const contagem = {
-  pessoas: 1,
+  leads: 1,
+  visitantes: 0,
   oportunidades: 0,
   propostas: 0,
   visitas: 0,
   tarefas: 0,
-  leads: 0,
   contatos: 0,
   total: 1,
 }
@@ -41,7 +41,7 @@ const payload = {
       dataHora: "2026-11-03T12:00:00.000Z",
       usuario: "Tiago",
       acao: "criar",
-      entidade: "CrmPessoa",
+      entidade: "CrmLead",
       categoria: "pessoas",
       descricao: "Pessoa criada: Maria Souza",
       pessoa: "Maria Souza",

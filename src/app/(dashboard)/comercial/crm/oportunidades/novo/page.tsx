@@ -8,9 +8,9 @@ import { useQueryClient } from "@tanstack/react-query"
 import Link from "next/link"
 import { ArrowLeft, Save, Building2, User, UserCheck } from "lucide-react"
 import { toast } from "sonner"
-import { QuickCreatePessoa } from "@/components/crm/quick-create-pessoa"
-import { QuickCreateCliente } from "@/components/crm/quick-create-cliente"
 import { QuickCreateLead } from "@/components/crm/quick-create-lead"
+import { QuickCreateCliente } from "@/components/crm/quick-create-cliente"
+import { QuickCreateVisitante } from "@/components/crm/quick-create-visitante"
 import { SelectCliente } from "@/components/crm/select-cliente"
 import { useStatuses, statusAtivos } from "@/hooks/use-statuses"
 import { TipoEntidadeSelector } from "@/app/(dashboard)/comercial/crm/visitas/novo/components/tipo-entidade-selector"
@@ -48,7 +48,7 @@ export default function NovaOportunidadePage() {
 
   async function loadEmpresas() {
     try {
-      const res = await fetch("/api/crm/pessoas")
+      const res = await fetch("/api/crm/leads")
       const data = await res.json()
       if (Array.isArray(data)) setEmpresas(data)
     } catch {}
@@ -56,7 +56,7 @@ export default function NovaOportunidadePage() {
 
   async function loadLeads() {
     try {
-      const res = await fetch("/api/crm/leads")
+      const res = await fetch("/api/crm/visitantes")
       const data = await res.json()
       if (Array.isArray(data)) setLeads(data)
     } catch {}
@@ -86,8 +86,8 @@ export default function NovaOportunidadePage() {
   useEffect(() => {
     async function load() {
       const [empresasRes, leadsRes, usuariosRes] = await Promise.allSettled([
-        fetch("/api/crm/pessoas").then((r) => r.json()),
         fetch("/api/crm/leads").then((r) => r.json()),
+        fetch("/api/crm/visitantes").then((r) => r.json()),
         fetch("/api/usuarios/ativos?role=COMERCIAL,ADMIN,SUDO").then((r) => r.json()),
       ])
       if (empresasRes.status === "fulfilled" && Array.isArray(empresasRes.value))
@@ -113,7 +113,7 @@ export default function NovaOportunidadePage() {
       return
     }
     if (tipoEntidade === "PESSOA" && !form.empresaId) {
-      toast.error("Selecione uma pessoa")
+      toast.error("Selecione uma lead")
       return
     }
     if (tipoEntidade === "CLIENTE" && !form.clienteId) {
@@ -165,7 +165,7 @@ export default function NovaOportunidadePage() {
       ? "Oportunidade de Cliente"
       : tipoEntidade === "AVULSO"
         ? "Oportunidade Avulsa"
-        : "Oportunidade de Pessoa (Negócio)"
+        : "Oportunidade de Lead (Negócio)"
 
   return (
     <div className="space-y-6 animate-fade-in max-w-2xl">
@@ -191,7 +191,7 @@ export default function NovaOportunidadePage() {
           description="Selecione o tipo de cliente para iniciar a oportunidade."
           labels={{
             clienteDesc: "Vincular a uma empresa cliente",
-            pessoaDesc: "Vincular a uma pessoa (negócio)",
+            leadDesc: "Vincular a uma lead (negócio)",
             avulsa: "Avulso",
             avulsaDesc: "Sem vínculo obrigatório (pode vincular)",
           }}
@@ -234,15 +234,15 @@ export default function NovaOportunidadePage() {
             </div>
             {tipoEntidade === "AVULSO" && (
               <div className="sm:col-span-2 rounded-lg border border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-950/20 px-4 py-3 text-sm text-orange-700 dark:text-orange-300">
-                Oportunidade sem vínculo obrigatório. Opcionalmente vincule a uma pessoa ou cliente.
+                Oportunidade sem vínculo obrigatório. Opcionalmente vincule a uma lead ou cliente.
               </div>
             )}
             {tipoEntidade === "AVULSO" ? (
               <>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                    Pessoa (Negócio)
-                    <QuickCreatePessoa onCreated={handleEmpresaCreated} />
+                    Lead (Negócio)
+                    <QuickCreateLead onCreated={handleEmpresaCreated} />
                   </label>
                   <select
                     value={form.empresaId}
@@ -282,8 +282,8 @@ export default function NovaOportunidadePage() {
             ) : (
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Pessoa (Negócio) *
-                  <QuickCreatePessoa onCreated={handleEmpresaCreated} />
+                  Lead (Negócio) *
+                  <QuickCreateLead onCreated={handleEmpresaCreated} />
                 </label>
                 <select
                   value={form.empresaId}
@@ -302,7 +302,7 @@ export default function NovaOportunidadePage() {
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                 Lead
-                <QuickCreateLead onCreated={handleLeadCreated} />
+                <QuickCreateVisitante onCreated={handleLeadCreated} />
               </label>
               <select
                 value={form.leadId}
@@ -319,7 +319,7 @@ export default function NovaOportunidadePage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                Responsável
+                Título
               </label>
               <select
                 value={form.responsavelId}
@@ -389,7 +389,7 @@ export default function NovaOportunidadePage() {
             </div>
             <div className="sm:col-span-2">
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                Descrição
+                Título
               </label>
               <textarea
                 value={form.descricao}
