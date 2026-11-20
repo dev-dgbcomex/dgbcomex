@@ -26,6 +26,23 @@
 
 > Detalhe técnico completo em [`docs/crm-cliente-e-relatorios.md`](./crm-cliente-e-relatorios.md).
 
+### Sessão 13 — Limpeza dos dados de visitas com backup restaurável
+
+- **Data:** 2026-11-20
+- **Commit:** `chore(crm): limpa dados de visitas com backup restauravel`
+- **Tarefa:** apagar somente os dados de `crm_visitas` (e tabelas filhas/timeline) após a migração integral para Ações de Prospecção, mantendo o módulo Visitas funcionando normalmente.
+- **Decisões aprovadas:** módulo, tabelas, rotas e UI permanecem; backup restaurável completo antes de qualquer DELETE; limpar `origem_visita_id` e `google_event_id` das ações originadas de visitas; apagar eventos do Google de todas as contas; não recriar eventos agora; restore deve devolver visitas, filhas, timeline, vínculos das ações e eventos com o mesmo ID.
+- **Resultado:**
+  - Backups em `backups/visitas/2026-11-20T23-42-37-940Z/` (gitignored): `neon.sql` (198 visitas, 52 eventos de timeline, 198 ações mapeadas), `warehouse_local.sql` (206 visitas, 52 eventos de timeline, 206 ações mapeadas), `google-events.json` e `manifest.json` com checksums.
+  - Não havia contas Google vinculadas nem `google_event_id` preenchido em visitas/ações; a etapa de apagar eventos terminou com `removidos=0`, `nao_encontrados=0`, `erros=0`.
+  - Pré-check: `pendentes=0` nos dois bancos. Limpeza aplicada em transação por banco; contagens finais de visitas, localizações, pesquisas, respostas, timeline `VISITA` e ações com origem/evento em **zero** nos dois bancos.
+  - O warehouse local permanece superset: `crm_acoes_prospeccao` 198/262, `crm_oportunidades` 12/13, `crm_propostas` 1/2, `crm_timeline_eventos` 60/93 e `user_menu_itens` 358/366 (linhas extras locais permitidas).
+  - `scripts/sync-all-dbs.js` agora alinha a FK `crm_pesquisas_satisfacao.visita_id` para `ON DELETE CASCADE` nos dois bancos.
+  - Restore validado em dry-run: `198` visitas no Neon e `206` no local seriam restauradas. Comando: `node scripts/restaurar-visitas.js --backup=<diretorio> --apply`.
+- **Arquivos Envolvidos:** `src/lib/crm/limpeza-visitas.ts`, `src/lib/google-calendar.ts`, `scripts/{lib-limpeza-visitas,backup-visitas,limpar-visitas,restaurar-visitas,sync-all-dbs}.js`, `docs/Sessoes.md`.
+- **Testes:** novos em `src/lib/crm/limpeza-visitas.test.ts` e `src/lib/google-calendar.test.ts`; suíte completa `npm run test` → **440 arquivos / 2518 testes passados**.
+- **Verificação:** `tsc --noEmit` limpo, `npm run lint` sem erros (apenas warnings pré-existentes), `npm run build` OK; `db:replicar-neon`, `db:verificar-local` (**0 divergências, local ⊇ Neon**) e `db:comparar` (`All databases are IDENTICAL`).
+
 ### Sessão 12 — Renomeação de Pessoas para Leads e Leads para Visitantes
 
 - **Data:** 2026-11-20

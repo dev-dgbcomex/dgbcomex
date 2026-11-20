@@ -450,6 +450,36 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
 END $$;
 
+DO $$
+DECLARE
+  fk_nome text;
+  coluna_visita smallint;
+BEGIN
+  SELECT attnum INTO coluna_visita
+  FROM pg_attribute
+  WHERE attrelid = 'crm_pesquisas_satisfacao'::regclass AND attname = 'visita_id';
+
+  SELECT conname INTO fk_nome
+  FROM pg_constraint
+  WHERE conrelid = 'crm_pesquisas_satisfacao'::regclass
+    AND contype = 'f'
+    AND conkey = ARRAY[coluna_visita]::smallint[]
+  LIMIT 1;
+
+  IF fk_nome IS NULL THEN
+    ALTER TABLE crm_pesquisas_satisfacao
+      ADD CONSTRAINT crm_pesquisas_satisfacao_visita_id_fkey
+      FOREIGN KEY (visita_id) REFERENCES crm_visitas(id) ON DELETE CASCADE;
+  ELSIF EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = fk_nome AND confdeltype <> 'c'
+  ) THEN
+    EXECUTE format('ALTER TABLE crm_pesquisas_satisfacao DROP CONSTRAINT %I', fk_nome);
+    ALTER TABLE crm_pesquisas_satisfacao
+      ADD CONSTRAINT crm_pesquisas_satisfacao_visita_id_fkey
+      FOREIGN KEY (visita_id) REFERENCES crm_visitas(id) ON DELETE CASCADE;
+  END IF;
+END $$;
+
 -- crm_email_config: adicionar colunas faltantes (nova estrutura)
 DO $$ BEGIN
   ALTER TABLE crm_email_config ADD COLUMN IF NOT EXISTS host varchar(200);
