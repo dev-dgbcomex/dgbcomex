@@ -2,7 +2,7 @@
 //
 // Como: comparando as 123 tabelas de `src/lib/db/schema` com o
 // `information_schema`. Qualquer consulta a uma tabela ausente quebrava com 500 — foi
-// o que derrubou a busca de CNPJ, que le `crm_pessoas` depois de chamar a API externa.
+// o que derrubou a busca de CNPJ, que le `crm_leads` depois de chamar a API externa.
 //
 // Idempotente (tudo e CREATE TABLE/INDEX IF NOT EXISTS).
 //   node scripts/criar-tabelas-faltantes.js            -> DATABASE_URL
@@ -157,7 +157,7 @@ const TABELAS = [
     "crm_acoes_prospeccao",
     `create table if not exists crm_acoes_prospeccao (
        id serial primary key,
-       empresa_id integer references crm_pessoas(id),
+       lead_id integer references crm_leads(id),
        cliente_id integer references clientes(id),
        oportunidade_id integer references crm_oportunidades(id),
        contato_id integer references crm_contatos(id),
@@ -198,7 +198,7 @@ const TABELAS = [
       )`,
     "alter table crm_acoes_prospeccao add column if not exists origem_visita_id integer",
     "create unique index if not exists idx_crm_acoes_prospeccao_origem_visita_id on crm_acoes_prospeccao (origem_visita_id) where origem_visita_id is not null",
-    "create index if not exists idx_crm_acoes_prospeccao_empresa_id on crm_acoes_prospeccao (empresa_id)",
+    "create index if not exists idx_crm_acoes_prospeccao_lead_id on crm_acoes_prospeccao (lead_id)",
     "create index if not exists idx_crm_acoes_prospeccao_cliente_id on crm_acoes_prospeccao (cliente_id)",
     "create index if not exists idx_crm_acoes_prospeccao_oportunidade_id on crm_acoes_prospeccao (oportunidade_id)",
     "create index if not exists idx_crm_acoes_prospeccao_contato_id on crm_acoes_prospeccao (contato_id)",

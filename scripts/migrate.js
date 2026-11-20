@@ -408,43 +408,43 @@ async function migrate() {
     await sql`INSERT INTO campo_visibilidade (cadastro, campo, roles_ocultos) VALUES ('CRM_ACAO_PROSPECCAO_DETALHE', 'proposta_vinculada', '["COMERCIAL"]'::jsonb) ON CONFLICT (cadastro, campo) DO NOTHING`
     console.log("✓ Regras de visibilidade de campos verificadas")
 
-    // crm_pessoas: tarja de promocao para cliente (a pessoa sai da listagem, mas
+    // crm_leads: tarja de promocao para cliente (a pessoa sai da listagem, mas
     // continua nos relatorios com todo o historico)
-    await sql`ALTER TABLE crm_pessoas ADD COLUMN IF NOT EXISTS promovida_cliente boolean NOT NULL DEFAULT false`
-    await sql`ALTER TABLE crm_pessoas ADD COLUMN IF NOT EXISTS promovido_em timestamp`
-    await sql`ALTER TABLE crm_pessoas ADD COLUMN IF NOT EXISTS promovido_por integer REFERENCES usuarios(id) ON DELETE SET NULL`
-    await sql`ALTER TABLE crm_pessoas ADD COLUMN IF NOT EXISTS promovido_por_nome varchar(255)`
-    await sql`CREATE INDEX IF NOT EXISTS idx_crm_pessoas_promovida_cliente ON crm_pessoas (promovida_cliente)`
+    await sql`ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS promovida_cliente boolean NOT NULL DEFAULT false`
+    await sql`ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS promovido_em timestamp`
+    await sql`ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS promovido_por integer REFERENCES usuarios(id) ON DELETE SET NULL`
+    await sql`ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS promovido_por_nome varchar(255)`
+    await sql`CREATE INDEX IF NOT EXISTS idx_crm_leads_promovida_cliente ON crm_leads (promovida_cliente)`
     await sql`
-      UPDATE crm_pessoas p
+      UPDATE crm_leads p
       SET promovida_cliente = true,
           promovido_em = COALESCE(c.created_at, p.updated_at, p.created_at)
       FROM clientes c
       WHERE p.cliente_id = c.id AND p.promovida_cliente = false
     `
-    console.log("✓ Tarja de promocao para cliente em crm_pessoas")
+    console.log("✓ Tarja de promocao para cliente em crm_leads")
 
     // Relacionamentos do cliente no CRM: timeline e WhatsApp tambem do cliente,
     // e o negocio da pessoa promovida passa a apontar para o cliente.
     await sql`ALTER TABLE crm_timeline_eventos ADD COLUMN IF NOT EXISTS cliente_id integer REFERENCES clientes(id) ON DELETE SET NULL`
-    await sql`ALTER TABLE crm_timeline_eventos ALTER COLUMN empresa_id DROP NOT NULL`
+    await sql`ALTER TABLE crm_timeline_eventos ALTER COLUMN lead_id DROP NOT NULL`
     await sql`CREATE INDEX IF NOT EXISTS idx_crm_timeline_eventos_cliente_id ON crm_timeline_eventos (cliente_id)`
     await sql`ALTER TABLE crm_whatsapp_mensagens ADD COLUMN IF NOT EXISTS cliente_id integer REFERENCES clientes(id) ON DELETE SET NULL`
     await sql`CREATE INDEX IF NOT EXISTS idx_crm_whatsapp_mensagens_cliente_id ON crm_whatsapp_mensagens (cliente_id)`
     await sql`
       UPDATE crm_oportunidades o SET cliente_id = p.cliente_id
-      FROM crm_pessoas p
-      WHERE o.empresa_id = p.id AND p.cliente_id IS NOT NULL AND o.cliente_id IS NULL
+      FROM crm_leads p
+      WHERE o.lead_id = p.id AND p.cliente_id IS NOT NULL AND o.cliente_id IS NULL
     `
     await sql`
       UPDATE crm_propostas pr SET cliente_id = p.cliente_id
-      FROM crm_pessoas p
-      WHERE pr.empresa_id = p.id AND p.cliente_id IS NOT NULL AND pr.cliente_id IS NULL
+      FROM crm_leads p
+      WHERE pr.lead_id = p.id AND p.cliente_id IS NOT NULL AND pr.cliente_id IS NULL
     `
     await sql`
       UPDATE crm_visitas v SET cliente_id = p.cliente_id
-      FROM crm_pessoas p
-      WHERE v.empresa_id = p.id AND p.cliente_id IS NOT NULL AND v.cliente_id IS NULL
+      FROM crm_leads p
+      WHERE v.lead_id = p.id AND p.cliente_id IS NOT NULL AND v.cliente_id IS NULL
     `
     console.log(
       "✓ Relacionamentos do cliente no CRM (timeline, WhatsApp e negocio da pessoa promovida)"
@@ -829,7 +829,7 @@ async function migrate() {
 
     // ==================== CRM (Fase 1) ====================
     await sql`
-      CREATE TABLE IF NOT EXISTS crm_pessoas (
+      CREATE TABLE IF NOT EXISTS crm_leads (
         id SERIAL PRIMARY KEY,
         razao_social VARCHAR(250) NOT NULL,
         nome_fantasia VARCHAR(200),
@@ -847,13 +847,13 @@ async function migrate() {
         updated_at TIMESTAMP DEFAULT NOW()
       )
     `
-    console.log("✓ Tabela crm_pessoas criada")
+    console.log("✓ Tabela crm_leads criada")
     // Coluna cliente_id (para quem já tem a tabela)
-    await sql`ALTER TABLE crm_pessoas ADD COLUMN IF NOT EXISTS cliente_id INTEGER REFERENCES clientes(id)`
-    console.log("✓ Coluna cliente_id em crm_pessoas")
+    await sql`ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS cliente_id INTEGER REFERENCES clientes(id)`
+    console.log("✓ Coluna cliente_id em crm_leads")
 
     await sql`
-      CREATE TABLE IF NOT EXISTS crm_leads (
+      CREATE TABLE IF NOT EXISTS crm_visitantes (
         id SERIAL PRIMARY KEY,
         nome VARCHAR(200) NOT NULL,
         email VARCHAR(255),
@@ -865,13 +865,13 @@ async function migrate() {
         status VARCHAR(30) NOT NULL DEFAULT 'NOVO',
         descricao TEXT,
         responsavel_id INTEGER REFERENCES usuarios(id),
-        empresa_id INTEGER REFERENCES crm_pessoas(id),
+        lead_id_legado INTEGER,
         id_integracao VARCHAR(100),
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW()
       )
     `
-    console.log("✓ Tabela crm_leads criada")
+    console.log("✓ Tabela crm_visitantes criada")
 
     await sql`
       CREATE TABLE IF NOT EXISTS crm_contatos (
@@ -884,7 +884,7 @@ async function migrate() {
         whatsapp VARCHAR(255),
         principal BOOLEAN DEFAULT false,
         observacoes TEXT,
-        empresa_id INTEGER REFERENCES crm_pessoas(id),
+        lead_id INTEGER REFERENCES crm_leads(id),
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW()
       )
@@ -892,7 +892,7 @@ async function migrate() {
     console.log("✓ Tabela crm_contatos criada")
     // Contato pode ser de cliente (cliente_id) ou avulso: empresa_id nao e obrigatorio
     await sql`ALTER TABLE crm_contatos ADD COLUMN IF NOT EXISTS cliente_id INTEGER REFERENCES clientes(id)`
-    await sql`ALTER TABLE crm_contatos ALTER COLUMN empresa_id DROP NOT NULL`
+    await sql`ALTER TABLE crm_contatos ALTER COLUMN lead_id DROP NOT NULL`
     console.log("✓ crm_contatos: empresa_id pode ser nulo (contato de cliente ou avulso)")
 
     await sql`
@@ -902,8 +902,8 @@ async function migrate() {
         descricao TEXT,
         valor_estimado NUMERIC(12,2),
         status VARCHAR(30) NOT NULL DEFAULT 'NOVO',
+        visitante_id INTEGER REFERENCES crm_visitantes(id),
         lead_id INTEGER REFERENCES crm_leads(id),
-        empresa_id INTEGER REFERENCES crm_pessoas(id),
         contato_id INTEGER REFERENCES crm_contatos(id),
         responsavel_id INTEGER REFERENCES usuarios(id),
         data_fechamento_prevista DATE,
@@ -918,7 +918,7 @@ async function migrate() {
     await sql`
       CREATE TABLE IF NOT EXISTS crm_visitas (
         id SERIAL PRIMARY KEY,
-        empresa_id INTEGER REFERENCES crm_pessoas(id),
+        lead_id INTEGER REFERENCES crm_leads(id),
         oportunidade_id INTEGER REFERENCES crm_oportunidades(id),
         contato_id INTEGER REFERENCES crm_contatos(id),
         data_visita DATE NOT NULL,
@@ -934,13 +934,13 @@ async function migrate() {
     `
     console.log("✓ Tabela crm_visitas criada")
     // Visita pode ser de cliente (cliente_id) ou avulsa (nome_avulso): empresa_id nao e obrigatorio
-    await sql`ALTER TABLE crm_visitas ALTER COLUMN empresa_id DROP NOT NULL`
+    await sql`ALTER TABLE crm_visitas ALTER COLUMN lead_id DROP NOT NULL`
     console.log("✓ crm_visitas: empresa_id pode ser nulo (visita de cliente ou avulsa)")
 
     await sql`
       CREATE TABLE IF NOT EXISTS crm_acoes_prospeccao (
         id SERIAL PRIMARY KEY,
-        empresa_id INTEGER REFERENCES crm_pessoas(id),
+        lead_id INTEGER REFERENCES crm_leads(id),
         cliente_id INTEGER REFERENCES clientes(id),
         oportunidade_id INTEGER REFERENCES crm_oportunidades(id),
         contato_id INTEGER REFERENCES crm_contatos(id),
@@ -1032,7 +1032,7 @@ async function migrate() {
     await sql`
       CREATE TABLE IF NOT EXISTS crm_tarefas (
         id SERIAL PRIMARY KEY,
-        empresa_id INTEGER REFERENCES crm_pessoas(id),
+        lead_id INTEGER REFERENCES crm_leads(id),
         oportunidade_id INTEGER REFERENCES crm_oportunidades(id),
         titulo VARCHAR(300) NOT NULL,
         descricao TEXT,
@@ -1052,7 +1052,7 @@ async function migrate() {
       CREATE TABLE IF NOT EXISTS crm_propostas (
         id SERIAL PRIMARY KEY,
         oportunidade_id INTEGER REFERENCES crm_oportunidades(id),
-        empresa_id INTEGER NOT NULL REFERENCES crm_pessoas(id),
+        lead_id INTEGER NOT NULL REFERENCES crm_leads(id),
         titulo VARCHAR(300) NOT NULL,
         valor NUMERIC(12,2),
         descricao TEXT,
@@ -1072,7 +1072,7 @@ async function migrate() {
     await sql`
       CREATE TABLE IF NOT EXISTS crm_timeline_eventos (
         id SERIAL PRIMARY KEY,
-        empresa_id INTEGER NOT NULL REFERENCES crm_pessoas(id),
+        lead_id INTEGER NOT NULL REFERENCES crm_leads(id),
         tipo VARCHAR(30) NOT NULL,
         descricao TEXT NOT NULL,
         metadados JSONB DEFAULT '{}'::jsonb,
@@ -1111,7 +1111,7 @@ async function migrate() {
     await sql`
       CREATE TABLE IF NOT EXISTS crm_whatsapp_mensagens (
         id SERIAL PRIMARY KEY,
-        empresa_id INTEGER REFERENCES crm_pessoas(id),
+        lead_id INTEGER REFERENCES crm_leads(id),
         contato_id INTEGER REFERENCES crm_contatos(id),
         mensagem TEXT NOT NULL,
         tipo VARCHAR(10) NOT NULL DEFAULT 'RECEBIDA',
@@ -1180,21 +1180,21 @@ async function migrate() {
 
     // ==================== CRM (Fase 11 - IA) ====================
     await sql`
-      ALTER TABLE crm_leads
+      ALTER TABLE crm_visitantes
         ADD COLUMN IF NOT EXISTS score INTEGER,
         ADD COLUMN IF NOT EXISTS segmento_ia VARCHAR(100),
         ADD COLUMN IF NOT EXISTS porte_ia VARCHAR(50),
         ADD COLUMN IF NOT EXISTS data_classificacao_ia TIMESTAMP
     `
-    console.log("✓ Colunas IA adicionadas em crm_leads")
+    console.log("✓ Colunas IA adicionadas em crm_visitantes")
 
     await sql`
-      ALTER TABLE crm_pessoas
+      ALTER TABLE crm_leads
         ADD COLUMN IF NOT EXISTS resumo_ia TEXT,
         ADD COLUMN IF NOT EXISTS sugestao_ia TEXT,
         ADD COLUMN IF NOT EXISTS data_resumo_ia TIMESTAMP
     `
-    console.log("✓ Colunas IA adicionadas em crm_pessoas")
+    console.log("✓ Colunas IA adicionadas em crm_leads")
 
     // ==================== Email em Massa - Tracking ====================
     await sql`
@@ -1300,53 +1300,53 @@ async function migrate() {
     `
     console.log("✓ Tabela crm_previsao_vendas criada")
 
-    // ==================== Novos campos de contato: crm_pessoas ====================
-    await sql`ALTER TABLE crm_pessoas ADD COLUMN IF NOT EXISTS telefone VARCHAR(20)`
-    await sql`ALTER TABLE crm_pessoas ADD COLUMN IF NOT EXISTS celular VARCHAR(20)`
-    await sql`ALTER TABLE crm_pessoas ADD COLUMN IF NOT EXISTS email VARCHAR(150)`
-    await sql`ALTER TABLE crm_pessoas ADD COLUMN IF NOT EXISTS email_nf VARCHAR(150)`
-    console.log("✓ Colunas telefone, celular, email, email_nf adicionadas em crm_pessoas")
+    // ==================== Novos campos de contato: crm_leads ====================
+    await sql`ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS telefone VARCHAR(20)`
+    await sql`ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS celular VARCHAR(20)`
+    await sql`ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS email VARCHAR(150)`
+    await sql`ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS email_nf VARCHAR(150)`
+    console.log("✓ Colunas telefone, celular, email, email_nf adicionadas em crm_leads")
 
     // ==================== Novos campos de contato: clientes ====================
     await sql`ALTER TABLE clientes ADD COLUMN IF NOT EXISTS celular VARCHAR(20)`
     await sql`ALTER TABLE clientes ADD COLUMN IF NOT EXISTS email_nf VARCHAR(150)`
     console.log("✓ Colunas celular, email_nf adicionadas em clientes")
 
-    // ==================== Tabela pessoas_representantes ====================
+    // ==================== Tabela leads_representantes ====================
     await sql`
-      CREATE TABLE IF NOT EXISTS pessoas_representantes (
+      CREATE TABLE IF NOT EXISTS leads_representantes (
         id SERIAL PRIMARY KEY,
-        pessoa_id INTEGER NOT NULL REFERENCES crm_pessoas(id) ON DELETE CASCADE,
+        lead_id INTEGER NOT NULL REFERENCES crm_leads(id) ON DELETE CASCADE,
         representante_id INTEGER NOT NULL REFERENCES representantes(id) ON DELETE CASCADE,
         created_at TIMESTAMP DEFAULT NOW()
       )
     `
-    console.log("✓ Tabela pessoas_representantes criada")
+    console.log("✓ Tabela leads_representantes criada")
 
-    // ==================== Colunas crm_leads (tipoPessoa, documento, pessoaId) ====================
-    await sql`ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS tipo_pessoa VARCHAR(2)`
-    console.log("✓ Coluna tipo_pessoa adicionada em crm_leads")
+    // ==================== Colunas crm_visitantes (tipoPessoa, documento, pessoaId) ====================
+    await sql`ALTER TABLE crm_visitantes ADD COLUMN IF NOT EXISTS tipo_pessoa VARCHAR(2)`
+    console.log("✓ Coluna tipo_pessoa adicionada em crm_visitantes")
 
-    // Drop FK incorreta (empresa_id apontava para crm_pessoas — não faz sentido)
+    // Drop FK incorreta (empresa_id apontava para crm_leads — não faz sentido)
     await sql`
       DO $$
       BEGIN
         IF EXISTS (
           SELECT 1 FROM information_schema.table_constraints
-          WHERE constraint_name = 'crm_leads_empresa_id_fkey'
-          AND table_name = 'crm_leads'
+          WHERE constraint_name = 'crm_visitantes_lead_id_legado_fkey'
+          AND table_name = 'crm_visitantes'
         ) THEN
-          ALTER TABLE crm_leads DROP CONSTRAINT crm_leads_empresa_id_fkey;
+          ALTER TABLE crm_visitantes DROP CONSTRAINT crm_visitantes_lead_id_legado_fkey;
         END IF;
       END $$;
     `
-    console.log("✓ FK empresa_id removida de crm_leads (apontava incorretamente para crm_pessoas)")
+    console.log("✓ FK empresa_id removida de crm_visitantes (apontava incorretamente para crm_leads)")
 
-    await sql`ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS documento VARCHAR(18)`
-    console.log("✓ Coluna documento adicionada em crm_leads")
+    await sql`ALTER TABLE crm_visitantes ADD COLUMN IF NOT EXISTS documento VARCHAR(18)`
+    console.log("✓ Coluna documento adicionada em crm_visitantes")
 
-    await sql`ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS pessoa_id INTEGER REFERENCES crm_pessoas(id)`
-    console.log("✓ Coluna pessoa_id adicionada em crm_leads")
+    await sql`ALTER TABLE crm_visitantes ADD COLUMN IF NOT EXISTS lead_id INTEGER REFERENCES crm_leads(id)`
+    console.log("✓ Coluna pessoa_id adicionada em crm_visitantes")
 
     // ==================== Atualizar menus existentes com link para Contatos ====================
     // 1. Corrige URL do menu Contatos que apontava erroneamente para /comercial/crm/pessoas
@@ -1405,7 +1405,7 @@ async function migrate() {
     console.log("✓ Coluna segmento adicionada em clientes")
 
     await sql`ALTER TABLE crm_propostas ADD COLUMN IF NOT EXISTS cliente_id INTEGER REFERENCES clientes(id)`
-    await sql`ALTER TABLE crm_propostas ALTER COLUMN empresa_id DROP NOT NULL`
+    await sql`ALTER TABLE crm_propostas ALTER COLUMN lead_id DROP NOT NULL`
     console.log("✓ Coluna cliente_id adicionada em crm_propostas e empresa_id liberada")
 
     await sql`ALTER TABLE crm_oportunidades ADD COLUMN IF NOT EXISTS cliente_id INTEGER REFERENCES clientes(id)`

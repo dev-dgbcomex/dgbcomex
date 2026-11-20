@@ -52,25 +52,25 @@ CREATE TABLE IF NOT EXISTS campo_visibilidade (
 INSERT INTO campo_visibilidade (cadastro, campo, roles_ocultos) VALUES ('CRM_VISITA_DETALHE', 'proposta_vinculada', '["COMERCIAL"]'::jsonb)
 ON CONFLICT (cadastro, campo) DO NOTHING;
 
--- crm_pessoas: tarja de promocao para cliente
+-- crm_leads: tarja de promocao para cliente
 DO $$ BEGIN
-  ALTER TABLE crm_pessoas ADD COLUMN IF NOT EXISTS promovida_cliente boolean NOT NULL DEFAULT false;
+  ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS promovida_cliente boolean NOT NULL DEFAULT false;
 EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
 END $$;
 DO $$ BEGIN
-  ALTER TABLE crm_pessoas ADD COLUMN IF NOT EXISTS promovido_em timestamp;
+  ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS promovido_em timestamp;
 EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
 END $$;
 DO $$ BEGIN
-  ALTER TABLE crm_pessoas ADD COLUMN IF NOT EXISTS promovido_por integer REFERENCES usuarios(id) ON DELETE SET NULL;
+  ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS promovido_por integer REFERENCES usuarios(id) ON DELETE SET NULL;
 EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
 END $$;
 DO $$ BEGIN
-  ALTER TABLE crm_pessoas ADD COLUMN IF NOT EXISTS promovido_por_nome varchar(255);
+  ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS promovido_por_nome varchar(255);
 EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
 END $$;
-CREATE INDEX IF NOT EXISTS idx_crm_pessoas_promovida_cliente ON crm_pessoas (promovida_cliente);
-UPDATE crm_pessoas p
+CREATE INDEX IF NOT EXISTS idx_crm_leads_promovida_cliente ON crm_leads (promovida_cliente);
+UPDATE crm_leads p
 SET promovida_cliente = true,
     promovido_em = COALESCE(c.created_at, p.updated_at, p.created_at)
 FROM clientes c
@@ -83,7 +83,7 @@ EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
 END $$;
 -- crm_contatos: empresa_id deixa de ser obrigatorio (contato de cliente ou avulso)
 DO $$ BEGIN
-  ALTER TABLE crm_contatos ALTER COLUMN empresa_id DROP NOT NULL;
+  ALTER TABLE crm_contatos ALTER COLUMN lead_id DROP NOT NULL;
 EXCEPTION WHEN undefined_table THEN NULL;
 END $$;
 
@@ -93,7 +93,7 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
 END $$;
 DO $$ BEGIN
-  ALTER TABLE crm_timeline_eventos ALTER COLUMN empresa_id DROP NOT NULL;
+  ALTER TABLE crm_timeline_eventos ALTER COLUMN lead_id DROP NOT NULL;
 EXCEPTION WHEN undefined_table THEN NULL;
 END $$;
 CREATE INDEX IF NOT EXISTS idx_crm_timeline_eventos_cliente_id ON crm_timeline_eventos (cliente_id);
@@ -107,14 +107,14 @@ CREATE INDEX IF NOT EXISTS idx_crm_whatsapp_mensagens_cliente_id ON crm_whatsapp
 
 -- Negocio da pessoa promovida passa a apontar para o cliente
 UPDATE crm_oportunidades o SET cliente_id = p.cliente_id
-FROM crm_pessoas p
-WHERE o.empresa_id = p.id AND p.cliente_id IS NOT NULL AND o.cliente_id IS NULL;
+FROM crm_leads p
+WHERE o.lead_id = p.id AND p.cliente_id IS NOT NULL AND o.cliente_id IS NULL;
 UPDATE crm_propostas pr SET cliente_id = p.cliente_id
-FROM crm_pessoas p
-WHERE pr.empresa_id = p.id AND p.cliente_id IS NOT NULL AND pr.cliente_id IS NULL;
+FROM crm_leads p
+WHERE pr.lead_id = p.id AND p.cliente_id IS NOT NULL AND pr.cliente_id IS NULL;
 UPDATE crm_visitas v SET cliente_id = p.cliente_id
-FROM crm_pessoas p
-WHERE v.empresa_id = p.id AND p.cliente_id IS NOT NULL AND v.cliente_id IS NULL;
+FROM crm_leads p
+WHERE v.lead_id = p.id AND p.cliente_id IS NOT NULL AND v.cliente_id IS NULL;
 
 -- usuarios: celular whatsapp do representante
 DO $$ BEGIN
@@ -169,7 +169,7 @@ EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
 END $$;
 -- crm_visitas: empresa_id deixa de ser obrigatorio (visita de cliente ou avulsa)
 DO $$ BEGIN
-  ALTER TABLE crm_visitas ALTER COLUMN empresa_id DROP NOT NULL;
+  ALTER TABLE crm_visitas ALTER COLUMN lead_id DROP NOT NULL;
 EXCEPTION WHEN undefined_table THEN NULL;
 END $$;
 
@@ -201,22 +201,22 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
 END $$;
 
--- crm_pessoas: adicionar colunas faltantes
+-- crm_leads: adicionar colunas faltantes
 DO $$ BEGIN
-  ALTER TABLE crm_pessoas ADD COLUMN IF NOT EXISTS tipo_pessoa varchar(10);
+  ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS tipo_pessoa varchar(10);
 EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
 END $$;
 DO $$ BEGIN
-  ALTER TABLE crm_pessoas ADD COLUMN IF NOT EXISTS nome varchar(200);
+  ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS nome varchar(200);
 EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
 END $$;
 DO $$ BEGIN
-  ALTER TABLE crm_pessoas ADD COLUMN IF NOT EXISTS cpf varchar(14);
+  ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS cpf varchar(14);
 EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL; WHEN undefined_table THEN NULL;
 END $$;
 
 -- requisicoes_corte: quem pediu, para quem e quando (o codigo ja lia; o banco nao tinha).
--- Mesma classe de bug do crm_pessoas: o schema declara, o banco ficou para tras.
+-- Mesma classe de bug do crm_leads: o schema declara, o banco ficou para tras.
 DO $$ BEGIN
   ALTER TABLE requisicoes_corte ADD COLUMN IF NOT EXISTS data_solicitacao date;
 EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
@@ -366,55 +366,55 @@ DO $$ BEGIN
 EXCEPTION WHEN undefined_table THEN NULL; WHEN duplicate_table THEN NULL;
 END $$;
 
--- neon does not have crm_empresas (migrated to crm_pessoas); skip for neon
+-- neon does not have crm_leads (migrated to crm_leads); skip for neon
 DO $$ BEGIN
-  ALTER TABLE crm_empresas ADD COLUMN IF NOT EXISTS endereco varchar(300);
+  ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS endereco varchar(300);
 EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
 END $$;
 DO $$ BEGIN
-  ALTER TABLE crm_empresas ADD COLUMN IF NOT EXISTS numero varchar(20);
+  ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS numero varchar(20);
 EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
 END $$;
 DO $$ BEGIN
-  ALTER TABLE crm_empresas ADD COLUMN IF NOT EXISTS complemento varchar(200);
+  ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS complemento varchar(200);
 EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
 END $$;
 DO $$ BEGIN
-  ALTER TABLE crm_empresas ADD COLUMN IF NOT EXISTS bairro varchar(150);
+  ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS bairro varchar(150);
 EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
 END $$;
 DO $$ BEGIN
-  ALTER TABLE crm_empresas ADD COLUMN IF NOT EXISTS cidade varchar(150);
+  ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS cidade varchar(150);
 EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
 END $$;
 DO $$ BEGIN
-  ALTER TABLE crm_empresas ADD COLUMN IF NOT EXISTS uf varchar(2);
+  ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS uf varchar(2);
 EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
 END $$;
 DO $$ BEGIN
-  ALTER TABLE crm_empresas ADD COLUMN IF NOT EXISTS cep varchar(10);
+  ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS cep varchar(10);
 EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
 END $$;
 DO $$ BEGIN
-  ALTER TABLE crm_empresas ADD COLUMN IF NOT EXISTS tipo_pessoa varchar(10);
+  ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS tipo_pessoa varchar(10);
 EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
 END $$;
 DO $$ BEGIN
-  ALTER TABLE crm_empresas ADD COLUMN IF NOT EXISTS cpf varchar(14);
+  ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS cpf varchar(14);
 EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
 END $$;
 DO $$ BEGIN
-  ALTER TABLE crm_empresas ADD COLUMN IF NOT EXISTS nome varchar(200);
+  ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS nome varchar(200);
 EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
 END $$;
 
--- crm_leads: adicionar colunas faltantes
+-- crm_visitantes: adicionar colunas faltantes
 DO $$ BEGIN
-  ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS pagina_inicial varchar(100);
+  ALTER TABLE crm_visitantes ADD COLUMN IF NOT EXISTS pagina_inicial varchar(100);
 EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
 END $$;
 DO $$ BEGIN
-  ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS pessoa_id integer;
+  ALTER TABLE crm_visitantes ADD COLUMN IF NOT EXISTS pessoa_id integer;
 EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
 END $$;
 
@@ -560,13 +560,13 @@ CREATE TABLE IF NOT EXISTS crm_whatsapp_retry_queue (
 CREATE INDEX IF NOT EXISTS idx_retry_queue_status ON crm_whatsapp_retry_queue(status);
 CREATE INDEX IF NOT EXISTS idx_retry_queue_proximo ON crm_whatsapp_retry_queue(proximo_retry_at) WHERE status = 'PENDENTE';
 
--- crm_leads: adicionar score e prioridade
+-- crm_visitantes: adicionar score e prioridade
 DO $$ BEGIN
-  ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS score integer DEFAULT 0;
+  ALTER TABLE crm_visitantes ADD COLUMN IF NOT EXISTS score integer DEFAULT 0;
 EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
 END $$;
 DO $$ BEGIN
-  ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS prioridade varchar(20) DEFAULT 'BAIXA';
+  ALTER TABLE crm_visitantes ADD COLUMN IF NOT EXISTS prioridade varchar(20) DEFAULT 'BAIXA';
 EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
 END $$;
 
@@ -675,7 +675,7 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
 END $$;
 DO $$ BEGIN
-  ALTER TABLE crm_propostas ALTER COLUMN empresa_id DROP NOT NULL;
+  ALTER TABLE crm_propostas ALTER COLUMN lead_id DROP NOT NULL;
 EXCEPTION WHEN undefined_column THEN NULL; WHEN undefined_table THEN NULL;
 END $$;
 
@@ -1242,7 +1242,7 @@ ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS bi_ordem_graficos JSONB DEFAULT '[
 -- Ações de Prospecção (clone do módulo Visitas)
 CREATE TABLE IF NOT EXISTS crm_acoes_prospeccao (
   id SERIAL PRIMARY KEY,
-  empresa_id INTEGER REFERENCES crm_pessoas(id),
+  lead_id INTEGER REFERENCES crm_leads(id),
   cliente_id INTEGER REFERENCES clientes(id),
   oportunidade_id INTEGER REFERENCES crm_oportunidades(id),
   contato_id INTEGER REFERENCES crm_contatos(id),
@@ -1321,7 +1321,7 @@ CREATE TABLE IF NOT EXISTS crm_acoes_prospeccao_pesquisas_respostas (
   created_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_crm_acoes_prospeccao_empresa_id ON crm_acoes_prospeccao(empresa_id);
+CREATE INDEX IF NOT EXISTS idx_crm_acoes_prospeccao_lead_id ON crm_acoes_prospeccao(lead_id);
 CREATE INDEX IF NOT EXISTS idx_crm_acoes_prospeccao_cliente_id ON crm_acoes_prospeccao(cliente_id);
 CREATE INDEX IF NOT EXISTS idx_crm_acoes_prospeccao_oportunidade_id ON crm_acoes_prospeccao(oportunidade_id);
 CREATE INDEX IF NOT EXISTS idx_crm_acoes_prospeccao_contato_id ON crm_acoes_prospeccao(contato_id);
