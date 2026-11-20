@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireAuth } from "@/lib/auth"
 import { db } from "@/lib/db"
-import { crmLeads } from "@/lib/db/schema/crm-leads"
+import { crmVisitantes } from "@/lib/db/schema/crm-visitantes"
 import { crmPessoas } from "@/lib/db/schema/crm-pessoas"
 import { eq } from "drizzle-orm"
 import { registrarLog, notificar, notificarDelecao } from "@/lib/notificar"
@@ -18,8 +18,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const { id } = await params
     const [lead] = await db
       .select()
-      .from(crmLeads)
-      .where(eq(crmLeads.id, parseInt(id)))
+      .from(crmVisitantes)
+      .where(eq(crmVisitantes.id, parseInt(id)))
       .limit(1)
 
     if (!lead) {
@@ -43,8 +43,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
     const [existente] = await db
       .select()
-      .from(crmLeads)
-      .where(eq(crmLeads.id, parseInt(id)))
+      .from(crmVisitantes)
+      .where(eq(crmVisitantes.id, parseInt(id)))
       .limit(1)
 
     if (!existente) {
@@ -67,16 +67,16 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     if (body.pessoaId !== undefined) values.pessoaId = body.pessoaId
 
     const [atualizado] = await db
-      .update(crmLeads)
+      .update(crmVisitantes)
       .set(values)
-      .where(eq(crmLeads.id, parseInt(id)))
+      .where(eq(crmVisitantes.id, parseInt(id)))
       .returning()
 
     await registrarLog({
       tipo: "ATUALIZACAO",
       acao: "atualizar",
       descricao: `Lead atualizado: ${atualizado.nome}`,
-      entidade: "CrmLead",
+      entidade: "CrmVisitante",
       entidadeId: atualizado.id,
       usuarioNome: session.user.name,
     })
@@ -119,9 +119,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
       // Vincular a pessoa criada ao lead
       await db
-        .update(crmLeads)
+        .update(crmVisitantes)
         .set({ pessoaId: pessoa.id, updatedAt: new Date() })
-        .where(eq(crmLeads.id, atualizado.id))
+        .where(eq(crmVisitantes.id, atualizado.id))
 
       await inserirTimelineEvento({
         empresaId: atualizado.empresaId!,
@@ -163,7 +163,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
         await excluirOportunidadeCascade(tx, o.id)
       }
       await excluirTimelineEventosEntidade({ tipo: "LEAD", campo: "leadId", id: leadId }, tx)
-      await tx.delete(crmLeads).where(eq(crmLeads.id, leadId))
+      await tx.delete(crmVisitantes).where(eq(crmVisitantes.id, leadId))
     })
 
     await notificarDelecao("Lead CRM", id, auth.session.user.name)

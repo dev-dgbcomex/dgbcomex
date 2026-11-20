@@ -3,7 +3,7 @@ import { db } from "@/lib/db"
 import { crmWhatsappMensagens } from "@/lib/db/schema/crm-whatsapp"
 import { crmPessoas } from "@/lib/db/schema/crm-pessoas"
 import { crmContatos } from "@/lib/db/schema/crm-contatos"
-import { crmLeads } from "@/lib/db/schema/crm-leads"
+import { crmVisitantes } from "@/lib/db/schema/crm-visitantes"
 import { eq } from "drizzle-orm"
 import { inserirTimelineEvento } from "@/lib/crm-timeline"
 import { validarWebhookSecret } from "@/lib/whatsapp/webhook-auth"
@@ -36,7 +36,7 @@ async function criarLeadWhatsApp(remoteJid: string, mensagem: string) {
     .returning()
 
   const [lead] = await db
-    .insert(crmLeads)
+    .insert(crmVisitantes)
     .values({
       nome: nomeContato,
       celular: numero,

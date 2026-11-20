@@ -4,7 +4,7 @@ import { db } from "@/lib/db"
 import { crmWhatsappConversas } from "@/lib/db/schema/crm-whatsapp-conversas"
 import { crmWhatsappMensagens } from "@/lib/db/schema/crm-whatsapp"
 import { crmWhatsappFlowLogs } from "@/lib/db/schema/crm-whatsapp-flow-logs"
-import { crmLeads } from "@/lib/db/schema/crm-leads"
+import { crmVisitantes } from "@/lib/db/schema/crm-visitantes"
 import { sql, eq, desc, and, gte } from "drizzle-orm"
 
 export const dynamic = "force-dynamic"
@@ -35,8 +35,8 @@ export async function GET(req: NextRequest) {
 
     const totalLeads = await db
       .select({ count: sql<number>`count(*)` })
-      .from(crmLeads)
-      .where(and(eq(crmLeads.origem, "WHATSAPP"), gte(crmLeads.createdAt, desde)))
+      .from(crmVisitantes)
+      .where(and(eq(crmVisitantes.origem, "WHATSAPP"), gte(crmVisitantes.createdAt, desde)))
       .then((r: any) => Number(r[0]?.count || 0))
 
     const encerrados = porEstado.find((e: any) => e.estado === "ENCERRADO")

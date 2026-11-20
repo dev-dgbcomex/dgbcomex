@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { requireAuth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { crmWhatsappMensagens } from "@/lib/db/schema/crm-whatsapp"
-import { crmLeads } from "@/lib/db/schema/crm-leads"
+import { crmVisitantes } from "@/lib/db/schema/crm-visitantes"
 import { crmPessoas } from "@/lib/db/schema/crm-pessoas"
 import { crmContatos } from "@/lib/db/schema/crm-contatos"
 import { desc, sql, and, eq, or, isNotNull } from "drizzle-orm"
@@ -46,16 +46,16 @@ export async function GET(req: NextRequest) {
 
     const leads = await db
       .select({
-        id: crmLeads.id,
-        nome: crmLeads.nome,
-        celular: crmLeads.celular,
-        status: crmLeads.status,
-        idIntegracao: crmLeads.idIntegracao,
+        id: crmVisitantes.id,
+        nome: crmVisitantes.nome,
+        celular: crmVisitantes.celular,
+        status: crmVisitantes.status,
+        idIntegracao: crmVisitantes.idIntegracao,
       })
-      .from(crmLeads)
+      .from(crmVisitantes)
       .where(
         remoteJids.length > 0
-          ? sql`${crmLeads.idIntegracao} IN (${sql.join(
+          ? sql`${crmVisitantes.idIntegracao} IN (${sql.join(
               remoteJids.map((j: any) => sql`${`whatsapp:${j}`}`),
               sql`, `
             )})`

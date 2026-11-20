@@ -8,7 +8,7 @@ import {
   boolean,
   uniqueIndex,
 } from "drizzle-orm/pg-core"
-import { crmPessoas } from "./crm-pessoas"
+import { crmLeads } from "./crm-leads"
 import { crmContatos } from "./crm-contatos"
 import { clientes } from "./clientes"
 
@@ -16,7 +16,7 @@ export const crmWhatsappMensagens = pgTable(
   "crm_whatsapp_mensagens",
   {
     id: serial("id").primaryKey(),
-    empresaId: integer("empresa_id").references(() => crmPessoas.id),
+    empresaId: integer("lead_id").references(() => crmLeads.id),
     clienteId: integer("cliente_id").references(() => clientes.id),
     contatoId: integer("contato_id").references(() => crmContatos.id),
     mensagem: text("mensagem").notNull(),

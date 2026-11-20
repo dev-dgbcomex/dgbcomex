@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireAuth } from "@/lib/auth"
 import { db } from "@/lib/db"
-import { crmLeads } from "@/lib/db/schema/crm-leads"
+import { crmVisitantes } from "@/lib/db/schema/crm-visitantes"
 import { eq } from "drizzle-orm"
 
 export async function POST(req: NextRequest) {
@@ -17,14 +17,14 @@ export async function POST(req: NextRequest) {
     }
 
     const [updated] = await db
-      .update(crmLeads)
+      .update(crmVisitantes)
       .set({
         score: score ?? null,
         segmentoIa: segmentoIa || null,
         porteIa: porteIa || null,
         dataClassificacaoIa: new Date(),
       })
-      .where(eq(crmLeads.id, leadId))
+      .where(eq(crmVisitantes.id, leadId))
       .returning()
 
     if (!updated) {

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireAuth } from "@/lib/auth"
 import { db } from "@/lib/db"
-import { crmLeads } from "@/lib/db/schema/crm-leads"
+import { crmVisitantes } from "@/lib/db/schema/crm-visitantes"
 import { crmPessoas } from "@/lib/db/schema/crm-pessoas"
 import { usuarios } from "@/lib/db/schema/usuarios"
 import { eq, desc, like, or, sql } from "drizzle-orm"
@@ -19,18 +19,18 @@ export async function GET(req: NextRequest) {
     const empresaId = searchParams.get("empresaId")
 
     let conditions = []
-    if (status) conditions.push(eq(crmLeads.status, status))
+    if (status) conditions.push(eq(crmVisitantes.status, status))
     if (empresaId) {
       conditions.push(
-        or(eq(crmLeads.empresaId, parseInt(empresaId)), eq(crmLeads.pessoaId, parseInt(empresaId)))
+        or(eq(crmVisitantes.empresaId, parseInt(empresaId)), eq(crmVisitantes.pessoaId, parseInt(empresaId)))
       )
     }
     if (search) {
       conditions.push(
         or(
-          like(crmLeads.nome, `%${search}%`),
-          like(crmLeads.email, `%${search}%`),
-          like(crmLeads.empresaNome, `%${search}%`)
+          like(crmVisitantes.nome, `%${search}%`),
+          like(crmVisitantes.email, `%${search}%`),
+          like(crmVisitantes.empresaNome, `%${search}%`)
         )
       )
     }
@@ -42,39 +42,39 @@ export async function GET(req: NextRequest) {
 
     const lista = await db
       .select({
-        id: crmLeads.id,
-        nome: crmLeads.nome,
-        email: crmLeads.email,
-        telefone: crmLeads.telefone,
-        celular: crmLeads.celular,
-        empresaNome: crmLeads.empresaNome,
-        cargo: crmLeads.cargo,
-        tipoPessoa: crmLeads.tipoPessoa,
-        documento: crmLeads.documento,
-        origem: crmLeads.origem,
-        status: crmLeads.status,
-        descricao: crmLeads.descricao,
-        score: crmLeads.score,
-        segmentoIa: crmLeads.segmentoIa,
-        porteIa: crmLeads.porteIa,
-        dataClassificacaoIa: crmLeads.dataClassificacaoIa,
-        responsavelId: crmLeads.responsavelId,
+        id: crmVisitantes.id,
+        nome: crmVisitantes.nome,
+        email: crmVisitantes.email,
+        telefone: crmVisitantes.telefone,
+        celular: crmVisitantes.celular,
+        empresaNome: crmVisitantes.empresaNome,
+        cargo: crmVisitantes.cargo,
+        tipoPessoa: crmVisitantes.tipoPessoa,
+        documento: crmVisitantes.documento,
+        origem: crmVisitantes.origem,
+        status: crmVisitantes.status,
+        descricao: crmVisitantes.descricao,
+        score: crmVisitantes.score,
+        segmentoIa: crmVisitantes.segmentoIa,
+        porteIa: crmVisitantes.porteIa,
+        dataClassificacaoIa: crmVisitantes.dataClassificacaoIa,
+        responsavelId: crmVisitantes.responsavelId,
         responsavelNome: usuarios.name,
-        empresaId: crmLeads.empresaId,
-        pessoaId: crmLeads.pessoaId,
+        empresaId: crmVisitantes.empresaId,
+        pessoaId: crmVisitantes.pessoaId,
         empresaNomeFantasia: crmPessoas.nomeFantasia,
         empresaRazaoSocial: crmPessoas.razaoSocial,
-        createdAt: crmLeads.createdAt,
-        updatedAt: crmLeads.updatedAt,
+        createdAt: crmVisitantes.createdAt,
+        updatedAt: crmVisitantes.updatedAt,
       })
-      .from(crmLeads)
-      .leftJoin(usuarios, eq(crmLeads.responsavelId, usuarios.id))
+      .from(crmVisitantes)
+      .leftJoin(usuarios, eq(crmVisitantes.responsavelId, usuarios.id))
       .leftJoin(
         crmPessoas,
-        sql`${crmPessoas.id} = COALESCE(${crmLeads.pessoaId}, ${crmLeads.empresaId})`
+        sql`${crmPessoas.id} = COALESCE(${crmVisitantes.pessoaId}, ${crmVisitantes.empresaId})`
       )
       .where(where)
-      .orderBy(desc(crmLeads.createdAt))
+      .orderBy(desc(crmVisitantes.createdAt))
 
     return NextResponse.json(lista)
   } catch (error) {
@@ -93,7 +93,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
 
     const [novo] = await db
-      .insert(crmLeads)
+      .insert(crmVisitantes)
       .values({
         nome: body.nome,
         email: body.email || null,
@@ -114,7 +114,7 @@ export async function POST(req: NextRequest) {
       tipo: "CADASTRO",
       acao: "criar",
       descricao: `Lead criado: ${novo.nome}`,
-      entidade: "CrmLead",
+      entidade: "CrmVisitante",
       entidadeId: novo.id,
       usuarioNome: session.user.name,
     })

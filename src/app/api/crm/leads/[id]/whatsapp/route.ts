@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireAuth } from "@/lib/auth"
 import { db } from "@/lib/db"
-import { crmLeads } from "@/lib/db/schema/crm-leads"
+import { crmVisitantes } from "@/lib/db/schema/crm-visitantes"
 import { crmWhatsappMensagens } from "@/lib/db/schema/crm-whatsapp"
 import { crmContatos } from "@/lib/db/schema/crm-contatos"
 import { eq, desc, and, or } from "drizzle-orm"
@@ -24,8 +24,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const { id } = await params
     const [lead] = await db
       .select()
-      .from(crmLeads)
-      .where(eq(crmLeads.id, parseInt(id)))
+      .from(crmVisitantes)
+      .where(eq(crmVisitantes.id, parseInt(id)))
       .limit(1)
 
     if (!lead) {
@@ -82,8 +82,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const { id } = await params
     const [lead] = await db
       .select()
-      .from(crmLeads)
-      .where(eq(crmLeads.id, parseInt(id)))
+      .from(crmVisitantes)
+      .where(eq(crmVisitantes.id, parseInt(id)))
       .limit(1)
 
     if (!lead) {

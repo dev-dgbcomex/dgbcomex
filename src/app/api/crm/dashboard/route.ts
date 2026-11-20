@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { requireAuth } from "@/lib/auth"
 import { db } from "@/lib/db"
-import { crmLeads } from "@/lib/db/schema/crm-leads"
+import { crmVisitantes } from "@/lib/db/schema/crm-visitantes"
 import { crmPessoas } from "@/lib/db/schema/crm-pessoas"
 import { crmOportunidades } from "@/lib/db/schema/crm-oportunidades"
 import { crmPropostas } from "@/lib/db/schema/crm-propostas"
@@ -51,7 +51,7 @@ export async function GET() {
         () =>
           db
             .select({ total: count() })
-            .from(crmLeads)
+            .from(crmVisitantes)
             .then((r: any) => r),
         []
       ),
@@ -59,8 +59,8 @@ export async function GET() {
         () =>
           db
             .select({ total: count() })
-            .from(crmLeads)
-            .where(gte(crmLeads.createdAt, new Date(inicioMes)))
+            .from(crmVisitantes)
+            .where(gte(crmVisitantes.createdAt, new Date(inicioMes)))
             .then((r: any) => r),
         []
       ),

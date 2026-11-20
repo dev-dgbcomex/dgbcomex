@@ -4,7 +4,7 @@ import { db } from "@/lib/db"
 import { eq, desc, and, sql } from "drizzle-orm"
 import { crmWhatsappMensagens } from "@/lib/db/schema/crm-whatsapp"
 import { crmWhatsappConversas } from "@/lib/db/schema/crm-whatsapp-conversas"
-import { crmLeads } from "@/lib/db/schema/crm-leads"
+import { crmVisitantes } from "@/lib/db/schema/crm-visitantes"
 import { enviarMensagem, evolutionConfigurado } from "@/lib/evolution-api"
 
 export async function GET(req: NextRequest) {
@@ -44,8 +44,8 @@ export async function GET(req: NextRequest) {
 
     const lead = await db
       .select()
-      .from(crmLeads)
-      .where(eq(crmLeads.idIntegracao, `whatsapp:${remoteJid}`))
+      .from(crmVisitantes)
+      .where(eq(crmVisitantes.idIntegracao, `whatsapp:${remoteJid}`))
       .limit(1)
       .then((r: any) => r[0] || null)
 

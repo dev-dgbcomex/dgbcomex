@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { requireAuth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { crmTarefas } from "@/lib/db/schema/crm-tarefas"
-import { crmLeads } from "@/lib/db/schema/crm-leads"
+import { crmVisitantes } from "@/lib/db/schema/crm-visitantes"
 import { crmPessoas } from "@/lib/db/schema/crm-pessoas"
 import { eq } from "drizzle-orm"
 import { inserirTimelineEvento } from "@/lib/crm-timeline"
@@ -25,9 +25,9 @@ export async function POST(req: NextRequest) {
 
     if (leadId) {
       const lead = await db
-        .select({ nome: crmLeads.nome, empresaId: crmLeads.empresaId })
-        .from(crmLeads)
-        .where(eq(crmLeads.id, leadId))
+        .select({ nome: crmVisitantes.nome, empresaId: crmVisitantes.empresaId })
+        .from(crmVisitantes)
+        .where(eq(crmVisitantes.id, leadId))
         .then((r: any) => r[0])
       if (lead) {
         nomeEntidade = lead.nome

@@ -9,8 +9,8 @@ import {
   date,
 } from "drizzle-orm/pg-core"
 import { usuarios } from "./usuarios"
+import { crmVisitantes } from "./crm-visitantes"
 import { crmLeads } from "./crm-leads"
-import { crmPessoas } from "./crm-pessoas"
 import { crmContatos } from "./crm-contatos"
 import { clientes } from "./clientes"
 
@@ -20,8 +20,8 @@ export const crmOportunidades = pgTable("crm_oportunidades", {
   descricao: text("descricao"),
   valorEstimado: numeric("valor_estimado", { precision: 12, scale: 2 }),
   status: varchar("status", { length: 30 }).notNull().default("NOVO"),
-  leadId: integer("lead_id").references(() => crmLeads.id),
-  empresaId: integer("empresa_id").references(() => crmPessoas.id),
+  leadId: integer("visitante_id").references(() => crmVisitantes.id),
+  empresaId: integer("lead_id").references(() => crmLeads.id),
   clienteId: integer("cliente_id").references(() => clientes.id),
   contatoId: integer("contato_id").references(() => crmContatos.id),
   responsavelId: integer("responsavel_id").references(() => usuarios.id),

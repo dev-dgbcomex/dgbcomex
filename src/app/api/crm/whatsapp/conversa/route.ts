@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { requireAuth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { eq, sql } from "drizzle-orm"
-import { crmLeads } from "@/lib/db/schema/crm-leads"
+import { crmVisitantes } from "@/lib/db/schema/crm-visitantes"
 import { crmWhatsappMensagens } from "@/lib/db/schema/crm-whatsapp"
 import { crmWhatsappConversas } from "@/lib/db/schema/crm-whatsapp-conversas"
 
@@ -32,16 +32,16 @@ export async function GET(req: NextRequest) {
 
       const leadExistente = await db
         .select({
-          id: crmLeads.id,
-          nome: crmLeads.nome,
-          celular: crmLeads.celular,
-          empresaNome: crmLeads.empresaNome,
-          tipoPessoa: crmLeads.tipoPessoa,
-          status: crmLeads.status,
+          id: crmVisitantes.id,
+          nome: crmVisitantes.nome,
+          celular: crmVisitantes.celular,
+          empresaNome: crmVisitantes.empresaNome,
+          tipoPessoa: crmVisitantes.tipoPessoa,
+          status: crmVisitantes.status,
         })
-        .from(crmLeads)
+        .from(crmVisitantes)
         .where(
-          sql`(${eq(crmLeads.idIntegracao, `whatsapp:${remoteJid}`)} OR ${eq(crmLeads.celular, numero)}) AND ${crmLeads.status} != 'CONVERTIDO'`
+          sql`(${eq(crmVisitantes.idIntegracao, `whatsapp:${remoteJid}`)} OR ${eq(crmVisitantes.celular, numero)}) AND ${crmVisitantes.status} != 'CONVERTIDO'`
         )
         .limit(1)
         .then((r: any) => r[0] || null)
@@ -118,9 +118,9 @@ export async function POST(req: NextRequest) {
     let lead = null
     if ((estado === "CONFIRMACAO" || estado === "ENCERRADO") && dados?.nome) {
       const existing = await db
-        .select({ id: crmLeads.id })
-        .from(crmLeads)
-        .where(eq(crmLeads.idIntegracao, `whatsapp:${remoteJid}`))
+        .select({ id: crmVisitantes.id })
+        .from(crmVisitantes)
+        .where(eq(crmVisitantes.idIntegracao, `whatsapp:${remoteJid}`))
         .limit(1)
         .then((r: any) => r[0] || null)
 
@@ -132,7 +132,7 @@ export async function POST(req: NextRequest) {
         if (dados.finalizado) descricaoParts.push("Lead finalizado via WhatsApp")
 
         const [novo] = await db
-          .insert(crmLeads)
+          .insert(crmVisitantes)
           .values({
             nome: dados.nome,
             celular: numero,

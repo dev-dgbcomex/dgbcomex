@@ -3,7 +3,7 @@ import { db } from "@/lib/db"
 import { crmWhatsappConversas } from "@/lib/db/schema/crm-whatsapp-conversas"
 import { crmWhatsappFila } from "@/lib/db/schema/crm-whatsapp-fila"
 import { crmWhatsappMensagens } from "@/lib/db/schema/crm-whatsapp"
-import { crmLeads } from "@/lib/db/schema/crm-leads"
+import { crmVisitantes } from "@/lib/db/schema/crm-visitantes"
 import { crmNotificacoes } from "@/lib/db/schema/crm-notificacoes"
 import { crmWhatsAppCatalogos } from "@/lib/db/schema/crm-whatsapp-catalogos"
 import { crmWhatsAppLinhas } from "@/lib/db/schema/crm-whatsapp-linhas"
@@ -614,10 +614,10 @@ async function processarConversa(params: {
   if (conversa.estado === "AGUARDANDO_REPRESENTANTE" || conversa.estado === "ENCERRADO") {
     const numeroRetorno = extrairNumero(remoteJid)
     const leadRetorno = await db
-      .select({ id: crmLeads.id, nome: crmLeads.nome, tipoPessoa: crmLeads.tipoPessoa })
-      .from(crmLeads)
+      .select({ id: crmVisitantes.id, nome: crmVisitantes.nome, tipoPessoa: crmVisitantes.tipoPessoa })
+      .from(crmVisitantes)
       .where(
-        sql`(${eq(crmLeads.idIntegracao, `whatsapp:${remoteJid}`)} OR ${eq(crmLeads.celular, numeroRetorno)}) AND ${crmLeads.status} != 'CONVERTIDO'`
+        sql`(${eq(crmVisitantes.idIntegracao, `whatsapp:${remoteJid}`)} OR ${eq(crmVisitantes.celular, numeroRetorno)}) AND ${crmVisitantes.status} != 'CONVERTIDO'`
       )
       .limit(1)
       .then((r: any) => r[0] || null)
@@ -708,10 +708,10 @@ async function processarConversa(params: {
   ) {
     const numeroRetorno = extrairNumero(remoteJid)
     const leadRetornando = await db
-      .select({ id: crmLeads.id, nome: crmLeads.nome, tipoPessoa: crmLeads.tipoPessoa })
-      .from(crmLeads)
+      .select({ id: crmVisitantes.id, nome: crmVisitantes.nome, tipoPessoa: crmVisitantes.tipoPessoa })
+      .from(crmVisitantes)
       .where(
-        sql`(${eq(crmLeads.idIntegracao, `whatsapp:${remoteJid}`)} OR ${eq(crmLeads.celular, numeroRetorno)}) AND ${crmLeads.status} != 'CONVERTIDO'`
+        sql`(${eq(crmVisitantes.idIntegracao, `whatsapp:${remoteJid}`)} OR ${eq(crmVisitantes.celular, numeroRetorno)}) AND ${crmVisitantes.status} != 'CONVERTIDO'`
       )
       .limit(1)
       .then((r: any) => r[0] || null)
@@ -910,10 +910,10 @@ async function processarConversa(params: {
 
       try {
         const existente = await db
-          .select({ id: crmLeads.id })
-          .from(crmLeads)
+          .select({ id: crmVisitantes.id })
+          .from(crmVisitantes)
           .where(
-            sql`${eq(crmLeads.idIntegracao, `whatsapp:${remoteJid}`)} OR ${eq(crmLeads.celular, numero)}`
+            sql`${eq(crmVisitantes.idIntegracao, `whatsapp:${remoteJid}`)} OR ${eq(crmVisitantes.celular, numero)}`
           )
           .limit(1)
           .then((r: any) => r[0] || null)
@@ -921,7 +921,7 @@ async function processarConversa(params: {
         if (!existente) {
           const pfLeadScore = calcularLeadScore({ tipoPessoa: "PF", documento: null })
           const [novoLead] = await db
-            .insert(crmLeads)
+            .insert(crmVisitantes)
             .values({
               nome: nomeFinal,
               celular: numero,
@@ -1087,10 +1087,10 @@ async function processarConversa(params: {
 
     try {
       const existente = await db
-        .select({ id: crmLeads.id })
-        .from(crmLeads)
+        .select({ id: crmVisitantes.id })
+        .from(crmVisitantes)
         .where(
-          sql`${eq(crmLeads.idIntegracao, `whatsapp:${remoteJid}`)} OR ${eq(crmLeads.celular, numero)}`
+          sql`${eq(crmVisitantes.idIntegracao, `whatsapp:${remoteJid}`)} OR ${eq(crmVisitantes.celular, numero)}`
         )
         .limit(1)
         .then((r: any) => r[0] || null)
@@ -1101,7 +1101,7 @@ async function processarConversa(params: {
           documento: dados.documento || null,
         })
         const [novoLead] = await db
-          .insert(crmLeads)
+          .insert(crmVisitantes)
           .values({
             nome: nomeFinal,
             celular: numero,
@@ -1119,9 +1119,9 @@ async function processarConversa(params: {
         dados.leadId = existente.id
         if (nomeFinal !== "Anonimo") {
           await db
-            .update(crmLeads)
+            .update(crmVisitantes)
             .set({ nome: nomeFinal, tipoPessoa: tipoPessoaFinal, updatedAt: sql`NOW()` })
-            .where(eq(crmLeads.id, existente.id))
+            .where(eq(crmVisitantes.id, existente.id))
         }
       }
     } catch (leadErr) {
@@ -1536,9 +1536,9 @@ async function processarConversa(params: {
 
   if (finalizado && dados.nome) {
     const existing = await db
-      .select({ id: crmLeads.id })
-      .from(crmLeads)
-      .where(eq(crmLeads.idIntegracao, `whatsapp:${remoteJid}`))
+      .select({ id: crmVisitantes.id })
+      .from(crmVisitantes)
+      .where(eq(crmVisitantes.idIntegracao, `whatsapp:${remoteJid}`))
       .limit(1)
       .then((r: any) => r[0] || null)
 
@@ -1595,7 +1595,7 @@ async function processarConversa(params: {
         dados._cnpjConsulta?.razaoSocial || dados.razaoSocial || dadosExtraidos.empresa || null
 
       const [novo] = await db
-        .insert(crmLeads)
+        .insert(crmVisitantes)
         .values({
           nome: nomeLead,
           celular: numero,

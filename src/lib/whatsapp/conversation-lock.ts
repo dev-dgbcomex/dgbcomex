@@ -1,7 +1,7 @@
 import { db } from "@/lib/db"
 import { sql, eq, and } from "drizzle-orm"
 import { crmWhatsappConversas } from "@/lib/db/schema/crm-whatsapp-conversas"
-import { crmLeads } from "@/lib/db/schema/crm-leads"
+import { crmVisitantes } from "@/lib/db/schema/crm-visitantes"
 import { extrairNumero } from "@/lib/whatsapp/helpers"
 
 export const LOCK_STALE_MS = 3 * 60 * 1000
@@ -44,14 +44,14 @@ export async function adquirirLockConversa(remoteJid: string): Promise<LockConve
   const numero = extrairNumero(remoteJid)
   const leadExistenteData = await db
     .select({
-      id: crmLeads.id,
-      nome: crmLeads.nome,
-      empresaNome: crmLeads.empresaNome,
-      tipoPessoa: crmLeads.tipoPessoa,
+      id: crmVisitantes.id,
+      nome: crmVisitantes.nome,
+      empresaNome: crmVisitantes.empresaNome,
+      tipoPessoa: crmVisitantes.tipoPessoa,
     })
-    .from(crmLeads)
+    .from(crmVisitantes)
     .where(
-      sql`(${eq(crmLeads.idIntegracao, `whatsapp:${remoteJid}`)} OR ${eq(crmLeads.celular, numero)}) AND ${crmLeads.status} != 'CONVERTIDO'`
+      sql`(${eq(crmVisitantes.idIntegracao, `whatsapp:${remoteJid}`)} OR ${eq(crmVisitantes.celular, numero)}) AND ${crmVisitantes.status} != 'CONVERTIDO'`
     )
     .limit(1)
     .then((r: any) => r[0] || null)

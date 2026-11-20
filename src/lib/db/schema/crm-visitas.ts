@@ -9,7 +9,7 @@ import {
   jsonb,
   doublePrecision,
 } from "drizzle-orm/pg-core"
-import { crmPessoas } from "./crm-pessoas"
+import { crmLeads } from "./crm-leads"
 import { crmOportunidades } from "./crm-oportunidades"
 import { crmContatos } from "./crm-contatos"
 import { clientes } from "./clientes"
@@ -21,7 +21,7 @@ import type { VisitaFoto } from "@/lib/crm/visita-fotos"
 
 export const crmVisitas = pgTable("crm_visitas", {
   id: serial("id").primaryKey(),
-  empresaId: integer("empresa_id").references(() => crmPessoas.id),
+  empresaId: integer("lead_id").references(() => crmLeads.id),
   clienteId: integer("cliente_id").references(() => clientes.id),
   oportunidadeId: integer("oportunidade_id").references(() => crmOportunidades.id),
   contatoId: integer("contato_id").references(() => crmContatos.id),

@@ -7,7 +7,7 @@ import { crmAcoesProspeccao } from "@/lib/db/schema/crm-acoes-prospeccao"
 import { crmPessoas } from "@/lib/db/schema/crm-pessoas"
 import { crmContatos } from "@/lib/db/schema/crm-contatos"
 import { crmTarefas } from "@/lib/db/schema/crm-tarefas"
-import { crmLeads } from "@/lib/db/schema/crm-leads"
+import { crmVisitantes } from "@/lib/db/schema/crm-visitantes"
 import { clientes } from "@/lib/db/schema/clientes"
 import { usuarios } from "@/lib/db/schema/usuarios"
 import { listarConversoes } from "@/lib/crm/historico-promocao"
@@ -35,7 +35,7 @@ export const CATEGORIAS_CRM = [
   { value: "propostas", label: "Propostas", entidade: "CrmProposta" },
   { value: "visitas", label: "Visitas", entidade: "CrmVisita" },
   { value: "tarefas", label: "Tarefas", entidade: "CrmTarefa" },
-  { value: "leads", label: "Leads", entidade: "CrmLead" },
+  { value: "leads", label: "Leads", entidade: "CrmVisitante" },
   { value: "contatos", label: "Contatos", entidade: "CrmContato" },
 ] as const
 
@@ -449,23 +449,23 @@ async function enriquecerEntidades(registros: any[]) {
     }
   }
 
-  const idsLead = ids("CrmLead")
+  const idsLead = ids("CrmVisitante")
   if (idsLead.length > 0) {
     const leads: any[] = await db
       .select({
-        id: crmLeads.id,
-        nome: crmLeads.nome,
-        empresaNome: crmLeads.empresaNome,
-        pessoaId: crmLeads.pessoaId,
+        id: crmVisitantes.id,
+        nome: crmVisitantes.nome,
+        empresaNome: crmVisitantes.empresaNome,
+        pessoaId: crmVisitantes.pessoaId,
       })
-      .from(crmLeads)
-      .where(inArray(crmLeads.id, idsLead))
+      .from(crmVisitantes)
+      .where(inArray(crmVisitantes.id, idsLead))
     const nomes = await nomesPessoasEClientes(
       leads.map((l) => l.pessoaId),
       []
     )
     for (const lead of leads) {
-      mapa.set(`CrmLead:${lead.id}`, {
+      mapa.set(`CrmVisitante:${lead.id}`, {
         pessoa: lead.empresaNome || nomes.pessoas.get(lead.pessoaId || 0) || lead.nome,
         cliente: null,
       })
