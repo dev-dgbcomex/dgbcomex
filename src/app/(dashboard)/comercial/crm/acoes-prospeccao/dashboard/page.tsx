@@ -26,10 +26,6 @@ import AcaoProspeccaoCronogramaModal from "@/components/crm/acao-prospeccao-cron
 import { exportCSV, exportMarkdown, exportPDFRelatorio } from "@/lib/export-utils"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { InfoButton } from "@/components/ui/info-button"
-import { ClienteSaudeModal } from "@/components/crm/acoes-prospeccao/dashboard/cliente-saude-modal"
-import { ClienteSaudeTable } from "@/components/crm/acoes-prospeccao/dashboard/cliente-saude-table"
-import { ItensEngajamentoModal } from "@/components/crm/acoes-prospeccao/dashboard/itens-engajamento-modal"
-import type { ClienteSaude } from "@/lib/crm/acoes-prospeccao-saude"
 import { corPorTitulo, iconePorTitulo } from "@/lib/dracula"
 import { getInfoContent } from "@/lib/info-content"
 import { saudeProspeccaoAcoesInfo } from "@/lib/info-content/crm"
@@ -100,8 +96,6 @@ export default function AcoesProspeccaoDashboardPage() {
     viagemId: number
     viagemTitulo: string
   } | null>(null)
-  const [clienteSelecionado, setClienteSelecionado] = useState<ClienteSaude | null>(null)
-  const [itensSelecionados, setItensSelecionados] = useState<ClienteSaude | null>(null)
 
   const { data, isLoading } = useQuery<AcoesProspeccaoDashboardData>({
     queryKey: ["acoes-prospeccao-dashboard", acoesFilter],
@@ -110,18 +104,6 @@ export default function AcoesProspeccaoDashboardPage() {
         `/api/crm/acoes-prospeccao/dashboard${acoesFilter === "minhas" ? "?mine=true" : ""}`
       ).then((response) => {
         if (!response.ok) throw new Error("Falha ao carregar dashboard")
-        return response.json()
-      }),
-    retry: 1,
-  })
-
-  const { data: saude, isLoading: saudeLoading } = useQuery<ClienteSaude[]>({
-    queryKey: ["acoes-prospeccao-dashboard-clientes", acoesFilter],
-    queryFn: () =>
-      fetch(
-        `/api/crm/acoes-prospeccao/dashboard/clientes${acoesFilter === "minhas" ? "?mine=true" : ""}`
-      ).then((response) => {
-        if (!response.ok) throw new Error("Falha ao carregar saúde da prospecção")
         return response.json()
       }),
     retry: 1,
@@ -204,7 +186,7 @@ export default function AcoesProspeccaoDashboardPage() {
             Dashboard de Ações de Prospecção{info && <InfoButton content={info} />}
           </h1>
           <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">
-            Central de saúde da prospecção: esforço comercial, engajamento do cliente e retorno
+            Indicadores das ações de prospecção, cobertura e retorno no ano corrente
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -294,13 +276,6 @@ export default function AcoesProspeccaoDashboardPage() {
               sub={`${data?.pesquisas?.abertas ?? 0} abertas`}
             />
           </div>
-
-          <ClienteSaudeTable
-            linhas={saude ?? []}
-            isLoading={saudeLoading}
-            onSelecionar={setClienteSelecionado}
-            onVerItens={setItensSelecionados}
-          />
 
           <AcoesProspeccaoCharts data={data} openModal={openModal} />
 
@@ -600,7 +575,7 @@ export default function AcoesProspeccaoDashboardPage() {
                 label="Kanban Ações"
               />
               <QuickAction
-                href="#saude-prospeccao"
+                href="/comercial/crm/leads/dashboard"
                 icon={<CheckCircle2 size={18} />}
                 label="Saúde da Prospecção"
               />
@@ -626,13 +601,6 @@ export default function AcoesProspeccaoDashboardPage() {
           onClose={() => setSelectedViagem(null)}
         />
       )}
-
-      <ClienteSaudeModal cliente={clienteSelecionado} onClose={() => setClienteSelecionado(null)} />
-
-      <ItensEngajamentoModal
-        cliente={itensSelecionados}
-        onClose={() => setItensSelecionados(null)}
-      />
 
       <Dialog
         open={!!modalFiltro}

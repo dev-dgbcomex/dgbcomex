@@ -28,10 +28,6 @@ import ViagemCronogramaModal from "@/components/crm/viagem-cronograma"
 import { exportCSV, exportMarkdown, exportPDFRelatorio } from "@/lib/export-utils"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { InfoButton } from "@/components/ui/info-button"
-import { ClienteSaudeModal } from "@/components/crm/visitas/dashboard/cliente-saude-modal"
-import { ClienteSaudeTable } from "@/components/crm/visitas/dashboard/cliente-saude-table"
-import { ItensEngajamentoModal } from "@/components/crm/visitas/dashboard/itens-engajamento-modal"
-import type { ClienteSaude } from "@/lib/crm/visitas-saude"
 import { getInfoContent } from "@/lib/info-content"
 import { saudeProspeccaoInfo } from "@/lib/info-content/crm"
 import type { VisitaModalRow } from "../types"
@@ -138,8 +134,6 @@ export default function VisitasDashboardPage() {
     viagemId: number
     viagemTitulo: string
   } | null>(null)
-  const [clienteSelecionado, setClienteSelecionado] = useState<ClienteSaude | null>(null)
-  const [itensSelecionados, setItensSelecionados] = useState<ClienteSaude | null>(null)
 
   const { data, isLoading } = useQuery<VisitasDashboardData>({
     queryKey: ["visitas-dashboard", visitasFilter],
@@ -150,18 +144,6 @@ export default function VisitasDashboardPage() {
           return response.json()
         }
       ),
-    retry: 1,
-  })
-
-  const { data: saude, isLoading: saudeLoading } = useQuery<ClienteSaude[]>({
-    queryKey: ["visitas-dashboard-clientes", visitasFilter],
-    queryFn: () =>
-      fetch(
-        `/api/crm/visitas/dashboard/clientes${visitasFilter === "minhas" ? "?mine=true" : ""}`
-      ).then((response) => {
-        if (!response.ok) throw new Error("Falha ao carregar saúde da prospecção")
-        return response.json()
-      }),
     retry: 1,
   })
 
@@ -239,10 +221,10 @@ export default function VisitasDashboardPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-50">
-            Dashboard de Visitas e Prospecção{info && <InfoButton content={info} />}
+            Dashboard de Visitas{info && <InfoButton content={info} />}
           </h1>
           <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">
-            Central de saúde da prospecção: esforço comercial, engajamento do cliente e retorno
+            Indicadores de visitas comerciais, cobertura e retorno no ano corrente
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -353,13 +335,6 @@ export default function VisitasDashboardPage() {
               iconColor="text-violet-600 dark:text-violet-400"
             />
           </div>
-
-          <ClienteSaudeTable
-            linhas={saude ?? []}
-            isLoading={saudeLoading}
-            onSelecionar={setClienteSelecionado}
-            onVerItens={setItensSelecionados}
-          />
 
           <VisitasCharts data={data} openModal={openModal} />
 
@@ -665,7 +640,7 @@ export default function VisitasDashboardPage() {
                 bg="bg-indigo-100 dark:bg-indigo-950/50"
               />
               <QuickAction
-                href="#saude-prospeccao"
+                href="/comercial/crm/leads/dashboard"
                 icon={<CheckCircle2 size={18} />}
                 label="Saúde da Prospecção"
                 color="text-green-600"
@@ -693,13 +668,6 @@ export default function VisitasDashboardPage() {
           onClose={() => setSelectedViagem(null)}
         />
       )}
-
-      <ClienteSaudeModal cliente={clienteSelecionado} onClose={() => setClienteSelecionado(null)} />
-
-      <ItensEngajamentoModal
-        cliente={itensSelecionados}
-        onClose={() => setItensSelecionados(null)}
-      />
 
       <Dialog
         open={!!modalFiltro}

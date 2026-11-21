@@ -26,6 +26,23 @@
 
 > Detalhe técnico completo em [`docs/crm-cliente-e-relatorios.md`](./crm-cliente-e-relatorios.md).
 
+### Sessão 17 — Dashboard de Leads com saúde de visitas e ações lado a lado
+
+- **Data:** 2026-11-21
+- **Commit:** `feat(crm): reorganiza dashboards de visitas, acoes e leads`
+- **Tarefa:** renomear o Dashboard de Visitas, remover o card de saúde da prospecção dos dashboards de visitas e ações e criar `/comercial/crm/leads/dashboard` com visitas e ações lado a lado, usando a mesma métrica R/A/C.
+- **Decisões aprovadas:** a saúde da prospecção passa a viver somente no Dashboard de Leads; o atalho `Saúde da Prospecção` dos dashboards de visitas e ações aponta para a nova rota; `/comercial/crm/acoes-prospeccao/dashboad` foi interpretado como a rota existente `/dashboard`.
+- **Resultado:**
+  - `visitas/dashboard` passa a se chamar **Dashboard de Visitas**, sem card/query/estados de saúde; atalho leva ao Dashboard de Leads.
+  - `acoes-prospeccao/dashboard` espelha o dashboard de visitas, sem card de saúde; atalho leva ao Dashboard de Leads.
+  - Corrigido o contrato da API de ações: `porGerente[].visitas` → `porGerente[].acoes`, alinhado ao tipo usado pelos gráficos.
+  - Novo `/comercial/crm/leads/dashboard` com filtro Todas/Minhas, tabela `Saúde da prospecção por cliente/pessoa`, colunas **Visitas R/A/C** e **Ações R/A/C** adjacentes, exportações CSV/PDF/MD e modais existentes.
+  - `src/lib/crm/leads-saude.ts` mescla as APIs de saúde por `tipo:id` e deriva a métrica ausente para manter as duas colunas sempre preenchidas com a mesma base.
+  - Cards AEC/Engajados/EQL/BEC, itens de engajamento, conversão e scores reaproveitam os componentes existentes; modais “i” e menus atualizados.
+- **Arquivos Envolvidos:** `src/app/(dashboard)/comercial/crm/{visitas/dashboard,acoes-prospeccao/dashboard,leads/dashboard}/**`, `src/lib/crm/leads-saude.ts`, `src/components/crm/leads/dashboard/cliente-saude-table.tsx`, `src/app/api/crm/acoes-prospeccao/dashboard/route.ts`, `src/lib/info-content/crm.ts`, `src/lib/search-registry.ts`, `scripts/seed-crm-menus.sql`.
+- **Testes:** novos em `src/lib/crm/leads-saude.test.ts` e `src/app/(dashboard)/comercial/crm/leads/dashboard/page.test.tsx`; atualizados em `visitas/dashboard/page.test.tsx`, `acoes-prospeccao/dashboard/page.test.tsx`, `acoes-prospeccao/dashboard/route.test.ts` e `info-content.test.ts`.
+- **Verificação:** `npm run lint` sem erros (apenas warnings pré-existentes); `tsc --noEmit` limpo com `NODE_OPTIONS=--max-old-space-size=8192`; suíte completa `npm run test` → **464 arquivos / 2677 testes passados**; `npm run build` OK com `NODE_OPTIONS=--max-old-space-size=8192`; `git diff --check` sem problemas.
+
 ### Sessão 16 — Ações rápidas enxutas, cards clicáveis, IA na timeline e Top Clientes
 
 - **Data:** 2026-11-21

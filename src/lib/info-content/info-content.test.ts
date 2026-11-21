@@ -1,6 +1,10 @@
 import { describe, it, expect } from "vitest"
 import { getInfoContent } from "./index"
-import { saudeProspeccaoAcoesInfo, saudeProspeccaoInfo } from "./crm"
+import {
+  saudeProspeccaoAcoesInfo,
+  saudeProspeccaoInfo,
+  saudeProspeccaoLeadsInfo,
+} from "./crm"
 import { crmDashboardInfo } from "./crm-dashboard"
 
 describe("getInfoContent", () => {
@@ -311,10 +315,10 @@ describe("getInfoContent", () => {
     expect(texto).toMatch(/Tabela ou Kanban/i)
   })
 
-  it("o dashboard de visitas explica saúde da prospecção, scores e detalhamento", () => {
+  it("o dashboard de visitas mostra indicadores e aponta para o dashboard de leads", () => {
     const conteudo = getInfoContent("/comercial/crm/visitas/dashboard")
     expect(conteudo).not.toBeNull()
-    expect(conteudo?.title).toMatch(/Dashboard de Visitas e Prospecção/i)
+    expect(conteudo?.title).toMatch(/^Dashboard de Visitas$/i)
 
     const texto = [
       conteudo?.description ?? "",
@@ -324,31 +328,17 @@ describe("getInfoContent", () => {
       ...(conteudo?.examples ?? []).map((e) => `${e.title}: ${e.desc}`),
     ].join("\n")
 
-    expect(texto).toMatch(/saúde da prospecção/i)
     expect(texto).toMatch(/ano corrente/i)
     expect(texto).toMatch(/recorte padrão/i)
-    expect(texto).toMatch(/Esforço/i)
-    expect(texto).toMatch(/Engajamento/i)
-    expect(texto).toMatch(/AEC/i)
-    expect(texto).toMatch(/Engajados/i)
-    expect(texto).toMatch(/EQL/i)
-    expect(texto).toMatch(/BEC/i)
-    expect(texto).toMatch(/10 pontos à frente/i)
-    expect(texto).toMatch(/Conversão/i)
-    expect(texto).toMatch(/Últimas visitas exportam CSV, PDF e MD/i)
-    expect(texto).toMatch(/Visitas R\/A\/C/i)
-    expect(texto).toMatch(/Itens de engajamento/i)
-    expect(texto).toMatch(/36%/i)
-    expect(texto).toMatch(/9,33%/i)
-    expect(texto).toMatch(/58 visitas cadastradas/i)
-    expect(texto).toMatch(/Próxima visita/i)
-    expect(texto).toMatch(/0 a 100%/i)
-    expect(texto).toMatch(/relato\/ata/i)
-    expect(texto).toMatch(/oportunidade/i)
-    expect(texto).toMatch(/pedido/i)
-    expect(texto).toMatch(/faturamento/i)
+    expect(texto).toMatch(/cards de resumo/i)
+    expect(texto).toMatch(/gráficos/i)
+    expect(texto).toMatch(/Viagens/i)
+    expect(texto).toMatch(/Últimas visitas/i)
     expect(texto).toMatch(/CSV, PDF e MD/i)
-    expect(texto).toMatch(/modal/i)
+    expect(texto).toMatch(/Todas \/ Minhas Visitas/i)
+    expect(texto).toMatch(/Dashboard de Leads/i)
+    expect(texto).not.toMatch(/Visitas R\/A\/C/i)
+    expect(texto).not.toMatch(/\bAEC\b/i)
   })
 
   it("a listagem de ações de prospecção explica a visão padrão Calendário", () => {
@@ -360,10 +350,36 @@ describe("getInfoContent", () => {
     expect(texto).toMatch(/Tabela ou Kanban/i)
   })
 
-  it("o dashboard de ações de prospecção explica saúde, scores e detalhamento", () => {
+  it("o dashboard de ações mostra indicadores e aponta para o dashboard de leads", () => {
     const conteudo = getInfoContent("/comercial/crm/acoes-prospeccao/dashboard")
     expect(conteudo).not.toBeNull()
-    expect(conteudo?.title).toMatch(/Dashboard de Ações de Prospecção/i)
+    expect(conteudo?.title).toMatch(/^Dashboard de Ações de Prospecção$/i)
+
+    const texto = [
+      conteudo?.description ?? "",
+      ...(conteudo?.rules ?? []),
+      ...(conteudo?.columns ?? []).map((c) => `${c.name}: ${c.desc}`),
+      ...(conteudo?.fields ?? []).map((f) => `${f.name}: ${f.desc}`),
+      ...(conteudo?.examples ?? []).map((e) => `${e.title}: ${e.desc}`),
+    ].join("\n")
+
+    expect(texto).toMatch(/ano corrente/i)
+    expect(texto).toMatch(/recorte padrão/i)
+    expect(texto).toMatch(/cards de resumo/i)
+    expect(texto).toMatch(/gráficos/i)
+    expect(texto).toMatch(/Viagens/i)
+    expect(texto).toMatch(/Últimas ações/i)
+    expect(texto).toMatch(/CSV, PDF e MD/i)
+    expect(texto).toMatch(/Todas \/ Minhas Ações/i)
+    expect(texto).toMatch(/Dashboard de Leads/i)
+    expect(texto).not.toMatch(/Ações R\/A\/C/i)
+    expect(texto).not.toMatch(/\bAEC\b/i)
+  })
+
+  it("o dashboard de leads explica visitas e ações lado a lado", () => {
+    const conteudo = getInfoContent("/comercial/crm/leads/dashboard")
+    expect(conteudo).not.toBeNull()
+    expect(conteudo?.title).toMatch(/Dashboard de Leads/i)
 
     const texto = [
       conteudo?.description ?? "",
@@ -375,26 +391,19 @@ describe("getInfoContent", () => {
 
     expect(texto).toMatch(/saúde da prospecção/i)
     expect(texto).toMatch(/ano corrente/i)
-    expect(texto).toMatch(/Esforço/i)
-    expect(texto).toMatch(/Engajamento/i)
+    expect(texto).toMatch(/Visitas R\/A\/C/i)
+    expect(texto).toMatch(/Ações R\/A\/C/i)
+    expect(texto).toMatch(/mesma métrica/i)
     expect(texto).toMatch(/AEC/i)
     expect(texto).toMatch(/Engajados/i)
     expect(texto).toMatch(/EQL/i)
     expect(texto).toMatch(/BEC/i)
     expect(texto).toMatch(/10 pontos à frente/i)
     expect(texto).toMatch(/Conversão/i)
-    expect(texto).toMatch(/Ações R\/A\/C/i)
-    expect(texto).toMatch(/Últimas ações exportam CSV, PDF e MD/i)
-    expect(texto).toMatch(/Itens de engajamento/i)
     expect(texto).toMatch(/36%/i)
     expect(texto).toMatch(/9,33%/i)
-    expect(texto).toMatch(/58 ações cadastradas/i)
-    expect(texto).toMatch(/Próxima ação/i)
-    expect(texto).toMatch(/Todas \/ Minhas Ações/i)
-    expect(texto).toMatch(/0 a 100%/i)
-    expect(texto).toMatch(/relato\/ata/i)
-    expect(texto).toMatch(/ação realizada \(\+12,5\)/i)
-    expect(texto).toMatch(/modal/i)
+    expect(texto).toMatch(/CSV, PDF e MD/i)
+    expect(texto).toMatch(/Todas \/ Minhas/i)
   })
 
   it("o cadastro e o detalhe da ação de prospecção explicam tipo, recorrência e relato", () => {
@@ -699,6 +708,22 @@ describe("saudeProspeccaoInfo", () => {
       /Endereço/i
     )
     expect(saudeProspeccaoInfo.engajados.examples?.length).toBeGreaterThan(0)
+  })
+})
+
+describe("saudeProspeccaoLeadsInfo", () => {
+  it("explica visitas e ações lado a lado na tabela de saúde", () => {
+    expect(saudeProspeccaoLeadsInfo.tabela.rules?.join(" ")).toMatch(/mesma métrica/i)
+    expect(saudeProspeccaoLeadsInfo.tabela.rules?.join(" ")).toMatch(/Ações R\/A\/C abre a lista de ações/i)
+    expect(
+      saudeProspeccaoLeadsInfo.tabela.columns?.map((coluna) => coluna.name).join(" ")
+    ).toMatch(/Visitas R\/A\/C.*Ações R\/A\/C/)
+    expect(
+      saudeProspeccaoLeadsInfo.tabela.examples?.map((exemplo) => exemplo.desc).join(" ")
+    ).toMatch(/4\/1\/0 nas duas colunas R\/A\/C/)
+    expect(saudeProspeccaoLeadsInfo.aec.rules?.join(" ")).toMatch(/Esforço > 35/i)
+    expect(saudeProspeccaoLeadsInfo.itensEngajamento.rules?.join(" ")).toMatch(/9,33% cada/i)
+    expect(saudeProspeccaoLeadsInfo.registros.description).toMatch(/não é a quantidade de visitas/i)
   })
 })
 

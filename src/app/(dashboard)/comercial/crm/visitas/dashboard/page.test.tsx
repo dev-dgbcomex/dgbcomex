@@ -2,7 +2,6 @@
 import { describe, it, expect, vi } from "vitest"
 import { screen, fireEvent, waitFor, within } from "@testing-library/react"
 import { createFetchMock, findCall, renderPage, routeJson } from "@/test/harness"
-import type { ClienteSaude } from "@/lib/crm/visitas-saude"
 import VisitasDashboardPage from "./page"
 
 vi.setConfig({ testTimeout: 30000 })
@@ -83,68 +82,6 @@ const viagemCronograma = {
   },
 }
 
-const saudeLinha: ClienteSaude = {
-  id: 10,
-  tipo: "cliente",
-  nome: "Cliente Alpha",
-  documento: "12345678000190",
-  segmento: "Têxtil",
-  porte: "Médio",
-  responsaveis: ["Maria"],
-  statusVisitas: ["REALIZADA"],
-  tiposVisita: ["PRESENCIAL"],
-  statusOportunidades: ["NEGOCIADA"],
-  totalVisitas: 2,
-  visitasRealizadas: 2,
-  visitasAgendadas: 0,
-  visitasCanceladas: 0,
-  ultimaVisita: "2026-11-10",
-  proximaVisita: "2026-12-15",
-  visitasComRelato: 2,
-  visitasComCheckIn: 1,
-  temContato: true,
-  temProposta: true,
-  temOportunidade: true,
-  propostasNegociadas: 1,
-  oportunidadesNegociadas: 1,
-  valorEstimadoTotal: 125000,
-  probabilidadeMedia: 60,
-  statusOportunidadeDominante: "Negociada",
-  pedidosVenda: 1,
-  valorPedidosVenda: 30000,
-  faturamentos: 1,
-  valorFaturamento: 20000,
-  scoreEsforco: 100,
-  scoreEngajamento: 90,
-  visitas: [
-    {
-      id: 11,
-      dataVisita: "2026-11-10",
-      hora: "10:00",
-      tipo: "PRESENCIAL",
-      status: "REALIZADA",
-      relato: "Ata assinada com o cliente",
-      checkInTime: "2026-11-10T10:00:00.000Z",
-      checkOutTime: null,
-      empresaNome: "Cliente Alpha",
-      clienteNome: null,
-      nomeAvulso: null,
-      oportunidadeId: 50,
-      oportunidadeTitulo: "Oportunidade 50",
-      oportunidadeStatus: "NEGOCIADA",
-      oportunidadeValor: 125000,
-      oportunidadeProbabilidade: 60,
-      propostaId: 40,
-      propostaTitulo: "Proposta 40",
-      propostaStatus: "NEGOCIADA",
-      contatoId: 30,
-      contatoNome: "João",
-      criadoPorNome: "Maria",
-      enderecoTexto: "Rua A, 100 - São Paulo/SP",
-    },
-  ],
-}
-
 function dashboardPayload(withViagem = true, overrides: Record<string, number> = {}) {
   return {
     total: 37,
@@ -180,13 +117,7 @@ function dashboardPayload(withViagem = true, overrides: Record<string, number> =
 }
 
 function mockRoutes(rotas: Record<string, unknown> = {}) {
-  return createFetchMock(
-    routeJson({
-      "GET /api/crm/visitas/dashboard/clientes?mine=true": [saudeLinha],
-      "GET /api/crm/visitas/dashboard/clientes": [saudeLinha],
-      ...rotas,
-    })
-  )
+  return createFetchMock(routeJson(rotas))
 }
 
 describe("VisitasDashboardPage", () => {
@@ -196,10 +127,12 @@ describe("VisitasDashboardPage", () => {
     })
     vi.stubGlobal("fetch", fetchMock.fn)
     renderPage(<VisitasDashboardPage />)
-    expect(
-      screen.getByRole("heading", { name: "Dashboard de Visitas e Prospecção" })
-    ).toBeInTheDocument()
+    expect(screen.getByRole("heading", { name: "Dashboard de Visitas" })).toBeInTheDocument()
     expect(await screen.findByText("Ações Rápidas")).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: /Saúde da Prospecção/ })).toHaveAttribute(
+      "href",
+      "/comercial/crm/leads/dashboard"
+    )
     expect(screen.getByText("Performance por Gerente Comercial")).toBeInTheDocument()
     expect(screen.getByText("Viagens")).toBeInTheDocument()
     expect(screen.getByText("Últimas Visitas")).toBeInTheDocument()
@@ -379,61 +312,6 @@ describe("VisitasDashboardPage", () => {
     )
   })
 
-  it("carrega e exibe a saúde da prospecção com scores e exportações", async () => {
-    const fetchMock = mockRoutes({
-      "GET /api/crm/visitas/dashboard": dashboardPayload(false),
-    })
-    vi.stubGlobal("fetch", fetchMock.fn)
-    renderPage(<VisitasDashboardPage />)
-
-    expect(
-      await screen.findByRole("heading", { name: /Saúde da prospecção por cliente\/pessoa/i })
-    ).toBeInTheDocument()
-    expect(screen.getByText("Cliente Alpha")).toBeInTheDocument()
-    expect(screen.getAllByText("100%").length).toBeGreaterThan(0)
-    expect(screen.getAllByText("90%").length).toBeGreaterThan(0)
-    expect(screen.getAllByText("EQL").length).toBeGreaterThan(0)
-    expect(
-      screen.getByRole("button", { name: /Itens de engajamento de Cliente Alpha/i })
-    ).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "CSV" })).toBeInTheDocument()
-    expect(findCall(fetchMock.calls, "/api/crm/visitas/dashboard/clientes")).toBeDefined()
-  })
-
-  it("abre o detalhamento da saúde ao clicar no cliente", async () => {
-    const fetchMock = mockRoutes({
-      "GET /api/crm/visitas/dashboard": dashboardPayload(false),
-    })
-    vi.stubGlobal("fetch", fetchMock.fn)
-    renderPage(<VisitasDashboardPage />)
-
-    fireEvent.click(await screen.findByText("Cliente Alpha"))
-
-    const dialog = await screen.findByRole("dialog")
-    expect(
-      within(dialog).getByRole("heading", { name: /Cliente Alpha — detalhamento das visitas/i })
-    ).toBeInTheDocument()
-    expect(within(dialog).getByText("Ata assinada com o cliente")).toBeInTheDocument()
-  })
-
-  it("abre os itens de engajamento ao clicar na coluna", async () => {
-    const fetchMock = mockRoutes({
-      "GET /api/crm/visitas/dashboard": dashboardPayload(false),
-    })
-    vi.stubGlobal("fetch", fetchMock.fn)
-    renderPage(<VisitasDashboardPage />)
-
-    fireEvent.click(
-      await screen.findByRole("button", { name: /Itens de engajamento de Cliente Alpha/i })
-    )
-
-    const dialog = await screen.findByRole("dialog")
-    expect(
-      within(dialog).getByRole("heading", { name: /Cliente Alpha — itens de engajamento/i })
-    ).toBeInTheDocument()
-    expect(within(dialog).getByText("Check-in/check-out")).toBeInTheDocument()
-  })
-
   it("recarrega o recorte ao alternar para Minhas visitas", async () => {
     const fetchMock = mockRoutes({
       "GET /api/crm/visitas/dashboard": dashboardPayload(false),
@@ -442,15 +320,13 @@ describe("VisitasDashboardPage", () => {
     vi.stubGlobal("fetch", fetchMock.fn)
     renderPage(<VisitasDashboardPage />)
 
-    await screen.findByText("Cliente Alpha")
+    await screen.findByText("Ações Rápidas")
     fireEvent.click(screen.getByRole("button", { name: /Minhas Visitas/ }))
 
     await waitFor(() =>
-      expect(
-        findCall(fetchMock.calls, "/api/crm/visitas/dashboard/clientes?mine=true")
-      ).toBeDefined()
+      expect(findCall(fetchMock.calls, "/api/crm/visitas/dashboard?mine=true")).toBeDefined()
     )
-    expect(findCall(fetchMock.calls, "/api/crm/visitas/dashboard?mine=true")).toBeDefined()
+    expect(findCall(fetchMock.calls, "/api/crm/visitas/dashboard/clientes")).toBeUndefined()
     expect(screen.getByRole("button", { name: /Minhas Visitas/ })).toHaveAttribute(
       "aria-pressed",
       "true"

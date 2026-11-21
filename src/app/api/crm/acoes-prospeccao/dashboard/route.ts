@@ -218,7 +218,7 @@ export async function GET(req: NextRequest) {
     type GerenteAcc = {
       gerenteId: number | null
       gerenteNome: string
-      visitas: number
+      acoes: number
       diasAtivos: number
       melhorDia: { dia: string; total: number } | null
       piorDia: { dia: string; total: number } | null
@@ -232,7 +232,7 @@ export async function GET(req: NextRequest) {
         g = {
           gerenteId: r.gerenteId,
           gerenteNome: r.gerenteNome || "Sem nome",
-          visitas: 0,
+          acoes: 0,
           diasAtivos: 0,
           melhorDia: null,
           piorDia: null,
@@ -241,7 +241,7 @@ export async function GET(req: NextRequest) {
         gerentes.set(r.gerenteId, g)
       }
       const total = Number(r.total)
-      g.visitas += total
+      g.acoes += total
       g._dias.set(r.dataAcao, (g._dias.get(r.dataAcao) || 0) + total)
     }
 
@@ -257,10 +257,10 @@ export async function GET(req: NextRequest) {
       const { _dias, ...rest } = g
       return {
         ...rest,
-        mediaPorDia: g.diasAtivos > 0 ? Number((g.visitas / g.diasAtivos).toFixed(1)) : 0,
+        mediaPorDia: g.diasAtivos > 0 ? Number((g.acoes / g.diasAtivos).toFixed(1)) : 0,
       }
     })
-    porGerente.sort((a, b) => b.visitas - a.visitas)
+    porGerente.sort((a, b) => b.acoes - a.acoes)
 
     const investimentoPorViagem = new Map<number | null, number>(
       investimentosPorViagem.map((r: any) => [r.viagemId, Number(r.totalInvestimento ?? 0)])

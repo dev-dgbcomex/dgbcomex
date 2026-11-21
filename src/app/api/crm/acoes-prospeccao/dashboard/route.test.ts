@@ -59,6 +59,6 @@ describe("GET /api/crm/acoes-prospeccao/dashboard", () => {
     const body = await res.json()
     expect(body.total).toBe(37)
     expect(body.porDia).toEqual([{ dia: "2026-08-10", total: 5 }])
-    expect(body.porGerente[0]).toMatchObject({ gerenteNome: "Ernandes", visitas: 7 })
+    expect(body.porGerente[0]).toMatchObject({ gerenteNome: "Ernandes", acoes: 7 })
   })
 })

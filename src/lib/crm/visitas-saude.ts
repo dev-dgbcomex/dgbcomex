@@ -494,10 +494,10 @@ function normalizar(valor: string | null | undefined): string {
     .toLowerCase()
 }
 
-export function filtrarClientesSaude(
-  linhas: ClienteSaude[],
+export function filtrarClientesSaude<T extends ClienteSaude>(
+  linhas: T[],
   filtros: FiltrosSaude
-): ClienteSaude[] {
+): T[] {
   const busca = normalizar(filtros.busca)
   return linhas.filter((linha) => {
     if (
