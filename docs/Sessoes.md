@@ -26,6 +26,23 @@
 
 > Detalhe técnico completo em [`docs/crm-cliente-e-relatorios.md`](./crm-cliente-e-relatorios.md).
 
+### Sessão 19 — Cards em Leads e Oportunidades
+
+- **Data:** 2026-11-21
+- **Commit:** `feat(crm): adiciona visualizacao em cards em leads e oportunidades`
+- **Tarefa:** incluir a visualização em cards nas listagens de Leads e Oportunidades, mantendo as três opções Cards, Tabela e Kanban nessas telas.
+- **Decisões aprovadas:** manter os padrões atuais (Kanban em Leads e Tabela em Oportunidades); Cards e Tabela usam os mesmos filtros; a preferência de Leads continua salva em `localStorage`, agora aceitando `cards`.
+- **Resultado:**
+  - Leads: botão `Cards` adicionado ao seletor e grid de cards com razão social/nome, documento, tipo PF/PJ, tarja de cliente, status, segmento, responsável, cadastro, contato e ações (ver, editar, mapa e promover).
+  - Oportunidades: botão `Cards` adicionado ao seletor e grid de cards com título, empresa/cliente, status colorido pelo cadastro, valor estimado, responsável, probabilidade, previsão, cadastro e ações (ver, editar e excluir).
+  - Filtros de lista passam a valer também para Cards; Kanban mantém o comportamento atual de quadro.
+  - Modal “i” das duas telas explica as três visualizações e remove a informação antiga de que Leads abriria em cards.
+- **Arquivos Envolvidos:** `src/app/(dashboard)/comercial/crm/leads/page.tsx`, `src/app/(dashboard)/comercial/crm/oportunidades/page.tsx`, `src/lib/info-content/crm.ts`, `docs/Sessoes.md`.
+- **Testes:** novos casos em `src/app/(dashboard)/comercial/crm/leads/page.test.tsx` e `src/app/(dashboard)/comercial/crm/oportunidades/page.test.tsx`; ajustes em `src/lib/info-content/info-content.test.ts`.
+- **Verificação:** focados `3 arquivos / 73 testes passados`; `npm run lint` sem erros (apenas warnings pré-existentes); `tsc --noEmit` limpo com `NODE_OPTIONS=--max-old-space-size=8192`; suíte completa `npm run test` → **464 arquivos / 2685 testes passados**; `npm run build` OK com `NODE_OPTIONS=--max-old-space-size=8192`; `git diff --check` sem problemas.
+
+---
+
 ### Sessão 18 — Top Leads separado de Top Clientes no dashboard CRM
 
 - **Data:** 2026-11-21

@@ -196,6 +196,9 @@ describe("getInfoContent", () => {
     // As colunas vêm do cadastro de status.
     expect(textoKanban).toMatch(/cadastro de Status/i)
     expect(textoKanban).toMatch(/Exibir no Kanban/)
+    expect(textoKanban).toMatch(/Cards/)
+    expect(textoKanban).toMatch(/Tabela/)
+    expect(textoKanban).toMatch(/Kanban/)
   })
 
   it("a selecao de tela do menu de navegacao explica a busca", () => {
@@ -589,6 +592,16 @@ describe("getInfoContent", () => {
       expect(texto).toMatch(/histórico/i)
       expect(texto).toMatch(/não podem ser excluídas|não há exclusão/i)
     }
+
+    const listagemTexto = [
+      listagem?.description ?? "",
+      ...(listagem?.rules ?? []),
+      ...(listagem?.fields ?? []).map((f) => `${f.name}: ${f.desc}`),
+    ].join("\n")
+
+    expect(listagemTexto).toMatch(/Cards/)
+    expect(listagemTexto).toMatch(/Tabela/)
+    expect(listagemTexto).toMatch(/Kanban/)
 
     const detalheTexto = [
       detalhe?.description ?? "",

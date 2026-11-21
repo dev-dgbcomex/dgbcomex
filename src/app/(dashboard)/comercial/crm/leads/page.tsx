@@ -9,6 +9,7 @@ import { getInfoContent } from "@/lib/info-content"
 import {
   PlusCircle,
   UserCircle,
+  LayoutGrid,
   Table,
   Columns,
   Database,
@@ -17,6 +18,9 @@ import {
   Pencil,
   ExternalLink,
   Archive,
+  Mail,
+  Phone,
+  MapPin,
 } from "lucide-react"
 import LeadsKanban from "@/components/crm/leads-kanban"
 import { FloatableKanban } from "@/components/crm/floatable-kanban"
@@ -44,18 +48,19 @@ const STATUS_CORES: Record<string, string> = {
 }
 
 type TarjaFiltro = "sem" | "com" | "todos"
+type ModoLead = "cards" | "tabela" | "kanban"
 
 function CrmLeadsPageContent() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const info = getInfoContent(pathname)
-  const [modo, setModo] = useState<"tabela" | "kanban">(() => {
+  const [modo, setModo] = useState<ModoLead>(() => {
     if (typeof window !== "undefined") {
       const salvo = localStorage.getItem("leads-modo")
-      if (salvo === "tabela" || salvo === "kanban") return salvo
+      if (salvo === "cards" || salvo === "tabela" || salvo === "kanban") return salvo
     }
     const view = searchParams.get("view")
-    if (view === "tabela" || view === "kanban") return view
+    if (view === "cards" || view === "tabela" || view === "kanban") return view
     return "kanban"
   })
   useEffect(() => {
@@ -192,6 +197,21 @@ function CrmLeadsPageContent() {
           </div>
           <div className="flex rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-0.5 shadow-sm">
             <button
+              type="button"
+              aria-pressed={modo === "cards"}
+              onClick={() => setModo("cards")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                modo === "cards"
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
+              }`}
+            >
+              <LayoutGrid size={14} />
+              Cards
+            </button>
+            <button
+              type="button"
+              aria-pressed={modo === "tabela"}
               onClick={() => setModo("tabela")}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                 modo === "tabela"
@@ -203,6 +223,8 @@ function CrmLeadsPageContent() {
               Tabela
             </button>
             <button
+              type="button"
+              aria-pressed={modo === "kanban"}
               onClick={() => setModo("kanban")}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                 modo === "kanban"
@@ -259,6 +281,153 @@ function CrmLeadsPageContent() {
         filterState={filterState}
         placeholder="Buscar leads..."
       />
+
+      {modo === "cards" &&
+        (isLoading ? (
+          <div className="flex justify-center py-20">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+          </div>
+        ) : filteredData.length === 0 ? (
+          <div className="flex flex-col items-center justify-center rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 py-20 text-center">
+            <UserCircle className="w-12 h-12 text-slate-300 dark:text-slate-700 mb-3" />
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+              Nenhum lead encontrada
+            </p>
+          </div>
+        ) : (
+          <div className="grid gap-4 p-4 md:grid-cols-2 xl:grid-cols-3">
+            {filteredData.map((emp) => (
+              <article
+                key={emp.id}
+                className="flex flex-col rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <Link
+                      href={`/comercial/crm/leads/${emp.id}`}
+                      className="text-sm font-semibold text-slate-900 dark:text-slate-100 hover:underline"
+                    >
+                      {nomeExibicao(emp)}
+                    </Link>
+                    {emp.nomeFantasia && emp.nomeFantasia !== nomeExibicao(emp) && (
+                      <p className="truncate text-xs text-slate-500 dark:text-slate-400">
+                        {emp.nomeFantasia}
+                      </p>
+                    )}
+                    <p className="mt-1 font-mono text-xs text-slate-500 dark:text-slate-400">
+                      {documento(emp)}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 flex-col items-end gap-1">
+                    <span className="rounded-full bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-[10px] font-medium text-slate-600 dark:text-slate-300">
+                      {emp.tipoPessoa || "—"}
+                    </span>
+                    {emp.promovidaCliente && (
+                      <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-300">
+                        <Archive size={11} />
+                        Cliente
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mt-4 flex flex-wrap items-center gap-2">
+                  <span
+                    className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                      STATUS_CORES[emp.status ?? ""] || "text-slate-600 bg-slate-100"
+                    }`}
+                  >
+                    {emp.status || "—"}
+                  </span>
+                  {emp.segmento && (
+                    <span className="rounded-full bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-[10px] font-medium text-slate-600 dark:text-slate-300">
+                      {emp.segmento}
+                    </span>
+                  )}
+                </div>
+
+                <div className="mt-4 space-y-2 text-xs text-slate-500 dark:text-slate-400">
+                  <div className="flex justify-between gap-3">
+                    <span>Responsável</span>
+                    <span className="text-right text-slate-700 dark:text-slate-200">
+                      {emp.responsavelNome || "—"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <span>Cadastro</span>
+                    <span className="text-slate-700 dark:text-slate-200">
+                      {emp.createdAt ? new Date(emp.createdAt).toLocaleDateString("pt-BR") : "—"}
+                    </span>
+                  </div>
+                </div>
+
+                {(emp.email || emp.telefone || emp.cidade) && (
+                  <div className="mt-3 space-y-1 border-t border-slate-100 dark:border-slate-800 pt-3 text-xs text-slate-600 dark:text-slate-400">
+                    {emp.email && (
+                      <div className="flex items-center gap-2">
+                        <Mail size={12} className="shrink-0 text-slate-400" />
+                        <span className="truncate">{emp.email}</span>
+                      </div>
+                    )}
+                    {emp.telefone && (
+                      <div className="flex items-center gap-2">
+                        <Phone size={12} className="shrink-0 text-slate-400" />
+                        <span>{emp.telefone}</span>
+                      </div>
+                    )}
+                    {emp.cidade && (
+                      <div className="flex items-center gap-2">
+                        <MapPin size={12} className="shrink-0 text-slate-400" />
+                        <span className="truncate">
+                          {emp.cidade}
+                          {emp.uf ? `, ${emp.uf}` : ""}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-100 dark:border-slate-800 pt-3">
+                  <Link
+                    href={`/comercial/crm/leads/${emp.id}`}
+                    className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline"
+                    title="Ver detalhes"
+                  >
+                    <Eye size={12} />
+                    Ver
+                  </Link>
+                  <Link
+                    href={`/comercial/crm/leads/${emp.id}?edit=true`}
+                    className="inline-flex items-center gap-1 text-xs text-amber-600 hover:underline"
+                    title="Editar"
+                  >
+                    <Pencil size={12} />
+                    Editar
+                  </Link>
+                  {mapsUrl(emp) && (
+                    <a
+                      href={mapsUrl(emp)!}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs text-emerald-600 hover:underline"
+                      title="Abrir no Google Maps"
+                    >
+                      <ExternalLink size={12} />
+                      Mapa
+                    </a>
+                  )}
+                  {!emp.promovidaCliente && (
+                    <PromoverClienteBotao
+                      lead={emp}
+                      compact
+                      onPromovido={() => refetch()}
+                    />
+                  )}
+                </div>
+              </article>
+            ))}
+          </div>
+        ))}
 
       {modo === "tabela" && (
         <>

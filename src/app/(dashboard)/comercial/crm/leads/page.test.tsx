@@ -82,6 +82,46 @@ describe("LeadsPage kanban", () => {
   })
 })
 
+describe("LeadsPage cards", () => {
+  beforeEach(() => {
+    localStorage.setItem("leads-modo", "cards")
+    const handler = ({ method, url }: { method: string; url: string }) => {
+      if (method === "GET" && url === "/api/crm/leads") return { json: leads }
+      return { json: null }
+    }
+    const fetchMock = createFetchMock(handler)
+    vi.stubGlobal("fetch", fetchMock.fn)
+  })
+
+  it("abre em cards e alterna para tabela e kanban", async () => {
+    renderPage(<CrmLeadsPage />)
+
+    await screen.findByText("Tecelagem Alpha")
+    expect(screen.queryByRole("table")).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Flutuar" })).not.toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "Tecelagem Alpha" })).toBeInTheDocument()
+    expect(screen.getByText("12.345.678/0001-90")).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole("button", { name: "Tabela" }))
+    expect(await screen.findByRole("table")).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole("button", { name: "Kanban" }))
+    expect(await screen.findByRole("button", { name: "Flutuar" })).toBeInTheDocument()
+  })
+
+  it("aplica os filtros no modo cards", async () => {
+    renderPage(<CrmLeadsPage />)
+
+    await screen.findByText("Tecelagem Alpha")
+    fireEvent.change(screen.getByPlaceholderText("Buscar leads..."), {
+      target: { value: "Lima" },
+    })
+
+    expect(await screen.findByText("Confecções Lima")).toBeInTheDocument()
+    expect(screen.queryByText("Tecelagem Alpha")).not.toBeInTheDocument()
+  })
+})
+
 describe("LeadsPage tarja de cliente", () => {
   beforeEach(() => {
     localStorage.setItem("leads-modo", "tabela")

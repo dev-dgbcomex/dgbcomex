@@ -10,6 +10,7 @@ import {
   PlusCircle,
   Target,
   Search,
+  LayoutGrid,
   Table,
   Columns,
   Users,
@@ -37,7 +38,7 @@ export default function OportunidadesPage() {
   const router = useRouter()
   const pathname = usePathname()
   const info = getInfoContent(pathname)
-  const [modo, setModo] = useState<"tabela" | "kanban">("tabela")
+  const [modo, setModo] = useState<"cards" | "tabela" | "kanban">("tabela")
 
   const [visitasFilter, setVisitasFilter] = useState<"todas" | "minhas">("minhas")
   const [deleteTarget, setDeleteTarget] = useState<Oportunidade | null>(null)
@@ -146,6 +147,21 @@ export default function OportunidadesPage() {
           </div>
           <div className="flex rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-0.5 shadow-sm">
             <button
+              type="button"
+              aria-pressed={modo === "cards"}
+              onClick={() => setModo("cards")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                modo === "cards"
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
+              }`}
+            >
+              <LayoutGrid size={14} />
+              Cards
+            </button>
+            <button
+              type="button"
+              aria-pressed={modo === "tabela"}
               onClick={() => setModo("tabela")}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                 modo === "tabela"
@@ -157,6 +173,8 @@ export default function OportunidadesPage() {
               Tabela
             </button>
             <button
+              type="button"
+              aria-pressed={modo === "kanban"}
               onClick={() => setModo("kanban")}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                 modo === "kanban"
@@ -185,19 +203,136 @@ export default function OportunidadesPage() {
         </div>
       </div>
 
+      {(modo === "tabela" || modo === "cards") && (
+        <ListFilters
+          config={{
+            searchFields: ["titulo", "empresaNome", "clienteNome", "responsavelNome"],
+            statusOptions,
+            dateField: "createdAt",
+          }}
+          data={oportunidades || []}
+          filterState={filterState}
+          placeholder="Buscar por título ou pessoa..."
+        />
+      )}
+
+      {modo === "cards" &&
+        (isLoading ? (
+          <div className="flex justify-center py-20">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+          </div>
+        ) : filteredData.length === 0 ? (
+          <div className="flex flex-col items-center justify-center rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 py-20 text-center">
+            <Target className="w-12 h-12 text-slate-300 dark:text-slate-700 mb-3" />
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+              Nenhuma oportunidade encontrada
+            </p>
+          </div>
+        ) : (
+          <div className="grid gap-4 p-4 md:grid-cols-2 xl:grid-cols-3">
+            {filteredData.map((op) => {
+              const cor = corDoStatus(op.status)
+              return (
+                <article
+                  key={op.id}
+                  className="flex flex-col rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <Link
+                        href={`/comercial/crm/oportunidades/${op.id}`}
+                        className="text-sm font-semibold text-slate-900 dark:text-slate-100 hover:underline"
+                      >
+                        {op.titulo}
+                      </Link>
+                      <p className="mt-1 truncate text-xs text-slate-500 dark:text-slate-400">
+                        {op.empresaNome || op.clienteNome || "—"}
+                      </p>
+                    </div>
+                    <span
+                      className="inline-flex shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-medium"
+                      style={{
+                        backgroundColor: hexToRgba(cor, 0.12),
+                        borderColor: hexToRgba(cor, 0.35),
+                        color: cor,
+                      }}
+                    >
+                      {labelDoStatus(op.status)}
+                    </span>
+                  </div>
+
+                  <div className="mt-4 rounded-lg bg-slate-50 dark:bg-slate-800/70 px-3 py-2">
+                    <p className="text-[10px] uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                      Valor estimado
+                    </p>
+                    <p className="text-base font-semibold text-slate-900 dark:text-slate-100">
+                      {formatarMoeda(op.valorEstimado)}
+                    </p>
+                  </div>
+
+                  <div className="mt-4 space-y-2 text-xs text-slate-500 dark:text-slate-400">
+                    <div className="flex justify-between gap-3">
+                      <span>Responsável</span>
+                      <span className="text-right text-slate-700 dark:text-slate-200">
+                        {op.responsavelNome || "—"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between gap-3">
+                      <span>Probabilidade</span>
+                      <span className="text-slate-700 dark:text-slate-200">{op.probabilidade ?? 0}%</span>
+                    </div>
+                    <div className="flex justify-between gap-3">
+                      <span>Previsão</span>
+                      <span className="text-slate-700 dark:text-slate-200">
+                        {op.dataFechamentoPrevista
+                          ? new Date(op.dataFechamentoPrevista).toLocaleDateString("pt-BR")
+                          : "—"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between gap-3">
+                      <span>Cadastro</span>
+                      <span className="text-slate-700 dark:text-slate-200">
+                        {op.createdAt ? new Date(op.createdAt).toLocaleDateString("pt-BR") : "—"}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-100 dark:border-slate-800 pt-3">
+                    <Link
+                      href={`/comercial/crm/oportunidades/${op.id}`}
+                      className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline"
+                    >
+                      Ver
+                    </Link>
+                    <Link
+                      href={`/comercial/crm/oportunidades/${op.id}?edit=true`}
+                      className="inline-flex items-center gap-1 text-xs text-amber-600 hover:underline"
+                      title="Editar oportunidade"
+                    >
+                      <Pencil size={12} />
+                      Editar
+                    </Link>
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-1 text-xs text-red-600 hover:underline"
+                      title="Excluir oportunidade"
+                      onClick={() => {
+                        setDeleteTarget(op)
+                        setDeleteBlocked(false)
+                      }}
+                    >
+                      <Trash2 size={12} />
+                      Excluir
+                    </button>
+                  </div>
+                </article>
+              )
+            })}
+          </div>
+        ))}
+
       {modo === "tabela" && (
         <>
-          <ListFilters
-            config={{
-              searchFields: ["titulo", "empresaNome", "clienteNome", "responsavelNome"],
-              statusOptions,
-              dateField: "createdAt",
-            }}
-            data={oportunidades || []}
-            filterState={filterState}
-            placeholder="Buscar por título ou pessoa..."
-          />
-
           <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
             {isLoading ? (
               <div className="flex justify-center py-20">

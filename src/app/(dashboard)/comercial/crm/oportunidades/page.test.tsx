@@ -74,6 +74,46 @@ describe("OportunidadesPage kanban", () => {
   })
 })
 
+describe("OportunidadesPage cards", () => {
+  beforeEach(() => {
+    const handler = ({ method, url }: { method: string; url: string }) => {
+      if (method === "GET" && url === "/api/crm/oportunidades?mine=true")
+        return { json: oportunidades }
+      return { json: null }
+    }
+    const fetchMock = createFetchMock(handler)
+    vi.stubGlobal("fetch", fetchMock.fn)
+  })
+
+  it("alterna para cards mostrando os dados da oportunidade", async () => {
+    renderPage(<OportunidadesPage />)
+
+    await screen.findByText("Venda de malha 100% algodão")
+    fireEvent.click(screen.getByRole("button", { name: "Cards" }))
+
+    expect(await screen.findByText(/5\.000,00/)).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "Venda de malha 100% algodão" })).toBeInTheDocument()
+    expect(screen.queryByRole("table")).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Flutuar" })).not.toBeInTheDocument()
+  })
+
+  it("filtra no modo cards e permite voltar para a tabela", async () => {
+    renderPage(<OportunidadesPage />)
+
+    await screen.findByText("Venda de malha 100% algodão")
+    fireEvent.click(screen.getByRole("button", { name: "Cards" }))
+    fireEvent.change(screen.getByPlaceholderText("Buscar por título ou pessoa..."), {
+      target: { value: "uniformes" },
+    })
+
+    expect(await screen.findByText("Confecções Lima")).toBeInTheDocument()
+    expect(screen.queryByText("Venda de malha 100% algodão")).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole("button", { name: "Tabela" }))
+    expect(await screen.findByRole("table")).toBeInTheDocument()
+  })
+})
+
 describe("OportunidadesPage status do cadastro", () => {
   it("usa rótulo e cor do cadastro de status", async () => {
     const handler = ({ method, url }: { method: string; url: string }) => {
