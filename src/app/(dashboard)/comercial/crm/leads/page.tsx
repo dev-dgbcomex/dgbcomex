@@ -31,6 +31,7 @@ import ListFilters, { useListFilters } from "@/components/ui/list-filters"
 import { PageSkeleton } from "@/components/ui/page-skeleton"
 import { ExportarRelatorio } from "@/components/crm/relatorios/exportar-relatorio"
 import { PromoverClienteBotao } from "@/components/crm/promover-cliente-botao"
+import { LeadMetricasModal, type TipoMetricaLead } from "@/components/crm/leads/metricas-modal"
 import type { Lead } from "./types"
 
 async function fetchEmpresas(): Promise<Lead[]> {
@@ -69,6 +70,9 @@ function CrmLeadsPageContent() {
   const [showApiImport, setShowApiImport] = useState(false)
   const [showCnpjSearch, setShowCnpjSearch] = useState(false)
   const [tarjaFiltro, setTarjaFiltro] = useState<TarjaFiltro>("sem")
+  const [metricaAberta, setMetricaAberta] = useState<{ lead: Lead; tipo: TipoMetricaLead } | null>(
+    null
+  )
 
   const {
     data: empresas,
@@ -348,19 +352,30 @@ function CrmLeadsPageContent() {
 
                 <div className="mt-4 grid grid-cols-4 gap-1 rounded-lg border border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/30 p-2 text-center">
                   {[
-                    { label: "Oportunidades", valor: emp.totalOportunidades ?? 0 },
-                    { label: "Pedidos", valor: emp.totalPedidos ?? 0 },
-                    { label: "Visitas", valor: emp.totalVisitas ?? 0 },
-                    { label: "Ações", valor: emp.totalAcoes ?? 0 },
+                    {
+                      label: "Oportunidades",
+                      valor: emp.totalOportunidades ?? 0,
+                      tipo: "oportunidades" as const,
+                    },
+                    { label: "Pedidos", valor: emp.totalPedidos ?? 0, tipo: "pedidos" as const },
+                    { label: "Visitas", valor: emp.totalVisitas ?? 0, tipo: "visitas" as const },
+                    { label: "Ações", valor: emp.totalAcoes ?? 0, tipo: "acoes" as const },
                   ].map((metrica) => (
-                    <div key={metrica.label} className="min-w-0">
+                    <button
+                      key={metrica.tipo}
+                      type="button"
+                      onClick={() => setMetricaAberta({ lead: emp, tipo: metrica.tipo })}
+                      aria-label={`Ver ${metrica.label.toLowerCase()} de ${nomeExibicao(emp)}`}
+                      title={`Ver ${metrica.label.toLowerCase()} de ${nomeExibicao(emp)}`}
+                      className="min-w-0 rounded-md px-1 py-1 transition-colors hover:bg-white dark:hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                    >
                       <div className="text-sm font-semibold text-slate-800 dark:text-slate-100">
                         {metrica.valor}
                       </div>
                       <div className="truncate text-[10px] text-slate-500 dark:text-slate-400">
                         {metrica.label}
                       </div>
-                    </div>
+                    </button>
                   ))}
                 </div>
 
@@ -429,11 +444,7 @@ function CrmLeadsPageContent() {
                     </a>
                   )}
                   {!emp.promovidaCliente && (
-                    <PromoverClienteBotao
-                      lead={emp}
-                      compact
-                      onPromovido={() => refetch()}
-                    />
+                    <PromoverClienteBotao lead={emp} compact onPromovido={() => refetch()} />
                   )}
                 </div>
               </article>
@@ -508,10 +519,7 @@ function CrmLeadsPageContent() {
                           )}
                         </td>
                         <td className="px-2 py-2 md:px-4 md:py-3 text-xs md:text-sm font-medium text-slate-900 dark:text-slate-200 whitespace-nowrap">
-                          <Link
-                            href={`/comercial/crm/leads/${emp.id}`}
-                            className="hover:underline"
-                          >
+                          <Link href={`/comercial/crm/leads/${emp.id}`} className="hover:underline">
                             {nomeExibicao(emp)}
                           </Link>
                         </td>
@@ -603,6 +611,15 @@ function CrmLeadsPageContent() {
             <LeadsKanban leads={filteredData} />
           </FloatableKanban>
         ))}
+
+      {metricaAberta && (
+        <LeadMetricasModal
+          tipo={metricaAberta.tipo}
+          leadId={metricaAberta.lead.id}
+          leadNome={nomeExibicao(metricaAberta.lead)}
+          onClose={() => setMetricaAberta(null)}
+        />
+      )}
 
       {showApiImport && (
         <ImportarApiModal

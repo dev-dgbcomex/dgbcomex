@@ -91,13 +91,47 @@ describe("LeadsPage kanban", () => {
 })
 
 describe("LeadsPage cards", () => {
+  let fetchMock: ReturnType<typeof createFetchMock>
+
+  const registrosPorMetrica: Record<string, unknown[]> = {
+    "/api/crm/oportunidades?all=true&empresaId=1": [
+      {
+        id: 11,
+        titulo: "Malha penteada",
+        descricao: "Lote de teste",
+        status: "NOVO",
+        valorEstimado: "1500.00",
+        dataFechamentoPrevista: "2026-12-01",
+      },
+    ],
+    "/api/crm/pedidos-venda?all=true&empresaId=1": [
+      {
+        id: 21,
+        numero: "PV-021",
+        oportunidadeId: 11,
+        oportunidadeTitulo: "Malha penteada",
+        status: "ABERTO",
+        dataEmissao: "2026-11-20",
+        total: "2200.00",
+      },
+    ],
+    "/api/crm/visitas?all=true&empresaId=1": [
+      { id: 31, relato: "Visita técnica", status: "REALIZADA", dataVisita: "2026-11-18" },
+    ],
+    "/api/crm/acoes-prospeccao?all=true&empresaId=1": [
+      { id: 41, relato: "Ligação de prospecção", status: "CONCLUIDA", dataAcao: "2026-11-17" },
+    ],
+  }
+
   beforeEach(() => {
     localStorage.setItem("leads-modo", "cards")
     const handler = ({ method, url }: { method: string; url: string }) => {
       if (method === "GET" && url === "/api/crm/leads") return { json: leads }
+      const registros = registrosPorMetrica[url]
+      if (method === "GET" && registros) return { json: registros }
       return { json: null }
     }
-    const fetchMock = createFetchMock(handler)
+    fetchMock = createFetchMock(handler)
     vi.stubGlobal("fetch", fetchMock.fn)
   })
 
@@ -127,6 +161,50 @@ describe("LeadsPage cards", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Kanban" }))
     expect(await screen.findByRole("button", { name: "Flutuar" })).toBeInTheDocument()
+  })
+
+  it("abre modais com os registros de cada indicador", async () => {
+    renderPage(<CrmLeadsPage />)
+
+    await screen.findByText("Tecelagem Alpha")
+
+    const casos = [
+      {
+        botao: "Ver oportunidades de Tecelagem Alpha",
+        titulo: "Oportunidades da lead",
+        texto: "Malha penteada",
+        url: "/api/crm/oportunidades?all=true&empresaId=1",
+      },
+      {
+        botao: "Ver pedidos de Tecelagem Alpha",
+        titulo: "Pedidos da lead",
+        texto: "PV-021",
+        url: "/api/crm/pedidos-venda?all=true&empresaId=1",
+      },
+      {
+        botao: "Ver visitas de Tecelagem Alpha",
+        titulo: "Visitas da lead",
+        texto: "Visita técnica",
+        url: "/api/crm/visitas?all=true&empresaId=1",
+      },
+      {
+        botao: "Ver ações de Tecelagem Alpha",
+        titulo: "Ações da lead",
+        texto: "Ligação de prospecção",
+        url: "/api/crm/acoes-prospeccao?all=true&empresaId=1",
+      },
+    ]
+
+    for (const caso of casos) {
+      fireEvent.click(screen.getByRole("button", { name: caso.botao }))
+
+      expect(await screen.findByRole("dialog", { name: caso.titulo })).toBeInTheDocument()
+      expect(await screen.findByText(caso.texto)).toBeInTheDocument()
+      expect(findCall(fetchMock.calls, caso.url, "GET")).toBeDefined()
+
+      fireEvent.click(screen.getByRole("button", { name: "Fechar" }))
+      await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument())
+    }
   })
 
   it("aplica os filtros no modo cards", async () => {

@@ -156,7 +156,7 @@ export const crmContent: Record<string, InfoContent> = {
       "O botão 'Tornar cliente' cria (ou reaproveita) o cadastro de Clientes pelo CNPJ, marca a lead com tarja de cliente e preserva todo o histórico (oportunidades, propostas e visitas) nos relatórios. A ação não pode ser desfeita.",
       "Há três visualizações: Cards, Tabela e Kanban. A preferência fica salva neste navegador e os filtros valem para Cards e Tabela.",
       "Cards é a visualização padrão; Tabela e Kanban continuam disponíveis, e o Kanban organiza as leads por status.",
-      "Os cards mostram as contagens de Oportunidades, Pedidos, Visitas e Ações no lugar do responsável do cadastro, que continua visível na Tabela e no detalhe da lead.",
+      "Os cards mostram as contagens de Oportunidades, Pedidos, Visitas e Ações no lugar do responsável do cadastro, que continua visível na Tabela e no detalhe da lead. Clique em qualquer contagem para abrir um modal com os registros vinculados a essa lead.",
       "A listagem esconde por padrão as leads com tarja. Use o filtro 'Sem tarja / Com tarja / Todos' para alternar a visibilidade.",
       "Leads com tarja continuam acessíveis pelo detalhe (link direto) e pelo relatório de Conversões.",
       "Ao clicar no nome da lead, você abre o detalhe completo com timeline, WhatsApp e resumo IA.",
@@ -212,13 +212,22 @@ export const crmContent: Record<string, InfoContent> = {
       { name: "Nome", desc: "Cliente ou lead do período. Clicável — abre o modal completo." },
       { name: "Documento", desc: "CNPJ ou CPF do cliente/lead." },
       { name: "Segmento/Porte", desc: "Dados do cliente ou da lead, quando preenchidos." },
-      { name: "Visitas R/A/C", desc: "Visitas realizadas / agendadas / canceladas no ano corrente." },
+      {
+        name: "Visitas R/A/C",
+        desc: "Visitas realizadas / agendadas / canceladas no ano corrente.",
+      },
       { name: "Ações R/A/C", desc: "Ações realizadas / agendadas / canceladas no ano corrente." },
       { name: "Última visita", desc: "Data da visita mais recente já realizada no recorte." },
       { name: "Próxima visita", desc: "Data da próxima visita agendada." },
-      { name: "Itens de engajamento", desc: "Quantidade de itens presentes e percentual ponderado." },
+      {
+        name: "Itens de engajamento",
+        desc: "Quantidade de itens presentes e percentual ponderado.",
+      },
       { name: "Status", desc: "Status da oportunidade mais avançada." },
-      { name: "Valor estimado / Prob.", desc: "Soma dos valores das oportunidades e média das probabilidades." },
+      {
+        name: "Valor estimado / Prob.",
+        desc: "Soma dos valores das oportunidades e média das probabilidades.",
+      },
       { name: "Conversão", desc: "Percentual de pedidos + faturamentos sobre o total de visitas." },
       { name: "Esforço / Engajamento", desc: "Scores de 0 a 100%; clique para ver os critérios." },
     ],
@@ -276,14 +285,23 @@ export const crmContent: Record<string, InfoContent> = {
       "O card 'Histórico de conversão em cliente' mostra quando a lead virou cliente, quem promoveu, o cliente vinculado e o total de oportunidades, ações e visitas acumulados.",
     ],
     fields: [
-      { name: "Contatos", desc: "Contatos da lead com cargo, e-mail e telefone e link para o cadastro" },
-      { name: "Representantes", desc: "Representantes vinculados com busca e link para o cadastro" },
+      {
+        name: "Contatos",
+        desc: "Contatos da lead com cargo, e-mail e telefone e link para o cadastro",
+      },
+      {
+        name: "Representantes",
+        desc: "Representantes vinculados com busca e link para o cadastro",
+      },
       { name: "Oportunidades", desc: "Negócios em aberto da lead com link para cada oportunidade" },
       { name: "Ações de Prospecção", desc: "Ações agendadas e realizadas com link para o detalhe" },
       { name: "Visitas", desc: "Visitas agendadas e realizadas com link para o detalhe" },
       { name: "Timeline", desc: "Histórico completo de eventos da lead em ordem cronológica" },
       { name: "WhatsApp", desc: "Painel de conversas WhatsApp vinculadas à lead" },
-      { name: "Análise de IA", desc: "Resumo do timeline completo e chat de perguntas sobre a lead" },
+      {
+        name: "Análise de IA",
+        desc: "Resumo do timeline completo e chat de perguntas sobre a lead",
+      },
       {
         name: "Histórico de conversão",
         desc: "Data, responsável, cliente vinculado e indicadores do período",
@@ -441,8 +459,14 @@ export const crmContent: Record<string, InfoContent> = {
       "Para comparar visitas e ações lado a lado, com esforço, engajamento e conversão por cliente/lead, use /comercial/crm/leads/dashboard.",
     ],
     columns: [
-      { name: "Últimas visitas", desc: "ID, data, hora, tipo, status e endereço das visitas mais recentes do recorte." },
-      { name: "Viagens", desc: "Viagem, total de visitas, realizadas, período, investimento e retorno." },
+      {
+        name: "Últimas visitas",
+        desc: "ID, data, hora, tipo, status e endereço das visitas mais recentes do recorte.",
+      },
+      {
+        name: "Viagens",
+        desc: "Viagem, total de visitas, realizadas, período, investimento e retorno.",
+      },
     ],
     fields: [
       {
@@ -534,8 +558,14 @@ export const crmContent: Record<string, InfoContent> = {
       "Para comparar visitas e ações lado a lado, com esforço, engajamento e conversão por cliente/lead, use /comercial/crm/leads/dashboard.",
     ],
     columns: [
-      { name: "Últimas ações", desc: "ID, data, hora, tipo, status e endereço das ações mais recentes do recorte." },
-      { name: "Viagens", desc: "Viagem, total de ações, realizadas, período, investimento e retorno." },
+      {
+        name: "Últimas ações",
+        desc: "ID, data, hora, tipo, status e endereço das ações mais recentes do recorte.",
+      },
+      {
+        name: "Viagens",
+        desc: "Viagem, total de ações, realizadas, período, investimento e retorno.",
+      },
     ],
     fields: [
       {
@@ -567,7 +597,10 @@ export const crmContent: Record<string, InfoContent> = {
       "Ao salvar com recorrência, a agenda cria uma ação por período definido.",
     ],
     fields: [
-      { name: "Lead / Cliente", desc: "Quem será prospectado (obrigatório, exceto na ação avulsa)" },
+      {
+        name: "Lead / Cliente",
+        desc: "Quem será prospectado (obrigatório, exceto na ação avulsa)",
+      },
       { name: "Contato", desc: "Contato da lead ou do cliente — pode ser cadastrado na hora" },
       { name: "Tipo", desc: "Presencial, Vídeo ou Telefone" },
       { name: "Data/Hora", desc: "Quando a ação será realizada" },
@@ -1402,11 +1435,26 @@ export const saudeProspeccaoInfo = {
       "Clique no nome para ver todas as visitas, vínculos e valores do cliente/lead.",
     ],
     columns: [
-      { name: "Visitas R/A/C", desc: "Realizadas / agendadas / canceladas. Clique para listar as visitas." },
-      { name: "Última / Próxima visita", desc: "Última visita já realizada e próxima visita agendada." },
-      { name: "Itens de engajamento", desc: "Ata, check-in/out, contato, proposta e oportunidade: quantidade, percentual e detalhe." },
-      { name: "Conversão", desc: "Percentual de pedidos + faturamentos sobre o total de visitas; clique para ver quantidades e valores." },
-      { name: "Esforço / Engajamento", desc: "Scores de 0 a 100% calculados pelas fórmulas acima." },
+      {
+        name: "Visitas R/A/C",
+        desc: "Realizadas / agendadas / canceladas. Clique para listar as visitas.",
+      },
+      {
+        name: "Última / Próxima visita",
+        desc: "Última visita já realizada e próxima visita agendada.",
+      },
+      {
+        name: "Itens de engajamento",
+        desc: "Ata, check-in/out, contato, proposta e oportunidade: quantidade, percentual e detalhe.",
+      },
+      {
+        name: "Conversão",
+        desc: "Percentual de pedidos + faturamentos sobre o total de visitas; clique para ver quantidades e valores.",
+      },
+      {
+        name: "Esforço / Engajamento",
+        desc: "Scores de 0 a 100% calculados pelas fórmulas acima.",
+      },
     ],
     examples: [
       {
@@ -1524,8 +1572,7 @@ export const saudeProspeccaoInfo = {
   },
   eql: {
     title: "EQL — Equilibrado",
-    description:
-      "Clientes e leads com esforço e engajamento acima de 35% e próximos um do outro.",
+    description: "Clientes e leads com esforço e engajamento acima de 35% e próximos um do outro.",
     rules: [
       "Fórmula: EQL se Esforço > 35, Engajamento > 35 e |Esforço − Engajamento| < 20.",
       "Quando o engajamento fica pelo menos 10 pontos à frente, o registro vai para Engajados mesmo com diferença menor que 20.",
@@ -1609,12 +1656,30 @@ export const saudeProspeccaoLeadsInfo = {
       "Clique no nome para ver todas as visitas, ações, vínculos e valores do cliente/lead.",
     ],
     columns: [
-      { name: "Visitas R/A/C", desc: "Realizadas / agendadas / canceladas. Clique para listar as visitas." },
-      { name: "Ações R/A/C", desc: "Realizadas / agendadas / canceladas. Clique para listar as ações." },
-      { name: "Última / Próxima visita", desc: "Última visita já realizada e próxima visita agendada." },
-      { name: "Itens de engajamento", desc: "Ata, check-in/out, contato, proposta e oportunidade: quantidade, percentual e detalhe." },
-      { name: "Conversão", desc: "Percentual de pedidos + faturamentos sobre o total de visitas; clique para ver quantidades e valores." },
-      { name: "Esforço / Engajamento", desc: "Scores de 0 a 100% calculados pelas fórmulas acima." },
+      {
+        name: "Visitas R/A/C",
+        desc: "Realizadas / agendadas / canceladas. Clique para listar as visitas.",
+      },
+      {
+        name: "Ações R/A/C",
+        desc: "Realizadas / agendadas / canceladas. Clique para listar as ações.",
+      },
+      {
+        name: "Última / Próxima visita",
+        desc: "Última visita já realizada e próxima visita agendada.",
+      },
+      {
+        name: "Itens de engajamento",
+        desc: "Ata, check-in/out, contato, proposta e oportunidade: quantidade, percentual e detalhe.",
+      },
+      {
+        name: "Conversão",
+        desc: "Percentual de pedidos + faturamentos sobre o total de visitas; clique para ver quantidades e valores.",
+      },
+      {
+        name: "Esforço / Engajamento",
+        desc: "Scores de 0 a 100% calculados pelas fórmulas acima.",
+      },
     ],
     examples: [
       {
@@ -1783,8 +1848,7 @@ export const saudeProspeccaoAcoesInfo = {
   },
   eql: {
     title: "EQL — Equilibrado",
-    description:
-      "Clientes e leads com esforço e engajamento acima de 35% e próximos um do outro.",
+    description: "Clientes e leads com esforço e engajamento acima de 35% e próximos um do outro.",
     rules: [
       "Fórmula: EQL se Esforço > 35, Engajamento > 35 e |Esforço − Engajamento| < 20.",
       "Quando o engajamento fica pelo menos 10 pontos à frente, o registro vai para Engajados mesmo com diferença menor que 20.",

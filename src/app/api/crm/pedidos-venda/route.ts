@@ -17,6 +17,7 @@ export async function GET(req: NextRequest) {
     const q = searchParams.get("q")?.trim() || ""
     const status = searchParams.get("status")
     const oportunidadeId = searchParams.get("oportunidadeId")
+    const empresaId = searchParams.get("empresaId")
     const page = Math.max(1, parseInt(searchParams.get("page") || "1"))
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "50")))
     const all = searchParams.get("all") === "true"
@@ -25,6 +26,7 @@ export async function GET(req: NextRequest) {
     if (status) conditions.push(eq(crmPedidosVenda.status, status))
     if (oportunidadeId)
       conditions.push(eq(crmPedidosVenda.oportunidadeId, parseInt(oportunidadeId)))
+    if (empresaId) conditions.push(eq(crmOportunidades.empresaId, parseInt(empresaId)))
     if (q.length >= 2) {
       conditions.push(
         or(

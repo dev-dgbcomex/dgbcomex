@@ -937,6 +937,7 @@ describe("crmDashboardInfo", () => {
     const textoLeads = [leads?.description ?? "", ...(leads?.rules ?? [])].join("\n")
     expect(textoLeads).toMatch(/Cards é a visualização padrão/)
     expect(textoLeads).toMatch(/Oportunidades, Pedidos, Visitas e Ações/)
+    expect(textoLeads).toMatch(/Clique em qualquer contagem para abrir um modal/)
     expect(textoLeads).not.toMatch(/O Kanban é a visualização padrão/)
 
     const textoOportunidades = [

@@ -44,6 +44,23 @@
 
 ---
 
+### Sessão 26 — Indicadores clicáveis nos cards de leads
+
+- **Data:** 2026-11-21
+- **Commit:** `feat(crm): abre detalhes dos indicadores nos cards de leads`
+- **Tarefa:** transformar as contagens de Oportunidades, Pedidos, Visitas e Ações exibidas nos cards da listagem `/comercial/crm/leads` em atalhos clicáveis, abrindo modais com os registros vinculados à lead.
+- **Decisões aprovadas:** as contagens continuam sendo as mesmas já exibidas (critério `empresaId` da lead, sem mesclar o cliente); cada contagem é um botão com rótulo acessível e foco visível; um único modal genérico normaliza as respostas das quatro APIs existentes; pedidos passam a aceitar filtro `empresaId` pela oportunidade; o rodapé do modal leva ao detalhe da lead.
+- **Resultado:**
+  - Novo `src/components/crm/leads/metricas-modal.tsx` com `TipoMetricaLead`, estados de carregamento/erro/vazio, resumo de valores e links para oportunidade, pedido de venda, visita, ação de prospecção ou detalhe da lead.
+  - `leads/page.tsx` guarda `{ lead, tipo }` no estado local e renderiza o modal uma única vez; os quatro indicadores dos cards viram botões com `aria-label`.
+  - `GET /api/crm/pedidos-venda` aceita `?empresaId=` e aplica `eq(crmOportunidades.empresaId, ...)`.
+  - Modal “i” da listagem explica que as contagens abrem os registros da lead.
+- **Arquivos Envolvidos:** `src/components/crm/leads/metricas-modal.tsx`, `src/components/crm/leads/metricas-modal.test.tsx`, `src/app/(dashboard)/comercial/crm/leads/page.tsx`, `src/app/(dashboard)/comercial/crm/leads/page.test.tsx`, `src/app/api/crm/pedidos-venda/route.ts`, `src/app/api/crm/pedidos-venda/route.test.ts`, `src/lib/info-content/crm.ts`, `src/lib/info-content/info-content.test.ts`, `docs/Sessoes.md`.
+- **Testes:** teste de página cobre a abertura dos quatro modais e as URLs chamadas; teste do componente cobre normalização de pedidos, estado vazio e erro; teste da API cobre o filtro `empresaId`; modal “i” atualizado.
+- **Verificação:** `npm run lint` sem erros (apenas warnings pré-existentes); `tsc --noEmit --pretty false` limpo com `NODE_OPTIONS=--max-old-space-size=8192`; suíte completa `npm run test` → **467 arquivos / 2712 testes passados**; `npm run build` OK com `NODE_OPTIONS=--max-old-space-size=8192`; `git diff --check` sem problemas.
+
+---
+
 ### Sessão 25 — Correção dos links de Atividades Recentes no dashboard CRM
 
 - **Data:** 2026-11-21

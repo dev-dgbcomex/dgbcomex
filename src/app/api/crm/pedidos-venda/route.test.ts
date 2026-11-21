@@ -88,6 +88,15 @@ describe("GET /api/crm/pedidos-venda", () => {
     expect(builder.where).toHaveBeenCalled()
   })
 
+  it("aplica filtro pela empresa da oportunidade", async () => {
+    db.select
+      .mockReturnValueOnce(createQueryBuilder([]))
+      .mockReturnValueOnce(createQueryBuilder([{ total: 0 }]))
+    await get("http://localhost/api/crm/pedidos-venda?empresaId=7")
+    const builder = (db.select as ReturnType<typeof vi.fn>).mock.results[0].value
+    expect(builder.where).toHaveBeenCalled()
+  })
+
   it("retorna array simples quando all=true (para dropdowns)", async () => {
     db.select.mockReturnValueOnce(createQueryBuilder(pedidos))
     const res = await get("http://localhost/api/crm/pedidos-venda?all=true")
