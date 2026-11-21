@@ -8,7 +8,7 @@ import Link from "next/link"
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
 
 interface BuscarCnpjModalProps {
-  tipo: "lead" | "representante"
+  tipo: "lead" | "representante" | "cliente"
   onClose: () => void
   onCreated?: () => void
 }
@@ -25,14 +25,20 @@ export default function BuscarCnpjModal({ tipo, onClose, onCreated }: BuscarCnpj
   const [cnpj, setCnpj] = useState("")
   const [loading, setLoading] = useState(false)
   const [apiData, setApiData] = useState<ApiData | null>(null)
-  const [existentes, setExistentes] = useState<{ crmPessoas: any[]; representantes: any[] }>({
+  const [existentes, setExistentes] = useState<{
+    crmPessoas: any[]
+    representantes: any[]
+    clientes: any[]
+  }>({
     crmPessoas: [],
     representantes: [],
+    clientes: [],
   })
   const [creating, setCreating] = useState(false)
   const [consultado, setConsultado] = useState(false)
 
-  const titulo = tipo === "lead" ? "Lead (Negócio)" : "Representante"
+  const titulo =
+    tipo === "lead" ? "Lead (Negócio)" : tipo === "cliente" ? "Cliente" : "Representante"
 
   async function handleConsultar() {
     const digits = cnpj.replace(/\D/g, "")
@@ -42,7 +48,7 @@ export default function BuscarCnpjModal({ tipo, onClose, onCreated }: BuscarCnpj
     }
     setLoading(true)
     setApiData(null)
-    setExistentes({ crmPessoas: [], representantes: [] })
+    setExistentes({ crmPessoas: [], representantes: [], clientes: [] })
     setConsultado(false)
     try {
       const res = await fetch(`/api/crm/consulta-cnpj?cnpj=${digits}`)
@@ -55,6 +61,7 @@ export default function BuscarCnpjModal({ tipo, onClose, onCreated }: BuscarCnpj
       setExistentes({
         crmPessoas: result.crmPessoas || [],
         representantes: result.representantes || [],
+        clientes: result.clientes || [],
       })
       setConsultado(true)
       if (!result.apiData) {
@@ -98,6 +105,32 @@ export default function BuscarCnpjModal({ tipo, onClose, onCreated }: BuscarCnpj
           throw new Error(err.error || "Erro ao criar pessoa")
         }
         toast.success(`Pessoa "${body.razaoSocial}" criada com sucesso`)
+      } else if (tipo === "cliente") {
+        const body = {
+          nome: api.nome_fantasia || api.razao_social || "",
+          cnpj: formatCnpj(api.cnpj || ""),
+          razaoSocial: api.razao_social || "",
+          segmento: api.cnae_principal_descricao || "",
+          endereco: [api.logradouro, api.numero, api.complemento, api.bairro]
+            .filter(Boolean)
+            .join(", "),
+          cidade: api.municipio || "",
+          uf: api.uf || "",
+          telefone:
+            api.telefones?.[0]?.ddd && api.telefones[0].numero
+              ? `${api.telefones[0].ddd}${api.telefones[0].numero}`
+              : "",
+        }
+        const res = await fetch("/api/clientes", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        })
+        if (!res.ok) {
+          const err = await res.json()
+          throw new Error(err.error || "Erro ao criar cliente")
+        }
+        toast.success(`Cliente "${body.nome}" criado com sucesso`)
       } else {
         const body = {
           nome: api.nome_fantasia || api.razao_social || "",
@@ -130,7 +163,11 @@ export default function BuscarCnpjModal({ tipo, onClose, onCreated }: BuscarCnpj
   }
 
   const jaExiste =
-    tipo === "lead" ? existentes.crmPessoas.length > 0 : existentes.representantes.length > 0
+    tipo === "lead"
+      ? existentes.crmPessoas.length > 0
+      : tipo === "cliente"
+        ? existentes.clientes.length > 0
+        : existentes.representantes.length > 0
 
   return (
     <DialogPrimitive.Root
@@ -261,26 +298,35 @@ export default function BuscarCnpjModal({ tipo, onClose, onCreated }: BuscarCnpj
             {jaExiste && (
               <div className="rounded-lg border border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/30 p-4">
                 <p className="text-sm font-medium text-blue-800 dark:text-blue-300 mb-2">
-                  {tipo === "lead" ? "Lead(s)" : "Representante(s)"} já cadastrado(s) com este
-                  CNPJ:
+                  {tipo === "lead"
+                    ? "Lead(s)"
+                    : tipo === "cliente"
+                      ? "Cliente(s)"
+                      : "Representante(s)"}{" "}
+                  já cadastrado(s) com este CNPJ:
                 </p>
                 <div className="space-y-2">
-                  {(tipo === "lead" ? existentes.crmPessoas : existentes.representantes).map(
-                    (item: any) => (
-                      <Link
-                        key={item.id}
-                        href={
-                          tipo === "lead"
-                            ? `/comercial/crm/leads/${item.id}`
+                  {(tipo === "lead"
+                    ? existentes.crmPessoas
+                    : tipo === "cliente"
+                      ? existentes.clientes
+                      : existentes.representantes
+                  ).map((item: any) => (
+                    <Link
+                      key={item.id}
+                      href={
+                        tipo === "lead"
+                          ? `/comercial/crm/leads/${item.id}`
+                          : tipo === "cliente"
+                            ? `/comercial/clientes/${item.id}`
                             : `/comercial/representantes/${item.id}`
-                        }
-                        target="_blank"
-                        className="flex items-center gap-1.5 text-sm text-blue-600 hover:underline"
-                      >
-                        {item.razaoSocial || item.nome} <ExternalLink size={12} />
-                      </Link>
-                    )
-                  )}
+                      }
+                      target="_blank"
+                      className="flex items-center gap-1.5 text-sm text-blue-600 hover:underline"
+                    >
+                      {item.razaoSocial || item.nome} <ExternalLink size={12} />
+                    </Link>
+                  ))}
                 </div>
               </div>
             )}
@@ -289,7 +335,13 @@ export default function BuscarCnpjModal({ tipo, onClose, onCreated }: BuscarCnpj
               <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 p-4 text-center">
                 <Building2 size={28} className="mx-auto text-slate-300 dark:text-slate-600 mb-2" />
                 <p className="font-medium text-slate-900 dark:text-slate-200">
-                  Deseja criar {tipo === "lead" ? "uma nova Lead" : "um novo Representante"}?
+                  Deseja criar{" "}
+                  {tipo === "lead"
+                    ? "uma nova Lead"
+                    : tipo === "cliente"
+                      ? "um novo Cliente"
+                      : "um novo Representante"}
+                  ?
                 </p>
                 <p className="text-xs text-slate-500 mt-1 mb-3">
                   Os dados serão preenchidos automaticamente com as informações da Receita Federal.

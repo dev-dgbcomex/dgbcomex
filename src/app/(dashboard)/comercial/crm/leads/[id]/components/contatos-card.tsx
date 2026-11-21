@@ -1,4 +1,5 @@
 import { useState } from "react"
+import Link from "next/link"
 import { Plus, Unlink, Mail, UserPlus } from "lucide-react"
 import type { Contato } from "../../types"
 
@@ -76,9 +77,12 @@ export function ContatosCard({
             >
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                  <Link
+                    href={`/comercial/crm/contatos/${contato.id}`}
+                    className="text-sm font-medium text-slate-900 dark:text-slate-100 hover:underline"
+                  >
                     {contato.nome}
-                  </p>
+                  </Link>
                   {contato.principal && (
                     <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400">
                       Principal

@@ -65,6 +65,39 @@ describe("GET /api/crm/dashboard/detalhes", () => {
     })
   })
 
+  it("retorna o bloco top-clientes com conversão e valor", async () => {
+    vi.mocked(db.select).mockReturnValue(
+      createQueryBuilder([
+        {
+          clienteId: 17,
+          clienteNome: "Conforto Prime",
+          totalValor: "150000.00",
+          totalOportunidades: "5",
+          oportunidadesConvertidas: "2",
+          valorAberto: "70000.00",
+        },
+      ]) as never
+    )
+
+    const res = await get("http://localhost/api/crm/dashboard/detalhes?bloco=top-clientes")
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({
+      bloco: "top-clientes",
+      titulo: "Top Clientes (por oportunidades)",
+      listagem: "/comercial/clientes",
+      itens: [
+        {
+          id: 17,
+          titulo: "Conforto Prime",
+          subtitulo: "2 convertidas de 5 oportunidades",
+          detalhe: "2 convertidas de 5 oportunidades",
+          valor: 150000,
+          href: "/comercial/clientes/17",
+        },
+      ],
+    })
+  })
+
   it("aplica filtro de status nas oportunidades", async () => {
     const builder = createQueryBuilder([
       {

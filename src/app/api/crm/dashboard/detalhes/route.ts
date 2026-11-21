@@ -43,6 +43,15 @@ type TopLeadRow = {
   totalValor: string | number | null
 }
 
+type TopClienteRow = {
+  clienteId: number | null
+  clienteNome: string | null
+  totalValor: string | number | null
+  totalOportunidades: string | number | null
+  oportunidadesConvertidas: string | number | null
+  valorAberto: string | number | null
+}
+
 const BLOCOS = new Set([
   "leads",
   "clientes",
@@ -56,6 +65,7 @@ const BLOCOS = new Set([
   "previsao-convertidas",
   "status",
   "top-leads",
+  "top-clientes",
   "recentes",
 ])
 
@@ -72,6 +82,7 @@ const TITULOS: Record<string, string> = {
   "previsao-convertidas": "Oportunidades convertidas",
   status: "Oportunidades por status",
   "top-leads": "Top Leads (Negócios)",
+  "top-clientes": "Top Clientes (por oportunidades)",
   recentes: "Atividades recentes",
 }
 
@@ -88,6 +99,7 @@ const LISTAGENS: Record<string, string> = {
   "previsao-convertidas": "/comercial/crm/oportunidades",
   status: "/comercial/crm/oportunidades",
   "top-leads": "/comercial/crm/oportunidades",
+  "top-clientes": "/comercial/clientes",
   recentes: "/comercial/crm",
 }
 
@@ -262,6 +274,41 @@ async function listarTopLeads(limite: number): Promise<DetalheItem[]> {
   })
 }
 
+async function listarTopClientes(limite: number): Promise<DetalheItem[]> {
+  const rows = await db
+    .select({
+      clienteId: sql<number>`${clientesSchema.id}`,
+      clienteNome: clientesSchema.nome,
+      totalValor: sql<string>`SUM(COALESCE(${crmOportunidades.valorEstimado}, 0)::numeric)`,
+      totalOportunidades: sql<string>`COUNT(*)`,
+      oportunidadesConvertidas: sql<string>`SUM(CASE WHEN ${crmOportunidades.status} = 'FECHADO_GANHO' THEN 1 ELSE 0 END)`,
+      valorAberto: sql<string>`SUM(CASE WHEN ${crmOportunidades.status} NOT IN ('FECHADO_PERDIDO', 'FECHADO_GANHO') THEN COALESCE(${crmOportunidades.valorEstimado}, 0)::numeric ELSE 0 END)`,
+    })
+    .from(crmOportunidades)
+    .leftJoin(crmPessoas, eq(crmOportunidades.empresaId, crmPessoas.id))
+    .innerJoin(
+      clientesSchema,
+      sql`${clientesSchema.id} = COALESCE(${crmOportunidades.clienteId}, ${crmPessoas.clienteId})`
+    )
+    .where(sql`COALESCE(${crmOportunidades.clienteId}, ${crmPessoas.clienteId}) IS NOT NULL`)
+    .groupBy(clientesSchema.id, clientesSchema.nome)
+    .orderBy(desc(sql`SUM(COALESCE(${crmOportunidades.valorEstimado}, 0)::numeric)`))
+    .limit(limite)
+  return (rows as TopClienteRow[]).map((row) => {
+    const totalOportunidades = Number(row.totalOportunidades ?? 0)
+    const oportunidadesConvertidas = Number(row.oportunidadesConvertidas ?? 0)
+    const conversao = `${oportunidadesConvertidas} convertidas de ${totalOportunidades} oportunidades`
+    return {
+      id: Number(row.clienteId),
+      titulo: texto(row.clienteNome) || "Sem nome",
+      subtitulo: conversao,
+      detalhe: conversao,
+      valor: Number(row.totalValor ?? 0),
+      href: `/comercial/clientes/${row.clienteId}`,
+    }
+  })
+}
+
 async function listarRecentes(limite: number): Promise<DetalheItem[]> {
   const eventos = await db
     .select({
@@ -382,6 +429,8 @@ export async function GET(req: NextRequest) {
       itens = await safeQuery(() => listarTarefas(limite), [])
     } else if (bloco === "top-leads") {
       itens = await safeQuery(() => listarTopLeads(limite), [])
+    } else if (bloco === "top-clientes") {
+      itens = await safeQuery(() => listarTopClientes(limite), [])
     } else if (bloco === "recentes") {
       itens = await safeQuery(() => listarRecentes(limite), [])
     }

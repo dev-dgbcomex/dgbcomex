@@ -154,6 +154,7 @@ export const crmContent: Record<string, InfoContent> = {
       "Leads podem ser criadas manualmente ou convertidas de leads qualificados.",
       "Leads não podem ser excluídas: o cadastro é referenciado por contatos, oportunidades, propostas, visitas e timeline. Use 'Tornar cliente' para arquivar.",
       "O botão 'Tornar cliente' cria (ou reaproveita) o cadastro de Clientes pelo CNPJ, marca a lead com tarja de cliente e preserva todo o histórico (oportunidades, propostas e visitas) nos relatórios. A ação não pode ser desfeita.",
+      "A visualização padrão é em cards; o botão 'Tabela' mantém a listagem tabular disponível com os mesmos filtros.",
       "A listagem esconde por padrão as leads com tarja. Use o filtro 'Sem tarja / Com tarja / Todos' para alternar a visibilidade.",
       "Leads com tarja continuam acessíveis pelo detalhe (link direto) e pelo relatório de Conversões.",
       "Ao clicar no nome da lead, você abre o detalhe completo com timeline, WhatsApp e resumo IA.",
@@ -194,6 +195,7 @@ export const crmContent: Record<string, InfoContent> = {
       "Cadastre uma nova lead no CRM. O cadastro pode ser feito manualmente ou através da conversão de um lead qualificado.",
     rules: [
       "A razão social é obrigatória; o CNPJ é recomendado para evitar duplicidade.",
+      "O botão 'Consultar' ao lado do CNPJ busca os dados na Receita Federal e preenche razão social, nome fantasia, endereço e segmento.",
       "Leads sem CNPJ podem ser cadastradas, mas a validação de unicidade não será aplicada.",
       "Após criar, você pode adicionar contatos, oportunidades e visitas.",
     ],
@@ -207,21 +209,26 @@ export const crmContent: Record<string, InfoContent> = {
   "/comercial/crm/leads/[id]": {
     title: "Detalhe da Lead",
     description:
-      "Visão completa de uma lead no CRM: dados cadastrais, contatos, timeline, WhatsApp, histórico de conversão em cliente e resumo gerado por IA. Tudo que você precisa saber sobre a conta.",
+      "Visão completa de uma lead no CRM: dados cadastrais, cards de contatos, representantes, oportunidades, ações de prospecção e visitas, timeline clicável, WhatsApp e análise de IA com chat.",
     rules: [
-      "A Timeline mostra todo o histórico de interações: leads, oportunidades, visitas, tarefas, propostas e mensagens WhatsApp.",
+      "A Timeline mostra todo o histórico de interações e cada evento com cadastro próprio abre o registro de origem.",
       "O WhatsApp permite enviar e receber mensagens diretamente pelo sistema (integrado com Evolution API + n8n).",
-      "O Resumo IA é gerado automaticamente, consolidando as informações mais relevantes da lead.",
+      "O Resumo IA é gerado automaticamente; o bloco de análise de IA lê o timeline completo e responde perguntas sobre a lead.",
+      "Não há card de Propostas nesta tela; as propostas continuam disponíveis na listagem geral e nos relatórios.",
       "Para editar os dados, clique em Editar no topo da página.",
       "Não há exclusão de lead: o cadastro é referenciado por veículos, oportunidades, propostas e visitas. O botão 'Tornar cliente' faz a promoção (cria ou reaproveita o cliente pelo CNPJ) e preserva o histórico.",
       "Promovida, a lead recebe a tarja 'Cliente' no topo e some da listagem padrão — o histórico continua aqui e nos relatórios.",
-      "O card 'Histórico de conversão em cliente' mostra quando a lead virou cliente, quem promoveu, o cliente vinculado e o total de oportunidades, propostas e visitas acumulados.",
+      "O card 'Histórico de conversão em cliente' mostra quando a lead virou cliente, quem promoveu, o cliente vinculado e o total de oportunidades e visitas acumulados.",
     ],
     fields: [
+      { name: "Contatos", desc: "Contatos da lead com cargo, e-mail e telefone e link para o cadastro" },
+      { name: "Representantes", desc: "Representantes vinculados com busca e link para o cadastro" },
+      { name: "Oportunidades", desc: "Negócios em aberto da lead com link para cada oportunidade" },
+      { name: "Ações de Prospecção", desc: "Ações agendadas e realizadas com link para o detalhe" },
+      { name: "Visitas", desc: "Visitas agendadas e realizadas com link para o detalhe" },
       { name: "Timeline", desc: "Histórico completo de eventos da lead em ordem cronológica" },
       { name: "WhatsApp", desc: "Painel de conversas WhatsApp vinculadas à lead" },
-      { name: "Resumo IA", desc: "Resumo inteligente com sugestões geradas pela IA Comercial" },
-      { name: "Contatos", desc: "Leads de contato da lead com cargo, e-mail e telefone" },
+      { name: "Análise de IA", desc: "Resumo do timeline completo e chat de perguntas sobre a lead" },
       {
         name: "Histórico de conversão",
         desc: "Data, responsável, cliente vinculado e indicadores do período",

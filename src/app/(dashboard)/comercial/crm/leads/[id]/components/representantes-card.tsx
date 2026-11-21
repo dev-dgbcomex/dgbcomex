@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { Users, Search, Loader2, UserPlus, Mail, Phone, MapPin, X } from "lucide-react"
 import type { RepresentanteResult, VinculoRepresentante } from "../../types"
 
@@ -111,7 +112,12 @@ export function RepresentantesCard({
               {vinculos.map((v: VinculoRepresentante) => (
                 <tr key={v.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
                   <td className="p-3 text-sm font-medium text-slate-900 dark:text-slate-200">
-                    {v.nome}
+                    <Link
+                      href={`/comercial/representantes/${v.representanteId ?? v.id}`}
+                      className="hover:underline"
+                    >
+                      {v.nome}
+                    </Link>
                   </td>
                   <td className="p-3 text-sm text-slate-500 font-mono">{v.cnpj || "—"}</td>
                   <td className="p-3 text-sm text-slate-500">

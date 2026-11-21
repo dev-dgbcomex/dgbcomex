@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query"
 import Link from "next/link"
-import { Suspense, useMemo, useState } from "react"
+import { Suspense, useEffect, useMemo, useState } from "react"
 import { usePathname, useSearchParams } from "next/navigation"
 import { InfoButton } from "@/components/ui/info-button"
 import { getInfoContent } from "@/lib/info-content"
@@ -49,9 +49,18 @@ function CrmLeadsPageContent() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const info = getInfoContent(pathname)
-  const [modo, setModo] = useState<"tabela" | "kanban">(
-    searchParams.get("view") === "kanban" ? "kanban" : "tabela"
-  )
+  const [modo, setModo] = useState<"tabela" | "kanban">(() => {
+    if (typeof window !== "undefined") {
+      const salvo = localStorage.getItem("leads-modo")
+      if (salvo === "tabela" || salvo === "kanban") return salvo
+    }
+    const view = searchParams.get("view")
+    if (view === "tabela" || view === "kanban") return view
+    return "kanban"
+  })
+  useEffect(() => {
+    localStorage.setItem("leads-modo", modo)
+  }, [modo])
   const [showApiImport, setShowApiImport] = useState(false)
   const [showCnpjSearch, setShowCnpjSearch] = useState(false)
   const [tarjaFiltro, setTarjaFiltro] = useState<TarjaFiltro>("sem")

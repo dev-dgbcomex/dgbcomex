@@ -25,6 +25,15 @@ type TopEmpresaRow = {
   totalValor: string | number | null
 }
 
+type TopClienteRow = {
+  clienteId: number | null
+  clienteNome: string | null
+  totalValor: string | number | null
+  totalOportunidades: string | number | null
+  oportunidadesConvertidas: string | number | null
+  valorAberto: string | number | null
+}
+
 type RecenteRow = {
   id: number
   tipo: string | null
@@ -194,8 +203,14 @@ export async function GET() {
       ),
     ])
 
-    const [topEmpresasRaw, forecastRaw, recentesRaw, visitasRecentesRaw, previsaoVendasRaw] =
-      await Promise.all([
+    const [
+      topEmpresasRaw,
+      topClientesRaw,
+      forecastRaw,
+      recentesRaw,
+      visitasRecentesRaw,
+      previsaoVendasRaw,
+    ] = await Promise.all([
         safeQuery(
           () =>
             db
@@ -218,6 +233,29 @@ export async function GET() {
                 crmPessoas.nome,
                 clientes.nome
               )
+              .orderBy(desc(sql`SUM(COALESCE(${crmOportunidades.valorEstimado}, 0)::numeric)`))
+              .limit(5),
+          []
+        ),
+        safeQuery(
+          () =>
+            db
+              .select({
+                clienteId: sql<number>`${clientes.id}`,
+                clienteNome: clientes.nome,
+                totalValor: sql<string>`SUM(COALESCE(${crmOportunidades.valorEstimado}, 0)::numeric)`,
+                totalOportunidades: sql<string>`COUNT(*)`,
+                oportunidadesConvertidas: sql<string>`SUM(CASE WHEN ${crmOportunidades.status} = 'FECHADO_GANHO' THEN 1 ELSE 0 END)`,
+                valorAberto: sql<string>`SUM(CASE WHEN ${crmOportunidades.status} NOT IN ('FECHADO_PERDIDO', 'FECHADO_GANHO') THEN COALESCE(${crmOportunidades.valorEstimado}, 0)::numeric ELSE 0 END)`,
+              })
+              .from(crmOportunidades)
+              .leftJoin(crmPessoas, eq(crmOportunidades.empresaId, crmPessoas.id))
+              .innerJoin(
+                clientes,
+                sql`${clientes.id} = COALESCE(${crmOportunidades.clienteId}, ${crmPessoas.clienteId})`
+              )
+              .where(sql`COALESCE(${crmOportunidades.clienteId}, ${crmPessoas.clienteId}) IS NOT NULL`)
+              .groupBy(clientes.id, clientes.nome)
               .orderBy(desc(sql`SUM(COALESCE(${crmOportunidades.valorEstimado}, 0)::numeric)`))
               .limit(5),
           []
@@ -388,6 +426,14 @@ export async function GET() {
         clienteId: r.clienteId,
         clienteNome: r.clienteNome,
         totalValor: Number(r.totalValor),
+      })),
+      topClientes: (topClientesRaw as TopClienteRow[]).map((r) => ({
+        clienteId: Number(r.clienteId),
+        clienteNome: r.clienteNome || "Sem nome",
+        totalValor: Number(r.totalValor),
+        totalOportunidades: Number(r.totalOportunidades),
+        oportunidadesConvertidas: Number(r.oportunidadesConvertidas),
+        valorAberto: Number(r.valorAberto),
       })),
       forecast: Number((forecastRaw as any[])[0]?.total ?? 0),
       conversao: {

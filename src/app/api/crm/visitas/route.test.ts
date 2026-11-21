@@ -6,7 +6,8 @@ import { db } from "@/lib/db"
 import { geocodificarCamposEndereco } from "@/lib/crm/geocode"
 import { createDbMock, createQueryBuilder } from "@/test/route-db-mock"
 import { notificarErro } from "@/lib/notificar"
-import { POST } from "./route"
+import { idsPessoasDoCliente } from "@/lib/crm/cliente-relacionamentos"
+import { GET, POST } from "./route"
 
 vi.mock("@/lib/auth", () => ({ requireAuth: vi.fn() }))
 vi.mock("@/lib/db", () => ({
@@ -26,6 +27,7 @@ vi.mock("@/lib/notificar", () => ({
   notificarErro: vi.fn(),
 }))
 vi.mock("@/lib/crm-timeline", () => ({ inserirTimelineEvento: vi.fn() }))
+vi.mock("@/lib/crm/cliente-relacionamentos", () => ({ idsPessoasDoCliente: vi.fn() }))
 
 const sessionAdmin = { session: { user: { id: "1", role: "ADMIN", name: "Tiago" } }, userId: 1 }
 
@@ -217,5 +219,28 @@ describe("POST /api/crm/visitas", () => {
     expect(update).not.toHaveBeenCalled()
     const body = await res.json()
     expect(body.visita.enderecoLat).toBeUndefined()
+  })
+})
+
+describe("GET /api/crm/visitas", () => {
+  beforeEach(() => {
+    vi.mocked(requireAuth).mockResolvedValue(sessionAdmin as any)
+    vi.mocked(idsPessoasDoCliente).mockReset()
+    vi.mocked(idsPessoasDoCliente).mockResolvedValue([3, 4])
+    ;(db.select as ReturnType<typeof vi.fn>).mockReset()
+  })
+
+  it("filtra pelo cliente e inclui as pessoas promovidas", async () => {
+    ;(db.select as ReturnType<typeof vi.fn>).mockReturnValue(
+      createQueryBuilder([{ id: 21, tipo: "PRESENCIAL" }])
+    )
+
+    const res = await GET(
+      new NextRequest("http://localhost/api/crm/visitas?all=true&clienteId=12")
+    )
+
+    expect(res.status).toBe(200)
+    expect(idsPessoasDoCliente).toHaveBeenCalledWith(12)
+    expect(await res.json()).toEqual([{ id: 21, tipo: "PRESENCIAL" }])
   })
 })

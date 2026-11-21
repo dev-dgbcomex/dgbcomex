@@ -9,6 +9,10 @@ vi.mock("next-auth/react", () => ({
   useSession: () => ({ data: { user: { role: "ADMIN" } } }),
 }))
 
+beforeEach(() => {
+  localStorage.clear()
+})
+
 const dados = [
   {
     id: 1,
@@ -106,5 +110,78 @@ describe("ClientesComercialPage - excluir", () => {
       expect(toastMock.error).toHaveBeenCalledWith("Erro interno do servidor")
     })
     expect(screen.getByText("Tecidos Silva")).toBeInTheDocument()
+  })
+})
+
+describe("ClientesComercialPage - visualização e busca de CNPJ", () => {
+  let fetchMock: ReturnType<typeof createFetchMock>
+
+  beforeEach(() => {
+    const handler = ({ method, url }: { method: string; url: string }) => {
+      if (method === "GET" && url === "/api/clientes") return { json: dados }
+      if (method === "GET" && url === "/api/crm/consulta-cnpj?cnpj=12345678000190") {
+        return {
+          json: {
+            apiData: {
+              cnpj: "12345678000190",
+              razao_social: "Tecelagem Alpha Ltda",
+              nome_fantasia: "Alpha Confecções",
+              situacao_cadastral: "Ativa",
+              logradouro: "Rua das Flores",
+              municipio: "São Paulo",
+              uf: "SP",
+            },
+            clientes: [],
+            crmPessoas: [],
+            representantes: [],
+          },
+        }
+      }
+      if (method === "POST" && url === "/api/clientes") return { json: { id: 3 } }
+      return { json: null }
+    }
+    fetchMock = createFetchMock(handler)
+    vi.stubGlobal("fetch", fetchMock.fn)
+  })
+
+  it("abre em cards por padrão e alterna para tabela", async () => {
+    renderPage(<ClientesPage />)
+    await screen.findByText("Tecidos Silva")
+    expect(screen.queryByRole("table")).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole("button", { name: "Tabela" }))
+    expect(await screen.findByRole("table")).toBeInTheDocument()
+    expect(screen.getByText("Tecidos Silva")).toBeInTheDocument()
+    expect(localStorage.getItem("clientes-modo")).toBe("tabela")
+
+    fireEvent.click(screen.getByRole("button", { name: "Cards" }))
+    await waitFor(() => expect(screen.queryByRole("table")).not.toBeInTheDocument())
+  })
+
+  it("mantém a visualização em tabela quando salva", async () => {
+    localStorage.setItem("clientes-modo", "tabela")
+    renderPage(<ClientesPage />)
+    expect(await screen.findByRole("table")).toBeInTheDocument()
+  })
+
+  it("busca CNPJ para cliente, cria e recarrega a lista", async () => {
+    renderPage(<ClientesPage />)
+    await screen.findByText("Tecidos Silva")
+
+    fireEvent.click(screen.getByRole("button", { name: "Buscar CNPJ" }))
+    const dialog = await screen.findByRole("dialog")
+    fireEvent.change(within(dialog).getByLabelText("CNPJ"), {
+      target: { value: "12.345.678/0001-90" },
+    })
+    fireEvent.click(within(dialog).getByRole("button", { name: "Consultar" }))
+    fireEvent.click(await within(dialog).findByRole("button", { name: "Criar Cliente" }))
+
+    await waitFor(() => {
+      const post = findCall(fetchMock.calls, "/api/clientes", "POST")
+      expect(post).toBeDefined()
+      expect(post!.body.nome).toBe("Alpha Confecções")
+      const gets = fetchMock.calls.filter((c) => c.method === "GET" && c.url === "/api/clientes")
+      expect(gets.length).toBeGreaterThanOrEqual(2)
+    })
   })
 })

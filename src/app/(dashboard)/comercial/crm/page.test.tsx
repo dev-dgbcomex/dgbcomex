@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from "vitest"
-import { fireEvent, screen, waitFor } from "@testing-library/react"
+import { fireEvent, screen, waitFor, within } from "@testing-library/react"
 import { createFetchMock, findCall, renderPage, routeJson } from "@/test/harness"
 import CrmDashboardPage from "./page"
 
@@ -19,6 +19,16 @@ const dashboardPayload = {
   visitas: { total: 1, hoje: 0 },
   tarefas: { pendentes: 0, vencendo: 0 },
   topEmpresas: [],
+  topClientes: [
+    {
+      clienteId: 17,
+      clienteNome: "Conforto Prime",
+      totalValor: 150000,
+      totalOportunidades: 5,
+      oportunidadesConvertidas: 2,
+      valorAberto: 70000,
+    },
+  ],
   forecast: 0,
   conversao: { oportunidadesConvertidas: 0, totalOportunidades: 0 },
   recentes: [],
@@ -42,11 +52,27 @@ const detalhePayload = {
   ],
 }
 
+const detalheTopClientesPayload = {
+  bloco: "top-clientes",
+  titulo: "Top Clientes (por oportunidades)",
+  listagem: "/comercial/clientes",
+  itens: [
+    {
+      id: 17,
+      titulo: "Conforto Prime",
+      subtitulo: "2 convertidas de 5 oportunidades",
+      valor: 150000,
+      href: "/comercial/clientes/17",
+    },
+  ],
+}
+
 function setup() {
   const fetchMock = createFetchMock(
     routeJson({
       "GET /api/crm/dashboard": dashboardPayload,
       "GET /api/crm/dashboard/detalhes?bloco=leads": detalhePayload,
+      "GET /api/crm/dashboard/detalhes?bloco=top-clientes": detalheTopClientesPayload,
     })
   )
   vi.stubGlobal("fetch", fetchMock.fn)
@@ -99,11 +125,55 @@ describe("CrmDashboardPage", () => {
     )
   })
 
-  it("mantém os atalhos dos domínios sem card", async () => {
+  it("mostra o painel Top Clientes com valor, conversão e linha clicável", async () => {
     setup()
 
-    for (const label of ["Novo Lead", "Nova Proposta", "Nova Campanha", "Email Massa"]) {
+    expect(await screen.findByRole("heading", { name: "Top Clientes" })).toBeInTheDocument()
+    const linha = await screen.findByRole("link", { name: /Conforto Prime/ })
+    expect(linha).toHaveAttribute("href", "/comercial/clientes/17")
+    expect(within(linha).getByText("2 convertidas de 5")).toBeInTheDocument()
+    expect(within(linha).getByText(/150\.000,00/)).toBeInTheDocument()
+  })
+
+  it("abre o modal de detalhes do Top Clientes", async () => {
+    const fetchMock = setup()
+
+    const titulo = await screen.findByRole("heading", { name: "Top Clientes" })
+    const cabecalho = titulo.parentElement
+    expect(cabecalho).not.toBeNull()
+    fireEvent.click(within(cabecalho!).getByRole("button", { name: /Ver todas/ }))
+
+    await waitFor(() =>
+      expect(
+        findCall(
+          fetchMock.calls,
+          "/api/crm/dashboard/detalhes?bloco=top-clientes",
+          "GET"
+        )
+      ).toBeDefined()
+    )
+    expect(await screen.findByText("2 convertidas de 5 oportunidades")).toBeInTheDocument()
+    expect(
+      screen
+        .getAllByRole("link", { name: /Conforto Prime/ })
+        .some((link) => link.getAttribute("href") === "/comercial/clientes/17")
+    ).toBe(true)
+  })
+
+  it("mantém apenas os cinco atalhos de ação rápida", async () => {
+    setup()
+
+    for (const label of [
+      "Novo Lead (Negócio)",
+      "Nova Oportunidade",
+      "Kanban",
+      "Nova Visita",
+      "Minhas Tarefas",
+    ]) {
       expect(await screen.findByText(label)).toBeInTheDocument()
+    }
+    for (const label of ["Novo Lead", "Nova Proposta", "Nova Campanha", "Email Massa"]) {
+      expect(screen.queryByText(label)).not.toBeInTheDocument()
     }
   })
 
@@ -116,6 +186,9 @@ describe("CrmDashboardPage", () => {
     expect(await screen.findAllByRole("button", { name: /^Informações do card / })).toHaveLength(5)
     expect(
       await screen.findByRole("button", { name: "Informações do painel Top Leads" })
+    ).toBeInTheDocument()
+    expect(
+      await screen.findByRole("button", { name: "Informações do painel Top Clientes" })
     ).toBeInTheDocument()
     expect(
       await screen.findByRole("button", { name: "Informações do painel Atividades Recentes" })

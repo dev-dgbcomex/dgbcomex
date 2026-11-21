@@ -43,6 +43,8 @@ export const comercialContent: Record<string, InfoContent> = {
       "Cadastro de clientes comerciais. Gerencie informações como nome, CNPJ, contatos e endereço.",
     rules: [
       "O CNPJ é validado para garantir unicidade no cadastro.",
+      "O botão 'Buscar CNPJ' consulta a Receita Federal, mostra clientes já cadastrados com aquele documento e permite criar um novo cliente com os dados retornados.",
+      "A visualização padrão é em cards; o botão 'Lista' mantém a tabela disponível com os mesmos filtros.",
       "Clientes ativos podem ser vinculados a solicitações.",
       "A desativação de um cliente não remove solicitações existentes.",
     ],
@@ -55,17 +57,19 @@ export const comercialContent: Record<string, InfoContent> = {
   "/comercial/clientes/[id]": {
     title: "Editar Cliente",
     description:
-      "Tela de cadastro do cliente: dados da empresa, representantes e contatos vinculados, histórico de conversão em cliente e os relacionamentos do CRM (oportunidades, propostas, timeline e WhatsApp).",
+      "Tela de cadastro do cliente: dados da empresa e, fora do formulário, cards de contatos, representantes, oportunidades, ações de prospecção, visitas, timeline, WhatsApp e análise de IA.",
     rules: [
       "Campos marcados com * são obrigatórios: Nome / Fantasia e CNPJ.",
       "O botão Salvar grava as alterações via PUT e atualiza o cadastro do cliente.",
       "A exclusão é restrita a ADMIN e SUDO e remove também os vínculos de representantes e contatos.",
-      "O card 'Histórico de conversão em cliente' mostra de qual pessoa do CRM o cliente veio, quando virou cliente, quem promoveu e o negócio acumulado (oportunidades, propostas e visitas).",
+      "O card 'Histórico de conversão em cliente' mostra de qual pessoa do CRM o cliente veio, quando virou cliente, quem promoveu e o negócio acumulado (oportunidades e visitas).",
       "Clientes cadastrados manualmente (sem origem no CRM) aparece no histórico com a mensagem de que não vieram de uma pessoa do CRM.",
-      "Na seção 'Relacionamentos do CRM' o cliente tem os mesmos cards da pessoa do CRM: Oportunidades, Propostas, Timeline e WhatsApp.",
+      "Na seção 'Relacionamentos do CRM' o cliente tem os cards de Contatos, Representantes, Oportunidades, Ações de Prospecção, Visitas, Timeline e WhatsApp.",
+      "Não há card de Propostas nesta tela; as propostas continuam disponíveis na listagem geral e nos relatórios.",
       "Os cards do cliente somam o negócio lançado direto nele e o negócio herdado das leads do CRM que foram promovidas a este cliente.",
-      "O botão '+' nos cards de Oportunidades e Propostas cria o registro já vinculado ao cliente.",
-      "Na timeline do cliente aparecem os eventos do próprio cliente e os eventos das leads promovidas (conversão, negócio, WhatsApp).",
+      "Nomes de contatos e representantes abrem o cadastro do respectivo registro; cada evento da timeline com detalhe abre o registro de origem.",
+      "O botão '+' no card de Oportunidades cria o registro já vinculado ao cliente.",
+      "O bloco de IA analisa o timeline completo e responde perguntas sobre o histórico do cliente.",
       "No WhatsApp do cliente vale a conversa dos contatos do cliente e das leads promovidas; o envio usa o contato principal com WhatsApp cadastrado.",
     ],
     fields: [
@@ -79,10 +83,11 @@ export const comercialContent: Record<string, InfoContent> = {
         desc: "Lead de origem, data da conversão, quem promovou e números do funil",
       },
       {
-        name: "Oportunidades / Propostas",
-        desc: "Negócio do cliente no período, direto ou herdado das leads promovidas",
+        name: "Oportunidades / Ações / Visitas",
+        desc: "Negócio e agenda do cliente, diretos ou herdados das leads promovidas",
       },
-      { name: "Timeline", desc: "Histórico de eventos do cliente e das leads promovidas" },
+      { name: "Timeline", desc: "Histórico clicável do cliente e das leads promovidas" },
+      { name: "Análise de IA", desc: "Resumo do timeline completo e chat de perguntas sobre o histórico" },
       { name: "WhatsApp", desc: "Conversa com os contatos do cliente e das leads promovidas" },
     ],
   },

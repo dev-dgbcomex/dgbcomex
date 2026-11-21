@@ -26,6 +26,25 @@
 
 > Detalhe técnico completo em [`docs/crm-cliente-e-relatorios.md`](./crm-cliente-e-relatorios.md).
 
+### Sessão 16 — Ações rápidas enxutas, cards clicáveis, IA na timeline e Top Clientes
+
+- **Data:** 2026-11-21
+- **Commit:** `feat(crm): refina acoes rapidas, cards e IA da timeline`
+- **Tarefa:** manter apenas os atalhos essenciais em `/comercial/crm`; melhorar os detalhes de cliente e lead com cards clicáveis, análise/chat de IA sobre a timeline e busca de CNPJ; adicionar painel de Top Clientes ao lado de Top Leads.
+- **Decisões aprovadas:** em Ações Rápidas manter somente `Novo Lead (Negócio)`, `Nova Oportunidade`, `Kanban`, `Nova Visita` e `Minhas Tarefas`; alterar clientes **e** leads; cards como visualização padrão com lista/tabela disponível; remover o card de Propostas dos detalhes; IA somente leitura, autenticada e com o conteúdo da timeline tratado como dado; filtros por `clienteId` incluem pessoas promovidas.
+- **Resultado:**
+  - Dashboard: ações rápidas reduzidas a cinco atalhos; novo painel `Top Clientes` com nome, valor total, valor em aberto, oportunidades e conversão (`X convertidas de Y`), link direto para o cliente e modal de detalhe `top-clientes`.
+  - API do dashboard: `topClientes` usa `COALESCE(crm_oportunidades.clienteId, crm_pessoas.clienteId)` para somar negócio direto e herdado; detalhes passam a aceitar o bloco `top-clientes`.
+  - Detalhes de cliente e lead: cards de Contatos, Representantes, Oportunidades, Ações de Prospecção e Visitas; nomes e itens com link para o cadastro de origem; Propostas removido dessas telas; Histórico de conversão ajustado para oportunidades e visitas.
+  - Timeline clicável: ícones/labels para visitante, ação de prospecção e conversão em cliente; links para lead, oportunidade, visita, ação, tarefa, proposta e conversão; WhatsApp e solicitação permanecem como texto.
+  - IA: `POST /api/crm/ia/timeline-chat` com `requireAuth`, zod, até 200 eventos, contexto delimitado por marcadores e instruções para ignorar comandos embutidos; componente `TimelineIaChat` com geração de análise e chat no detalhe de clientes/leads.
+  - CNPJ: `Consultar` em clientes/novo e `Buscar CNPJ` em clientes; modal passa a aceitar `tipo: "cliente"`, mostra clientes já cadastrados e cria novo cliente com os dados da Receita Federal.
+  - APIs `acoes-prospeccao` e `visitas`: param `clienteId` agora considera `idsPessoasDoCliente` com `inArray` em `empresaId`.
+  - Modais “i” de CRM, clientes e dashboard atualizados, incluindo novos cards, IA, CNPJ e Top Clientes; sem alteração de schema.
+- **Arquivos Envolvidos:** `src/app/(dashboard)/comercial/crm/page.tsx`, `src/app/api/crm/dashboard/{route.ts,detalhes/route.ts}`, `src/app/(dashboard)/comercial/clientes/{page.tsx,novo/page.tsx,[id]/page.tsx}`, `src/app/(dashboard)/comercial/crm/leads/{page.tsx,novo/page.tsx,[id]/page.tsx}`, `src/app/(dashboard)/comercial/crm/leads/[id]/components/{contatos-card.tsx,representantes-card.tsx}`, `src/components/crm/{buscar-cnpj-modal.tsx,crm-timeline.tsx,timeline-ia-chat.tsx,contatos-vinculados-card.tsx,representantes-vinculados-card.tsx,acoes-prospeccao-card.tsx,visitas-card.tsx}`, `src/app/api/crm/ia/timeline-chat/route.ts`, `src/app/api/crm/{acoes-prospeccao,visitas}/route.ts`, `src/lib/info-content/{crm,comercial,crm-dashboard}.ts`.
+- **Testes:** novos/ajustados em páginas de CRM, clientes e leads, modal CNPJ, cards compartilhados, timeline, rota IA, APIs dashboard/ações/visitas e `info-content.test.ts`; focado `5 arquivos / 62 testes` após correções de tipo; suíte completa `npm run test` → **462 arquivos / 2673 testes passados**.
+- **Verificação:** `npm run lint` sem erros (apenas warnings pré-existentes); `tsc --noEmit` limpo com `NODE_OPTIONS=--max-old-space-size=8192`; `npm run build` OK com 254 páginas estáticas.
+
 ### Sessão 15 — Dashboard clicável e documentos CPF/CNPJ normalizados
 
 - **Data:** 2026-11-20

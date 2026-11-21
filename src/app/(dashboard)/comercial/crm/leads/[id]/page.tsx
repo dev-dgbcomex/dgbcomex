@@ -17,7 +17,9 @@ import { ContatosCard } from "./components/contatos-card"
 import { RepresentantesCard } from "./components/representantes-card"
 import { VisitantesCard } from "./components/visitantes-card"
 import { OportunidadesCard } from "@/components/crm/oportunidades-card"
-import { PropostasCard } from "@/components/crm/propostas-card"
+import { AcoesProspeccaoCard } from "@/components/crm/acoes-prospeccao-card"
+import { VisitasCard } from "@/components/crm/visitas-card"
+import { TimelineIaChat } from "@/components/crm/timeline-ia-chat"
 import { HistoricoConversaoCard } from "./components/historico-conversao-card"
 import type {
   Contato,
@@ -366,10 +368,11 @@ function LeadDetailPageContent() {
 
       <HistoricoConversaoCard lead={lead} />
 
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2">
         <VisitantesCard empresaId={params.id as string} />
         <OportunidadesCard empresaId={params.id as string} />
-        <PropostasCard empresaId={params.id as string} />
+        <AcoesProspeccaoCard empresaId={params.id as string} />
+        <VisitasCard empresaId={params.id as string} />
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
@@ -379,6 +382,7 @@ function LeadDetailPageContent() {
             <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-50">Timeline</h2>
           </div>
           <CrmTimeline pessoaId={params.id as string} />
+          <TimelineIaChat tipo="lead" id={params.id as string} />
         </div>
 
         <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">

@@ -5,6 +5,10 @@ import CrmLeadsPage from "./page"
 import { createFetchMock, renderPage, findCall, toastMock } from "@/test/harness"
 import { listSmokeSpec } from "@/test/list-smoke-spec"
 
+beforeEach(() => {
+  localStorage.clear()
+})
+
 const leads = [
   {
     id: 1,
@@ -30,27 +34,34 @@ const leads = [
   },
 ]
 
-listSmokeSpec({
-  title: "LeadsPage",
-  component: <CrmLeadsPage />,
-  apiUrl: "/api/crm/leads",
-  heading: "Leads (Negócios)",
-  emptyText: "Nenhum lead encontrada",
-  searchPlaceholder: "Buscar leads...",
-  newLinkText: "Novo Lead",
-  newHref: "/comercial/crm/leads/novo",
-  editHref: (item) => `/comercial/crm/leads/${item.id}`,
-  primaryField: "razaoSocial",
-  data: leads,
-  firstItemText: "Tecelagem Alpha",
-  secondItemText: "Confecções Lima",
-  matchQuery: "Tecelagem",
+describe("LeadsPage (tabela)", () => {
+  beforeEach(() => {
+    localStorage.setItem("leads-modo", "tabela")
+  })
+
+  listSmokeSpec({
+    title: "LeadsPage",
+    component: <CrmLeadsPage />,
+    apiUrl: "/api/crm/leads",
+    heading: "Leads (Negócios)",
+    emptyText: "Nenhum lead encontrada",
+    searchPlaceholder: "Buscar leads...",
+    newLinkText: "Novo Lead",
+    newHref: "/comercial/crm/leads/novo",
+    editHref: (item) => `/comercial/crm/leads/${item.id}`,
+    primaryField: "razaoSocial",
+    data: leads,
+    firstItemText: "Tecelagem Alpha",
+    secondItemText: "Confecções Lima",
+    matchQuery: "Tecelagem",
+  })
 })
 
 describe("LeadsPage kanban", () => {
   let fetchMock: ReturnType<typeof createFetchMock>
 
   beforeEach(() => {
+    localStorage.setItem("leads-modo", "tabela")
     const handler = ({ method, url }: { method: string; url: string }) => {
       if (method === "GET" && url === "/api/crm/leads") return { json: leads }
       return { json: null }
@@ -72,6 +83,10 @@ describe("LeadsPage kanban", () => {
 })
 
 describe("LeadsPage tarja de cliente", () => {
+  beforeEach(() => {
+    localStorage.setItem("leads-modo", "tabela")
+  })
+
   const comTarja = {
     id: 3,
     tipoPessoa: "PJ",
@@ -139,5 +154,38 @@ describe("LeadsPage tarja de cliente", () => {
 
     expect(await screen.findByText("Tecelagem Convertida")).toBeInTheDocument()
     expect(screen.queryByText("Tecelagem Alpha")).not.toBeInTheDocument()
+  })
+})
+
+describe("LeadsPage visualização padrão", () => {
+  let fetchMock: ReturnType<typeof createFetchMock>
+
+  beforeEach(() => {
+    const handler = ({ method, url }: { method: string; url: string }) => {
+      if (method === "GET" && url === "/api/crm/leads") return { json: leads }
+      return { json: null }
+    }
+    fetchMock = createFetchMock(handler)
+    vi.stubGlobal("fetch", fetchMock.fn)
+  })
+
+  it("abre em kanban por padrão e alterna para tabela", async () => {
+    renderPage(<CrmLeadsPage />)
+
+    await screen.findByText("Tecelagem Alpha")
+    expect(screen.queryByRole("table")).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Flutuar" })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole("button", { name: "Tabela" }))
+    expect(await screen.findByRole("table")).toBeInTheDocument()
+    expect(localStorage.getItem("leads-modo")).toBe("tabela")
+  })
+
+  it("respeita a preferência de tabela salva", async () => {
+    localStorage.setItem("leads-modo", "tabela")
+    renderPage(<CrmLeadsPage />)
+
+    expect(await screen.findByRole("table")).toBeInTheDocument()
+    expect(fetchMock.calls.some((c) => c.url === "/api/crm/leads")).toBe(true)
   })
 })

@@ -24,7 +24,6 @@ import {
   AlertCircle,
   BarChart3,
   Megaphone,
-  Mail,
 } from "lucide-react"
 
 const CrmCharts = dynamic(() => import("./charts").then((m) => m.CrmCharts), { ssr: false })
@@ -50,6 +49,14 @@ type CrmDashboardData = {
     clienteId?: number | null
     clienteNome?: string | null
     totalValor: number
+  }[]
+  topClientes: {
+    clienteId: number
+    clienteNome: string
+    totalValor: number
+    totalOportunidades: number
+    oportunidadesConvertidas: number
+    valorAberto: number
   }[]
   forecast: number
   conversao: { oportunidadesConvertidas: number; totalOportunidades: number }
@@ -219,8 +226,8 @@ export default function CrmDashboardPage() {
             />
           </div>
 
-          {/* Linha 3: Top Leads + Atividades Recentes */}
-          <div className="grid gap-6 md:grid-cols-2">
+          {/* Linha 3: Top Leads, Top Clientes e Atividades Recentes */}
+          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
             {/* Top Leads */}
             <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
               <div className="flex items-center justify-between p-4 border-b border-slate-100 dark:border-slate-800">
@@ -271,6 +278,56 @@ export default function CrmDashboardPage() {
               ) : (
                 <p className="text-sm text-slate-400 text-center py-8">
                   Nenhuma oportunidade em aberto
+                </p>
+              )}
+            </div>
+
+            <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
+              <div className="flex items-center justify-between p-4 border-b border-slate-100 dark:border-slate-800">
+                <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-50 flex items-center gap-2">
+                  <Users size={16} className="text-indigo-500" />
+                  Top Clientes
+                  <InfoButton
+                    content={crmDashboardInfo.paineis.topClientes}
+                    label="Informações do painel Top Clientes"
+                  />
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => setDetalhe({ bloco: "top-clientes" })}
+                  className="text-xs text-blue-600 hover:underline flex items-center gap-1"
+                >
+                  Ver todas <ArrowRight size={12} />
+                </button>
+              </div>
+              {data?.topClientes && data.topClientes.length > 0 ? (
+                <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {data.topClientes.map((cliente, i) => (
+                    <Link
+                      key={cliente.clienteId}
+                      href={`/comercial/clientes/${cliente.clienteId}`}
+                      className="flex items-center justify-between gap-3 p-3 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                    >
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-slate-400 w-5">{i + 1}.</span>
+                          <p className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">
+                            {cliente.clienteNome}
+                          </p>
+                        </div>
+                        <p className="text-[11px] text-slate-400 mt-0.5">
+                          {cliente.oportunidadesConvertidas} convertidas de {cliente.totalOportunidades}
+                        </p>
+                      </div>
+                      <p className="text-sm font-semibold text-slate-700 dark:text-slate-300 shrink-0">
+                        {formatCurrency(cliente.totalValor)}
+                      </p>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-slate-400 text-center py-8">
+                  Nenhuma oportunidade de cliente
                 </p>
               )}
             </div>
@@ -343,14 +400,7 @@ export default function CrmDashboardPage() {
                 label="Informações das Ações Rápidas"
               />
             </h2>
-            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-9 gap-3">
-              <QuickAction
-                href="/comercial/crm/visitantes/novo"
-                icon={<UserPlus size={18} />}
-                label="Novo Lead"
-                color="text-emerald-600"
-                bg="bg-emerald-100 dark:bg-emerald-950/50"
-              />
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
               <QuickAction
                 href="/comercial/crm/leads/novo"
                 icon={<Building2 size={18} />}
@@ -378,27 +428,6 @@ export default function CrmDashboardPage() {
                 label="Nova Visita"
                 color="text-amber-600"
                 bg="bg-amber-100 dark:bg-amber-950/50"
-              />
-              <QuickAction
-                href="/comercial/crm/propostas/novo"
-                icon={<FileText size={18} />}
-                label="Nova Proposta"
-                color="text-cyan-600"
-                bg="bg-cyan-100 dark:bg-cyan-950/50"
-              />
-              <QuickAction
-                href="/comercial/crm/campanhas/nova"
-                icon={<Megaphone size={18} />}
-                label="Nova Campanha"
-                color="text-violet-600"
-                bg="bg-violet-100 dark:bg-violet-950/50"
-              />
-              <QuickAction
-                href="/admin/email-massa"
-                icon={<Mail size={18} />}
-                label="Email Massa"
-                color="text-teal-600"
-                bg="bg-teal-100 dark:bg-teal-950/50"
               />
               <QuickAction
                 href="/comercial/crm/tarefas"

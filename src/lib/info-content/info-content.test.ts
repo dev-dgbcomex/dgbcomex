@@ -48,6 +48,7 @@ describe("getInfoContent", () => {
 
     expect(texto).toMatch(/cinco cards/i)
     expect(texto).toMatch(/Top Leads/)
+    expect(texto).toMatch(/Top Clientes/)
     expect(texto).toMatch(/Ações Rápidas/)
     expect(texto).toMatch(/continuam no JSON da API/i)
     expect(texto).not.toMatch(/funil de 5 etapas|IA Comercial/i)
@@ -514,11 +515,16 @@ describe("getInfoContent", () => {
     ].join("\n")
 
     expect(texto).toMatch(/Relacionamentos do CRM/)
+    expect(texto).toMatch(/Contatos/)
+    expect(texto).toMatch(/Representantes/)
     expect(texto).toMatch(/Oportunidades/)
-    expect(texto).toMatch(/Propostas/)
+    expect(texto).toMatch(/Ações de Prospecção/)
+    expect(texto).toMatch(/Visitas/)
     expect(texto).toMatch(/Timeline/)
+    expect(texto).toMatch(/análise de IA/i)
     expect(texto).toMatch(/WhatsApp/)
     expect(texto).toMatch(/promovid/i)
+    expect(texto).not.toMatch(/card de Propostas.*cliente/i)
   })
 
   it("o relatório de clientes explica o negócio herdado das leads promovidas", () => {
@@ -574,6 +580,18 @@ describe("getInfoContent", () => {
       expect(texto).toMatch(/histórico/i)
       expect(texto).toMatch(/não podem ser excluídas|não há exclusão/i)
     }
+
+    const detalheTexto = [
+      detalhe?.description ?? "",
+      ...(detalhe?.rules ?? []),
+      ...(detalhe?.fields ?? []).map((f) => `${f.name}: ${f.desc}`),
+    ].join("\n")
+
+    expect(detalheTexto).toMatch(/Contatos/)
+    expect(detalheTexto).toMatch(/Representantes/)
+    expect(detalheTexto).toMatch(/Ações de Prospecção/)
+    expect(detalheTexto).toMatch(/Visitas/)
+    expect(detalheTexto).toMatch(/análise de IA/i)
   })
 
   it("a tela de contatos explica vínculos, ficha e exclusão restrita", () => {
@@ -736,6 +754,7 @@ describe("crmDashboardInfo", () => {
     ["graficos.previsaoConversao", crmDashboardInfo.graficos.previsaoConversao],
     ["graficos.status", crmDashboardInfo.graficos.status],
     ["paineis.topLeads", crmDashboardInfo.paineis.topLeads],
+    ["paineis.topClientes", crmDashboardInfo.paineis.topClientes],
     ["paineis.recentes", crmDashboardInfo.paineis.recentes],
     ["acoesRapidas", crmDashboardInfo.acoesRapidas],
   ] as const
@@ -769,6 +788,24 @@ describe("crmDashboardInfo", () => {
     expect(texto).toMatch(/Ver todas/)
   })
 
+  it("o painel Top Clientes explica a promoção, a conversão e o exemplo", () => {
+    const bloco = crmDashboardInfo.paineis.topClientes
+    const texto = [
+      bloco.title,
+      bloco.description,
+      ...(bloco.rules ?? []),
+      ...(bloco.fields ?? []).map((f) => `${f.name}: ${f.desc}`),
+      ...(bloco.examples ?? []).map((e) => `${e.title}: ${e.desc}`),
+    ].join("\n")
+
+    expect(texto).toMatch(/crm_oportunidades/)
+    expect(texto).toMatch(/COALESCE\(crm_oportunidades\.clienteId, crm_pessoas\.clienteId\)/)
+    expect(texto).toMatch(/pessoa promovida/i)
+    expect(texto).toMatch(/FECHADO_GANHO/)
+    expect(texto).toMatch(/2 convertidas de 5/)
+    expect(texto).toMatch(/valorAberto/)
+  })
+
   it("os gráficos e painéis explicam contagens, somas e exemplos", () => {
     const textoBlocos = [
       ...Object.values(crmDashboardInfo.graficos),
@@ -791,6 +828,11 @@ describe("crmDashboardInfo", () => {
     expect(textoBlocos).toMatch(/Ação de prospecção/)
     expect(textoBlocos).toMatch(/nome do cliente/)
     expect(textoBlocos).toMatch(/R\$ 120\.000/)
+    expect(textoBlocos).toMatch(/Top Clientes/)
+    expect(textoBlocos).toMatch(/COALESCE/)
+    expect(textoBlocos).toMatch(/promovida/i)
+    expect(textoBlocos).toMatch(/convertidas de 5/)
+    expect(textoBlocos).toMatch(/R\$ 150\.000/)
 
     const acoes = [
       crmDashboardInfo.acoesRapidas.description,
@@ -798,8 +840,13 @@ describe("crmDashboardInfo", () => {
       ...(crmDashboardInfo.acoesRapidas.examples ?? []).map((e) => e.desc),
     ].join("\n")
 
-    expect(acoes).toMatch(/Nova Campanha/)
-    expect(acoes).toMatch(/Email Massa/)
-    expect(acoes).toMatch(/\/admin\/email-massa/)
+    expect(acoes).toMatch(/Novo Lead \(Negócio\)/)
+    expect(acoes).toMatch(/Nova Oportunidade/)
+    expect(acoes).toMatch(/Kanban/)
+    expect(acoes).toMatch(/Nova Visita/)
+    expect(acoes).toMatch(/Minhas Tarefas/)
+    expect(acoes).not.toMatch(/Nova Proposta/)
+    expect(acoes).not.toMatch(/Nova Campanha/)
+    expect(acoes).not.toMatch(/Email Massa/)
   })
 })

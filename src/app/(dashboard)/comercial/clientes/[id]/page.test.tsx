@@ -9,7 +9,15 @@ describe("EditarClientePage", () => {
   const id = "5"
 
   beforeEach(() => {
-    const handler = ({ method, url }: { method: string; url: string }) => {
+    const handler = ({
+      method,
+      url,
+      body,
+    }: {
+      method: string
+      url: string
+      body?: { mensagens?: unknown[] }
+    }) => {
       if (method === "GET" && url === `/api/clientes/${id}`) {
         return {
           json: {
@@ -24,7 +32,21 @@ describe("EditarClientePage", () => {
           },
         }
       }
-      if (method === "GET" && url === `/api/clientes/${id}/representantes`) return { json: [] }
+      if (method === "GET" && url === `/api/clientes/${id}/representantes`) {
+        return {
+          json: [
+            {
+              id: 1,
+              representanteId: 22,
+              clienteId: 5,
+              nome: "Representante Beta",
+              cnpj: "22.333.444/0001-55",
+              cidade: "Campinas",
+              uf: "SP",
+            },
+          ],
+        }
+      }
       if (method === "GET" && url === `/api/clientes/${id}/historico`) {
         return {
           json: {
@@ -86,8 +108,38 @@ describe("EditarClientePage", () => {
           ],
         }
       }
-      if (method === "GET" && url === `/api/crm/propostas?clienteId=${id}`) {
-        return { json: [{ id: 41, titulo: "Propostatec", status: "ACEITA", valor: "5000" }] }
+      if (method === "GET" && url === `/api/crm/acoes-prospeccao?all=true&clienteId=${id}`) {
+        return {
+          json: [
+            {
+              id: 61,
+              tipo: "CONTATO",
+              relato: "Ligação de acompanhamento",
+              status: "CONCLUIDA",
+              dataAcao: "2026-11-01T10:00:00Z",
+            },
+          ],
+        }
+      }
+      if (method === "GET" && url === `/api/crm/visitas?all=true&clienteId=${id}`) {
+        return {
+          json: [
+            {
+              id: 71,
+              tipo: "VISITA",
+              relato: "Reunião de alinhamento",
+              status: "REALIZADA",
+              dataVisita: "2026-11-03T14:00:00Z",
+            },
+          ],
+        }
+      }
+      if (method === "POST" && url === "/api/crm/ia/timeline-chat") {
+        return {
+          json: {
+            resposta: body?.mensagens?.length ? "Resposta da IA" : "Resumo gerado pela IA",
+          },
+        }
       }
       if (method === "GET" && url === `/api/crm/timeline?clienteId=${id}`) {
         return {
@@ -208,27 +260,78 @@ describe("EditarClientePage", () => {
     expect(screen.getAllByText("R$ 5.000,00").length).toBeGreaterThan(0)
   })
 
-  it("mostra os relacionamentos do CRM do cliente", async () => {
+  it("mostra os relacionamentos do CRM do cliente sem o card de Propostas", async () => {
     renderPage(<EditarClientePage params={Promise.resolve({ id })} />)
 
     expect(await screen.findByText("Relacionamentos do CRM")).toBeInTheDocument()
 
-    // Oportunidades e propostas do cliente (inclusive o negócio herdado das
-    // pessoas promovidas)
     expect(await screen.findByText("Pedido 500meters")).toBeInTheDocument()
-    expect(await screen.findByText("Propostatec")).toBeInTheDocument()
+    expect(await screen.findByText("Ligação de acompanhamento")).toBeInTheDocument()
+    expect(await screen.findByText("Reunião de alinhamento")).toBeInTheDocument()
     expect(screen.getAllByText("R$ 8.000,00").length).toBeGreaterThan(0)
-    expect(screen.getAllByText("R$ 5.000,00").length).toBeGreaterThan(0)
+    expect(screen.queryByRole("heading", { name: "Propostas" })).not.toBeInTheDocument()
 
-    // Timeline e WhatsApp do cliente
     expect(await screen.findByText("Transformada em cliente por Tiago")).toBeInTheDocument()
     expect(screen.getByRole("heading", { name: "WhatsApp" })).toBeInTheDocument()
 
     await waitFor(() => {
       expect(findCall(fetchMock.calls, `/api/crm/oportunidades?clienteId=${id}`)).toBeDefined()
-      expect(findCall(fetchMock.calls, `/api/crm/propostas?clienteId=${id}`)).toBeDefined()
+      expect(
+        findCall(fetchMock.calls, `/api/crm/acoes-prospeccao?all=true&clienteId=${id}`)
+      ).toBeDefined()
+      expect(findCall(fetchMock.calls, `/api/crm/visitas?all=true&clienteId=${id}`)).toBeDefined()
       expect(findCall(fetchMock.calls, `/api/crm/timeline?clienteId=${id}`)).toBeDefined()
       expect(findCall(fetchMock.calls, `/api/crm/whatsapp?clienteId=${id}`)).toBeDefined()
+      expect(findCall(fetchMock.calls, `/api/crm/propostas?clienteId=${id}`)).toBeUndefined()
+    })
+  })
+
+  it("exibe contatos e representantes do cliente como links e cards fora do formulário", async () => {
+    renderPage(<EditarClientePage params={Promise.resolve({ id })} />)
+
+    expect(await screen.findByRole("heading", { name: /Contatos/ })).toBeInTheDocument()
+    expect(await screen.findByRole("link", { name: "Ana Souza" })).toHaveAttribute(
+      "href",
+      "/comercial/crm/contatos/100"
+    )
+    expect(await screen.findByRole("link", { name: "Representante Beta" })).toHaveAttribute(
+      "href",
+      "/comercial/representantes/22"
+    )
+
+    const form = document.querySelector("form")!
+    expect(form.querySelector('a[href="/comercial/crm/contatos/100"]')).toBeNull()
+    expect(form.querySelector('a[href="/comercial/representantes/22"]')).toBeNull()
+  })
+
+  it("gera análise e envia pergunta sobre a timeline", async () => {
+    renderPage(<EditarClientePage params={Promise.resolve({ id })} />)
+
+    await screen.findByDisplayValue("Tecidos Silva")
+    fireEvent.click(screen.getByRole("button", { name: "Gerar análise" }))
+
+    expect(await screen.findByText("Resumo gerado pela IA")).toBeInTheDocument()
+    const geracao = findCall(fetchMock.calls, "/api/crm/ia/timeline-chat", "POST")
+    expect(geracao).toBeDefined()
+    expect(geracao!.body).toEqual({ tipo: "cliente", id, mensagens: [] })
+
+    fireEvent.change(screen.getByLabelText("Perguntar sobre a timeline"), {
+      target: { value: "Quais visitas?" },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Enviar" }))
+
+    expect(await screen.findByText("Quais visitas?")).toBeInTheDocument()
+    expect(await screen.findByText("Resposta da IA")).toBeInTheDocument()
+    const envios = fetchMock.calls.filter(
+      (chamada) =>
+        chamada.url === "/api/crm/ia/timeline-chat" &&
+        chamada.method === "POST" &&
+        chamada.body?.mensagens?.length
+    )
+    expect(envios[envios.length - 1]!.body).toEqual({
+      tipo: "cliente",
+      id,
+      mensagens: [{ papel: "usuario", texto: "Quais visitas?" }],
     })
   })
 })

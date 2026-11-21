@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
 import {
   PlusCircle,
@@ -17,6 +17,9 @@ import {
   X,
   ExternalLink,
   Trash2,
+  Search,
+  Columns,
+  Table,
 } from "lucide-react"
 import { toast } from "sonner"
 import { usePathname } from "next/navigation"
@@ -27,6 +30,7 @@ import { getInfoContent } from "@/lib/info-content"
 import { Button } from "@/components/ui/button"
 import { ConfirmModal } from "@/components/ui/confirm-modal"
 import ImportarApiModal from "@/components/integracao/ImportarApiModal"
+import BuscarCnpjModal from "@/components/crm/buscar-cnpj-modal"
 import { ExportarDados } from "@/components/exportar/ExportarDados"
 import { useStatuses, hexToRgba } from "@/hooks/use-statuses"
 import type { Cliente, SolicitacaoResumo, AmostraResumo } from "./types"
@@ -45,6 +49,14 @@ export default function ClientesPage() {
   )
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [loading, setLoading] = useState(true)
+  const [showCnpjSearch, setShowCnpjSearch] = useState(false)
+  const [modo, setModo] = useState<"cards" | "tabela">(() => {
+    if (typeof window !== "undefined") {
+      const salvo = localStorage.getItem("clientes-modo")
+      if (salvo === "cards" || salvo === "tabela") return salvo
+    }
+    return "cards"
+  })
 
   const filterState = useListFilters(
     { searchFields: ["nome", "razaoSocial", "cnpj", "contato", "email", "telefone", "cidade"] },
@@ -69,22 +81,27 @@ export default function ClientesPage() {
   const { data: session } = useSession()
   const isAdmin = session?.user?.role === "ADMIN" || session?.user?.role === "SUDO"
 
-  useEffect(() => {
-    async function fetchClientes() {
-      try {
-        const res = await fetch("/api/clientes")
-        if (res.ok) {
-          const data = await res.json()
-          setClientes(data)
-        }
-      } catch (err) {
-        console.error("Erro ao buscar clientes:", err)
-      } finally {
-        setLoading(false)
+  const carregarClientes = useCallback(async () => {
+    try {
+      const res = await fetch("/api/clientes")
+      if (res.ok) {
+        const data = await res.json()
+        setClientes(data)
       }
+    } catch (err) {
+      console.error("Erro ao buscar clientes:", err)
+    } finally {
+      setLoading(false)
     }
-    fetchClientes()
   }, [])
+
+  useEffect(() => {
+    carregarClientes()
+  }, [carregarClientes])
+
+  useEffect(() => {
+    localStorage.setItem("clientes-modo", modo)
+  }, [modo])
 
   async function abrirSolicitacoes(cliente: Cliente) {
     setSolicModal({ cliente, data: [], loading: true })
@@ -157,7 +174,35 @@ export default function ClientesPage() {
             {loading ? "Carregando..." : `${filteredData.length} de ${clientes.length} total`}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2 items-center">
+          <div className="flex rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-0.5 shadow-sm">
+            <button
+              onClick={() => setModo("cards")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                modo === "cards"
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
+              }`}
+            >
+              <Columns size={14} />
+              Cards
+            </button>
+            <button
+              onClick={() => setModo("tabela")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                modo === "tabela"
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
+              }`}
+            >
+              <Table size={14} />
+              Tabela
+            </button>
+          </div>
+          <Button variant="outline" onClick={() => setShowCnpjSearch(true)} className="gap-2">
+            <Search size={16} />
+            Buscar CNPJ
+          </Button>
           <ExportarDados
             data={filteredData}
             columns={[
@@ -207,7 +252,7 @@ export default function ClientesPage() {
               Nenhum cliente encontrado
             </p>
           </div>
-        ) : (
+        ) : modo === "cards" ? (
           <div className="grid gap-4 p-4 md:grid-cols-2 lg:grid-cols-3">
             {filteredData.map((cliente) => (
               <div
@@ -295,6 +340,96 @@ export default function ClientesPage() {
                 </div>
               </div>
             ))}
+          </div>
+        ) : (
+          <div className="overflow-auto max-h-[70vh]">
+            <table className="w-full">
+              <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase whitespace-nowrap">
+                    Nome
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase whitespace-nowrap">
+                    CNPJ
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase whitespace-nowrap hidden md:table-cell">
+                    Razão Social
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase whitespace-nowrap hidden lg:table-cell">
+                    Contato
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase whitespace-nowrap hidden lg:table-cell">
+                    Cidade/UF
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-slate-500 dark:text-slate-400 uppercase whitespace-nowrap">
+                    Ações
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                {filteredData.map((cliente) => (
+                  <tr
+                    key={cliente.id}
+                    className="hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                  >
+                    <td className="px-4 py-3 text-sm font-medium text-slate-900 dark:text-slate-200 whitespace-nowrap">
+                      {cliente.nome}
+                    </td>
+                    <td className="px-4 py-3 text-sm font-mono text-slate-500 whitespace-nowrap">
+                      {cliente.cnpj}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-slate-500 hidden md:table-cell">
+                      {cliente.razaoSocial || "—"}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-slate-500 hidden lg:table-cell">
+                      {cliente.contato || "—"}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-slate-500 hidden lg:table-cell">
+                      {cliente.cidade
+                        ? `${cliente.cidade}${cliente.uf ? `, ${cliente.uf}` : ""}`
+                        : "—"}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-2">
+                        <Link
+                          href={`/comercial/clientes/${cliente.id}`}
+                          className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline"
+                        >
+                          <Pencil size={12} />
+                          Editar
+                        </Link>
+                        <button
+                          onClick={() => abrirSolicitacoes(cliente)}
+                          className="inline-flex items-center gap-1 text-xs text-emerald-600 hover:underline"
+                        >
+                          <FileText size={12} />
+                          Solicitações
+                        </button>
+                        <button
+                          onClick={() => abrirAmostras(cliente)}
+                          className="inline-flex items-center gap-1 text-xs text-purple-600 hover:underline"
+                        >
+                          <FlaskConical size={12} />
+                          Amostras
+                        </button>
+                        {isAdmin && (
+                          <button
+                            onClick={() => {
+                              setDeleteTarget(cliente)
+                              setDeleteBlocked(false)
+                            }}
+                            className="inline-flex items-center gap-1 text-xs text-red-600 hover:underline"
+                          >
+                            <Trash2 size={12} />
+                            Excluir
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
@@ -450,6 +585,14 @@ export default function ClientesPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {showCnpjSearch && (
+        <BuscarCnpjModal
+          tipo="cliente"
+          onCreated={carregarClientes}
+          onClose={() => setShowCnpjSearch(false)}
+        />
       )}
 
       {showApiImport && (

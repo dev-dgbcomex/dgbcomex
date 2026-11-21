@@ -62,24 +62,60 @@ const oportunidades = [
   { id: 20, titulo: "Oportunidade Grande", valorEstimado: 5000, status: "Novo", empresaId: 1 },
 ]
 
-const propostas = [
-  { id: 30, titulo: "Proposta Tecido", valor: 1200, status: "ENVIADA", empresaId: 1 },
-]
-
 const orfaos = [{ id: 9, nome: "Contato Órfão", email: "orfao@x.com" }]
 
 describe("LeadDetailPage", () => {
   let fetchMock: ReturnType<typeof createFetchMock>
 
   beforeEach(() => {
-    const handler = ({ method, url }: { method: string; url: string }) => {
+    const handler = ({
+      method,
+      url,
+      body,
+    }: {
+      method: string
+      url: string
+      body?: { mensagens?: unknown[] }
+    }) => {
       if (method === "GET" && url === "/api/crm/leads/1") return { json: lead }
       if (method === "GET" && url === "/api/crm/leads/1/representantes")
         return { json: representantes }
       if (method === "GET" && url === "/api/crm/visitantes?empresaId=1") return { json: leads }
       if (method === "GET" && url === "/api/crm/oportunidades?empresaId=1")
         return { json: oportunidades }
-      if (method === "GET" && url === "/api/crm/propostas?empresaId=1") return { json: propostas }
+      if (method === "GET" && url === "/api/crm/acoes-prospeccao?all=true&empresaId=1") {
+        return {
+          json: [
+            {
+              id: 40,
+              tipo: "CONTATO",
+              relato: "Visita técnica agendada",
+              status: "PENDENTE",
+              dataAcao: "2026-11-05T09:00:00Z",
+            },
+          ],
+        }
+      }
+      if (method === "GET" && url === "/api/crm/visitas?all=true&empresaId=1") {
+        return {
+          json: [
+            {
+              id: 50,
+              tipo: "VISITA",
+              relato: "Visita de prospecção",
+              status: "REALIZADA",
+              dataVisita: "2026-11-06T10:00:00Z",
+            },
+          ],
+        }
+      }
+      if (method === "POST" && url === "/api/crm/ia/timeline-chat") {
+        return {
+          json: {
+            resposta: body?.mensagens?.length ? "Resposta da IA" : "Resumo gerado pela IA",
+          },
+        }
+      }
       if (method === "POST" && url === "/api/crm/visitantes") {
         return { json: { id: 99, nome: "Novo Lead Teste", empresaId: 1 } }
       }
@@ -135,7 +171,7 @@ describe("LeadDetailPage", () => {
     vi.stubGlobal("fetch", fetchMock.fn)
   })
 
-  it("exibe os dados da lead com contatos, representantes, leads, oportunidades e propostas", async () => {
+  it("exibe os dados da lead com contatos, representantes, visitantes e oportunidades", async () => {
     navMock.setParams({ id: "1" })
     navMock.setPathname("/comercial/crm/leads/1")
     renderPage(<LeadDetailPage />)
@@ -153,8 +189,73 @@ describe("LeadDetailPage", () => {
 
     expect(await screen.findByText("Pedro Souza")).toBeInTheDocument()
     expect(screen.getByText("Oportunidade Grande")).toBeInTheDocument()
-    expect(screen.getByText("Proposta Tecido")).toBeInTheDocument()
+    expect(screen.queryByRole("heading", { name: "Propostas" })).not.toBeInTheDocument()
     expect(await screen.findByText("Nenhuma mensagem")).toBeInTheDocument()
+  })
+
+  it("exibe cards de ações e visitas com links e sem propostas", async () => {
+    navMock.setParams({ id: "1" })
+    navMock.setPathname("/comercial/crm/leads/1")
+    renderPage(<LeadDetailPage />)
+
+    expect(await screen.findByText("Visita técnica agendada")).toBeInTheDocument()
+    expect(await screen.findByText("Visita de prospecção")).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: /Visita técnica agendada/ })).toHaveAttribute(
+      "href",
+      "/comercial/crm/acoes-prospeccao/40"
+    )
+    expect(screen.getByRole("link", { name: /Visita de prospecção/ })).toHaveAttribute(
+      "href",
+      "/comercial/crm/visitas/50"
+    )
+    expect(screen.getByRole("link", { name: "Carlos Silva" })).toHaveAttribute(
+      "href",
+      "/comercial/crm/contatos/3"
+    )
+    expect(screen.getByRole("link", { name: "Representante Beta" })).toHaveAttribute(
+      "href",
+      "/comercial/representantes/5"
+    )
+
+    await waitFor(() => {
+      expect(
+        findCall(fetchMock.calls, "/api/crm/acoes-prospeccao?all=true&empresaId=1")
+      ).toBeDefined()
+      expect(findCall(fetchMock.calls, "/api/crm/visitas?all=true&empresaId=1")).toBeDefined()
+      expect(findCall(fetchMock.calls, "/api/crm/propostas?empresaId=1")).toBeUndefined()
+    })
+  })
+
+  it("gera análise e envia pergunta sobre a timeline da lead", async () => {
+    navMock.setParams({ id: "1" })
+    navMock.setPathname("/comercial/crm/leads/1")
+    renderPage(<LeadDetailPage />)
+
+    await screen.findByRole("heading", { name: /Tecelagem Alpha/ })
+    fireEvent.click(screen.getByRole("button", { name: "Gerar análise" }))
+
+    expect(await screen.findByText("Resumo gerado pela IA")).toBeInTheDocument()
+    const geracao = findCall(fetchMock.calls, "/api/crm/ia/timeline-chat", "POST")
+    expect(geracao!.body).toEqual({ tipo: "lead", id: "1", mensagens: [] })
+
+    fireEvent.change(screen.getByLabelText("Perguntar sobre a timeline"), {
+      target: { value: "Qual o próximo passo?" },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Enviar" }))
+
+    expect(await screen.findByText("Qual o próximo passo?")).toBeInTheDocument()
+    expect(await screen.findByText("Resposta da IA")).toBeInTheDocument()
+    const envios = fetchMock.calls.filter(
+      (chamada) =>
+        chamada.url === "/api/crm/ia/timeline-chat" &&
+        chamada.method === "POST" &&
+        chamada.body?.mensagens?.length
+    )
+    expect(envios[envios.length - 1]!.body).toEqual({
+      tipo: "lead",
+      id: "1",
+      mensagens: [{ papel: "usuario", texto: "Qual o próximo passo?" }],
+    })
   })
 
   it("cria um visitante vinculado à lead pelo card de visitantes", async () => {

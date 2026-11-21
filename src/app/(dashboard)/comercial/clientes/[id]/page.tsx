@@ -6,30 +6,16 @@ import { useRouter, usePathname } from "next/navigation"
 import { InfoButton } from "@/components/ui/info-button"
 import { getInfoContent } from "@/lib/info-content"
 import Link from "next/link"
-import {
-  ArrowLeft,
-  Save,
-  Trash2,
-  Building2,
-  Search,
-  UserPlus,
-  Users,
-  Loader2,
-  X,
-  Mail,
-  Phone,
-  MapPin,
-  Plus,
-  Unlink,
-  Clock,
-  MessageSquare,
-  RefreshCw,
-} from "lucide-react"
+import { ArrowLeft, Save, Trash2, Building2, Loader2, Clock, MessageSquare, RefreshCw } from "lucide-react"
 import { toast } from "sonner"
 import { ConfirmModal } from "@/components/ui/confirm-modal"
 import { SelectSegmento } from "@/components/crm/select-segmento"
 import { OportunidadesCard } from "@/components/crm/oportunidades-card"
-import { PropostasCard } from "@/components/crm/propostas-card"
+import { ContatosVinculadosCard } from "@/components/crm/contatos-vinculados-card"
+import { RepresentantesVinculadosCard } from "@/components/crm/representantes-vinculados-card"
+import { AcoesProspeccaoCard } from "@/components/crm/acoes-prospeccao-card"
+import { VisitasCard } from "@/components/crm/visitas-card"
+import { TimelineIaChat } from "@/components/crm/timeline-ia-chat"
 import CrmTimeline from "@/components/crm/crm-timeline"
 import CrmWhatsapp from "@/components/crm/crm-whatsapp"
 import { HistoricoConversaoCard } from "./components/historico-conversao-card"
@@ -76,7 +62,6 @@ export default function EditarClientePage({ params }: { params: Promise<{ id: st
   const [contatos, setContatos] = useState<Contato[]>([])
   const [loadingContatos, setLoadingContatos] = useState(false)
   const [orfaos, setOrfaos] = useState<Contato[]>([])
-  const [contatoSelecionado, setContatoSelecionado] = useState("")
   const [atualizandoCNPJ, setAtualizandoCNPJ] = useState(false)
 
   const [historico, setHistorico] = useState<HistoricoPromocao | null>(null)
@@ -164,9 +149,7 @@ export default function EditarClientePage({ params }: { params: Promise<{ id: st
     }
   }
 
-  async function vincularContatoSelecionado() {
-    if (!contatoSelecionado) return
-    const contatoId = parseInt(contatoSelecionado)
+  async function vincularContato(contatoId: number) {
     try {
       const res = await fetch(`/api/crm/contatos/${contatoId}`, {
         method: "PUT",
@@ -180,7 +163,6 @@ export default function EditarClientePage({ params }: { params: Promise<{ id: st
       const atualizado = (await res.json()) as Contato
       setContatos((prev) => [...prev, atualizado])
       setOrfaos((prev) => prev.filter((c) => c.id !== contatoId))
-      setContatoSelecionado("")
       toast.success("Contato vinculado ao cliente")
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Erro ao vincular contato")
@@ -245,7 +227,7 @@ export default function EditarClientePage({ params }: { params: Promise<{ id: st
     }
   }
 
-  async function removeRepresentante(vinculo: VinculoRepresentante) {
+  async function removeRepresentante(vinculo: { id: number }) {
     try {
       await fetch(`/api/clientes/${id}/representantes?vinculoId=${vinculo.id}`, {
         method: "DELETE",
@@ -578,245 +560,6 @@ export default function EditarClientePage({ params }: { params: Promise<{ id: st
             <HistoricoConversaoCard historico={historico} carregando={loadingHistorico} />
           </div>
 
-          <div className="border-t border-slate-200 dark:border-slate-700 pt-6 space-y-4">
-            <h2 className="text-lg font-semibold flex items-center gap-2">
-              <Users size={18} className="text-blue-500" />
-              Representantes Vinculados ({vinculos.length})
-            </h2>
-
-            <div className="flex gap-2">
-              <div className="relative flex-1 max-w-sm">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="Buscar representante por nome ou CNPJ..."
-                  value={searchRep}
-                  onChange={(e) => searchRepresentantes(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400"
-                />
-              </div>
-            </div>
-
-            {searchingRep && (
-              <div className="flex items-center gap-2 text-sm text-slate-500">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Buscando...
-              </div>
-            )}
-
-            {repResults.length > 0 && (
-              <div className="rounded-lg border border-slate-200 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-800 max-h-48 overflow-y-auto">
-                {repResults.map((r) => (
-                  <button
-                    key={r.id}
-                    onClick={() => addRepresentante(r.id)}
-                    className="flex items-center justify-between w-full px-4 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-800/50 text-left"
-                  >
-                    <div>
-                      <span className="font-medium text-slate-900 dark:text-slate-100">
-                        {r.nome}
-                      </span>
-                      <span className="text-slate-400 ml-2">{r.cnpj}</span>
-                      {r.cidade && (
-                        <span className="text-slate-400 ml-2">
-                          {r.cidade}/{r.uf}
-                        </span>
-                      )}
-                    </div>
-                    <UserPlus size={14} className="text-blue-500 shrink-0" />
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {loadingVinculos ? (
-              <div className="flex justify-center py-4">
-                <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
-              </div>
-            ) : vinculos.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-6 text-center">
-                <Users className="w-8 h-8 text-slate-300 dark:text-slate-700 mb-2" />
-                <p className="text-sm text-slate-500">Nenhum representante vinculado</p>
-                <p className="text-xs text-slate-400 mt-1">
-                  Busque acima para vincular representantes
-                </p>
-              </div>
-            ) : (
-              <div className="rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
-                <table className="w-full">
-                  <thead className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
-                    <tr>
-                      <th className="text-left text-xs font-medium text-slate-500 dark:text-slate-400 p-3">
-                        Nome
-                      </th>
-                      <th className="text-left text-xs font-medium text-slate-500 dark:text-slate-400 p-3">
-                        CNPJ
-                      </th>
-                      <th className="text-left text-xs font-medium text-slate-500 dark:text-slate-400 p-3">
-                        Contato
-                      </th>
-                      <th className="text-left text-xs font-medium text-slate-500 dark:text-slate-400 p-3">
-                        Cidade/UF
-                      </th>
-                      <th className="text-right text-xs font-medium text-slate-500 dark:text-slate-400 p-3">
-                        Ações
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                    {vinculos.map((v) => (
-                      <tr key={v.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                        <td className="p-3 text-sm font-medium text-slate-900 dark:text-slate-200">
-                          {v.nome}
-                        </td>
-                        <td className="p-3 text-sm text-slate-500 font-mono">{v.cnpj || "—"}</td>
-                        <td className="p-3 text-sm text-slate-500">
-                          <div className="flex flex-col gap-0.5">
-                            {v.email && (
-                              <span className="flex items-center gap-1">
-                                <Mail size={12} />
-                                {v.email}
-                              </span>
-                            )}
-                            {v.telefone && (
-                              <span className="flex items-center gap-1">
-                                <Phone size={12} />
-                                {v.telefone}
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="p-3 text-sm text-slate-500">
-                          {v.cidade ? (
-                            <span className="flex items-center gap-1">
-                              <MapPin size={12} />
-                              {v.cidade}/{v.uf}
-                            </span>
-                          ) : (
-                            "—"
-                          )}
-                        </td>
-                        <td className="p-3 text-right">
-                          <button
-                            onClick={() => setRepToRemove(v)}
-                            className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/50 text-slate-400 hover:text-red-600 transition-colors"
-                          >
-                            <X size={14} />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-
-          <div className="border-t border-slate-200 dark:border-slate-700 pt-6 space-y-4">
-            <h2 className="text-lg font-semibold flex items-center gap-2">
-              <Users size={18} className="text-blue-500" />
-              Contatos Vinculados ({contatos.length})
-            </h2>
-
-            <div className="flex gap-2">
-              <div className="relative flex-1 max-w-sm">
-                <select
-                  aria-label="Contatos sem vínculo"
-                  value={contatoSelecionado}
-                  onChange={(e) => setContatoSelecionado(e.target.value)}
-                  className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
-                >
-                  <option value="">Vincular contato existente...</option>
-                  {orfaos.map((c) => (
-                    <option key={c.id} value={String(c.id)}>
-                      {c.nome}
-                      {c.email ? ` — ${c.email}` : ""}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <button
-                type="button"
-                onClick={vincularContatoSelecionado}
-                disabled={!contatoSelecionado}
-                className="inline-flex items-center gap-2 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-              >
-                <UserPlus size={14} />
-                Vincular
-              </button>
-              <button
-                type="button"
-                onClick={adicionarContato}
-                className="inline-flex items-center gap-2 px-3 py-2 text-sm border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800"
-              >
-                <Plus size={14} />
-                Adicionar contato
-              </button>
-            </div>
-
-            {loadingContatos ? (
-              <div className="flex justify-center py-4">
-                <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
-              </div>
-            ) : contatos.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-6 text-center">
-                <Users className="w-8 h-8 text-slate-300 dark:text-slate-700 mb-2" />
-                <p className="text-sm text-slate-500">Nenhum contato vinculado</p>
-                <p className="text-xs text-slate-400 mt-1">
-                  Vincule um contato existente ou adicione um novo
-                </p>
-              </div>
-            ) : (
-              <div className="rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
-                <table className="w-full">
-                  <thead className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
-                    <tr>
-                      <th className="text-left text-xs font-medium text-slate-500 dark:text-slate-400 p-3">
-                        Nome
-                      </th>
-                      <th className="text-left text-xs font-medium text-slate-500 dark:text-slate-400 p-3">
-                        Email
-                      </th>
-                      <th className="text-left text-xs font-medium text-slate-500 dark:text-slate-400 p-3">
-                        Telefone
-                      </th>
-                      <th className="text-right text-xs font-medium text-slate-500 dark:text-slate-400 p-3">
-                        Ações
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                    {contatos.map((c) => (
-                      <tr key={c.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                        <td className="p-3 text-sm font-medium text-slate-900 dark:text-slate-200">
-                          <Link
-                            href={`/comercial/crm/contatos/${c.id}`}
-                            className="hover:underline"
-                          >
-                            {c.nome}
-                          </Link>
-                        </td>
-                        <td className="p-3 text-sm text-slate-500">{c.email || "—"}</td>
-                        <td className="p-3 text-sm text-slate-500">
-                          {c.telefone || c.celular || "—"}
-                        </td>
-                        <td className="p-3 text-right">
-                          <button
-                            onClick={() => removerContato(c.id)}
-                            title="Desvincular contato"
-                            className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/50 text-slate-400 hover:text-red-600 transition-colors"
-                          >
-                            <Unlink size={14} />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-
           <div className="flex justify-between pt-6 border-t border-slate-200 dark:border-slate-700">
             <button
               type="button"
@@ -859,8 +602,27 @@ export default function EditarClientePage({ params }: { params: Promise<{ id: st
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
+          <ContatosVinculadosCard
+            contatos={contatos}
+            orfaos={orfaos}
+            carregando={loadingContatos}
+            onAdd={adicionarContato}
+            onVincular={vincularContato}
+            onRemover={removerContato}
+          />
+          <RepresentantesVinculadosCard
+            vinculos={vinculos}
+            resultados={repResults}
+            carregando={loadingVinculos}
+            buscando={searchingRep}
+            busca={searchRep}
+            onBuscar={searchRepresentantes}
+            onVincular={addRepresentante}
+            onRemover={removeRepresentante}
+          />
           <OportunidadesCard clienteId={id} />
-          <PropostasCard clienteId={id} />
+          <AcoesProspeccaoCard clienteId={id} />
+          <VisitasCard clienteId={id} />
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
@@ -870,6 +632,7 @@ export default function EditarClientePage({ params }: { params: Promise<{ id: st
               <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-50">Timeline</h2>
             </div>
             <CrmTimeline clienteId={id} />
+            <TimelineIaChat tipo="cliente" id={id} />
           </div>
 
           <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">

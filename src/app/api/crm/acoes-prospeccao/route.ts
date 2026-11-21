@@ -14,6 +14,7 @@ import { notificarAtividadeAcaoProspeccao } from "@/lib/crm/notificar-atividade"
 import { inserirTimelineEvento } from "@/lib/crm-timeline"
 import { temEndereco, type EnderecoCampos } from "@/lib/crm/endereco"
 import { geocodificarCamposEndereco } from "@/lib/crm/geocode"
+import { idsPessoasDoCliente } from "@/lib/crm/cliente-relacionamentos"
 
 export async function GET(req: NextRequest) {
   try {
@@ -21,6 +22,7 @@ export async function GET(req: NextRequest) {
     if (auth instanceof NextResponse) return auth
     const { searchParams } = new URL(req.url)
     const empresaId = searchParams.get("empresaId")
+    const clienteId = searchParams.get("clienteId")
     const status = searchParams.get("status")
     const mine = searchParams.get("mine")
     const q = searchParams.get("q")
@@ -32,6 +34,13 @@ export async function GET(req: NextRequest) {
 
     const conditions = []
     if (empresaId) conditions.push(eq(crmAcoesProspeccao.empresaId, parseInt(empresaId)))
+    if (clienteId) {
+      const clienteIdNumero = parseInt(clienteId)
+      const pessoas = await idsPessoasDoCliente(clienteIdNumero)
+      const partes: any[] = [eq(crmAcoesProspeccao.clienteId, clienteIdNumero)]
+      if (pessoas.length > 0) partes.push(inArray(crmAcoesProspeccao.empresaId, pessoas))
+      conditions.push(or(...partes)!)
+    }
     if (status) conditions.push(eq(crmAcoesProspeccao.status, status))
     if (mine === "true") {
       conditions.push(eq(crmAcoesProspeccao.criadoPor, auth.userId))

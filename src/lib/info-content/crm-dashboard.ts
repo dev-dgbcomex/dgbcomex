@@ -4,10 +4,11 @@ export const crmDashboardInfo = {
   pagina: {
     title: "Dashboard CRM — visão geral",
     description:
-      "Painel inicial do CRM com cinco cards de resumo, três gráficos, Top Leads, Atividades Recentes e Ações Rápidas. Cards, gráficos e painéis abrem um modal com a lista de registros; cada registro abre o cadastro correspondente.",
+      "Painel inicial do CRM com cinco cards de resumo, três gráficos, Top Leads, Top Clientes, Atividades Recentes e Ações Rápidas. Cards, gráficos e painéis abrem um modal com a lista de registros; cada registro abre o cadastro correspondente.",
     rules: [
       "O resumo mostra apenas Leads (Negócios), Clientes, Oportunidades, Visitas e Tarefas Pendentes. Visitantes, Propostas, Campanhas e E-mails Enviados continuam no JSON da API e nos atalhos.",
       "O funil mostra três contagens: Leads (crm_leads), Oportunidades e Oportunidades Convertidas; Propostas foi removido do gráfico.",
+      "A linha dos painéis mostra Top Leads, Top Clientes e Atividades Recentes; o Top Clientes considera oportunidades abertas e fechadas de clientes e de pessoas promovidas.",
       "Clicar em um card, em 'Ver todas', em uma barra do funil ou em um status abre GET /api/crm/dashboard/detalhes com o bloco correspondente.",
       "O 'i' do título explica a tela como um todo; o 'i' de cada bloco explica a origem e o cálculo do número exibido naquele bloco.",
       "As Ações Rápidas são atalhos para cadastros e listagens; elas não alteram os números exibidos.",
@@ -122,6 +123,33 @@ export const crmDashboardInfo = {
         },
       ],
     } satisfies InfoContent,
+    topClientes: {
+      title: "Top Clientes — oportunidades e conversão por cliente",
+      description:
+        "Ranking do painel Top Clientes com os cinco clientes de maior soma de valor estimado em oportunidades, incluindo as oportunidades de pessoas promovidas a cliente.",
+      rules: [
+        "A origem é crm_oportunidades: a API soma valorEstimado de todas as oportunidades do cliente, abertas e fechadas, e ordena da maior soma para a menor com limite de 5.",
+        "O cliente de cada oportunidade vem de COALESCE(crm_oportunidades.clienteId, crm_pessoas.clienteId): quando a oportunidade está ligada a uma pessoa promovida, ela entra para o cliente dessa pessoa.",
+        "O nome exibido vem da tabela clientes; oportunidades sem cliente resolvido não entram no ranking.",
+        "O texto 'X convertidas de Y' usa o total de oportunidades do cliente (Y) e a quantidade com status FECHADO_GANHO (X).",
+        "O valor ao lado do nome é a soma de todas as oportunidades do cliente; o campo valorAberto separa apenas as que não estão FECHADO_GANHO nem FECHADO_PERDIDO.",
+        "Clicar em uma linha abre /comercial/clientes/[id]; 'Ver todas' abre o modal com o mesmo ranking e o link final abre a listagem de clientes.",
+      ],
+      fields: [
+        { name: "Linha do cliente", desc: "Nome do cliente, soma das oportunidades e texto de conversão; abre o cadastro do cliente." },
+        { name: "Ver todas", desc: "Abre o modal de detalhes com o bloco top-clientes." },
+      ],
+      examples: [
+        {
+          title: "Exemplo do ranking",
+          desc: "Conforto Prime tem cinco oportunidades: duas FECHADO_GANHO de R$ 50.000 e R$ 30.000 e três abertas de R$ 40.000, R$ 20.000 e R$ 10.000. Aparece com R$ 150.000 e '2 convertidas de 5'.",
+        },
+        {
+          title: "Exemplo de pessoa promovida",
+          desc: "Uma oportunidade de R$ 25.000 ligada à pessoa promovida Tecelagem Y, com clienteId preenchido nela, entra na soma do cliente da pessoa por COALESCE.",
+        },
+      ],
+    } satisfies InfoContent,
     recentes: {
       title: "Atividades Recentes — origem do feed",
       description:
@@ -143,16 +171,16 @@ export const crmDashboardInfo = {
   acoesRapidas: {
     title: "Ações Rápidas — atalhos do dashboard",
     description:
-      "Nove atalhos para criar registros ou abrir listagens do CRM e da área de e-mail em massa, sem sair do dashboard.",
+      "Cinco atalhos para criar registros ou abrir listagens do CRM diretamente do dashboard.",
     rules: [
-      "Os atalhos levam a: Novo Lead (visitante), Novo Lead (Negócio), Nova Oportunidade, Kanban, Nova Visita, Nova Proposta, Nova Campanha, Email Massa e Minhas Tarefas.",
-      "'Nova Campanha' e 'Email Massa' permanecem aqui mesmo sem card de Campanhas ou E-mails Enviados no resumo.",
+      "Os atalhos disponíveis são: Novo Lead (Negócio), Nova Oportunidade, Kanban, Nova Visita e Minhas Tarefas.",
+      "A grade mostra apenas estes cinco atalhos.",
       "Os links apenas navegam: nenhum dado é criado ou alterado ao clicar em um atalho.",
     ],
     examples: [
       {
         title: "Exemplo de atalho",
-        desc: "Clicar em 'Email Massa' abre /admin/email-massa e clicar em 'Nova Proposta' abre /comercial/crm/propostas/novo; nenhum dos dois modifica os números do dashboard.",
+        desc: "Clicar em 'Novo Lead (Negócio)' abre /comercial/crm/leads/novo e clicar em 'Minhas Tarefas' abre /comercial/crm/tarefas, sem modificar os números do dashboard.",
       },
     ],
   } satisfies InfoContent,
