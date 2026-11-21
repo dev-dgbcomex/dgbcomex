@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query"
 import Link from "next/link"
-import { hrefEventoTimeline } from "@/lib/crm/href-evento-timeline"
+import { hrefEventoTimeline, resumoIdEventoTimeline } from "@/lib/crm/href-evento-timeline"
 import {
   Loader2,
   Zap,
@@ -31,6 +31,7 @@ const TIPO_ICON: Record<string, { icon: any; cor: string }> = {
     icon: RefreshCw,
     cor: "text-fuchsia-500 bg-fuchsia-50 dark:bg-fuchsia-950/50",
   },
+  RESUMO_IA: { icon: FileText, cor: "text-violet-500 bg-violet-50 dark:bg-violet-950/50" },
 }
 
 const TIPO_LABEL: Record<string, string> = {
@@ -44,6 +45,7 @@ const TIPO_LABEL: Record<string, string> = {
   WHATSAPP: "WhatsApp",
   SOLICITACAO: "Solicitação",
   CONVERSAO_CLIENTE: "Conversão em cliente",
+  RESUMO_IA: "Resumo IA",
 }
 
 async function fetchTimeline(pessoaId?: string, clienteId?: string) {
@@ -62,9 +64,11 @@ async function fetchTimeline(pessoaId?: string, clienteId?: string) {
 export default function CrmTimeline({
   pessoaId,
   clienteId,
+  onAbrirResumo,
 }: {
   pessoaId?: string
   clienteId?: string
+  onAbrirResumo?: (resumoId: number) => void
 }) {
   const queryKey = clienteId ? ["crm-timeline-cliente", clienteId] : ["crm-timeline", pessoaId]
 
@@ -101,6 +105,7 @@ export default function CrmTimeline({
         }
         const Icon = config.icon
         const href = hrefEventoTimeline(evento)
+        const resumoId = evento.tipo === "RESUMO_IA" ? resumoIdEventoTimeline(evento) : null
         return (
           <div key={evento.id} className="relative pb-5 group">
             <div
@@ -114,7 +119,15 @@ export default function CrmTimeline({
                 <span>•</span>
                 <span>{new Date(evento.dataEvento).toLocaleString("pt-BR")}</span>
               </div>
-              {href ? (
+              {resumoId && onAbrirResumo ? (
+                <button
+                  type="button"
+                  onClick={() => onAbrirResumo(resumoId)}
+                  className="text-sm text-left text-slate-700 dark:text-slate-300 hover:text-blue-600 hover:underline dark:hover:text-blue-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded"
+                >
+                  {evento.descricao}
+                </button>
+              ) : href ? (
                 <Link
                   href={href}
                   className="text-sm text-slate-700 dark:text-slate-300 hover:text-blue-600 hover:underline dark:hover:text-blue-400"

@@ -13,6 +13,7 @@ type TipoEvento =
   | "WHATSAPP"
   | "SOLICITACAO"
   | "CONVERSAO_CLIENTE"
+  | "RESUMO_IA"
 
 export async function inserirTimelineEvento(params: {
   empresaId?: number | null

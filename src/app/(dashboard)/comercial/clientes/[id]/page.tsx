@@ -18,6 +18,7 @@ import { VisitasCard } from "@/components/crm/visitas-card"
 import { TimelineIaChat } from "@/components/crm/timeline-ia-chat"
 import CrmTimeline from "@/components/crm/crm-timeline"
 import CrmWhatsapp from "@/components/crm/crm-whatsapp"
+import ResumoIACard from "@/components/crm/resumo-ia-card"
 import { HistoricoConversaoCard } from "./components/historico-conversao-card"
 import type { HistoricoPromocao } from "@/lib/crm/historico-promocao"
 import type { Cliente, VinculoRepresentante, RepresentanteResumo } from "../types"
@@ -66,6 +67,7 @@ export default function EditarClientePage({ params }: { params: Promise<{ id: st
 
   const [historico, setHistorico] = useState<HistoricoPromocao | null>(null)
   const [loadingHistorico, setLoadingHistorico] = useState(false)
+  const [resumoAbertoId, setResumoAbertoId] = useState<number | null>(null)
 
   useEffect(() => {
     async function loadCliente() {
@@ -620,6 +622,13 @@ export default function EditarClientePage({ params }: { params: Promise<{ id: st
             onVincular={addRepresentante}
             onRemover={removeRepresentante}
           />
+          <ResumoIACard
+            tipo="cliente"
+            id={id}
+            nomeEntidade={cliente.nome}
+            abertoId={resumoAbertoId}
+            onAbertoIdChange={setResumoAbertoId}
+          />
           <OportunidadesCard clienteId={id} />
           <AcoesProspeccaoCard clienteId={id} />
           <VisitasCard clienteId={id} />
@@ -631,7 +640,7 @@ export default function EditarClientePage({ params }: { params: Promise<{ id: st
               <Clock size={16} className="text-slate-400" />
               <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-50">Timeline</h2>
             </div>
-            <CrmTimeline clienteId={id} />
+            <CrmTimeline clienteId={id} onAbrirResumo={setResumoAbertoId} />
             <TimelineIaChat tipo="cliente" id={id} />
           </div>
 

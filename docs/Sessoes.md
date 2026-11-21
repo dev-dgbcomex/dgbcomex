@@ -26,6 +26,24 @@
 
 > Detalhe técnico completo em [`docs/crm-cliente-e-relatorios.md`](./crm-cliente-e-relatorios.md).
 
+### Sessão 27 — Resumo IA com histórico e exportação no detalhe de Lead/Cliente
+
+- **Data:** 2026-11-21
+- **Commit:** `feat(crm): gera e exporta resumo ia de leads e clientes`
+- **Tarefa:** substituir o resumo pontual da lead por um card de Resumo IA com geração manual, histórico reabitável, evento na timeline e exportação em arquivo único ou separado (MD/PDF/TXT), também disponível no detalhe do cliente.
+- **Decisões aprovadas:** cada geração roda a consulta consolidada (inclusive resumos anteriores); a IA devolve texto simples com classificação `QUENTE`/`MORNO`/`FRIO`; o markdown é escapado e renderizado como plain text; cada resumo vira evento `RESUMO_IA` clicável na timeline; a exportação usa `md` e `unico` como padrão; apenas a lead espelha os campos legados `resumoIa`/`sugestaoIa`/`dataResumoIa`.
+- **Resultado:**
+  - Nova tabela `crm_resumos_ia` (migration `0074_crm_resumos_ia.sql`), com índice por `entidade_tipo`, `entidade_id` e `created_at`; DDL replicado em `scripts/migrate.js` via `criar-tabelas-faltantes.js` e em `scripts/sync-all-dbs.js` (o `migrate.js` não executa os `.sql` numerados).
+  - `GET /api/crm/ia/resumos` lista até 50 resumos; `POST /api/crm/ia/resumos` gera via `chamarIA` (`temperatura: 0`, `maxTokens: 700`), valida o JSON, salva o resumo, cria o evento de timeline e espelha o legado da lead em transação.
+  - `src/lib/crm/resumo-ia-contexto.ts` consolida dados cadastrais, interações, oportunidades, propostas, visitas, ações, faturamento/pedidos, saúde dos registros e resumos anteriores com limites e truncamento; corrigido o campo `o.valor_estimado AS total`.
+  - `src/lib/crm/resumo-ia-parser.ts` valida a resposta da IA; `validateRequest` agora preserva o tipo de saída de schemas zod com `transform`.
+  - `src/components/crm/resumo-ia-card.tsx` controla geração, histórico, modal de leitura, seleção múltipla e exportação; `resumo-ia-export.ts` gera MD/TXT via Blob e PDF via `jspdf` dinâmico.
+  - `CrmTimeline` ganhou `onAbrirResumo` e o helper `resumoIdEventoTimeline`; os detalhes de lead e cliente passam a abrir o resumo pelo evento da timeline.
+  - Modais “i” do detalhe de Lead/Cliente e o normalizador de ID numérico em `getInfoContent` atualizados.
+- **Arquivos Envolvidos:** `src/lib/db/schema/crm-resumos-ia.ts`, `src/lib/db/migrations/0074_crm_resumos_ia.sql`, `src/lib/db/schema/index.ts`, `src/app/api/crm/ia/resumos/route.ts`, `src/lib/{validation,crm-timeline}.ts`, `src/lib/crm/{resumo-ia-contexto,resumo-ia-parser,resumo-ia-export,href-evento-timeline}.ts`, `src/components/crm/{resumo-ia-card,crm-timeline}.tsx`, `src/app/(dashboard)/comercial/{crm/leads,clientes}/[id]/page.tsx`, `src/lib/info-content/{index,crm,comercial}.ts`, `scripts/{migrate,criar-tabelas-faltantes,sync-all-dbs}.js`, `docs/Sessoes.md`.
+- **Testes:** novos em `resumo-ia-contexto.test.ts`, `resumo-ia-parser.test.ts`, `resumo-ia-export.test.ts`, `route.test.ts` (API), `resumo-ia-card.test.tsx`; `crm-timeline.test.tsx` e `info-content.test.ts` atualizados; suíte completa `npm run test` → **472 arquivos / 2740 testes passados**.
+- **Verificação:** `npm run lint` sem erros (apenas warnings pré-existentes); `tsc --noEmit --pretty false` limpo com `NODE_OPTIONS=--max-old-space-size=8192`; `npm run build` OK; `npm run db:migrate`, `node scripts/sync-principal.js`, `npm run db:replicar-neon`, `npm run db:comparar` (`All databases are IDENTICAL`) e `npm run db:verificar-local` (0 divergências, local ⊇ Neon); `git diff --check` sem problemas.
+
 ### Sessão 20 — Histórico de conversão com Ações e Contatos no detalhe
 
 - **Data:** 2026-11-21

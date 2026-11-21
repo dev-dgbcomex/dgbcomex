@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import { screen } from "@testing-library/react"
+import { fireEvent, screen } from "@testing-library/react"
 import { createFetchMock, renderPage } from "@/test/harness"
+import { resumoIdEventoTimeline } from "@/lib/crm/href-evento-timeline"
 import CrmTimeline from "./crm-timeline"
 
 describe("CrmTimeline", () => {
@@ -29,6 +30,13 @@ describe("CrmTimeline", () => {
           dataEvento: "2026-11-18T10:00:00.000Z",
           metadados: { whatsappId: 5 },
         },
+        {
+          id: 4,
+          tipo: "RESUMO_IA",
+          descricao: "MORNO: resumo salvo",
+          dataEvento: "2026-11-17T10:00:00.000Z",
+          metadados: { resumoId: 55 },
+        },
       ],
     }))
     vi.stubGlobal("fetch", fetchMock.fn)
@@ -54,5 +62,21 @@ describe("CrmTimeline", () => {
 
     expect(await screen.findByText("Mensagem recebida")).toBeInTheDocument()
     expect(screen.queryByRole("link", { name: "Mensagem recebida" })).not.toBeInTheDocument()
+  })
+
+  it("abre o resumo IA pelo evento da timeline", async () => {
+    const onAbrirResumo = vi.fn()
+    renderPage(<CrmTimeline pessoaId="9" onAbrirResumo={onAbrirResumo} />)
+
+    const botao = await screen.findByRole("button", { name: "MORNO: resumo salvo" })
+    expect(screen.getByText("Resumo IA")).toBeInTheDocument()
+    fireEvent.click(botao)
+    expect(onAbrirResumo).toHaveBeenCalledWith(55)
+  })
+
+  it("extrai o id do resumo dos metadados do evento", () => {
+    expect(resumoIdEventoTimeline({ tipo: "RESUMO_IA", metadados: { resumoId: 55 } })).toBe(55)
+    expect(resumoIdEventoTimeline({ tipo: "RESUMO_IA", metadados: "{\"resumoId\":55}" })).toBe(55)
+    expect(resumoIdEventoTimeline({ tipo: "RESUMO_IA", metadados: {} })).toBeNull()
   })
 })

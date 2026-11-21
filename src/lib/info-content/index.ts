@@ -33,13 +33,22 @@ const infoContent: Record<string, InfoContent> = {
   ...wmsContent,
 }
 
+function normalizarPathname(pathname: string) {
+  const semBarraFinal = pathname.replace(/\/+$/, "") || "/"
+  return semBarraFinal
+    .split("/")
+    .map((segmento) => (/^\d+$/.test(segmento) ? "[id]" : segmento))
+    .join("/")
+}
+
 export function getInfoContent(pathname: string): InfoContent | null {
-  const exact = infoContent[pathname]
+  const caminho = normalizarPathname(pathname)
+  const exact = infoContent[caminho]
   if (exact) return exact
 
   let bestKey = ""
   for (const key of Object.keys(infoContent)) {
-    if ((pathname.startsWith(key) || key.startsWith(pathname)) && key.length > bestKey.length) {
+    if ((caminho.startsWith(key) || key.startsWith(caminho)) && key.length > bestKey.length) {
       bestKey = key
     }
   }

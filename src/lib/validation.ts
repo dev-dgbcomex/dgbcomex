@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
 
-export function validateRequest<T>(
-  schema: z.ZodType<T>,
+export function validateRequest<S extends z.ZodTypeAny>(
+  schema: S,
   data: unknown
-): { data: T } | { error: NextResponse } {
+): { data: z.output<S> } | { error: NextResponse } {
   const result = schema.safeParse(data)
   if (!result.success) {
     const firstError = result.error.errors[0]
@@ -429,4 +429,21 @@ export const chamadoStatusSchema = z.object({
 
 export const chamadoAssumirSchema = z.object({
   responsavelId: z.number().int().positive().optional().nullable(),
+})
+
+const idPositivoSchema = z
+  .union([
+    z.number().int().positive("ID deve ser positivo"),
+    z.string().regex(/^[1-9]\d*$/, "ID deve ser um número positivo").transform(Number),
+  ])
+  .refine((valor) => valor > 0, "ID deve ser positivo")
+
+export const resumoIaSchema = z.object({
+  tipo: z.enum(["lead", "cliente"]),
+  id: idPositivoSchema,
+})
+
+export const resumoIaConsultaSchema = z.object({
+  tipo: z.enum(["lead", "cliente"]),
+  id: z.string().regex(/^[1-9]\d*$/, "ID deve ser um número positivo").transform(Number),
 })

@@ -273,11 +273,13 @@ export const crmContent: Record<string, InfoContent> = {
   "/comercial/crm/leads/[id]": {
     title: "Detalhe da Lead",
     description:
-      "Visão completa de uma lead no CRM: dados cadastrais, cards de contatos, representantes, oportunidades, ações de prospecção e visitas, timeline clicável, WhatsApp e análise de IA com chat.",
+      "Visão completa de uma lead no CRM: dados cadastrais, cards de contatos, representantes, oportunidades, ações de prospecção e visitas, timeline clicável, WhatsApp, histórico de Resumos IA e chat de análise.",
     rules: [
       "A Timeline mostra todo o histórico de interações e cada evento com cadastro próprio abre o registro de origem.",
       "O WhatsApp permite enviar e receber mensagens diretamente pelo sistema (integrado com Evolution API + n8n).",
-      "O Resumo IA é gerado automaticamente; o bloco de análise de IA lê o timeline completo e responde perguntas sobre a lead.",
+      "O Resumo IA é gerado manualmente pelo botão 'Gerar resumo' e usa cadastro, oportunidades, pedidos, visitas, ações, propostas, tarefas, WhatsApp, timeline e os resumos anteriores da lead.",
+      "Cada resumo gerado vira um evento clicável na Timeline e abre o texto completo no card 'Resumo IA'.",
+      "No card 'Resumo IA' é possível selecionar resumos e exportar em MD, PDF ou TXT, em arquivo único ou arquivos separados.",
       "Não há card de Propostas nesta tela; as propostas continuam disponíveis na listagem geral e nos relatórios.",
       "Para editar os dados, clique em Editar no topo da página.",
       "Não há exclusão de lead: o cadastro é referenciado por veículos, oportunidades, propostas e visitas. O botão 'Tornar cliente' faz a promoção (cria ou reaproveita o cliente pelo CNPJ) e preserva o histórico.",
@@ -299,12 +301,26 @@ export const crmContent: Record<string, InfoContent> = {
       { name: "Timeline", desc: "Histórico completo de eventos da lead em ordem cronológica" },
       { name: "WhatsApp", desc: "Painel de conversas WhatsApp vinculadas à lead" },
       {
+        name: "Resumo IA",
+        desc: "Histórico de resumos, botão 'Gerar resumo', classificação QUENTE/MORNO/FRIO e exportação MD/PDF/TXT",
+      },
+      {
         name: "Análise de IA",
-        desc: "Resumo do timeline completo e chat de perguntas sobre a lead",
+        desc: "Chat de perguntas sobre a lead com base na timeline",
       },
       {
         name: "Histórico de conversão",
         desc: "Data, responsável, cliente vinculado e indicadores do período",
+      },
+    ],
+    examples: [
+      {
+        title: "Resumo QUENTE",
+        desc: "Ao gerar, a IA pode classificar a lead como QUENTE quando há visita recente com ata detalhada, oportunidade ativa e contato nos últimos 7 dias.",
+      },
+      {
+        title: "Exportação do histórico",
+        desc: "Com 3 resumos selecionados, 'Arquivo único' gera um MD com os 3; 'Arquivos separados' gera 3 arquivos nomeados pelo id de cada resumo.",
       },
     ],
   },

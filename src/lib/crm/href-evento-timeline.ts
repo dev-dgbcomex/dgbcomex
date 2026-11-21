@@ -34,6 +34,10 @@ function idMetadado(metadados: MetadadosEvento, ...chaves: string[]): number | n
   return null
 }
 
+export function resumoIdEventoTimeline(evento: EventoTimelineParaHref): number | null {
+  return idMetadado(metadadosEvento(evento), "resumoId")
+}
+
 export function hrefEventoTimeline(evento: EventoTimelineParaHref): string | null {
   const metadados = metadadosEvento(evento)
   switch (evento?.tipo) {

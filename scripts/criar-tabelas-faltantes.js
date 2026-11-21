@@ -249,7 +249,28 @@ const TABELAS = [
        resposta text,
        created_at timestamp default now()
      )`,
-    "create index if not exists idx_crm_acoes_prospeccao_pesquisas_respostas_pesquisa_id on crm_acoes_prospeccao_pesquisas_respostas (pesquisa_id)",
+     "create index if not exists idx_crm_acoes_prospeccao_pesquisas_respostas_pesquisa_id on crm_acoes_prospeccao_pesquisas_respostas (pesquisa_id)",
+   ],
+  [
+    "crm_resumos_ia",
+    `create table if not exists crm_resumos_ia (
+       id serial primary key,
+       entidade_tipo varchar(10) not null,
+       entidade_id integer not null,
+       resumo text not null,
+       insights text,
+       sugestoes text,
+       classificacao varchar(10) not null,
+       motivo_classificacao text,
+       contexto jsonb default '{}'::jsonb,
+       provedor varchar(40),
+       modelo varchar(120),
+       tentativas integer default 0,
+       criado_por integer references usuarios(id),
+       criado_por_nome varchar(255),
+       created_at timestamp default now()
+     )`,
+    "create index if not exists idx_crm_resumos_ia_entidade on crm_resumos_ia (entidade_tipo, entidade_id, created_at desc)",
   ],
 ]
 

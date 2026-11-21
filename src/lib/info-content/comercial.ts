@@ -58,19 +58,22 @@ export const comercialContent: Record<string, InfoContent> = {
   "/comercial/clientes/[id]": {
     title: "Editar Cliente",
     description:
-      "Tela de cadastro do cliente: dados da empresa e, fora do formulário, cards de contatos, representantes, oportunidades, ações de prospecção, visitas, timeline, WhatsApp e análise de IA.",
+      "Tela de cadastro do cliente: dados da empresa e, fora do formulário, cards de contatos, representantes, oportunidades, ações de prospecção, visitas, timeline, WhatsApp, histórico de Resumos IA e chat de análise.",
     rules: [
       "Campos marcados com * são obrigatórios: Nome / Fantasia e CNPJ.",
       "O botão Salvar grava as alterações via PUT e atualiza o cadastro do cliente.",
       "A exclusão é restrita a ADMIN e SUDO e remove também os vínculos de representantes e contatos.",
       "O card 'Histórico de conversão em cliente' mostra de qual pessoa do CRM o cliente veio, quando virou cliente, quem promoveu e o negócio acumulado (oportunidades, ações e visitas).",
       "Clientes cadastrados manualmente (sem origem no CRM) aparece no histórico com a mensagem de que não vieram de uma pessoa do CRM.",
-      "Na seção 'Relacionamentos do CRM' o cliente tem os cards de Contatos, Representantes, Oportunidades, Ações de Prospecção, Visitas, Timeline e WhatsApp.",
+      "Na seção 'Relacionamentos do CRM' o cliente tem os cards de Contatos, Representantes, Resumo IA, Oportunidades, Ações de Prospecção, Visitas, Timeline e WhatsApp.",
       "Não há card de Propostas nesta tela; as propostas continuam disponíveis na listagem geral e nos relatórios.",
       "Os cards do cliente somam o negócio lançado direto nele e o negócio herdado das leads do CRM que foram promovidas a este cliente.",
       "Nomes de contatos e representantes abrem o cadastro do respectivo registro; cada evento da timeline com detalhe abre o registro de origem.",
       "O botão '+' no card de Oportunidades cria o registro já vinculado ao cliente.",
-      "O bloco de IA analisa o timeline completo e responde perguntas sobre o histórico do cliente.",
+      "O Resumo IA é gerado manualmente pelo botão 'Gerar resumo' e usa o histórico do cliente, das pessoas promovidas, dos negócios, visitas, ações, propostas, tarefas, WhatsApp e dos resumos anteriores.",
+      "Cada resumo gerado vira um evento clicável na Timeline e abre o texto completo no card 'Resumo IA'.",
+      "No card 'Resumo IA' é possível selecionar resumos e exportar em MD, PDF ou TXT, em arquivo único ou arquivos separados.",
+      "O bloco de análise de IA responde perguntas sobre o histórico do cliente a partir da timeline.",
       "No WhatsApp do cliente vale a conversa dos contatos do cliente e das leads promovidas; o envio usa o contato principal com WhatsApp cadastrado.",
     ],
     fields: [
@@ -88,8 +91,22 @@ export const comercialContent: Record<string, InfoContent> = {
         desc: "Negócio e agenda do cliente, diretos ou herdados das leads promovidas",
       },
       { name: "Timeline", desc: "Histórico clicável do cliente e das leads promovidas" },
-      { name: "Análise de IA", desc: "Resumo do timeline completo e chat de perguntas sobre o histórico" },
+      {
+        name: "Resumo IA",
+        desc: "Histórico de resumos, botão 'Gerar resumo', classificação QUENTE/MORNO/FRIO e exportação MD/PDF/TXT",
+      },
+      { name: "Análise de IA", desc: "Chat de perguntas sobre o histórico do cliente" },
       { name: "WhatsApp", desc: "Conversa com os contatos do cliente e das leads promovidas" },
+    ],
+    examples: [
+      {
+        title: "Resumo MORNO",
+        desc: "Ao gerar, a IA pode classificar o cliente como MORNO quando há proposta enviada-sem-resposta e o último contato foi há mais de 30 dias.",
+      },
+      {
+        title: "Exportação do histórico",
+        desc: "Com 2 resumos selecionados, 'Arquivos separados' gera 2 PDFs; 'Arquivo único' gera um PDF com os 2 resumos em sequência.",
+      },
     ],
   },
   "/comercial/requisicoes-amostra-comercial": {

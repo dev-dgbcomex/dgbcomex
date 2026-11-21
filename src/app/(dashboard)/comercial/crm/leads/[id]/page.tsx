@@ -8,6 +8,7 @@ import Link from "next/link"
 import { Clock, MessageSquare } from "lucide-react"
 import CrmTimeline from "@/components/crm/crm-timeline"
 import CrmWhatsapp from "@/components/crm/crm-whatsapp"
+import ResumoIACard from "@/components/crm/resumo-ia-card"
 import { toast } from "sonner"
 import { ConfirmModal } from "@/components/ui/confirm-modal"
 import { PageSkeleton } from "@/components/ui/page-skeleton"
@@ -42,6 +43,7 @@ function LeadDetailPageContent() {
   const [estadoId, setEstadoId] = useState<number | null>(null)
   const [showPromover, setShowPromover] = useState(false)
   const [promoverLoading, setPromoverLoading] = useState(false)
+  const [resumoAbertoId, setResumoAbertoId] = useState<number | null>(null)
   const { data: estados = [] } = useQuery<{ id: number; uf: string }[]>({
     queryKey: ["crm-estados"],
     queryFn: async () => {
@@ -304,46 +306,13 @@ function LeadDetailPageContent() {
           estadoId={estadoId}
         />
 
-        <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
-          <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-50 mb-4 flex items-center gap-2">
-            <svg
-              className="w-4 h-4 text-purple-500"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-              />
-            </svg>
-            Resumo IA
-          </h2>
-          {lead.resumoIa ? (
-            <div className="space-y-3 text-sm">
-              <p className="text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
-                {lead.resumoIa}
-              </p>
-              {lead.sugestaoIa && (
-                <div className="rounded-lg bg-amber-50 dark:bg-amber-950/30 p-3 border border-amber-200 dark:border-amber-900">
-                  <p className="text-xs font-medium text-amber-700 dark:text-amber-400 mb-1">
-                    Sugestão da IA
-                  </p>
-                  <p className="text-sm text-amber-800 dark:text-amber-300">{lead.sugestaoIa}</p>
-                </div>
-              )}
-              {lead.dataResumoIa && (
-                <p className="text-[10px] text-slate-400">
-                  Gerado em {new Date(lead.dataResumoIa).toLocaleString("pt-BR")}
-                </p>
-              )}
-            </div>
-          ) : (
-            <p className="text-sm text-slate-400 text-center py-6">Nenhum resumo disponível</p>
-          )}
-        </div>
+        <ResumoIACard
+          tipo="lead"
+          id={params.id as string}
+          nomeEntidade={lead.nome || lead.razaoSocial || "Lead"}
+          abertoId={resumoAbertoId}
+          onAbertoIdChange={setResumoAbertoId}
+        />
       </div>
 
       <RepresentantesCard
@@ -378,7 +347,7 @@ function LeadDetailPageContent() {
             <Clock size={16} className="text-slate-400" />
             <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-50">Timeline</h2>
           </div>
-          <CrmTimeline pessoaId={params.id as string} />
+          <CrmTimeline pessoaId={params.id as string} onAbrirResumo={setResumoAbertoId} />
           <TimelineIaChat tipo="lead" id={params.id as string} />
         </div>
 

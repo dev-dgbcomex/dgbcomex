@@ -10,6 +10,14 @@ describe("getInfoContent", () => {
     expect(result?.title).toContain("Dashboard")
   })
 
+  it("normaliza ids numéricos para [id] nas rotas de detalhe", () => {
+    const lead = getInfoContent("/comercial/crm/leads/191?edit=true".split("?")[0])
+    const cliente = getInfoContent("/comercial/clientes/42")
+
+    expect(lead?.title).toBe("Detalhe da Lead")
+    expect(cliente?.title).toBe("Editar Cliente")
+  })
+
   it("returns null for unknown path", () => {
     const result = getInfoContent("/nonexistent/path")
     expect(result).toBeNull()
@@ -617,6 +625,31 @@ describe("getInfoContent", () => {
     expect(detalheTexto).toMatch(/Ações de Prospecção/)
     expect(detalheTexto).toMatch(/Visitas/)
     expect(detalheTexto).toMatch(/análise de IA/i)
+  })
+
+  it("as telas de lead e cliente explicam o histórico de Resumo IA", () => {
+    const conteudos = [
+      getInfoContent("/comercial/crm/leads/191"),
+      getInfoContent("/comercial/clientes/42"),
+    ]
+
+    for (const conteudo of conteudos) {
+      expect(conteudo).not.toBeNull()
+      const texto = [
+        conteudo?.description ?? "",
+        ...(conteudo?.rules ?? []),
+        ...(conteudo?.fields ?? []).map((f) => `${f.name}: ${f.desc}`),
+        ...(conteudo?.examples ?? []).map((e) => `${e.title}: ${e.desc}`),
+      ].join("\n")
+
+      expect(texto).toMatch(/Resumo IA/i)
+      expect(texto).toMatch(/Gerar resumo/i)
+      expect(texto).toMatch(/QUENTE\/MORNO\/FRIO/)
+      expect(texto).toMatch(/MD.*PDF.*TXT/i)
+      expect(texto).toMatch(/arquivo único/i)
+      expect(texto).toMatch(/arquivos separados/i)
+      expect(texto).toMatch(/evento clicável/i)
+    }
   })
 
   it("a tela de contatos explica vínculos, ficha e exclusão restrita", () => {
