@@ -21,6 +21,11 @@ describe("contadores-listagem", () => {
     expect(texto).toMatch(/crm_pedidos_venda/)
     expect(texto).toMatch(/crm_visitas/)
     expect(texto).toMatch(/crm_acoes_prospeccao/)
+    expect(texto).toContain('"clientes"."id"')
+    expect(texto).toContain(
+      '"crm_pedidos_venda"."oportunidade_id" = "crm_oportunidades"."id"'
+    )
+    expect(texto).not.toMatch(/where "cliente_id" = "id"/)
   })
 
   it("contabiliza o relacionamento das leads", () => {
@@ -38,5 +43,10 @@ describe("contadores-listagem", () => {
     expect(texto).toMatch(/crm_pedidos_venda/)
     expect(texto).toMatch(/crm_visitas/)
     expect(texto).toMatch(/crm_acoes_prospeccao/)
+    expect(texto).toContain('"crm_leads"."id"')
+    expect(texto).toContain(
+      '"crm_pedidos_venda"."oportunidade_id" = "crm_oportunidades"."id"'
+    )
+    expect(texto).not.toMatch(/where "lead_id" = "id"/)
   })
 })

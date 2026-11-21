@@ -44,6 +44,23 @@
 
 ---
 
+### Sessão 22 — Corrige SQL das contagens das listagens
+
+- **Data:** 2026-11-21
+- **Commit:** `fix(crm): qualifica colunas nas contagens das listagens`
+- **Tarefa:** corrigir o erro 500 de `GET /api/clientes` e `GET /api/crm/leads` introduzido pelas subconsultas de contagem da Sessão 21, que fazia a listagem de Clientes aparecer vazia.
+- **Decisões aprovadas:** manter as mesmas quatro contagens e a mesma origem dos dados; corrigir apenas a qualificação dos identificadores no SQL gerado, sem alterar contrato, telas ou modais “i”.
+- **Resultado:**
+  - `src/lib/crm/contadores-listagem.ts` passa a qualificar a chave externa da tabela principal (`"clientes"."id"` / `"crm_leads"."id"`) e as colunas das subconsultas, inclusive o join de pedidos (`"crm_pedidos_venda"."oportunidade_id" = "crm_oportunidades"."id"`).
+  - Antes, o Drizzle renderizava `"oportunidade_id" = "id"` sem qualificar as tabelas no join; como ambas têm `id`, o PostgreSQL rejeitava a consulta com `column reference "id" is ambiguous` e a API devolvia 500.
+  - Teste do helper passa a afirmar a presença dos qualificadores e a ausência da forma ambígua, evitando regressão silenciosa em mocks de API.
+  - Consulta real no Neon com as duas seleções finais retornou linhas normalmente (`/api/clientes` e `/api/crm/leads` voltam a popular as listagens).
+- **Arquivos Envolvidos:** `src/lib/crm/contadores-listagem.ts`, `src/lib/crm/contadores-listagem.test.ts`, `docs/Sessoes.md`.
+- **Testes:** focados `3 arquivos / 10 testes passados` (helper e APIs de Clientes/Leads).
+- **Verificação:** `npm run lint` sem erros (apenas warnings pré-existentes); `tsc --noEmit` limpo com `NODE_OPTIONS=--max-old-space-size=8192`; suíte completa `npm run test` → **465 arquivos / 2691 testes passados**; `npm run build` OK com `NODE_OPTIONS=--max-old-space-size=8192`; `git diff --check` sem problemas.
+
+---
+
 ### Sessão 21 — Cards como padrão com contagens de relacionamento
 
 - **Data:** 2026-11-21
