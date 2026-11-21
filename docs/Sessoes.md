@@ -44,6 +44,25 @@
 
 ---
 
+### Sessão 23 — Ações realizadas e detalhes da previsão no dashboard CRM
+
+- **Data:** 2026-11-21
+- **Commit:** `feat(crm): melhora cards e detalhes do dashboard`
+- **Tarefa:** mostrar Ações de Prospecção realizadas ao lado de Visitas no dashboard `/comercial/crm` e detalhar a Previsão de Receita (Pipeline) com oportunidades, totais e exportação.
+- **Decisões aprovadas:** o card usa somente `crmAcoesProspeccao.status = REALIZADA`, com recortes de hoje e do mês por `dataAcao`; o modal da previsão lista oportunidades **abertas** (`status NOT IN ('FECHADO_PERDIDO','FECHADO_GANHO')`); 'Convertidas' continua com `FECHADO_GANHO`; os totais de quantidade e valor vêm da API e cobrem todos os registros do filtro, não apenas as linhas exibidas.
+- **Resultado:**
+  - `GET /api/crm/dashboard` passa a devolver `acoesProspeccao: { realizadas, hoje, esteMes }`, `forecastQuantidade`, `conversao.valorConvertido` e `totalPrevisaoConversao: { quantidade, valor }`.
+  - O grid de resumo passa a ter seis cards, com 'Ações de Prospecção' entre Visitas e Tarefas Pendentes; o card mostra total, ações hoje e ações no mês.
+  - O bloco 'Previsão & Conversão' mostra quantidade e valor das oportunidades abertas, quantidade e valor das convertidas, taxa de conversão e a soma dos dois lados; os clique em 'Previsão de Receita (Pipeline)' e 'Convertidas' abrem modais próprios.
+  - `GET /api/crm/dashboard/detalhes` aceita os blocos `acoes-realizadas` e `previsao-abertas`; os blocos `previsao-*` trazem `totalRegistros` e `totalValor`, com limite padrão de 500 linhas para a exportação.
+  - O modal de detalhes mostra o total no rodapé e oferece exportação CSV/JSON/PDF para os dois blocos de previsão, mantendo o link 'Ver todas'.
+  - Modais 'i' da visão geral, do resumo e da previsão/conversão atualizados; foi corrigido também o helper de testes `sqlParaTexto` para renderizar operadores do Drizzle (`>=`, `NOT IN`) usados nas asserções de SQL.
+- **Arquivos Envolvidos:** `src/app/api/crm/dashboard/route.ts`, `src/app/api/crm/dashboard/detalhes/route.ts`, `src/app/(dashboard)/comercial/crm/page.tsx`, `src/app/(dashboard)/comercial/crm/charts.tsx`, `src/components/crm/dashboard/detalhes-modal.tsx`, `src/lib/info-content/crm-dashboard.ts`, `src/test/route-db-mock.ts`, `docs/Sessoes.md`.
+- **Testes:** ajustes e novos casos em `src/app/api/crm/dashboard/route.test.ts`, `src/app/api/crm/dashboard/detalhes/route.test.ts`, `src/app/(dashboard)/comercial/crm/page.test.tsx`, `src/app/(dashboard)/comercial/crm/charts.test.tsx`, `src/components/crm/dashboard/detalhes-modal.test.tsx` e `src/lib/info-content/info-content.test.ts`; suíte completa `npm run test` → **465 arquivos / 2698 testes passados**.
+- **Verificação:** `npm run lint` sem erros (apenas warnings pré-existentes); `tsc --noEmit --pretty false` limpo com `NODE_OPTIONS=--max-old-space-size=8192`; `npm run build` OK com `NODE_OPTIONS=--max-old-space-size=8192` (240/240 páginas estáticas); `git diff --check` sem problemas.
+
+---
+
 ### Sessão 22 — Corrige SQL das contagens das listagens
 
 - **Data:** 2026-11-21

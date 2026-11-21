@@ -42,6 +42,7 @@ type CrmDashboardData = {
     byStatus: { status: string; total: number }[]
   }
   visitas: { total: number; hoje: number }
+  acoesProspeccao: { realizadas: number; hoje: number; esteMes: number }
   tarefas: { pendentes: number; vencendo: number }
   topEmpresas: {
     empresaId: number | null
@@ -57,7 +58,13 @@ type CrmDashboardData = {
     valorAberto: number
   }[]
   forecast: number
-  conversao: { oportunidadesConvertidas: number; totalOportunidades: number }
+  forecastQuantidade: number
+  conversao: {
+    oportunidadesConvertidas: number
+    totalOportunidades: number
+    valorConvertido: number
+  }
+  totalPrevisaoConversao: { quantidade: number; valor: number }
   recentes: { id: number; tipo: string; descricao: string; dataEvento: string; href?: string }[]
   previsaoVendas: {
     periodo: string
@@ -165,7 +172,7 @@ export default function CrmDashboardPage() {
       ) : (
         <>
           {/* Linha 1: Cards de resumo */}
-          <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+          <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
             <SummaryCard
               onClick={() => setDetalhe({ bloco: "leads" })}
               icon={<Building2 size={20} />}
@@ -205,6 +212,16 @@ export default function CrmDashboardPage() {
               iconColor="text-amber-600 dark:text-amber-400"
             />
             <SummaryCard
+              onClick={() => setDetalhe({ bloco: "acoes-realizadas" })}
+              icon={<Megaphone size={20} />}
+              value={data?.acoesProspeccao.realizadas ?? 0}
+              label="Ações de Prospecção"
+              sub={`${data?.acoesProspeccao.hoje ?? 0} hoje · ${data?.acoesProspeccao.esteMes ?? 0} no mês`}
+              info={crmDashboardInfo.resumo}
+              bgColor="bg-violet-100 dark:bg-violet-950/50"
+              iconColor="text-violet-600 dark:text-violet-400"
+            />
+            <SummaryCard
               onClick={() => setDetalhe({ bloco: "tarefas" })}
               icon={<CheckCircle2 size={20} />}
               value={data?.tarefas.pendentes ?? 0}
@@ -218,10 +235,7 @@ export default function CrmDashboardPage() {
 
           {/* Linha 2: Pipeline, Forecast, Conversão */}
           <div className="grid gap-6 md:grid-cols-3">
-            <CrmCharts
-              data={data}
-              onDetalhe={(bloco, status) => setDetalhe({ bloco, status })}
-            />
+            <CrmCharts data={data} onDetalhe={(bloco, status) => setDetalhe({ bloco, status })} />
           </div>
 
           {/* Linha 3: Top Leads, Top Clientes e Atividades Recentes */}
@@ -250,7 +264,11 @@ export default function CrmDashboardPage() {
                   {data.topEmpresas.map((emp, i) => (
                     <Link
                       key={emp.empresaId ?? i}
-                      href={emp.empresaId ? `/comercial/crm/leads/${emp.empresaId}` : "/comercial/crm/leads"}
+                      href={
+                        emp.empresaId
+                          ? `/comercial/crm/leads/${emp.empresaId}`
+                          : "/comercial/crm/leads"
+                      }
                       className="flex items-center justify-between p-3 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/60"
                     >
                       <div className="flex items-center gap-3 min-w-0">
@@ -306,7 +324,8 @@ export default function CrmDashboardPage() {
                           </p>
                         </div>
                         <p className="text-[11px] text-slate-400 mt-0.5">
-                          {cliente.oportunidadesConvertidas} convertidas de {cliente.totalOportunidades}
+                          {cliente.oportunidadesConvertidas} convertidas de{" "}
+                          {cliente.totalOportunidades}
                         </p>
                       </div>
                       <p className="text-sm font-semibold text-slate-700 dark:text-slate-300 shrink-0">
@@ -429,9 +448,7 @@ export default function CrmDashboardPage() {
             </div>
           </div>
 
-          {detalhe && (
-            <DashboardDetalhesModal detalhe={detalhe} onClose={() => setDetalhe(null)} />
-          )}
+          {detalhe && <DashboardDetalhesModal detalhe={detalhe} onClose={() => setDetalhe(null)} />}
         </>
       )}
     </div>

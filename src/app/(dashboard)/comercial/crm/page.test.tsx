@@ -17,6 +17,7 @@ const dashboardPayload = {
   oportunidades: { total: 0, esteMes: 0, byStatus: [] },
   propostas: { total: 0, byStatus: [] },
   visitas: { total: 1, hoje: 0 },
+  acoesProspeccao: { realizadas: 30, hoje: 4, esteMes: 22 },
   tarefas: { pendentes: 0, vencendo: 0 },
   topEmpresas: [
     {
@@ -35,8 +36,14 @@ const dashboardPayload = {
       valorAberto: 70000,
     },
   ],
-  forecast: 0,
-  conversao: { oportunidadesConvertidas: 0, totalOportunidades: 0 },
+  forecast: 480000,
+  forecastQuantidade: 40,
+  conversao: {
+    oportunidadesConvertidas: 18,
+    totalOportunidades: 85,
+    valorConvertido: 720000,
+  },
+  totalPrevisaoConversao: { quantidade: 58, valor: 1200000 },
   recentes: [],
   previsaoVendas: [],
   campanhas: { total: 0, ativas: 0, orcamentoTotal: 0 },
@@ -54,6 +61,22 @@ const detalhePayload = {
       subtitulo: "12.345.678/0001-90",
       status: "NOVO",
       href: "/comercial/crm/leads/7",
+    },
+  ],
+}
+
+const detalheAcoesPayload = {
+  bloco: "acoes-realizadas",
+  titulo: "Ações de prospecção realizadas",
+  listagem: "/comercial/crm/acoes-prospeccao",
+  itens: [
+    {
+      id: 3,
+      titulo: "Visita à Tecelagem Y",
+      subtitulo: "PRESENCIAL",
+      status: "REALIZADA",
+      data: "2026-11-21T12:00:00.000Z",
+      href: "/comercial/crm/acoes-prospeccao/3",
     },
   ],
 }
@@ -78,6 +101,7 @@ function setup() {
     routeJson({
       "GET /api/crm/dashboard": dashboardPayload,
       "GET /api/crm/dashboard/detalhes?bloco=leads": detalhePayload,
+      "GET /api/crm/dashboard/detalhes?bloco=acoes-realizadas": detalheAcoesPayload,
       "GET /api/crm/dashboard/detalhes?bloco=top-clientes": detalheTopClientesPayload,
     })
   )
@@ -87,7 +111,7 @@ function setup() {
 }
 
 describe("CrmDashboardPage", () => {
-  it("renderiza o heading e apenas os cinco cards de resumo restantes", async () => {
+  it("renderiza o heading e apenas os seis cards de resumo restantes", async () => {
     setup()
     expect(screen.getByRole("heading", { name: "CRM" })).toBeInTheDocument()
 
@@ -96,6 +120,7 @@ describe("CrmDashboardPage", () => {
       "Clientes",
       "Oportunidades",
       "Visitas",
+      "Ações de Prospecção",
       "Tarefas Pendentes",
     ]) {
       expect(await screen.findByText(label)).toBeInTheDocument()
@@ -142,6 +167,23 @@ describe("CrmDashboardPage", () => {
     )
   })
 
+  it("mostra as ações realizadas no card e abre o detalhe do bloco", async () => {
+    const fetchMock = setup()
+
+    expect(await screen.findByText("4 hoje · 22 no mês")).toBeInTheDocument()
+    expect(screen.getByText("30")).toBeInTheDocument()
+
+    fireEvent.click(screen.getByTitle("Ações de Prospecção"))
+
+    await waitFor(() =>
+      expect(
+        findCall(fetchMock.calls, "/api/crm/dashboard/detalhes?bloco=acoes-realizadas", "GET")
+      ).toBeDefined()
+    )
+    expect(await screen.findByText("Visita à Tecelagem Y")).toBeInTheDocument()
+    expect(screen.getByText("REALIZADA")).toBeInTheDocument()
+  })
+
   it("mostra o painel Top Clientes com valor, conversão e linha clicável", async () => {
     setup()
 
@@ -162,11 +204,7 @@ describe("CrmDashboardPage", () => {
 
     await waitFor(() =>
       expect(
-        findCall(
-          fetchMock.calls,
-          "/api/crm/dashboard/detalhes?bloco=top-clientes",
-          "GET"
-        )
+        findCall(fetchMock.calls, "/api/crm/dashboard/detalhes?bloco=top-clientes", "GET")
       ).toBeDefined()
     )
     expect(await screen.findByText("2 convertidas de 5 oportunidades")).toBeInTheDocument()
@@ -200,7 +238,7 @@ describe("CrmDashboardPage", () => {
     expect(
       screen.getByRole("button", { name: "Informações da visão geral do CRM" })
     ).toBeInTheDocument()
-    expect(await screen.findAllByRole("button", { name: /^Informações do card / })).toHaveLength(5)
+    expect(await screen.findAllByRole("button", { name: /^Informações do card / })).toHaveLength(6)
     expect(
       await screen.findByRole("button", { name: "Informações do painel Top Leads" })
     ).toBeInTheDocument()

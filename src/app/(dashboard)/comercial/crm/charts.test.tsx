@@ -51,7 +51,13 @@ const data = {
   tarefas: { pendentes: 8, vencendo: 3 },
   topEmpresas: [],
   forecast: 480000,
-  conversao: { oportunidadesConvertidas: 18, totalOportunidades: 85 },
+  forecastQuantidade: 40,
+  conversao: {
+    oportunidadesConvertidas: 18,
+    totalOportunidades: 85,
+    valorConvertido: 720000,
+  },
+  totalPrevisaoConversao: { quantidade: 58, valor: 1200000 },
   recentes: [],
   previsaoVendas: [
     { periodo: "2026-10", valorPrevisto: 450000, valorReal: 460000, dados: null },
@@ -65,9 +71,7 @@ describe("CrmCharts", () => {
   it("exibe o botão de informações nos três gráficos", () => {
     render(<CrmCharts data={data} />)
 
-    expect(
-      screen.getAllByRole("heading", { name: "Pipeline (Funil)" }).length
-    ).toBeGreaterThan(0)
+    expect(screen.getAllByRole("heading", { name: "Pipeline (Funil)" }).length).toBeGreaterThan(0)
     expect(screen.getByRole("heading", { name: "Previsão & Conversão" })).toBeInTheDocument()
     expect(screen.getByRole("heading", { name: "Oportunidades por Status" })).toBeInTheDocument()
 
@@ -88,9 +92,7 @@ describe("CrmCharts", () => {
     fireEvent.click(screen.getByRole("button", { name: "Informações do gráfico Pipeline (Funil)" }))
 
     expect(screen.getByText("Pipeline (Funil) — composição das barras")).toBeInTheDocument()
-    expect(
-      screen.getByText(/185 leads, 85 oportunidades e 18 convertidas/)
-    ).toBeInTheDocument()
+    expect(screen.getByText(/185 leads, 85 oportunidades e 18 convertidas/)).toBeInTheDocument()
   })
 
   it("explica a fórmula da taxa de conversão no modal da previsão", () => {
@@ -102,6 +104,26 @@ describe("CrmCharts", () => {
 
     expect(screen.getByText("Previsão & Conversão — fórmulas")).toBeInTheDocument()
     expect(screen.getByText(/18 ÷ 85 × 100/)).toBeInTheDocument()
+  })
+
+  it("mostra quantidade, valor e total da previsão com conversão", () => {
+    const onDetalhe = vi.fn()
+    render(<CrmCharts data={data} onDetalhe={onDetalhe} />)
+
+    expect(screen.getByText("40 oportunidade(s) em aberto")).toBeInTheDocument()
+    expect(screen.getByText(/480\.000,00/)).toBeInTheDocument()
+    expect(screen.getByText(/720\.000,00/)).toBeInTheDocument()
+    expect(screen.getByText(/1\.200\.000,00/)).toBeInTheDocument()
+    expect(screen.getByText("58 oportunidade(s) no total")).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole("button", { name: /Previsão de Receita \(Pipeline\)/ }))
+    expect(onDetalhe).toHaveBeenCalledWith("previsao-abertas")
+
+    fireEvent.click(screen.getByRole("button", { name: /^Convertidas/ }))
+    expect(onDetalhe).toHaveBeenCalledWith("previsao-convertidas")
+
+    fireEvent.click(screen.getAllByRole("button", { name: /Ver todas/ })[1])
+    expect(onDetalhe).toHaveBeenCalledWith("previsao-abertas")
   })
 
   it("abre os detalhes do funil e o detalhe filtrado por status", () => {

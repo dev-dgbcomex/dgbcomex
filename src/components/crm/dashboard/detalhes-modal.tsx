@@ -3,12 +3,8 @@
 import { useQuery } from "@tanstack/react-query"
 import Link from "next/link"
 import { AlertCircle, ArrowRight, ExternalLink, Loader2 } from "lucide-react"
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { ExportarDados } from "@/components/exportar/ExportarDados"
 
 export type DetalheDashboard = {
   bloco: string
@@ -31,6 +27,8 @@ type DetalheResponse = {
   titulo: string
   listagem: string
   itens: DetalheItem[]
+  totalRegistros?: number
+  totalValor?: number
 }
 
 const STATUS_CORES: Record<string, string> = {
@@ -58,8 +56,22 @@ function formatarData(valor: string | null | undefined) {
   if (!valor) return "—"
   const data = new Date(valor)
   if (Number.isNaN(data.getTime())) return valor
-  return data.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
+  return data.toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  })
 }
+
+const COLUNAS_EXPORTACAO = [
+  { key: "titulo", label: "Oportunidade" },
+  { key: "subtitulo", label: "Detalhe" },
+  { key: "status", label: "Status" },
+  { key: "data", label: "Data" },
+  { key: "valor", label: "Valor" },
+  { key: "link", label: "Link" },
+]
 
 export function DashboardDetalhesModal({
   detalhe,
@@ -70,6 +82,8 @@ export function DashboardDetalhesModal({
 }) {
   const params = new URLSearchParams({ bloco: detalhe.bloco })
   if (detalhe.status) params.set("status", detalhe.status)
+  const comTotais = detalhe.bloco === "previsao-abertas" || detalhe.bloco === "previsao-convertidas"
+  if (comTotais) params.set("limite", "500")
 
   const { data, isLoading, isError } = useQuery<DetalheResponse>({
     queryKey: ["crm-dashboard-detalhes", detalhe.bloco, detalhe.status ?? null],
@@ -81,6 +95,16 @@ export function DashboardDetalhesModal({
     retry: 1,
   })
 
+  const linhasExportacao = (data?.itens ?? []).map((item) => ({
+    titulo: item.titulo,
+    subtitulo: item.subtitulo || item.detalhe || "",
+    status: item.status || "",
+    data: formatarData(item.data),
+    valor: typeof item.valor === "number" ? formatCurrency(item.valor) : "",
+    link: item.href || "",
+  }))
+  const nomeArquivo = `dashboard-${detalhe.bloco}`
+
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-3xl p-0">
@@ -89,7 +113,9 @@ export function DashboardDetalhesModal({
             {data?.titulo ?? "Detalhes do dashboard"}
           </DialogTitle>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            {data ? `${data.itens.length} registro(s) encontrado(s)` : "Carregando registros..."}
+            {data
+              ? `${data.totalRegistros ?? data.itens.length} registro(s) encontrado(s)`
+              : "Carregando registros..."}
           </p>
         </DialogHeader>
         <div className="max-h-[60vh] overflow-y-auto p-4 sm:p-5">
@@ -149,14 +175,36 @@ export function DashboardDetalhesModal({
           )}
         </div>
         {data && (
-          <div className="border-t border-slate-100 p-4 dark:border-slate-800">
-            <Link
-              href={data.listagem}
-              onClick={onClose}
-              className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:underline dark:text-blue-400"
-            >
-              Ver todas <ArrowRight size={12} />
-            </Link>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 p-4 dark:border-slate-800">
+            {comTotais ? (
+              <div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Total de {data.totalRegistros ?? data.itens.length} oportunidade(s)
+                </p>
+                <p className="text-lg font-bold text-slate-900 dark:text-slate-50">
+                  {formatCurrency(data.totalValor ?? 0)}
+                </p>
+              </div>
+            ) : (
+              <span />
+            )}
+            <div className="flex flex-wrap items-center gap-3">
+              {comTotais && data.itens.length > 0 && (
+                <ExportarDados
+                  data={linhasExportacao}
+                  columns={COLUNAS_EXPORTACAO}
+                  filename={nomeArquivo}
+                  title={data.titulo}
+                />
+              )}
+              <Link
+                href={data.listagem}
+                onClick={onClose}
+                className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:underline dark:text-blue-400"
+              >
+                Ver todas <ArrowRight size={12} />
+              </Link>
+            </div>
           </div>
         )}
       </DialogContent>

@@ -4,9 +4,10 @@ export const crmDashboardInfo = {
   pagina: {
     title: "Dashboard CRM — visão geral",
     description:
-      "Painel inicial do CRM com cinco cards de resumo, três gráficos, Top Leads, Top Clientes, Atividades Recentes e Ações Rápidas. Cards, gráficos e painéis abrem um modal com a lista de registros; cada registro abre o cadastro correspondente.",
+      "Painel inicial do CRM com seis cards de resumo, três gráficos, Top Leads, Top Clientes, Atividades Recentes e Ações Rápidas. Cards, gráficos e painéis abrem um modal com a lista de registros; cada registro abre o cadastro correspondente.",
     rules: [
-      "O resumo mostra apenas Leads (Negócios), Clientes, Oportunidades, Visitas e Tarefas Pendentes. Visitantes, Propostas, Campanhas e E-mails Enviados continuam no JSON da API e nos atalhos.",
+      "O resumo mostra Leads (Negócios), Clientes, Oportunidades, Visitas, Ações de Prospecção e Tarefas Pendentes. Visitantes, Propostas, Campanhas e E-mails Enviados continuam no JSON da API e nos atalhos.",
+      "Clicar em 'Previsão de Receita (Pipeline)' abre o modal com as oportunidades em aberto da previsão, com total e botão de exportação; 'Convertidas' abre as oportunidades FECHADO_GANHO com o mesmo total e exportação.",
       "O funil mostra três contagens: Leads (crm_leads), Oportunidades e Oportunidades Convertidas; Propostas foi removido do gráfico.",
       "A linha dos painéis mostra Top Leads, Top Clientes e Atividades Recentes; o Top Leads considera só oportunidades de leads não promovidas, e o Top Clientes considera oportunidades abertas e fechadas de clientes e de pessoas promovidas.",
       "Clicar em um card, em 'Ver todas', em uma barra do funil ou em um status abre GET /api/crm/dashboard/detalhes com o bloco correspondente.",
@@ -16,7 +17,7 @@ export const crmDashboardInfo = {
     examples: [
       {
         title: "Leitura do painel",
-        desc: "Com 185 leads, 12 clientes e 85 oportunidades, os três primeiros cards mostram 185, 12 e 85. Clicar no card de Oportunidades abre a lista de oportunidades; o 'i' abre apenas a explicação.",
+        desc: "Com 185 leads, 12 clientes, 85 oportunidades e 30 ações realizadas, os cards mostram 185, 12, 85 e 30. Clicar no card de Oportunidades abre a lista de oportunidades; o 'i' abre apenas a explicação.",
       },
       {
         title: "Detalhe do gráfico",
@@ -27,12 +28,13 @@ export const crmDashboardInfo = {
   resumo: {
     title: "Cards de resumo — origem dos números",
     description:
-      "Os cinco cards mostram contagens do banco principal calculadas em GET /api/crm/dashboard. Cada card abre um modal com os registros do domínio; o botão 'i' abre esta explicação sem abrir o modal.",
+      "Os seis cards mostram contagens do banco principal calculadas em GET /api/crm/dashboard. Cada card abre um modal com os registros do domínio; o botão 'i' abre esta explicação sem abrir o modal.",
     rules: [
       "Leads (Negócios) = COUNT de crm_pessoas, ou seja, quantas pessoas/leads estão cadastradas.",
       "Clientes = COUNT da tabela clientes, independente de tarja de lead promovida.",
       "Oportunidades = COUNT de crm_oportunidades; o complemento 'este mês' conta só os registros com createdAt a partir do primeiro dia do mês corrente.",
       "Visitas = COUNT de crm_visitas; o complemento 'hoje' filtra dataVisita igual ao dia atual.",
+      "Ações de Prospecção = COUNT de crm_acoes_prospeccao com status REALIZADA; os complementos 'hoje' e 'no mês' filtram dataAcao igual ao dia atual e a partir do primeiro dia do mês, sempre mantendo status REALIZADA.",
       "Tarefas Pendentes = COUNT de crm_tarefas com status PENDENTE; o complemento 'vencidas' conta as pendentes com dataPrevista menor ou igual a hoje.",
       "Os números são recalculados a cada carregamento da API, sem filtro de período, usuário ou responsável.",
       "Clicar no card abre o modal de detalhes; cada linha do modal abre o cadastro e o rodapé 'Ver todas' abre a listagem do domínio.",
@@ -41,14 +43,24 @@ export const crmDashboardInfo = {
     fields: [
       { name: "Leads (Negócios)", desc: "Abre o modal de leads — contagem de crm_leads." },
       { name: "Clientes", desc: "Abre o modal de clientes — contagem de clientes." },
-      { name: "Oportunidades", desc: "Abre o modal de oportunidades — contagem de crm_oportunidades." },
+      {
+        name: "Oportunidades",
+        desc: "Abre o modal de oportunidades — contagem de crm_oportunidades.",
+      },
       { name: "Visitas", desc: "Abre o modal de visitas — contagem de crm_visitas." },
-      { name: "Tarefas Pendentes", desc: "Abre o modal de tarefas — contagem de tarefas PENDENTE." },
+      {
+        name: "Ações de Prospecção",
+        desc: "Abre o modal de ações realizadas — contagem de crm_acoes_prospeccao com status REALIZADA.",
+      },
+      {
+        name: "Tarefas Pendentes",
+        desc: "Abre o modal de tarefas — contagem de tarefas PENDENTE.",
+      },
     ],
     examples: [
       {
         title: "Exemplo de leitura",
-        desc: "185 leads, 12 clientes, 85 oportunidades (9 criadas este mês), 1 visita hoje e 8 tarefas pendentes (3 com prazo até hoje): os cards mostram 185, 12, 85, 1 e 8, com os complementos '9 este mês', '1 hoje' e '3 vencidas'.",
+        desc: "185 leads, 12 clientes, 85 oportunidades (9 criadas este mês), 1 visita hoje, 30 ações realizadas (4 hoje e 22 no mês) e 8 tarefas pendentes (3 com prazo até hoje): os cards mostram 185, 12, 85, 1, 30 e 8, com os complementos '9 este mês', '1 hoje', '4 hoje · 22 no mês' e '3 vencidas'.",
       },
     ],
   } satisfies InfoContent,
@@ -73,18 +85,20 @@ export const crmDashboardInfo = {
     previsaoConversao: {
       title: "Previsão & Conversão — fórmulas",
       description:
-        "Bloco com a previsão de receita do pipeline, a quantidade de oportunidades ganhas, a taxa de conversão e o histórico mensal salvo.",
+        "Bloco com quantidade e valor da previsão de receita do pipeline, quantidade e valor das oportunidades ganhas, total somando as duas partes, taxa de conversão e histórico mensal salvo.",
       rules: [
-        "Previsão de Receita = SOMA de valorEstimado das oportunidades cujo status não é FECHADO_GANHO nem FECHADO_PERDIDO.",
-        "Convertidas = COUNT de crm_oportunidades com status FECHADO_GANHO.",
+        "Previsão de Receita = SOMA de valorEstimado e COUNT das oportunidades cujo status não é FECHADO_GANHO nem FECHADO_PERDIDO.",
+        "Convertidas = COUNT e SOMA de valorEstimado de crm_oportunidades com status FECHADO_GANHO.",
+        "Total (previsão + convertidas) = quantidade de oportunidades abertas mais convertidas e valor da previsão mais valor das convertidas.",
         "Taxa de Conversão = Convertidas ÷ total de oportunidades × 100, com uma casa decimal; sem oportunidades, mostra 0,0%.",
         "O histórico mensal lê até 12 registros de crm_previsaoVendas (valorPrevisto e valorReal), do mais recente para o mais antigo; a linha é invertida na exibição para ficar em ordem cronológica.",
-        "O número 'Convertidas' e o botão 'Ver todas' abrem o modal com as oportunidades FECHADO_GANHO; cada linha abre a oportunidade correspondente.",
+        "Clicar em 'Previsão de Receita (Pipeline)' ou em 'Ver todas' abre o modal com as oportunidades em aberto da previsão; clicar em 'Convertidas' abre as oportunidades FECHADO_GANHO.",
+        "Ambos os modais mostram a quantidade e o valor total de todas as oportunidades do filtro, independente do limite de linhas exibidas, e oferecem exportação em CSV, JSON e PDF.",
       ],
       examples: [
         {
           title: "Exemplo da taxa",
-          desc: "Com oportunidades abertas somando R$ 480.000 e 18 ganhas de um total de 85: a previsão mostra R$ 480.000, 'Convertidas' mostra 18 e a taxa mostra 21,2% (18 ÷ 85 × 100).",
+          desc: "Com 40 oportunidades abertas somando R$ 480.000 e 18 ganhas somando R$ 720.000 de um total de 85: a previsão mostra '40 oportunidade(s) em aberto' e R$ 480.000, 'Convertidas' mostra 18 e R$ 720.000, o total mostra 58 oportunidade(s) e R$ 1.200.000, e a taxa mostra 21,2% (18 ÷ 85 × 100).",
         },
       ],
     } satisfies InfoContent,
@@ -109,7 +123,8 @@ export const crmDashboardInfo = {
   paineis: {
     topLeads: {
       title: "Top Leads (Negócios) — como a lista é montada",
-      description: "Ranking das cinco leads com maior soma de valor estimado em oportunidades ainda abertas.",
+      description:
+        "Ranking das cinco leads com maior soma de valor estimado em oportunidades ainda abertas.",
       rules: [
         "A API soma valorEstimado de crm_oportunidades com status diferente de FECHADO_GANHO e FECHADO_PERDIDO, considera só oportunidades ligadas a uma lead por empresaId e ordena da maior soma para a menor, com limite de 5.",
         "Oportunidades com clienteId preenchido na oportunidade ou na lead, bem como leads com promovidaCliente ativo, ficam de fora do Top Leads e entram no Top Clientes.",
@@ -141,7 +156,10 @@ export const crmDashboardInfo = {
         "Clicar em uma linha abre /comercial/clientes/[id]; 'Ver todas' abre o modal com o mesmo ranking e o link final abre a listagem de clientes.",
       ],
       fields: [
-        { name: "Linha do cliente", desc: "Nome do cliente, soma das oportunidades e texto de conversão; abre o cadastro do cliente." },
+        {
+          name: "Linha do cliente",
+          desc: "Nome do cliente, soma das oportunidades e texto de conversão; abre o cadastro do cliente.",
+        },
         { name: "Ver todas", desc: "Abre o modal de detalhes com o bloco top-clientes." },
       ],
       examples: [

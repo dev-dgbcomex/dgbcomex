@@ -1,10 +1,6 @@
 import { describe, it, expect } from "vitest"
 import { getInfoContent } from "./index"
-import {
-  saudeProspeccaoAcoesInfo,
-  saudeProspeccaoInfo,
-  saudeProspeccaoLeadsInfo,
-} from "./crm"
+import { saudeProspeccaoAcoesInfo, saudeProspeccaoInfo, saudeProspeccaoLeadsInfo } from "./crm"
 import { crmDashboardInfo } from "./crm-dashboard"
 
 describe("getInfoContent", () => {
@@ -50,7 +46,10 @@ describe("getInfoContent", () => {
       ...(conteudo?.examples ?? []).map((e) => `${e.title}: ${e.desc}`),
     ].join("\n")
 
-    expect(texto).toMatch(/cinco cards/i)
+    expect(texto).toMatch(/seis cards/i)
+    expect(texto).toMatch(/Ações de Prospecção/)
+    expect(texto).toMatch(/oportunidades em aberto da previsão/)
+    expect(texto).toMatch(/exportação/)
     expect(texto).toMatch(/Top Leads/)
     expect(texto).toMatch(/Top Clientes/)
     expect(texto).toMatch(/Ações Rápidas/)
@@ -694,21 +693,19 @@ describe("saudeProspeccaoInfo", () => {
       /\(pedidos de venda \+ faturamentos\) ÷ total de visitas/i
     )
     expect(
-      saudeProspeccaoInfo.tabela.examples?.map((exemplo) => `${exemplo.title}: ${exemplo.desc}`).join(" ")
+      saudeProspeccaoInfo.tabela.examples
+        ?.map((exemplo) => `${exemplo.title}: ${exemplo.desc}`)
+        .join(" ")
     ).toMatch(/4 visitas, 1 pedido/i)
     expect(saudeProspeccaoInfo.aec.rules?.join(" ")).toMatch(/Esforço > 35/i)
-    expect(saudeProspeccaoInfo.engajados.rules?.join(" ")).toMatch(
-      /Engajamento − Esforço ≥ 10/i
-    )
+    expect(saudeProspeccaoInfo.engajados.rules?.join(" ")).toMatch(/Engajamento − Esforço ≥ 10/i)
     expect(saudeProspeccaoInfo.eql.rules?.join(" ")).toMatch(/\|Esforço − Engajamento\| < 20/i)
     expect(saudeProspeccaoInfo.eql.rules?.join(" ")).toMatch(/pelo menos 10 pontos à frente/i)
     expect(saudeProspeccaoInfo.bec.rules?.join(" ")).toMatch(/Esforço ≤ 35/i)
     expect(saudeProspeccaoInfo.conversao.rules?.join(" ")).toMatch(/limitado a 100%/i)
     expect(saudeProspeccaoInfo.esforco.rules?.join(" ")).toMatch(/visita realizada \(\+12,5\)/i)
     expect(saudeProspeccaoInfo.esforco.rules?.join(" ")).toMatch(/proposta \(\+25\)/i)
-    expect(saudeProspeccaoInfo.engajamento.rules?.join(" ")).toMatch(
-      /proposta negociada \(\+20\)/i
-    )
+    expect(saudeProspeccaoInfo.engajamento.rules?.join(" ")).toMatch(/proposta negociada \(\+20\)/i)
     expect(saudeProspeccaoInfo.itensEngajamento.rules?.join(" ")).toMatch(
       /Proposta e oportunidade valem 36% cada/i
     )
@@ -729,10 +726,12 @@ describe("saudeProspeccaoInfo", () => {
 describe("saudeProspeccaoLeadsInfo", () => {
   it("explica visitas e ações lado a lado na tabela de saúde", () => {
     expect(saudeProspeccaoLeadsInfo.tabela.rules?.join(" ")).toMatch(/mesma métrica/i)
-    expect(saudeProspeccaoLeadsInfo.tabela.rules?.join(" ")).toMatch(/Ações R\/A\/C abre a lista de ações/i)
-    expect(
-      saudeProspeccaoLeadsInfo.tabela.columns?.map((coluna) => coluna.name).join(" ")
-    ).toMatch(/Visitas R\/A\/C.*Ações R\/A\/C/)
+    expect(saudeProspeccaoLeadsInfo.tabela.rules?.join(" ")).toMatch(
+      /Ações R\/A\/C abre a lista de ações/i
+    )
+    expect(saudeProspeccaoLeadsInfo.tabela.columns?.map((coluna) => coluna.name).join(" ")).toMatch(
+      /Visitas R\/A\/C.*Ações R\/A\/C/
+    )
     expect(
       saudeProspeccaoLeadsInfo.tabela.examples?.map((exemplo) => exemplo.desc).join(" ")
     ).toMatch(/4\/1\/0 nas duas colunas R\/A\/C/)
@@ -760,20 +759,14 @@ describe("saudeProspeccaoAcoesInfo", () => {
     expect(saudeProspeccaoAcoesInfo.eql.rules?.join(" ")).toMatch(/pelo menos 10 pontos à frente/i)
     expect(saudeProspeccaoAcoesInfo.bec.rules?.join(" ")).toMatch(/Esforço ≤ 35/i)
     expect(saudeProspeccaoAcoesInfo.conversao.rules?.join(" ")).toMatch(/limitado a 100%/i)
-    expect(saudeProspeccaoAcoesInfo.esforco.rules?.join(" ")).toMatch(
-      /ação realizada \(\+12,5\)/i
-    )
+    expect(saudeProspeccaoAcoesInfo.esforco.rules?.join(" ")).toMatch(/ação realizada \(\+12,5\)/i)
     expect(saudeProspeccaoAcoesInfo.esforco.rules?.join(" ")).toMatch(/proposta \(\+25\)/i)
-    expect(saudeProspeccaoAcoesInfo.engajamento.rules?.join(" ")).toMatch(
-      /ação agendada \(\+10\)/i
-    )
+    expect(saudeProspeccaoAcoesInfo.engajamento.rules?.join(" ")).toMatch(/ação agendada \(\+10\)/i)
     expect(saudeProspeccaoAcoesInfo.itensEngajamento.rules?.join(" ")).toMatch(
       /Proposta e oportunidade valem 36% cada/i
     )
     expect(saudeProspeccaoAcoesInfo.itensEngajamento.rules?.join(" ")).toMatch(/9,33% cada/i)
-    expect(saudeProspeccaoAcoesInfo.registros.description).toMatch(
-      /não é a quantidade de ações/i
-    )
+    expect(saudeProspeccaoAcoesInfo.registros.description).toMatch(/não é a quantidade de ações/i)
     expect(saudeProspeccaoAcoesInfo.registros.examples?.map((e) => e.desc).join(" ")).toMatch(
       /58 ações cadastradas/i
     )
@@ -809,7 +802,7 @@ describe("crmDashboardInfo", () => {
     }
   })
 
-  it("o resumo explica a origem dos cinco cards restantes", () => {
+  it("o resumo explica a origem dos seis cards restantes", () => {
     const resumo = crmDashboardInfo.resumo
     const texto = [
       resumo.description,
@@ -822,6 +815,9 @@ describe("crmDashboardInfo", () => {
     expect(texto).toMatch(/tabela clientes/)
     expect(texto).toMatch(/crm_oportunidades/)
     expect(texto).toMatch(/dataVisita/)
+    expect(texto).toMatch(/crm_acoes_prospeccao/)
+    expect(texto).toMatch(/REALIZADA/)
+    expect(texto).toMatch(/dataAcao/)
     expect(texto).toMatch(/dataPrevista/)
     expect(texto).toMatch(/185 leads/)
     expect(texto).toMatch(/modal de detalhes/)
@@ -882,6 +878,10 @@ describe("crmDashboardInfo", () => {
     expect(textoBlocos).toMatch(/crm_timeline_eventos/)
     expect(textoBlocos).toMatch(/crm_visitas/)
     expect(textoBlocos).toMatch(/Ação de prospecção/)
+    expect(textoBlocos).toMatch(/40 oportunidade\(s\) em aberto/)
+    expect(textoBlocos).toMatch(/Total \(previsão \+ convertidas\)/)
+    expect(textoBlocos).toMatch(/R\$ 1\.200\.000/)
+    expect(textoBlocos).toMatch(/exportação em CSV, JSON e PDF/)
     expect(textoBlocos).toMatch(/nome do cliente/)
     expect(textoBlocos).toMatch(/R\$ 120\.000/)
     expect(textoBlocos).toMatch(/Top Clientes/)

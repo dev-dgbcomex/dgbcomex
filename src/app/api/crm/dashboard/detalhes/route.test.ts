@@ -15,6 +15,11 @@ function get(url: string) {
   return GET(new NextRequest(url))
 }
 
+function isTotaisPrevisaoQuery(campos: unknown) {
+  const chaves = Object.keys((campos ?? {}) as Record<string, unknown>)
+  return chaves.includes("totalRegistros") && chaves.includes("totalValor")
+}
+
 beforeEach(() => {
   vi.mocked(requireAuth).mockReset()
   resetDb(db)
@@ -93,9 +98,7 @@ describe("GET /api/crm/dashboard/detalhes", () => {
         },
       ],
     })
-    const where = builder.where.mock.calls
-      .map((args: unknown[]) => sqlParaTexto(args[0]))
-      .join(" ")
+    const where = builder.where.mock.calls.map((args: unknown[]) => sqlParaTexto(args[0])).join(" ")
     expect(where).toContain("cliente_id")
     expect(where).toContain("promovida_cliente")
   })
@@ -155,5 +158,92 @@ describe("GET /api/crm/dashboard/detalhes", () => {
       valor: 1200,
       href: "/comercial/crm/oportunidades/11",
     })
+  })
+
+  it("retorna as ações realizadas com link para a ação", async () => {
+    const builder = createQueryBuilder([
+      {
+        id: 9,
+        titulo: "Visita à Tecelagem Y",
+        subtitulo: "PRESENCIAL",
+        status: "REALIZADA",
+        data: "2026-11-21T12:00:00.000Z",
+      },
+    ])
+    vi.mocked(db.select).mockReturnValue(builder as never)
+
+    const res = await get("http://localhost/api/crm/dashboard/detalhes?bloco=acoes-realizadas")
+    expect(res.status).toBe(200)
+    const json = (await res.json()) as {
+      titulo: string
+      listagem: string
+      itens: { titulo: string; status: string; href: string }[]
+    }
+    expect(json).toMatchObject({
+      titulo: "Ações de prospecção realizadas",
+      listagem: "/comercial/crm/acoes-prospeccao",
+    })
+    expect(json.itens[0]).toMatchObject({
+      titulo: "Visita à Tecelagem Y",
+      status: "REALIZADA",
+      href: "/comercial/crm/acoes-prospeccao/9",
+    })
+    expect(
+      builder.where.mock.calls.map((args: unknown[]) => sqlParaTexto(args[0])).join(" ")
+    ).toContain("REALIZADA")
+  })
+
+  it("retorna oportunidades em aberto com total e limite ampliado na previsão", async () => {
+    const itensBuilder = createQueryBuilder([
+      {
+        id: 12,
+        titulo: "Oportunidade 12",
+        status: "NEGOCIACAO",
+        valor: "12500.00",
+        data: "2026-11-20T12:00:00.000Z",
+      },
+    ])
+    const totaisBuilder = createQueryBuilder([{ totalRegistros: "40", totalValor: "480000.00" }])
+    vi.mocked(db.select).mockImplementation(
+      ((campos: unknown) =>
+        (isTotaisPrevisaoQuery(campos) ? totaisBuilder : itensBuilder) as never) as never
+    )
+
+    const res = await get("http://localhost/api/crm/dashboard/detalhes?bloco=previsao-abertas")
+    expect(res.status).toBe(200)
+    const json = (await res.json()) as {
+      titulo: string
+      totalRegistros: number
+      totalValor: number
+      itens: { valor: number; href: string }[]
+    }
+    expect(json.titulo).toBe("Oportunidades da previsão de receita")
+    expect(json.totalRegistros).toBe(40)
+    expect(json.totalValor).toBe(480000)
+    expect(json.itens[0]).toMatchObject({
+      valor: 12500,
+      href: "/comercial/crm/oportunidades/12",
+    })
+    expect(
+      itensBuilder.where.mock.calls.map((args: unknown[]) => sqlParaTexto(args[0])).join(" ")
+    ).toContain("NOT IN")
+    expect(itensBuilder.limit).toHaveBeenCalledWith(500)
+  })
+
+  it("retorna oportunidades convertidas com o total ganho", async () => {
+    const itensBuilder = createQueryBuilder([])
+    const totaisBuilder = createQueryBuilder([{ totalRegistros: "18", totalValor: "720000.00" }])
+    vi.mocked(db.select).mockImplementation(
+      ((campos: unknown) =>
+        (isTotaisPrevisaoQuery(campos) ? totaisBuilder : itensBuilder) as never) as never
+    )
+
+    const res = await get("http://localhost/api/crm/dashboard/detalhes?bloco=previsao-convertidas")
+    expect(res.status).toBe(200)
+    const json = (await res.json()) as { totalRegistros: number; totalValor: number }
+    expect(json).toMatchObject({ totalRegistros: 18, totalValor: 720000 })
+    expect(
+      itensBuilder.where.mock.calls.map((args: unknown[]) => sqlParaTexto(args[0])).join(" ")
+    ).toContain("FECHADO_GANHO")
   })
 })

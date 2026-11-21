@@ -36,7 +36,13 @@ type CrmDashboardData = {
   tarefas: { pendentes: number; vencendo: number }
   topEmpresas: { empresaId: number | null; empresaNome: string; totalValor: number }[]
   forecast: number
-  conversao: { oportunidadesConvertidas: number; totalOportunidades: number }
+  forecastQuantidade: number
+  conversao: {
+    oportunidadesConvertidas: number
+    totalOportunidades: number
+    valorConvertido: number
+  }
+  totalPrevisaoConversao: { quantidade: number; valor: number }
   recentes: { id: number; tipo: string; descricao: string; dataEvento: string }[]
   previsaoVendas: {
     periodo: string
@@ -150,31 +156,46 @@ export function CrmCharts({
           />
           <button
             type="button"
-            onClick={() => onDetalhe?.("previsao-convertidas")}
+            onClick={() => onDetalhe?.("previsao-abertas")}
             className="ml-auto text-xs text-blue-600 hover:underline flex items-center gap-1"
           >
             Ver todas <ArrowRight size={12} />
           </button>
         </div>
-        <div className="space-y-4">
-          <div className="rounded-lg bg-indigo-50 dark:bg-indigo-950/30 p-4">
-            <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">
-              Previsão de Receita (Pipeline)
-            </p>
-            <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
-              {formatCurrency(data?.forecast ?? 0)}
-            </p>
-          </div>
+        <div className="space-y-3">
+          <button
+            type="button"
+            onClick={() => onDetalhe?.("previsao-abertas")}
+            className="w-full rounded-lg bg-indigo-50 dark:bg-indigo-950/30 p-4 text-left transition-colors hover:bg-indigo-100/70 dark:hover:bg-indigo-950/50"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">
+                  Previsão de Receita (Pipeline)
+                </p>
+                <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+                  {formatCurrency(data?.forecast ?? 0)}
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  {data?.forecastQuantidade ?? 0} oportunidade(s) em aberto
+                </p>
+              </div>
+              <ArrowRight size={14} className="mt-1 shrink-0 text-indigo-500" />
+            </div>
+          </button>
           <div className="grid grid-cols-2 gap-3">
             <button
               type="button"
               onClick={() => onDetalhe?.("previsao-convertidas")}
-              className="rounded-lg bg-green-50 dark:bg-green-950/30 p-3 text-left"
+              className="rounded-lg bg-green-50 dark:bg-green-950/30 p-3 text-left transition-colors hover:bg-green-100/70 dark:hover:bg-green-950/50"
             >
               <Handshake size={16} className="text-green-600 dark:text-green-400 mb-1" />
               <p className="text-xs text-slate-500 dark:text-slate-400">Convertidas</p>
               <p className="text-xl font-bold text-green-600 dark:text-green-400">
                 {data?.conversao.oportunidadesConvertidas ?? 0}
+              </p>
+              <p className="text-xs text-slate-600 dark:text-slate-300">
+                {formatCurrency(data?.conversao.valorConvertido ?? 0)}
               </p>
             </button>
             <div className="rounded-lg bg-amber-50 dark:bg-amber-950/30 p-3">
@@ -184,6 +205,17 @@ export function CrmCharts({
                 {taxaConversao}%
               </p>
             </div>
+          </div>
+          <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 p-3">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Total (previsão + convertidas)
+            </p>
+            <p className="text-lg font-bold text-slate-900 dark:text-slate-50">
+              {formatCurrency(data?.totalPrevisaoConversao.valor ?? 0)}
+            </p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {data?.totalPrevisaoConversao.quantidade ?? 0} oportunidade(s) no total
+            </p>
           </div>
         </div>
         {data?.previsaoVendas && data.previsaoVendas.length > 0 && (

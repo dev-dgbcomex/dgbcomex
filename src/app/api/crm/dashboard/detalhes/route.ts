@@ -5,6 +5,7 @@ import { crmVisitantes } from "@/lib/db/schema/crm-visitantes"
 import { crmPessoas } from "@/lib/db/schema/crm-pessoas"
 import { crmOportunidades } from "@/lib/db/schema/crm-oportunidades"
 import { crmVisitas } from "@/lib/db/schema/crm-visitas"
+import { crmAcoesProspeccao } from "@/lib/db/schema/crm-acoes-prospeccao"
 import { crmTarefas } from "@/lib/db/schema/crm-tarefas"
 import { crmTimelineEventos } from "@/lib/db/schema/crm-timeline-eventos"
 import { crmPrevisaoVendas } from "@/lib/db/schema/crm-previsao-vendas"
@@ -55,11 +56,13 @@ const BLOCOS = new Set([
   "clientes",
   "oportunidades",
   "visitas",
+  "acoes-realizadas",
   "tarefas",
   "funil",
   "funil-leads",
   "funil-oportunidades",
   "funil-convertidas",
+  "previsao-abertas",
   "previsao-convertidas",
   "status",
   "top-leads",
@@ -72,11 +75,13 @@ const TITULOS: Record<string, string> = {
   clientes: "Clientes",
   oportunidades: "Oportunidades",
   visitas: "Visitas",
+  "acoes-realizadas": "Ações de prospecção realizadas",
   tarefas: "Tarefas",
   funil: "Pipeline (Funil)",
   "funil-leads": "Leads no funil",
   "funil-oportunidades": "Oportunidades no funil",
   "funil-convertidas": "Oportunidades convertidas",
+  "previsao-abertas": "Oportunidades da previsão de receita",
   "previsao-convertidas": "Oportunidades convertidas",
   status: "Oportunidades por status",
   "top-leads": "Top Leads (Negócios)",
@@ -89,11 +94,13 @@ const LISTAGENS: Record<string, string> = {
   clientes: "/comercial/clientes",
   oportunidades: "/comercial/crm/oportunidades",
   visitas: "/comercial/crm/visitas",
+  "acoes-realizadas": "/comercial/crm/acoes-prospeccao",
   tarefas: "/comercial/crm/tarefas",
   funil: "/comercial/crm/oportunidades",
   "funil-leads": "/comercial/crm/leads",
   "funil-oportunidades": "/comercial/crm/oportunidades",
   "funil-convertidas": "/comercial/crm/oportunidades",
+  "previsao-abertas": "/comercial/crm/oportunidades",
   "previsao-convertidas": "/comercial/crm/oportunidades",
   status: "/comercial/crm/oportunidades",
   "top-leads": "/comercial/crm/leads",
@@ -163,10 +170,7 @@ async function listarClientes(limite: number): Promise<DetalheItem[]> {
   }))
 }
 
-async function listarOportunidades(
-  status: string | null,
-  limite: number
-): Promise<DetalheItem[]> {
+async function listarOportunidades(status: string | null, limite: number): Promise<DetalheItem[]> {
   let query = db
     .select({
       id: crmOportunidades.id,
@@ -185,6 +189,74 @@ async function listarOportunidades(
     valor: Number(row.valor ?? 0),
     data: dataTexto(row.data),
     href: `/comercial/crm/oportunidades/${row.id}`,
+  }))
+}
+
+async function listarOportunidadesPrevisao(
+  tipo: "abertas" | "convertidas",
+  limite: number
+): Promise<{ itens: DetalheItem[]; totalRegistros: number; totalValor: number }> {
+  const condicao =
+    tipo === "abertas"
+      ? sql`${crmOportunidades.status} NOT IN ('FECHADO_PERDIDO', 'FECHADO_GANHO')`
+      : eq(crmOportunidades.status, "FECHADO_GANHO")
+
+  const [linhas, totais] = await Promise.all([
+    db
+      .select({
+        id: crmOportunidades.id,
+        titulo: crmOportunidades.titulo,
+        status: crmOportunidades.status,
+        valor: crmOportunidades.valorEstimado,
+        data: crmOportunidades.createdAt,
+      })
+      .from(crmOportunidades)
+      .where(condicao)
+      .orderBy(desc(crmOportunidades.createdAt))
+      .limit(limite),
+    db
+      .select({
+        totalRegistros: count(),
+        totalValor: sql<string>`COALESCE(SUM(${crmOportunidades.valorEstimado}), 0)`,
+      })
+      .from(crmOportunidades)
+      .where(condicao),
+  ])
+
+  return {
+    itens: (linhas as ListaRow[]).map((row) => ({
+      id: row.id,
+      titulo: texto(row.titulo),
+      status: row.status,
+      valor: Number(row.valor ?? 0),
+      data: dataTexto(row.data),
+      href: `/comercial/crm/oportunidades/${row.id}`,
+    })),
+    totalRegistros: Number(totais[0]?.totalRegistros ?? 0),
+    totalValor: Number(totais[0]?.totalValor ?? 0),
+  }
+}
+
+async function listarAcoesRealizadas(limite: number): Promise<DetalheItem[]> {
+  const rows = await db
+    .select({
+      id: crmAcoesProspeccao.id,
+      titulo: sql<string>`COALESCE(NULLIF(${crmAcoesProspeccao.nomeAvulso}, ''), (SELECT nome FROM clientes WHERE id = ${crmAcoesProspeccao.clienteId}), (SELECT COALESCE(NULLIF(razao_social, ''), NULLIF(nome, '')) FROM crm_leads WHERE id = ${crmAcoesProspeccao.empresaId}), 'Ação de prospecção')`,
+      subtitulo: crmAcoesProspeccao.tipo,
+      status: crmAcoesProspeccao.status,
+      data: crmAcoesProspeccao.dataAcao,
+    })
+    .from(crmAcoesProspeccao)
+    .where(eq(crmAcoesProspeccao.status, "REALIZADA"))
+    .orderBy(desc(crmAcoesProspeccao.dataAcao))
+    .limit(limite)
+  return (rows as ListaRow[]).map((row) => ({
+    id: row.id,
+    titulo: texto(row.titulo),
+    subtitulo: row.subtitulo,
+    status: row.status,
+    data: dataTexto(row.data),
+    href: `/comercial/crm/acoes-prospeccao/${row.id}`,
   }))
 }
 
@@ -341,10 +413,7 @@ async function listarRecentes(limite: number): Promise<DetalheItem[]> {
 
 async function resumoFunil(): Promise<DetalheItem[]> {
   const [leads, clientes, oportunidades, convertidas] = await Promise.all([
-    safeQuery(
-      () => db.select({ total: count() }).from(crmPessoas),
-      [{ total: 0 }]
-    ),
+    safeQuery(() => db.select({ total: count() }).from(crmPessoas), [{ total: 0 }]),
     safeQuery(() => db.select({ total: count() }).from(clientesSchema), [{ total: 0 }]),
     safeQuery(() => db.select({ total: count() }).from(crmOportunidades), [{ total: 0 }]),
     safeQuery(
@@ -397,26 +466,44 @@ export async function GET(req: NextRequest) {
     }
 
     const status = params.get("status")
+    const blocoPrevisao = bloco === "previsao-abertas" || bloco === "previsao-convertidas"
+    const limiteMaximo = blocoPrevisao ? 500 : 100
+    const limitePadrao = blocoPrevisao ? 500 : 25
     const limiteParam = Number(params.get("limite"))
-    const limite = Number.isFinite(limiteParam) && limiteParam > 0 ? Math.min(limiteParam, 100) : 25
+    const limite =
+      Number.isFinite(limiteParam) && limiteParam > 0
+        ? Math.min(limiteParam, limiteMaximo)
+        : limitePadrao
 
     let itens: DetalheItem[] = []
+    let totalRegistros = 0
+    let totalValor = 0
     if (bloco === "funil") {
       itens = await safeQuery(resumoFunil, [])
     } else if (bloco === "leads" || bloco === "funil-leads") {
       itens = await safeQuery(() => listarLeads(status, limite), [])
     } else if (bloco === "clientes") {
       itens = await safeQuery(() => listarClientes(limite), [])
-    } else if (
-      bloco === "oportunidades" ||
-      bloco === "funil-oportunidades" ||
-      bloco === "status"
-    ) {
+    } else if (bloco === "oportunidades" || bloco === "funil-oportunidades" || bloco === "status") {
       itens = await safeQuery(() => listarOportunidades(status, limite), [])
-    } else if (bloco === "funil-convertidas" || bloco === "previsao-convertidas") {
+    } else if (bloco === "funil-convertidas") {
       itens = await safeQuery(() => listarOportunidades("FECHADO_GANHO", limite), [])
+    } else if (blocoPrevisao) {
+      const previsao = await safeQuery(
+        () =>
+          listarOportunidadesPrevisao(
+            bloco === "previsao-abertas" ? "abertas" : "convertidas",
+            limite
+          ),
+        { itens: [], totalRegistros: 0, totalValor: 0 }
+      )
+      itens = previsao.itens
+      totalRegistros = previsao.totalRegistros
+      totalValor = previsao.totalValor
     } else if (bloco === "visitas") {
       itens = await safeQuery(() => listarVisitas(limite), [])
+    } else if (bloco === "acoes-realizadas") {
+      itens = await safeQuery(() => listarAcoesRealizadas(limite), [])
     } else if (bloco === "tarefas") {
       itens = await safeQuery(() => listarTarefas(limite), [])
     } else if (bloco === "top-leads") {
@@ -432,6 +519,7 @@ export async function GET(req: NextRequest) {
       titulo: TITULOS[bloco],
       listagem: LISTAGENS[bloco],
       itens,
+      ...(blocoPrevisao ? { totalRegistros, totalValor } : {}),
     })
   } catch (error) {
     console.error("[GET /api/crm/dashboard/detalhes]", error)

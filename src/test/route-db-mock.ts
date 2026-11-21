@@ -46,6 +46,7 @@ export function sqlParaTexto(valor: unknown): string {
     const partes: string[] = []
     if (typeof objeto.name === "string") partes.push(objeto.name)
     if (typeof objeto.value === "string") partes.push(objeto.value)
+    if (Array.isArray(objeto.value)) partes.push(percorrer(objeto.value))
     if (objeto.queryChunks) partes.push(percorrer(objeto.queryChunks))
     if (Array.isArray(no)) {
       for (const item of no) partes.push(percorrer(item))
