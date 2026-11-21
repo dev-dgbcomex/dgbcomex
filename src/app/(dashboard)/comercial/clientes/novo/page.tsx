@@ -11,6 +11,7 @@ import { SelectSegmento } from "@/components/crm/select-segmento"
 import Link from "next/link"
 import { ArrowLeft, Save } from "lucide-react"
 import { toast } from "sonner"
+import { formatarDocumento } from "@/lib/documento"
 
 export default function NovoClientePage() {
   const router = useRouter()
@@ -63,6 +64,10 @@ export default function NovoClientePage() {
     }
     if (!form.cnpj.trim()) {
       toast.error("CNPJ é obrigatório")
+      return
+    }
+    if (form.cnpj.replace(/\D/g, "").length !== 14) {
+      toast.error("CNPJ deve ter 14 dígitos")
       return
     }
 
@@ -130,7 +135,7 @@ export default function NovoClientePage() {
             <input
               type="text"
               value={form.cnpj}
-              onChange={(e) => setField("cnpj", e.target.value)}
+              onChange={(e) => setField("cnpj", formatarDocumento(e.target.value, "CNPJ") ?? "")}
               placeholder="00.000.000/0000-00"
               className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               required

@@ -27,6 +27,7 @@ import type {
   RepresentanteResult,
   VinculoRepresentante,
 } from "../types"
+import { formatarDocumento } from "@/lib/documento"
 
 export default function NovaLeadPage() {
   const router = useRouter()
@@ -131,12 +132,6 @@ export default function NovaLeadPage() {
     setForm((prev) => ({ ...prev, tipoPessoa: tipo }))
   }
 
-  function formatCnpj(v: string) {
-    const d = v.replace(/\D/g, "")
-    if (d.length !== 14) return v
-    return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12)}`
-  }
-
   async function handleConsultarCnpj() {
     const digits = (form.cnpj || "").replace(/\D/g, "")
     if (digits.length !== 14) {
@@ -163,7 +158,7 @@ export default function NovaLeadPage() {
       setConsulted(true)
       setForm((prev) => ({
         ...prev,
-        cnpj: formatCnpj(digits),
+        cnpj: formatarDocumento(digits, "CNPJ") ?? digits,
         razaoSocial: api.razao_social || prev.razaoSocial,
         nomeFantasia: api.nome_fantasia || prev.nomeFantasia,
         segmento:
@@ -199,12 +194,27 @@ export default function NovaLeadPage() {
       toast.error(tipoPessoa === "PF" ? "Nome é obrigatório" : "Razão Social é obrigatória")
       return
     }
+    const digitosCpf = (form.cpf || "").replace(/\D/g, "")
+    const digitosCnpj = (form.cnpj || "").replace(/\D/g, "")
+    if (tipoPessoa === "PF" && digitosCpf.length > 0 && digitosCpf.length !== 11) {
+      toast.error("CPF deve ter 11 dígitos")
+      return
+    }
+    if (tipoPessoa === "PJ" && digitosCnpj.length > 0 && digitosCnpj.length !== 14) {
+      toast.error("CNPJ deve ter 14 dígitos")
+      return
+    }
+    const payload = {
+      ...form,
+      cpf: tipoPessoa === "PF" ? (formatarDocumento(digitosCpf, "CPF") ?? null) : null,
+      cnpj: tipoPessoa === "PJ" ? (formatarDocumento(digitosCnpj, "CNPJ") ?? null) : null,
+    }
     setSaving(true)
     try {
       const res = await fetch("/api/crm/leads", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       })
       if (!res.ok) {
         const err = await res.json()
@@ -305,7 +315,7 @@ export default function NovaLeadPage() {
                 <input
                   type="text"
                   value={form.cpf || ""}
-                  onChange={(e) => setField("cpf", e.target.value)}
+                  onChange={(e) => setField("cpf", formatarDocumento(e.target.value, "CPF") ?? "")}
                   placeholder="000.000.000-00"
                   className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
@@ -344,7 +354,7 @@ export default function NovaLeadPage() {
                   <input
                     type="text"
                     value={form.cnpj}
-                    onChange={(e) => setField("cnpj", e.target.value)}
+                    onChange={(e) => setField("cnpj", formatarDocumento(e.target.value, "CNPJ") ?? "")}
                     onKeyDown={(e) =>
                       e.key === "Enter" && (e.preventDefault(), handleConsultarCnpj())
                     }

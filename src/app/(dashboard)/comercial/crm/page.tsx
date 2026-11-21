@@ -1,11 +1,16 @@
 "use client"
 
+import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { InfoButton } from "@/components/ui/info-button"
 import type { InfoContent } from "@/lib/info-content"
 import { crmDashboardInfo } from "@/lib/info-content/crm-dashboard"
 import Link from "next/link"
 import dynamic from "next/dynamic"
+import {
+  DashboardDetalhesModal,
+  type DetalheDashboard,
+} from "@/components/crm/dashboard/detalhes-modal"
 import {
   Building2,
   Users,
@@ -39,10 +44,16 @@ type CrmDashboardData = {
   }
   visitas: { total: number; hoje: number }
   tarefas: { pendentes: number; vencendo: number }
-  topEmpresas: { empresaId: number | null; empresaNome: string; totalValor: number }[]
+  topEmpresas: {
+    empresaId: number | null
+    empresaNome: string
+    clienteId?: number | null
+    clienteNome?: string | null
+    totalValor: number
+  }[]
   forecast: number
   conversao: { oportunidadesConvertidas: number; totalOportunidades: number }
-  recentes: { id: number; tipo: string; descricao: string; dataEvento: string }[]
+  recentes: { id: number; tipo: string; descricao: string; dataEvento: string; href?: string }[]
   previsaoVendas: {
     periodo: string
     valorPrevisto: number
@@ -72,6 +83,7 @@ const TIPO_EVENTO_ICON: Record<string, React.ReactNode> = {
   VISITA: <Calendar size={14} />,
   TAREFA: <CheckCircle2 size={14} />,
   PROPOSTA: <FileText size={14} />,
+  ACAO_PROSPECCAO: <Megaphone size={14} />,
 }
 
 function formatCurrency(value: number) {
@@ -85,6 +97,7 @@ function getTipoCor(tipo: string) {
     VISITA: "text-blue-500",
     TAREFA: "text-amber-500",
     PROPOSTA: "text-cyan-500",
+    ACAO_PROSPECCAO: "text-violet-500",
   }
   return map[tipo] || "text-slate-400"
 }
@@ -96,11 +109,13 @@ function getTipoBg(tipo: string) {
     VISITA: "bg-blue-100 dark:bg-blue-950/50",
     TAREFA: "bg-amber-100 dark:bg-amber-950/50",
     PROPOSTA: "bg-cyan-100 dark:bg-cyan-950/50",
+    ACAO_PROSPECCAO: "bg-violet-100 dark:bg-violet-950/50",
   }
   return map[tipo] || "bg-slate-100 dark:bg-slate-800"
 }
 
 export default function CrmDashboardPage() {
+  const [detalhe, setDetalhe] = useState<DetalheDashboard | null>(null)
   const { data, isLoading, isError } = useQuery<CrmDashboardData>({
     queryKey: ["crm-dashboard"],
     queryFn: async () => {
@@ -147,7 +162,7 @@ export default function CrmDashboardPage() {
           {/* Linha 1: Cards de resumo */}
           <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
             <SummaryCard
-              href="/comercial/crm/leads"
+              onClick={() => setDetalhe({ bloco: "leads" })}
               icon={<Building2 size={20} />}
               value={data?.leads.total ?? 0}
               label="Leads (Negócios)"
@@ -156,7 +171,7 @@ export default function CrmDashboardPage() {
               iconColor="text-blue-600 dark:text-blue-400"
             />
             <SummaryCard
-              href="/comercial/crm/relatorios/clientes"
+              onClick={() => setDetalhe({ bloco: "clientes" })}
               icon={<Users size={20} />}
               value={data?.clientes.total ?? 0}
               label="Clientes"
@@ -165,7 +180,7 @@ export default function CrmDashboardPage() {
               iconColor="text-indigo-600 dark:text-indigo-400"
             />
             <SummaryCard
-              href="/comercial/crm/oportunidades"
+              onClick={() => setDetalhe({ bloco: "oportunidades" })}
               icon={<Target size={20} />}
               value={data?.oportunidades.total ?? 0}
               label="Oportunidades"
@@ -175,7 +190,7 @@ export default function CrmDashboardPage() {
               iconColor="text-purple-600 dark:text-purple-400"
             />
             <SummaryCard
-              href="/comercial/crm/visitas"
+              onClick={() => setDetalhe({ bloco: "visitas" })}
               icon={<Calendar size={20} />}
               value={data?.visitas.total ?? 0}
               label="Visitas"
@@ -185,7 +200,7 @@ export default function CrmDashboardPage() {
               iconColor="text-amber-600 dark:text-amber-400"
             />
             <SummaryCard
-              href="/comercial/crm/tarefas"
+              onClick={() => setDetalhe({ bloco: "tarefas" })}
               icon={<CheckCircle2 size={20} />}
               value={data?.tarefas.pendentes ?? 0}
               label="Tarefas Pendentes"
@@ -198,7 +213,10 @@ export default function CrmDashboardPage() {
 
           {/* Linha 2: Pipeline, Forecast, Conversão */}
           <div className="grid gap-6 md:grid-cols-3">
-            <CrmCharts data={data} />
+            <CrmCharts
+              data={data}
+              onDetalhe={(bloco, status) => setDetalhe({ bloco, status })}
+            />
           </div>
 
           {/* Linha 3: Top Leads + Atividades Recentes */}
@@ -214,28 +232,41 @@ export default function CrmDashboardPage() {
                     label="Informações do painel Top Leads"
                   />
                 </h2>
-                <Link
-                  href="/comercial/crm/leads"
+                <button
+                  type="button"
+                  onClick={() => setDetalhe({ bloco: "top-leads" })}
                   className="text-xs text-blue-600 hover:underline flex items-center gap-1"
                 >
                   Ver todas <ArrowRight size={12} />
-                </Link>
+                </button>
               </div>
               {data?.topEmpresas && data.topEmpresas.length > 0 ? (
                 <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {data.topEmpresas.map((emp, i) => (
-                    <div key={emp.empresaId ?? i} className="flex items-center justify-between p-3">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <span className="text-xs font-bold text-slate-400 w-5">{i + 1}.</span>
-                        <p className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">
-                          {emp.empresaNome}
+                  {data.topEmpresas.map((emp, i) => {
+                    const nome = emp.empresaNome === "Sem nome" && emp.clienteNome ? emp.clienteNome : emp.empresaNome
+                    const href = emp.empresaId
+                      ? `/comercial/crm/leads/${emp.empresaId}`
+                      : emp.clienteId
+                        ? `/comercial/clientes/${emp.clienteId}`
+                        : "/comercial/crm/oportunidades"
+                    return (
+                      <Link
+                        key={`${emp.empresaId ?? "cliente"}-${emp.clienteId ?? i}`}
+                        href={href}
+                        className="flex items-center justify-between p-3 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <span className="text-xs font-bold text-slate-400 w-5">{i + 1}.</span>
+                          <p className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">
+                            {nome}
+                          </p>
+                        </div>
+                        <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                          {formatCurrency(emp.totalValor)}
                         </p>
-                      </div>
-                      <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                        {formatCurrency(emp.totalValor)}
-                      </p>
-                    </div>
-                  ))}
+                      </Link>
+                    )
+                  })}
                 </div>
               ) : (
                 <p className="text-sm text-slate-400 text-center py-8">
@@ -255,11 +286,22 @@ export default function CrmDashboardPage() {
                     label="Informações do painel Atividades Recentes"
                   />
                 </h2>
+                <button
+                  type="button"
+                  onClick={() => setDetalhe({ bloco: "recentes" })}
+                  className="text-xs text-blue-600 hover:underline flex items-center gap-1"
+                >
+                  Ver todas <ArrowRight size={12} />
+                </button>
               </div>
               {data?.recentes && data.recentes.length > 0 ? (
                 <div className="divide-y divide-slate-100 dark:divide-slate-800">
                   {data.recentes.map((ev) => (
-                    <div key={ev.id} className="flex items-start gap-3 p-3">
+                    <Link
+                      key={ev.id}
+                      href={ev.href || "/comercial/crm"}
+                      className="flex items-start gap-3 p-3 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                    >
                       <div className={`rounded-lg p-1.5 mt-0.5 ${getTipoBg(ev.tipo)}`}>
                         <span className={getTipoCor(ev.tipo)}>
                           {TIPO_EVENTO_ICON[ev.tipo] || <Clock size={14} />}
@@ -280,7 +322,7 @@ export default function CrmDashboardPage() {
                             : "—"}
                         </p>
                       </div>
-                    </div>
+                    </Link>
                   ))}
                 </div>
               ) : (
@@ -367,6 +409,10 @@ export default function CrmDashboardPage() {
               />
             </div>
           </div>
+
+          {detalhe && (
+            <DashboardDetalhesModal detalhe={detalhe} onClose={() => setDetalhe(null)} />
+          )}
         </>
       )}
     </div>
@@ -374,7 +420,7 @@ export default function CrmDashboardPage() {
 }
 
 function SummaryCard({
-  href,
+  onClick,
   icon,
   value,
   label,
@@ -383,7 +429,7 @@ function SummaryCard({
   bgColor,
   iconColor,
 }: {
-  href: string
+  onClick: () => void
   icon: React.ReactNode
   value: number
   label: string
@@ -393,10 +439,19 @@ function SummaryCard({
   iconColor: string
 }) {
   return (
-    <Link
-      href={href}
+    <div
+      role="button"
+      tabIndex={0}
       title={label}
-      className="min-w-0 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 hover:shadow-md transition-shadow"
+      aria-label={`Abrir detalhes de ${label}`}
+      onClick={onClick}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault()
+          onClick()
+        }
+      }}
+      className="min-w-0 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 hover:shadow-md transition-shadow cursor-pointer"
     >
       <div className="flex items-center gap-3 min-w-0">
         <div className={`shrink-0 rounded-lg ${bgColor} p-2.5`}>
@@ -415,7 +470,7 @@ function SummaryCard({
         </span>
       </div>
       {sub && <p className="text-[10px] text-slate-400 mt-1.5 truncate">{sub}</p>}
-    </Link>
+    </div>
   )
 }
 

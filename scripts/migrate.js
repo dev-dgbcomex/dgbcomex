@@ -1823,6 +1823,11 @@ async function migrate() {
     // information_schema mostrou 8 ausentes: o banco so tinha o que o migrate.js criou.
     await criarTabelas(process.env.DATABASE_URL)
 
+    await sql`CREATE UNIQUE INDEX IF NOT EXISTS clientes_cnpj_normalizado_unique ON public.clientes (regexp_replace(cnpj, '\\D', '', 'g'))`
+    await sql`CREATE UNIQUE INDEX IF NOT EXISTS crm_leads_cnpj_normalizado_unique ON public.crm_leads (regexp_replace(cnpj, '\\D', '', 'g')) WHERE cnpj IS NOT NULL`
+    await sql`CREATE UNIQUE INDEX IF NOT EXISTS crm_leads_cpf_normalizado_unique ON public.crm_leads (regexp_replace(cpf, '\\D', '', 'g')) WHERE cpf IS NOT NULL`
+    await sql`UPDATE public.crm_timeline_eventos SET descricao = regexp_replace(descricao, '^Visita ', 'Ação de prospecção ') WHERE tipo = 'ACAO_PROSPECCAO' AND descricao LIKE 'Visita %'`
+
     console.log("\n✅ Migration concluída com sucesso!")
   } catch (error) {
     console.error("❌ Erro na migration:", error.message)

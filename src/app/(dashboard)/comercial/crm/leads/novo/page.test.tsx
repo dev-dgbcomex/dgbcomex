@@ -121,7 +121,7 @@ describe("NovaLeadPage", () => {
       expect(call!.body).toEqual({
         tipoPessoa: "PJ",
         nome: "",
-        cpf: "",
+        cpf: null,
         razaoSocial: "Tecelagem Beta Ltda",
         nomeFantasia: "Beta Confecções",
         cnpj: "12.345.678/0001-90",

@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from "next/server"
 import { requireAuth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { clientes } from "@/lib/db/schema/clientes"
-import { eq } from "drizzle-orm"
+import { eq, sql } from "drizzle-orm"
 import { excluirClienteCascade } from "@/lib/cliente-cascade"
 import { registrarLog } from "@/lib/notificar"
 import { podeGerenciarTudo } from "@/lib/permissoes"
+import { digitosDocumento, formatarDocumento, validarDocumento } from "@/lib/documento"
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -61,11 +62,14 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       return NextResponse.json({ error: "CNPJ é obrigatório" }, { status: 400 })
     }
 
-    const cnpjLimpo = cnpj.replace(/\D/g, "")
+    const erroCnpj = validarDocumento(cnpj, "CNPJ")
+    if (erroCnpj) return NextResponse.json({ error: erroCnpj }, { status: 400 })
+
+    const cnpjFormatado = formatarDocumento(cnpj, "CNPJ")!
     const existenteCNPJ = await db
       .select()
       .from(clientes)
-      .where(eq(clientes.cnpj, cnpjLimpo))
+      .where(sql`regexp_replace(${clientes.cnpj}, '\\D', '', 'g') = ${digitosDocumento(cnpjFormatado)}`)
       .limit(1)
 
     if (existenteCNPJ[0] && existenteCNPJ[0].id !== parseInt(id)) {
@@ -91,7 +95,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       .update(clientes)
       .set({
         nome: nome.trim(),
-        cnpj: cnpjLimpo,
+        cnpj: cnpjFormatado,
         razaoSocial: razaoSocial?.trim() || null,
         email: email?.trim() || null,
         emailNf: emailNf?.trim() || null,

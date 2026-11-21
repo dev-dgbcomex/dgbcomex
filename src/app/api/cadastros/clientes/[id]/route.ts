@@ -3,10 +3,11 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { clientes } from "@/lib/db/schema/clientes"
-import { eq } from "drizzle-orm"
+import { eq, and, ne, sql } from "drizzle-orm"
 import { handleApiError } from "@/lib/api-error"
 import { notificarDelecao } from "@/lib/notificar"
 import { excluirClienteCascade } from "@/lib/cliente-cascade"
+import { digitosDocumento, formatarDocumento, validarDocumento } from "@/lib/documento"
 export const dynamic = "force-dynamic"
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -55,11 +56,30 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       ativo,
     } = body
 
+    const erroCnpj = cnpj ? validarDocumento(cnpj, "CNPJ") : "CNPJ é obrigatório"
+    if (erroCnpj) return NextResponse.json({ error: erroCnpj }, { status: 400 })
+
+    const cnpjFormatado = formatarDocumento(cnpj, "CNPJ")!
+    const duplicado = await db
+      .select({ id: clientes.id })
+      .from(clientes)
+      .where(
+        and(
+          sql`regexp_replace(${clientes.cnpj}, '\\D', '', 'g') = ${digitosDocumento(cnpjFormatado)}`,
+          ne(clientes.id, parseInt(id))
+        )
+      )
+      .limit(1)
+
+    if (duplicado[0]) {
+      return NextResponse.json({ error: "CNPJ já cadastrado em outro cliente" }, { status: 409 })
+    }
+
     const [atualizado] = await db
       .update(clientes)
       .set({
         nome: nome?.trim(),
-        cnpj: cnpj?.trim(),
+        cnpj: cnpjFormatado,
         razaoSocial: razaoSocial?.trim() || null,
         email: email?.trim() || null,
         telefone: telefone?.trim() || null,

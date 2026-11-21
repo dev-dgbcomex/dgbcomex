@@ -14,17 +14,12 @@ import {
 } from "@/components/ui/dialog"
 import { SelectUf } from "./select-uf"
 import { SelectCidade } from "./select-cidade"
+import { formatarDocumento, validarDocumento } from "@/lib/documento"
 
 type Props = {
   onCreated: (id: number, nome: string) => void
   open?: boolean
   onOpenChange?: (open: boolean) => void
-}
-
-function formatCnpj(v: string) {
-  const d = v.replace(/\D/g, "")
-  if (d.length !== 14) return v
-  return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12)}`
 }
 
 export function QuickCreateCliente({ onCreated, open: openProp, onOpenChange }: Props) {
@@ -128,6 +123,11 @@ export function QuickCreateCliente({ onCreated, open: openProp, onOpenChange }: 
       toast.error("Nome e CNPJ são obrigatórios")
       return
     }
+    const erroCnpj = validarDocumento(cnpj, "CNPJ")
+    if (erroCnpj) {
+      toast.error(erroCnpj)
+      return
+    }
     setSaving(true)
     try {
       const res = await fetch("/api/clientes", {
@@ -136,7 +136,7 @@ export function QuickCreateCliente({ onCreated, open: openProp, onOpenChange }: 
         body: JSON.stringify({
           nome,
           razaoSocial: razaoSocial || null,
-          cnpj,
+          cnpj: formatarDocumento(cnpj, "CNPJ") ?? cnpj,
           email: email || null,
           telefone: telefone || null,
           contato: contato || null,
@@ -217,7 +217,7 @@ export function QuickCreateCliente({ onCreated, open: openProp, onOpenChange }: 
               <input
                 type="text"
                 value={cnpj}
-                onChange={(e) => setCnpj(e.target.value)}
+                onChange={(e) => setCnpj(formatarDocumento(e.target.value, "CNPJ") ?? "")}
                 onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleConsultarCnpj())}
                 className="flex-1 min-w-0 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
                 placeholder="00.000.000/0001-00"
@@ -239,7 +239,7 @@ export function QuickCreateCliente({ onCreated, open: openProp, onOpenChange }: 
             <div className="rounded-lg border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/30 p-3 flex items-start gap-2">
               <AlertCircle size={16} className="text-amber-500 mt-0.5 shrink-0" />
               <p className="text-sm text-amber-700 dark:text-amber-300">
-                CNPJ {formatCnpj(cnpj)} não encontrado na Receita Federal. Preencha os dados
+                CNPJ {formatarDocumento(cnpj, "CNPJ") || cnpj} não encontrado na Receita Federal. Preencha os dados
                 manualmente.
               </p>
             </div>

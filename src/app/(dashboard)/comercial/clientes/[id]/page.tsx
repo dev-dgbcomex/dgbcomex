@@ -36,6 +36,7 @@ import { HistoricoConversaoCard } from "./components/historico-conversao-card"
 import type { HistoricoPromocao } from "@/lib/crm/historico-promocao"
 import type { Cliente, VinculoRepresentante, RepresentanteResumo } from "../types"
 import type { Contato } from "../../crm/contatos/types"
+import { formatarDocumento } from "@/lib/documento"
 
 async function fetchRepresentantes(query: string): Promise<RepresentanteResumo[]> {
   const res = await fetch(`/api/representantes?q=${encodeURIComponent(query)}`)
@@ -310,6 +311,10 @@ export default function EditarClientePage({ params }: { params: Promise<{ id: st
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (!cliente) return
+    if (cliente.cnpj.replace(/\D/g, "").length !== 14) {
+      toast.error("CNPJ deve ter 14 dígitos")
+      return
+    }
 
     setSaving(true)
     try {
@@ -334,7 +339,8 @@ export default function EditarClientePage({ params }: { params: Promise<{ id: st
   }
 
   const handleChange = (field: keyof Cliente, value: string) => {
-    setCliente((prev) => (prev ? { ...prev, [field]: value } : null))
+    const novoValor = field === "cnpj" ? (formatarDocumento(value, "CNPJ") ?? "") : value
+    setCliente((prev) => (prev ? { ...prev, [field]: novoValor } : null))
   }
 
   const handleCheckboxChange = (field: keyof Cliente, checked: boolean) => {

@@ -8,6 +8,7 @@ import { clientes } from "@/lib/db/schema/clientes"
 import { registrarLog } from "@/lib/notificar"
 import { notificarAtividadeComercial } from "@/lib/crm/notificar-atividade"
 import { inserirTimelineEvento } from "@/lib/crm-timeline"
+import { digitosDocumento, formatarDocumento } from "@/lib/documento"
 
 export class PromocaoErro extends Error {
   status: number
@@ -50,7 +51,7 @@ export async function promoverLeadParaCliente(params: {
     throw new PromocaoErro("Esta lead já foi transformada em cliente", 409)
   }
 
-  const cnpj = (pessoa.cnpj || "").replace(/\D/g, "")
+  const cnpj = formatarDocumento(pessoa.cnpj, "CNPJ") || ""
   if (!cnpj) {
     throw new PromocaoErro("A lead precisa ter CNPJ cadastrado para virar cliente", 400)
   }
@@ -85,7 +86,7 @@ export async function promoverLeadParaCliente(params: {
     const [clienteExistente] = await db
       .select()
       .from(clientes)
-      .where(eq(clientes.cnpj, cnpj))
+      .where(sql`regexp_replace(${clientes.cnpj}, '\\D', '', 'g') = ${digitosDocumento(cnpj)}`)
       .limit(1)
 
     if (clienteExistente) {

@@ -17,6 +17,21 @@ import { eq, desc, sql, and, gte, lte, count } from "drizzle-orm"
 
 export const dynamic = "force-dynamic"
 
+type TopEmpresaRow = {
+  empresaId: number | null
+  clienteId: number | null
+  empresaNome: string | null
+  clienteNome: string | null
+  totalValor: string | number | null
+}
+
+type RecenteRow = {
+  id: number
+  tipo: string | null
+  descricao: string | null
+  dataEvento: Date | string | null
+}
+
 async function safeQuery<T>(fn: () => Promise<T>, fallback: T): Promise<T> {
   try {
     return await fn()
@@ -179,64 +194,85 @@ export async function GET() {
       ),
     ])
 
-    const [topEmpresasRaw, forecastRaw, recentesRaw, previsaoVendasRaw] = await Promise.all([
-      safeQuery(
-        () =>
-          db
-            .select({
-              empresaId: crmOportunidades.empresaId,
-              empresaNome: crmPessoas.razaoSocial,
-              totalValor: sql<string>`SUM(COALESCE(${crmOportunidades.valorEstimado}, 0)::numeric)`,
-            })
-            .from(crmOportunidades)
-            .leftJoin(crmPessoas, eq(crmOportunidades.empresaId, crmPessoas.id))
-            .where(sql`${crmOportunidades.status} NOT IN ('FECHADO_PERDIDO', 'FECHADO_GANHO')`)
-            .groupBy(crmOportunidades.empresaId, crmPessoas.razaoSocial)
-            .orderBy(desc(sql`SUM(COALESCE(${crmOportunidades.valorEstimado}, 0)::numeric)`))
-            .limit(5)
-            .then((r: any) => r),
-        []
-      ),
-      safeQuery(
-        () =>
-          db
-            .select({ total: sql<string>`COALESCE(SUM(${crmOportunidades.valorEstimado}), 0)` })
-            .from(crmOportunidades)
-            .where(sql`${crmOportunidades.status} NOT IN ('FECHADO_PERDIDO', 'FECHADO_GANHO')`)
-            .then((r: any) => r),
-        []
-      ),
-      safeQuery(
-        () =>
-          db
-            .select({
-              id: crmTimelineEventos.id,
-              tipo: crmTimelineEventos.tipo,
-              descricao: crmTimelineEventos.descricao,
-              dataEvento: crmTimelineEventos.dataEvento,
-            })
-            .from(crmTimelineEventos)
-            .orderBy(desc(crmTimelineEventos.dataEvento))
-            .limit(10)
-            .then((r: any) => r),
-        []
-      ),
-      safeQuery(
-        () =>
-          db
-            .select({
-              periodo: crmPrevisaoVendas.periodo,
-              valorPrevisto: crmPrevisaoVendas.valorPrevisto,
-              valorReal: crmPrevisaoVendas.valorReal,
-              dados: crmPrevisaoVendas.dados,
-            })
-            .from(crmPrevisaoVendas)
-            .orderBy(desc(crmPrevisaoVendas.periodo))
-            .limit(12)
-            .then((r: any) => r),
-        []
-      ),
-    ])
+    const [topEmpresasRaw, forecastRaw, recentesRaw, visitasRecentesRaw, previsaoVendasRaw] =
+      await Promise.all([
+        safeQuery(
+          () =>
+            db
+              .select({
+                empresaId: crmOportunidades.empresaId,
+                clienteId: crmOportunidades.clienteId,
+                empresaNome: sql<string>`COALESCE(NULLIF(${crmPessoas.nomeFantasia}, ''), NULLIF(${crmPessoas.razaoSocial}, ''), NULLIF(${crmPessoas.nome}, ''), ${clientes.nome}, 'Sem nome')`,
+                clienteNome: clientes.nome,
+                totalValor: sql<string>`SUM(COALESCE(${crmOportunidades.valorEstimado}, 0)::numeric)`,
+              })
+              .from(crmOportunidades)
+              .leftJoin(crmPessoas, eq(crmOportunidades.empresaId, crmPessoas.id))
+              .leftJoin(clientes, eq(crmOportunidades.clienteId, clientes.id))
+              .where(sql`${crmOportunidades.status} NOT IN ('FECHADO_PERDIDO', 'FECHADO_GANHO')`)
+              .groupBy(
+                crmOportunidades.empresaId,
+                crmOportunidades.clienteId,
+                crmPessoas.nomeFantasia,
+                crmPessoas.razaoSocial,
+                crmPessoas.nome,
+                clientes.nome
+              )
+              .orderBy(desc(sql`SUM(COALESCE(${crmOportunidades.valorEstimado}, 0)::numeric)`))
+              .limit(5),
+          []
+        ),
+        safeQuery(
+          () =>
+            db
+              .select({ total: sql<string>`COALESCE(SUM(${crmOportunidades.valorEstimado}), 0)` })
+              .from(crmOportunidades)
+              .where(sql`${crmOportunidades.status} NOT IN ('FECHADO_PERDIDO', 'FECHADO_GANHO')`),
+          []
+        ),
+        safeQuery(
+          () =>
+            db
+              .select({
+                id: crmTimelineEventos.id,
+                tipo: crmTimelineEventos.tipo,
+                descricao: crmTimelineEventos.descricao,
+                dataEvento: crmTimelineEventos.dataEvento,
+              })
+              .from(crmTimelineEventos)
+              .orderBy(desc(crmTimelineEventos.dataEvento))
+              .limit(10),
+          []
+        ),
+        safeQuery(
+          () =>
+            db
+              .select({
+                id: crmVisitas.id,
+                tipo: sql<string>`'VISITA'`,
+                descricao: sql<string>`'Visita ' || COALESCE(${crmVisitas.dataVisita}::text, '') || ' — ' || ${crmVisitas.status}`,
+                dataEvento: sql<string>`COALESCE(${crmVisitas.dataVisita}::text, '') || ' ' || COALESCE(${crmVisitas.hora}, '00:00')`,
+              })
+              .from(crmVisitas)
+              .orderBy(desc(crmVisitas.dataVisita))
+              .limit(10),
+          []
+        ),
+        safeQuery(
+          () =>
+            db
+              .select({
+                periodo: crmPrevisaoVendas.periodo,
+                valorPrevisto: crmPrevisaoVendas.valorPrevisto,
+                valorReal: crmPrevisaoVendas.valorReal,
+                dados: crmPrevisaoVendas.dados,
+              })
+              .from(crmPrevisaoVendas)
+              .orderBy(desc(crmPrevisaoVendas.periodo))
+              .limit(12),
+          []
+        ),
+      ])
 
     const [
       campanhasTotal,
@@ -300,6 +336,34 @@ export async function GET() {
 
     const totalConvertidas = getCount(oportunidadesFechadoGanho)
 
+    const recentes = [
+      ...(recentesRaw as RecenteRow[]).map((r) => ({
+        id: r.id,
+        tipo: r.tipo,
+        descricao: r.descricao,
+        dataEvento: r.dataEvento
+          ? r.dataEvento instanceof Date
+            ? r.dataEvento.toISOString()
+            : String(r.dataEvento)
+          : "",
+        href:
+          r.tipo === "ACAO_PROSPECCAO"
+            ? `/comercial/crm/acoes-prospeccao/${r.id}`
+            : r.tipo === "VISITA"
+              ? `/comercial/crm/visitas/${r.id}`
+              : "/comercial/crm",
+      })),
+      ...(visitasRecentesRaw as RecenteRow[]).map((r) => ({
+        id: r.id,
+        tipo: r.tipo,
+        descricao: r.descricao,
+        dataEvento: r.dataEvento,
+        href: `/comercial/crm/visitas/${r.id}`,
+      })),
+    ]
+      .sort((a, b) => new Date(b.dataEvento ?? 0).getTime() - new Date(a.dataEvento ?? 0).getTime())
+      .slice(0, 10)
+
     return NextResponse.json({
       visitantes: { total: getCount(leadsTotal), esteMes: getCount(leadsMes) },
       leads: { total: getCount(empresasTotal) },
@@ -318,9 +382,11 @@ export async function GET() {
       },
       visitas: { total: getCount(visitasTotal), hoje: getCount(visitasHoje) },
       tarefas: { pendentes: getCount(tarefasPendentes), vencendo: getCount(tarefasVencendo) },
-      topEmpresas: topEmpresasRaw.map((r: any) => ({
+      topEmpresas: (topEmpresasRaw as TopEmpresaRow[]).map((r) => ({
         empresaId: r.empresaId,
         empresaNome: r.empresaNome || "Sem nome",
+        clienteId: r.clienteId,
+        clienteNome: r.clienteNome,
         totalValor: Number(r.totalValor),
       })),
       forecast: Number((forecastRaw as any[])[0]?.total ?? 0),
@@ -328,12 +394,7 @@ export async function GET() {
         oportunidadesConvertidas: totalConvertidas,
         totalOportunidades: getCount(oportunidadesTotal),
       },
-      recentes: recentesRaw.map((r: any) => ({
-        id: r.id,
-        tipo: r.tipo,
-        descricao: r.descricao,
-        dataEvento: r.dataEvento,
-      })),
+      recentes,
       previsaoVendas: previsaoVendasRaw.map((r: any) => ({
         periodo: r.periodo,
         valorPrevisto: Number(r.valorPrevisto),

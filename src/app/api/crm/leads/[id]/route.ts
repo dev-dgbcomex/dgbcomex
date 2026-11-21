@@ -11,6 +11,7 @@ import { eq, and, ne, sql } from "drizzle-orm"
 import { registrarLog, notificar } from "@/lib/notificar"
 import { promoverLeadParaCliente } from "@/lib/crm/promover-cliente"
 import { handleApiError } from "@/lib/api-error"
+import { digitosDocumento, formatarDocumento, validarDocumento } from "@/lib/documento"
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -98,21 +99,51 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       return NextResponse.json({ error: "Lead não encontrada" }, { status: 404 })
     }
 
-    const cnpj = body.cnpj ? body.cnpj.replace(/[^a-zA-Z0-9]/g, "") : undefined
-    const cpf = body.cpf ? body.cpf.replace(/[^0-9]/g, "") : undefined
+    const tipoPessoa = body.tipoPessoa ?? existente.tipoPessoa
+    const cnpjDigitado = body.cnpj ? String(body.cnpj) : ""
+    const cpfDigitado = body.cpf ? String(body.cpf) : ""
+
+    const erroCnpj = tipoPessoa === "PJ" && cnpjDigitado ? validarDocumento(cnpjDigitado, "CNPJ") : null
+    if (erroCnpj) return NextResponse.json({ error: erroCnpj }, { status: 400 })
+    const erroCpf = tipoPessoa === "PF" && cpfDigitado ? validarDocumento(cpfDigitado, "CPF") : null
+    if (erroCpf) return NextResponse.json({ error: erroCpf }, { status: 400 })
+
+    const cnpj = body.cnpj !== undefined && cnpjDigitado ? formatarDocumento(cnpjDigitado, "CNPJ") : undefined
+    const cpf = body.cpf !== undefined && cpfDigitado ? formatarDocumento(cpfDigitado, "CPF") : undefined
 
     if (cnpj) {
       const [duplicado] = await db
         .select({ id: crmLeads.id })
         .from(crmLeads)
-        .where(and(eq(crmLeads.cnpj, cnpj), ne(crmLeads.id, parseInt(id))))
+        .where(
+          and(
+            sql`regexp_replace(${crmLeads.cnpj}, '\\D', '', 'g') = ${digitosDocumento(cnpj)}`,
+            ne(crmLeads.id, parseInt(id))
+          )
+        )
         .limit(1)
       if (duplicado) {
         return NextResponse.json({ error: "CNPJ já cadastrado" }, { status: 409 })
       }
     }
 
-    const values: Record<string, any> = { updatedAt: new Date() }
+    if (cpf) {
+      const [duplicado] = await db
+        .select({ id: crmLeads.id })
+        .from(crmLeads)
+        .where(
+          and(
+            sql`regexp_replace(${crmLeads.cpf}, '\\D', '', 'g') = ${digitosDocumento(cpf)}`,
+            ne(crmLeads.id, parseInt(id))
+          )
+        )
+        .limit(1)
+      if (duplicado) {
+        return NextResponse.json({ error: "CPF já cadastrado" }, { status: 409 })
+      }
+    }
+
+    const values: Partial<typeof crmLeads.$inferInsert> = { updatedAt: new Date() }
     if (body.tipoPessoa !== undefined) values.tipoPessoa = body.tipoPessoa
     if (body.nome !== undefined) values.nome = body.nome || null
     if (body.razaoSocial !== undefined) values.razaoSocial = body.razaoSocial || null

@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server"
 import { requireAuth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { clientes } from "@/lib/db/schema/clientes"
-import { ilike, or, desc, eq } from "drizzle-orm"
+import { ilike, or, desc, eq, sql } from "drizzle-orm"
 import { registrarLog } from "@/lib/notificar"
+import { digitosDocumento, formatarDocumento, validarDocumento } from "@/lib/documento"
 
 export async function GET(req: NextRequest) {
   try {
@@ -73,10 +74,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "CNPJ é obrigatório" }, { status: 400 })
     }
 
+    const erroCnpj = validarDocumento(cnpj, "CNPJ")
+    if (erroCnpj) return NextResponse.json({ error: erroCnpj }, { status: 400 })
+
+    const cnpjFormatado = formatarDocumento(cnpj, "CNPJ")!
     const existente = await db
       .select()
       .from(clientes)
-      .where(eq(clientes.cnpj, cnpj.trim()))
+      .where(sql`regexp_replace(${clientes.cnpj}, '\\D', '', 'g') = ${digitosDocumento(cnpjFormatado)}`)
       .limit(1)
 
     if (existente[0]) {
@@ -87,7 +92,7 @@ export async function POST(req: NextRequest) {
       .insert(clientes)
       .values({
         nome: nome.trim(),
-        cnpj: cnpj.trim(),
+        cnpj: cnpjFormatado,
         razaoSocial: razaoSocial?.trim() || null,
         email: email?.trim() || null,
         emailNf: emailNf?.trim() || null,
@@ -112,9 +117,9 @@ export async function POST(req: NextRequest) {
     })
 
     return NextResponse.json(novoCliente, { status: 201 })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[POST /api/clientes]", error)
-    if (error.code === "23505") {
+    if ((error as { code?: string })?.code === "23505") {
       return NextResponse.json({ error: "CNPJ já cadastrado" }, { status: 409 })
     }
     return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 })

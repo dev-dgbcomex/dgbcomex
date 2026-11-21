@@ -3,8 +3,9 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { clientes } from "@/lib/db/schema/clientes"
-import { eq } from "drizzle-orm"
+import { eq, sql } from "drizzle-orm"
 import { handleApiError } from "@/lib/api-error"
+import { digitosDocumento, formatarDocumento, validarDocumento } from "@/lib/documento"
 export const dynamic = "force-dynamic"
 
 interface ClienteImport {
@@ -137,11 +138,17 @@ export async function POST(req: NextRequest) {
         continue
       }
 
-      const cnpjLimpo = reg.cnpj.replace(/\D/g, "")
+      const erroCnpj = validarDocumento(reg.cnpj, "CNPJ")
+      if (erroCnpj) {
+        resultados.erros.push({ linha: i + 2, erro: erroCnpj })
+        continue
+      }
+
+      const cnpjFormatado = formatarDocumento(reg.cnpj, "CNPJ")!
       const existente = await db
         .select()
         .from(clientes)
-        .where(eq(clientes.cnpj, cnpjLimpo))
+        .where(sql`regexp_replace(${clientes.cnpj}, '\\D', '', 'g') = ${digitosDocumento(cnpjFormatado)}`)
         .limit(1)
 
       if (existente[0]) {
@@ -169,7 +176,7 @@ export async function POST(req: NextRequest) {
 
       paraInserir.push({
         nome: reg.nome!,
-        cnpj: cnpjLimpo,
+        cnpj: cnpjFormatado,
         razaoSocial: reg.razaoSocial || null,
         email: reg.email || null,
         telefone: reg.telefone || null,
@@ -186,12 +193,13 @@ export async function POST(req: NextRequest) {
       try {
         await db.insert(clientes).values(paraInserir)
         resultados.importados = paraInserir.length
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Erro na inserção em lote:", err)
+        const info = err as { code?: string; message?: string }
         const mensagemErro =
-          err.code === "23505"
+          info.code === "23505"
             ? "CNPJ duplicado na importação"
-            : err.message || "Erro ao inserir registros"
+            : info.message || "Erro ao inserir registros"
         resultados.erros.push({ linha: 0, erro: mensagemErro })
       }
     }

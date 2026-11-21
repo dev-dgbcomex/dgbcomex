@@ -49,7 +49,7 @@ describe("getInfoContent", () => {
     expect(texto).toMatch(/cinco cards/i)
     expect(texto).toMatch(/Top Leads/)
     expect(texto).toMatch(/Ações Rápidas/)
-    expect(texto).toMatch(/não ocupam mais um card/i)
+    expect(texto).toMatch(/continuam no JSON da API/i)
     expect(texto).not.toMatch(/funil de 5 etapas|IA Comercial/i)
     expect(texto).not.toMatch(/Novo → Qualificação → Proposta → Negociação → Fechado/)
   })
@@ -759,12 +759,14 @@ describe("crmDashboardInfo", () => {
       ...(resumo.examples ?? []).map((e) => `${e.title}: ${e.desc}`),
     ].join("\n")
 
-    expect(texto).toMatch(/crm_pessoas/)
+    expect(texto).toMatch(/crm_leads/)
     expect(texto).toMatch(/tabela clientes/)
     expect(texto).toMatch(/crm_oportunidades/)
     expect(texto).toMatch(/dataVisita/)
     expect(texto).toMatch(/dataPrevista/)
     expect(texto).toMatch(/185 leads/)
+    expect(texto).toMatch(/modal de detalhes/)
+    expect(texto).toMatch(/Ver todas/)
   })
 
   it("os gráficos e painéis explicam contagens, somas e exemplos", () => {
@@ -779,12 +781,15 @@ describe("crmDashboardInfo", () => {
       ])
       .join("\n")
 
-    expect(textoBlocos).toMatch(/240 visitantes/)
+    expect(textoBlocos).toMatch(/185 leads/)
     expect(textoBlocos).toMatch(/FECHADO_GANHO/)
     expect(textoBlocos).toMatch(/crm_previsaoVendas/)
     expect(textoBlocos).toMatch(/GROUP BY status/)
     expect(textoBlocos).toMatch(/limite de 5/)
     expect(textoBlocos).toMatch(/crm_timeline_eventos/)
+    expect(textoBlocos).toMatch(/crm_visitas/)
+    expect(textoBlocos).toMatch(/Ação de prospecção/)
+    expect(textoBlocos).toMatch(/nome do cliente/)
     expect(textoBlocos).toMatch(/R\$ 120\.000/)
 
     const acoes = [

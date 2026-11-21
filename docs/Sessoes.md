@@ -26,6 +26,22 @@
 
 > Detalhe técnico completo em [`docs/crm-cliente-e-relatorios.md`](./crm-cliente-e-relatorios.md).
 
+### Sessão 15 — Dashboard clicável e documentos CPF/CNPJ normalizados
+
+- **Data:** 2026-11-20
+- **Tarefa:** transformar cards, gráficos e painéis do dashboard `/comercial/crm` em atalhos para modais de detalhe, com link por registro e “Ver todas” para as listagens; normalizar CPF/CNPJ em leads/clientes, aceitando somente documentos pontuados e eliminando duplicatas por dígitos.
+- **Decisões aprovadas:** modal para todos os blocos do dashboard; Pipeline com `Leads`, `Oportunidades` e `Convertidas` (sem Propostas); “Sem nome” de oportunidades sem lead resolve para o cliente; atividades recentes incluem ações de prospecção e visitas; tarefas sem rota `[id]` abrem a listagem com `?busca=`; CNPJ válido tem 14 dígitos e CPF 11, sem validação de dígitos verificadores; CNPJ pontuado é canônico na mesclagem de duplicatas.
+- **Resultado:**
+  - Criado `src/lib/documento.ts` (`digitosDocumento`, `formatarDocumento`, `validarDocumento`, `documentoEstaPontuado`) e `scripts/normalizar-documentos.js`, executado com `--apply` em Neon e warehouse local, com backup JSON e 0 duplicatas após a correção.
+  - APIs de leads/clientes/importação/promoção passaram a validar, pontuar e checar duplicatas por `regexp_replace(documento, '\D', '', 'g')`; formulários e quick-creates aplicam a mesma máscara.
+  - Migration `0073_documentos_normalizados.sql` adiciona índices funcionais e normaliza descrições de ações de prospecção no timeline; SQL replicado por `sync-all-dbs.js` e `sync-principal.js`.
+  - Criado `GET /api/crm/dashboard/detalhes` com allowlist de blocos e `src/components/crm/dashboard/detalhes-modal.tsx`; cards, barras do funil, status e “Ver todas” abrem o modal com links para os cadastros.
+  - `topEmpresas`, `recentes` e o payload do dashboard foram ajustados para mostrar cliente quando o lead não existe e para incluir ações de prospecção/visitas.
+  - Modal “i” do dashboard atualizado com origem, cálculo e exemplos das novas interações.
+- **Arquivos Envolvidos:** `src/lib/documento.ts`, `scripts/normalizar-documentos.js`, `src/lib/db/migrations/0073_documentos_normalizados.sql`, `scripts/{migrate.js,sync-all-dbs.js}`, APIs `src/app/api/{crm/leads,clientes,cadastros/clientes}/**`, `src/lib/crm/promover-cliente.ts`, formulários de leads/clientes, `src/components/crm/quick-create-{lead,cliente}.tsx`, `src/app/(dashboard)/comercial/crm/{page.tsx,charts.tsx}`, `src/app/api/crm/dashboard/{route.ts,detalhes/route.ts}`, `src/components/crm/dashboard/detalhes-modal.tsx` e `src/lib/info-content/crm-dashboard.ts`.
+- **Testes:** novos/ajustados em `documento.test.ts`, rotas de leads/clientes/detalhes, modal, `page.test.tsx`, `charts.test.tsx` e `info-content.test.ts`; suíte completa `npm run test` → **453 arquivos / 2629 testes passados**.
+- **Verificação:** `npm run lint` sem erros (apenas warnings pré-existentes), `tsc --noEmit` limpo, `npm run build` OK; `db:verificar-local` (**0 divergências, local ⊇ Neon**) e `db:comparar` (`All databases are IDENTICAL`).
+
 ### Sessão 14 — Dashboard CRM, recorte padrão e acesso comercial
 
 - **Data:** 2026-11-20

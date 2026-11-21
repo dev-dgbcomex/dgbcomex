@@ -18,6 +18,7 @@
     "db:replicar-neon": "node scripts/replicar-neon-local.js",
     "db:verificar-local": "node scripts/verify-neon-local.js",
     "db:comparar": "node scripts/compare-schemas.js",
+    "db:normalizar-documentos": "node scripts/normalizar-documentos.js",
     "test": "vitest run",
     "test:watch": "vitest"
   },

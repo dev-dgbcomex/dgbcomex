@@ -65,7 +65,9 @@ describe("CrmCharts", () => {
   it("exibe o botão de informações nos três gráficos", () => {
     render(<CrmCharts data={data} />)
 
-    expect(screen.getByRole("heading", { name: "Pipeline (Funil)" })).toBeInTheDocument()
+    expect(
+      screen.getAllByRole("heading", { name: "Pipeline (Funil)" }).length
+    ).toBeGreaterThan(0)
     expect(screen.getByRole("heading", { name: "Previsão & Conversão" })).toBeInTheDocument()
     expect(screen.getByRole("heading", { name: "Oportunidades por Status" })).toBeInTheDocument()
 
@@ -86,7 +88,9 @@ describe("CrmCharts", () => {
     fireEvent.click(screen.getByRole("button", { name: "Informações do gráfico Pipeline (Funil)" }))
 
     expect(screen.getByText("Pipeline (Funil) — composição das barras")).toBeInTheDocument()
-    expect(screen.getByText(/240 visitantes, 85 oportunidades, 32 propostas/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/185 leads, 85 oportunidades e 18 convertidas/)
+    ).toBeInTheDocument()
   })
 
   it("explica a fórmula da taxa de conversão no modal da previsão", () => {
@@ -98,5 +102,17 @@ describe("CrmCharts", () => {
 
     expect(screen.getByText("Previsão & Conversão — fórmulas")).toBeInTheDocument()
     expect(screen.getByText(/18 ÷ 85 × 100/)).toBeInTheDocument()
+  })
+
+  it("abre os detalhes do funil e o detalhe filtrado por status", () => {
+    const onDetalhe = vi.fn()
+    render(<CrmCharts data={data} onDetalhe={onDetalhe} />)
+
+    expect(screen.getAllByRole("button", { name: /Ver todas/ })).toHaveLength(3)
+    fireEvent.click(screen.getAllByRole("button", { name: /Ver todas/ })[0])
+    expect(onDetalhe).toHaveBeenCalledWith("funil")
+
+    fireEvent.click(screen.getByRole("button", { name: "NOVO: 40" }))
+    expect(onDetalhe).toHaveBeenCalledWith("status", "NOVO")
   })
 })

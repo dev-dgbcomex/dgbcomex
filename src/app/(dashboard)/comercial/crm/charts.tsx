@@ -14,7 +14,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts"
-import { BarChart3, TrendingUp, PieChart, Handshake } from "lucide-react"
+import { ArrowRight, BarChart3, TrendingUp, PieChart, Handshake } from "lucide-react"
 import { ChartTooltip } from "@/components/ui/chart-tooltip"
 import { AnimatedLine } from "@/components/ui/animated-line"
 import { InfoButton } from "@/components/ui/info-button"
@@ -55,12 +55,25 @@ function formatCurrency(value: number) {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
 }
 
-export function CrmCharts({ data }: { data: CrmDashboardData | undefined }) {
+export function CrmCharts({
+  data,
+  onDetalhe,
+}: {
+  data: CrmDashboardData | undefined
+  onDetalhe?: (bloco: string, status?: string) => void
+}) {
   const pipelineData = [
-    { name: "Visitantes", value: data?.visitantes.total ?? 0 },
-    { name: "Oportunidades", value: data?.oportunidades.total ?? 0 },
-    { name: "Propostas", value: data?.propostas.total ?? 0 },
-    { name: "Convertidas", value: data?.conversao.oportunidadesConvertidas ?? 0 },
+    { name: "Leads", value: data?.leads.total ?? 0, bloco: "funil-leads" },
+    {
+      name: "Oportunidades",
+      value: data?.oportunidades.total ?? 0,
+      bloco: "funil-oportunidades",
+    },
+    {
+      name: "Convertidas",
+      value: data?.conversao.oportunidadesConvertidas ?? 0,
+      bloco: "funil-convertidas",
+    },
   ]
 
   const taxaConversao = data?.conversao.totalOportunidades
@@ -82,6 +95,13 @@ export function CrmCharts({ data }: { data: CrmDashboardData | undefined }) {
             content={crmDashboardInfo.graficos.pipeline}
             label="Informações do gráfico Pipeline (Funil)"
           />
+          <button
+            type="button"
+            onClick={() => onDetalhe?.("funil")}
+            className="ml-auto text-xs text-blue-600 hover:underline flex items-center gap-1"
+          >
+            Ver todas <ArrowRight size={12} />
+          </button>
         </div>
         <ResponsiveContainer width="100%" height={220}>
           <BarChart data={pipelineData} layout="vertical" margin={{ left: 10, right: 10 }}>
@@ -100,6 +120,10 @@ export function CrmCharts({ data }: { data: CrmDashboardData | undefined }) {
             <Tooltip content={<ChartTooltip formatter={(v) => `${v} registros`} />} />
             <Bar
               dataKey="value"
+              onClick={(entry) => {
+                const bloco = (entry as { payload?: { bloco?: string } }).payload?.bloco
+                if (bloco) onDetalhe?.(bloco)
+              }}
               radius={[0, 4, 4, 0]}
               animationDuration={1800}
               animationEasing="ease-in-out"
@@ -124,6 +148,13 @@ export function CrmCharts({ data }: { data: CrmDashboardData | undefined }) {
             content={crmDashboardInfo.graficos.previsaoConversao}
             label="Informações da previsão de receita e conversão"
           />
+          <button
+            type="button"
+            onClick={() => onDetalhe?.("previsao-convertidas")}
+            className="ml-auto text-xs text-blue-600 hover:underline flex items-center gap-1"
+          >
+            Ver todas <ArrowRight size={12} />
+          </button>
         </div>
         <div className="space-y-4">
           <div className="rounded-lg bg-indigo-50 dark:bg-indigo-950/30 p-4">
@@ -135,13 +166,17 @@ export function CrmCharts({ data }: { data: CrmDashboardData | undefined }) {
             </p>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-lg bg-green-50 dark:bg-green-950/30 p-3">
+            <button
+              type="button"
+              onClick={() => onDetalhe?.("previsao-convertidas")}
+              className="rounded-lg bg-green-50 dark:bg-green-950/30 p-3 text-left"
+            >
               <Handshake size={16} className="text-green-600 dark:text-green-400 mb-1" />
               <p className="text-xs text-slate-500 dark:text-slate-400">Convertidas</p>
               <p className="text-xl font-bold text-green-600 dark:text-green-400">
                 {data?.conversao.oportunidadesConvertidas ?? 0}
               </p>
-            </div>
+            </button>
             <div className="rounded-lg bg-amber-50 dark:bg-amber-950/30 p-3">
               <PieChart size={16} className="text-amber-600 dark:text-amber-400 mb-1" />
               <p className="text-xs text-slate-500 dark:text-slate-400">Taxa Conversão</p>
@@ -203,6 +238,13 @@ export function CrmCharts({ data }: { data: CrmDashboardData | undefined }) {
             content={crmDashboardInfo.graficos.status}
             label="Informações do gráfico Oportunidades por Status"
           />
+          <button
+            type="button"
+            onClick={() => onDetalhe?.("status")}
+            className="ml-auto text-xs text-blue-600 hover:underline flex items-center gap-1"
+          >
+            Ver todas <ArrowRight size={12} />
+          </button>
         </div>
         {data?.oportunidades.byStatus && data.oportunidades.byStatus.length > 0 ? (
           <>
@@ -230,16 +272,18 @@ export function CrmCharts({ data }: { data: CrmDashboardData | undefined }) {
             </ResponsiveContainer>
             <div className="flex flex-wrap gap-1.5 justify-center mt-1">
               {data.oportunidades.byStatus.map((s, i) => (
-                <span
+                <button
+                  type="button"
                   key={s.status}
-                  className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
+                  onClick={() => onDetalhe?.("status", s.status)}
+                  className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-blue-950/40"
                 >
                   <span
                     className="w-2 h-2 rounded-full"
                     style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }}
                   />
                   {s.status}: {s.total}
-                </span>
+                </button>
               ))}
             </div>
           </>

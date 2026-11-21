@@ -6,6 +6,7 @@ import { usuarios } from "@/lib/db/schema/usuarios"
 import { eq, desc, like, or, sql } from "drizzle-orm"
 import { registrarLog, notificar } from "@/lib/notificar"
 import { notificarAtividadeComercial } from "@/lib/crm/notificar-atividade"
+import { digitosDocumento, formatarDocumento, validarDocumento } from "@/lib/documento"
 
 export async function GET(req: NextRequest) {
   try {
@@ -88,17 +89,36 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json()
     const tipoPessoa = body.tipoPessoa || "PJ"
-    const cnpj = body.cnpj?.replace(/[^a-zA-Z0-9]/g, "") || null
-    const cpf = body.cpf?.replace(/[^0-9]/g, "") || null
+    const cnpjDigitado = body.cnpj ? String(body.cnpj) : ""
+    const cpfDigitado = body.cpf ? String(body.cpf) : ""
+
+    const erroCnpj = tipoPessoa === "PJ" && cnpjDigitado ? validarDocumento(cnpjDigitado, "CNPJ") : null
+    if (erroCnpj) return NextResponse.json({ error: erroCnpj }, { status: 400 })
+    const erroCpf = tipoPessoa === "PF" && cpfDigitado ? validarDocumento(cpfDigitado, "CPF") : null
+    if (erroCpf) return NextResponse.json({ error: erroCpf }, { status: 400 })
+
+    const cnpj = tipoPessoa === "PJ" && cnpjDigitado ? formatarDocumento(cnpjDigitado, "CNPJ") : null
+    const cpf = tipoPessoa === "PF" && cpfDigitado ? formatarDocumento(cpfDigitado, "CPF") : null
 
     if (cnpj) {
       const [existente] = await db
         .select({ id: crmLeads.id })
         .from(crmLeads)
-        .where(eq(crmLeads.cnpj, cnpj))
+        .where(sql`regexp_replace(${crmLeads.cnpj}, '\\D', '', 'g') = ${digitosDocumento(cnpj)}`)
         .limit(1)
       if (existente) {
         return NextResponse.json({ error: "CNPJ já cadastrado" }, { status: 409 })
+      }
+    }
+
+    if (cpf) {
+      const [existente] = await db
+        .select({ id: crmLeads.id })
+        .from(crmLeads)
+        .where(sql`regexp_replace(${crmLeads.cpf}, '\\D', '', 'g') = ${digitosDocumento(cpf)}`)
+        .limit(1)
+      if (existente) {
+        return NextResponse.json({ error: "CPF já cadastrado" }, { status: 409 })
       }
     }
 
@@ -158,8 +178,8 @@ export async function POST(req: NextRequest) {
     })
 
     return NextResponse.json(nova, { status: 201 })
-  } catch (error: any) {
-    if (error?.code === "23505") {
+  } catch (error: unknown) {
+    if ((error as { code?: string })?.code === "23505") {
       return NextResponse.json({ error: "Documento já cadastrado" }, { status: 409 })
     }
     console.error("[POST /api/crm/empresas]", error)

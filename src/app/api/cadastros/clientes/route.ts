@@ -3,9 +3,10 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { clientes } from "@/lib/db/schema/clientes"
-import { ilike, or, and, desc, eq } from "drizzle-orm"
+import { ilike, or, and, desc, eq, sql } from "drizzle-orm"
 import { validateRequest, clienteSchema } from "@/lib/validation"
 import { handleApiError } from "@/lib/api-error"
+import { digitosDocumento, formatarDocumento, validarDocumento } from "@/lib/documento"
 export const dynamic = "force-dynamic"
 
 export async function GET(req: NextRequest) {
@@ -57,7 +58,15 @@ export async function POST(req: NextRequest) {
       idIntegracao,
     } = parsed.data
 
-    const existente = await db.select().from(clientes).where(eq(clientes.cnpj, cnpj)).limit(1)
+    const erroCnpj = validarDocumento(cnpj, "CNPJ")
+    if (erroCnpj) return NextResponse.json({ error: erroCnpj }, { status: 400 })
+
+    const cnpjFormatado = formatarDocumento(cnpj, "CNPJ")!
+    const existente = await db
+      .select()
+      .from(clientes)
+      .where(sql`regexp_replace(${clientes.cnpj}, '\\D', '', 'g') = ${digitosDocumento(cnpjFormatado)}`)
+      .limit(1)
 
     if (existente[0]) {
       return NextResponse.json({ error: "CNPJ já cadastrado" }, { status: 409 })
@@ -67,7 +76,7 @@ export async function POST(req: NextRequest) {
       .insert(clientes)
       .values({
         nome,
-        cnpj,
+        cnpj: cnpjFormatado,
         razaoSocial: razaoSocial || null,
         email: email || null,
         telefone: telefone || null,

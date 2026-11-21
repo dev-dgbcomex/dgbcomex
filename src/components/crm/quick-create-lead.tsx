@@ -15,17 +15,12 @@ import {
 import { SelectUf } from "./select-uf"
 import { SelectCidade } from "./select-cidade"
 import { SelectSegmento } from "./select-segmento"
+import { formatarDocumento, validarDocumento } from "@/lib/documento"
 
 type Props = {
   onCreated: (id: number, razaoSocial: string) => void
   open?: boolean
   onOpenChange?: (open: boolean) => void
-}
-
-function formatCnpj(v: string) {
-  const d = v.replace(/\D/g, "")
-  if (d.length !== 14) return v
-  return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12)}`
 }
 
 type ConsultaCnpjData = {
@@ -167,9 +162,21 @@ export function QuickCreateLead({ onCreated, open: openProp, onOpenChange }: Pro
         toast.error("Razão Social e CNPJ são obrigatórios")
         return
       }
-    } else if (!nomePF.trim()) {
-      toast.error("Nome é obrigatório")
-      return
+      const erro = validarDocumento(cnpj, "CNPJ")
+      if (erro) {
+        toast.error(erro)
+        return
+      }
+    } else {
+      if (!nomePF.trim()) {
+        toast.error("Nome é obrigatório")
+        return
+      }
+      const erro = cpf ? validarDocumento(cpf, "CPF") : null
+      if (erro) {
+        toast.error(erro)
+        return
+      }
     }
     setSaving(true)
     try {
@@ -179,10 +186,10 @@ export function QuickCreateLead({ onCreated, open: openProp, onOpenChange }: Pro
         body: JSON.stringify({
           tipoPessoa,
           nome: tipoPessoa === "PF" ? nomePF : null,
-          cpf: tipoPessoa === "PF" ? cpf : null,
+          cpf: tipoPessoa === "PF" ? (formatarDocumento(cpf, "CPF") ?? null) : null,
           razaoSocial: tipoPessoa === "PJ" ? razaoSocial : null,
           nomeFantasia: tipoPessoa === "PJ" ? nomeFantasia || null : null,
-          cnpj: tipoPessoa === "PJ" ? cnpj : null,
+          cnpj: tipoPessoa === "PJ" ? (formatarDocumento(cnpj, "CNPJ") ?? null) : null,
           segmento: segmento || null,
           porte: porte || null,
           endereco: endereco || null,
@@ -302,7 +309,7 @@ export function QuickCreateLead({ onCreated, open: openProp, onOpenChange }: Pro
                   <input
                     type="text"
                     value={cnpj}
-                    onChange={(e) => setCnpj(e.target.value)}
+                    onChange={(e) => setCnpj(formatarDocumento(e.target.value, "CNPJ") ?? "")}
                     onKeyDown={(e) =>
                       e.key === "Enter" && (e.preventDefault(), handleConsultarCnpj())
                     }
@@ -330,7 +337,7 @@ export function QuickCreateLead({ onCreated, open: openProp, onOpenChange }: Pro
                 <div className="rounded-lg border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/30 p-3 flex items-start gap-2">
                   <AlertCircle size={16} className="text-amber-500 mt-0.5 shrink-0" />
                   <p className="text-sm text-amber-700 dark:text-amber-300">
-                    CNPJ {formatCnpj(cnpj)} não encontrado na Receita Federal. Preencha os dados
+                    CNPJ {formatarDocumento(cnpj, "CNPJ") || cnpj} não encontrado na Receita Federal. Preencha os dados
                     manualmente.
                   </p>
                 </div>
@@ -372,7 +379,7 @@ export function QuickCreateLead({ onCreated, open: openProp, onOpenChange }: Pro
                   <input
                     type="text"
                     value={cpf}
-                    onChange={(e) => setCpf(e.target.value)}
+                    onChange={(e) => setCpf(formatarDocumento(e.target.value, "CPF") ?? "")}
                     placeholder="000.000.000-00"
                     className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
