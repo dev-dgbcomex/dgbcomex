@@ -14,6 +14,7 @@ import { crmPrevisaoVendas } from "@/lib/db/schema/crm-previsao-vendas"
 import { clientes } from "@/lib/db/schema/clientes"
 import { emailEnviados } from "@/lib/db/schema/email-enviados"
 import { emailCliques } from "@/lib/db/schema/email-cliques"
+import { hrefEventoTimeline } from "@/lib/crm/href-evento-timeline"
 import { eq, desc, sql, and, gte, lte, count } from "drizzle-orm"
 
 export const dynamic = "force-dynamic"
@@ -38,6 +39,7 @@ type RecenteRow = {
   tipo: string | null
   descricao: string | null
   dataEvento: Date | string | null
+  metadados?: unknown
 }
 
 async function safeQuery<T>(fn: () => Promise<T>, fallback: T): Promise<T> {
@@ -333,6 +335,7 @@ export async function GET() {
               tipo: crmTimelineEventos.tipo,
               descricao: crmTimelineEventos.descricao,
               dataEvento: crmTimelineEventos.dataEvento,
+              metadados: crmTimelineEventos.metadados,
             })
             .from(crmTimelineEventos)
             .orderBy(desc(crmTimelineEventos.dataEvento))
@@ -444,12 +447,7 @@ export async function GET() {
             ? r.dataEvento.toISOString()
             : String(r.dataEvento)
           : "",
-        href:
-          r.tipo === "ACAO_PROSPECCAO"
-            ? `/comercial/crm/acoes-prospeccao/${r.id}`
-            : r.tipo === "VISITA"
-              ? `/comercial/crm/visitas/${r.id}`
-              : "/comercial/crm",
+        href: hrefEventoTimeline(r) ?? "/comercial/crm",
       })),
       ...(visitasRecentesRaw as RecenteRow[]).map((r) => ({
         id: r.id,

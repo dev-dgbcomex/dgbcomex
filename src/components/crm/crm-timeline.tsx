@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query"
 import Link from "next/link"
+import { hrefEventoTimeline } from "@/lib/crm/href-evento-timeline"
 import {
   Loader2,
   Zap,
@@ -54,69 +55,6 @@ async function fetchTimeline(pessoaId?: string, clienteId?: string) {
   return res.json()
 }
 
-function metadadosEvento(evento: any): Record<string, any> {
-  const bruto = evento?.metadados
-  if (!bruto) return {}
-  if (typeof bruto === "string") {
-    try {
-      return JSON.parse(bruto)
-    } catch {
-      return {}
-    }
-  }
-  return bruto
-}
-
-function idMetadado(metadados: Record<string, any>, ...chaves: string[]): number | null {
-  for (const chave of chaves) {
-    const valor = metadados[chave]
-    if (valor === undefined || valor === null || valor === "") continue
-    const numero = Number(valor)
-    if (Number.isFinite(numero) && numero > 0) return numero
-  }
-  return null
-}
-
-function hrefEvento(evento: any): string | null {
-  const metadados = metadadosEvento(evento)
-  switch (evento?.tipo) {
-    case "LEAD": {
-      const id = idMetadado(metadados, "leadId", "empresaId")
-      return id ? `/comercial/crm/leads/${id}` : null
-    }
-    case "VISITANTE": {
-      const id = idMetadado(metadados, "visitanteId")
-      return id ? `/comercial/crm/visitantes/${id}` : null
-    }
-    case "OPORTUNIDADE": {
-      const id = idMetadado(metadados, "oportunidadeId")
-      return id ? `/comercial/crm/oportunidades/${id}` : null
-    }
-    case "VISITA": {
-      const id = idMetadado(metadados, "visitaId")
-      return id ? `/comercial/crm/visitas/${id}` : null
-    }
-    case "ACAO_PROSPECCAO": {
-      const id = idMetadado(metadados, "acaoProspeccaoId")
-      return id ? `/comercial/crm/acoes-prospeccao/${id}` : null
-    }
-    case "TAREFA": {
-      const id = idMetadado(metadados, "tarefaId")
-      return id ? `/comercial/crm/tarefas?busca=${id}` : null
-    }
-    case "PROPOSTA": {
-      const id = idMetadado(metadados, "propostaId")
-      return id ? `/comercial/crm/propostas/${id}` : null
-    }
-    case "CONVERSAO_CLIENTE": {
-      const id = idMetadado(metadados, "clienteId")
-      return id ? `/comercial/clientes/${id}` : null
-    }
-    default:
-      return null
-  }
-}
-
 /**
  * Timeline do CRM — da pessoa (`pessoaId`) ou do cliente (`clienteId`, que
  * reúne os eventos do próprio cliente e das pessoas que viraram o cliente).
@@ -162,7 +100,7 @@ export default function CrmTimeline({
           cor: "text-slate-500 bg-slate-50 dark:bg-slate-800",
         }
         const Icon = config.icon
-        const href = hrefEvento(evento)
+        const href = hrefEventoTimeline(evento)
         return (
           <div key={evento.id} className="relative pb-5 group">
             <div

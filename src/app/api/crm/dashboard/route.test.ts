@@ -36,6 +36,13 @@ function isTopLeadsQuery(campos: unknown) {
   )
 }
 
+function isRecentesTimelineQuery(campos: unknown) {
+  const chaves = Object.keys((campos ?? {}) as Record<string, unknown>)
+  return (
+    chaves.includes("descricao") && chaves.includes("dataEvento") && chaves.includes("metadados")
+  )
+}
+
 function builderComResultado(campos: unknown, resolver: (contexto: any) => unknown[]) {
   const builder = createQueryBuilder<unknown[]>([])
   let tabela: unknown
@@ -202,5 +209,48 @@ describe("GET /api/crm/dashboard", () => {
       valorConvertido: 720000,
     })
     expect(json.totalPrevisaoConversao).toEqual({ quantidade: 58, valor: 1200000 })
+  })
+
+  it("abre ações e visitas recentes pelo ID salvo nos metadados do evento", async () => {
+    vi.mocked(db.select).mockImplementation(((campos: unknown) =>
+      isRecentesTimelineQuery(campos)
+        ? createQueryBuilder([
+            {
+              id: 214,
+              tipo: "ACAO_PROSPECCAO",
+              descricao: "Ação de prospecção TELEFONE agendada para 19/11/2026",
+              dataEvento: "2026-11-19T11:45:00.000Z",
+              metadados: { acaoProspeccaoId: 87 },
+            },
+            {
+              id: 215,
+              tipo: "VISITA",
+              descricao: "Visita técnica",
+              dataEvento: "2026-11-18T10:00:00.000Z",
+              metadados: { visitaId: 42 },
+            },
+          ])
+        : createQueryBuilder([])) as never)
+
+    const res = await GET()
+    expect(res.status).toBe(200)
+    const json = (await res.json()) as {
+      recentes: { id: number; tipo: string; href: string | null }[]
+    }
+    expect(json.recentes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 214,
+          tipo: "ACAO_PROSPECCAO",
+          href: "/comercial/crm/acoes-prospeccao/87",
+        }),
+        expect.objectContaining({
+          id: 215,
+          tipo: "VISITA",
+          href: "/comercial/crm/visitas/42",
+        }),
+      ])
+    )
+    expect(json.recentes.some((r) => r.href?.includes("/214"))).toBe(false)
   })
 })

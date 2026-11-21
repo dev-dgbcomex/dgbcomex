@@ -20,6 +20,11 @@ function isTotaisPrevisaoQuery(campos: unknown) {
   return chaves.includes("totalRegistros") && chaves.includes("totalValor")
 }
 
+function isRecentesTimelineQuery(campos: unknown) {
+  const chaves = Object.keys((campos ?? {}) as Record<string, unknown>)
+  return chaves.includes("titulo") && chaves.includes("metadados")
+}
+
 beforeEach(() => {
   vi.mocked(requireAuth).mockReset()
   resetDb(db)
@@ -245,5 +250,47 @@ describe("GET /api/crm/dashboard/detalhes", () => {
     expect(
       itensBuilder.where.mock.calls.map((args: unknown[]) => sqlParaTexto(args[0])).join(" ")
     ).toContain("FECHADO_GANHO")
+  })
+
+  it("abre atividades recentes pelo ID da entidade salvo nos metadados", async () => {
+    vi.mocked(db.select).mockImplementation(((campos: unknown) =>
+      isRecentesTimelineQuery(campos)
+        ? createQueryBuilder([
+            {
+              id: 214,
+              titulo: "Ação de prospecção TELEFONE agendada para 19/11/2026",
+              status: "ACAO_PROSPECCAO",
+              data: "2026-11-19T11:45:00.000Z",
+              metadados: { acaoProspeccaoId: 87 },
+            },
+          ])
+        : createQueryBuilder([
+            {
+              id: 42,
+              titulo: "Visita técnica",
+              status: "VISITA",
+              data: "2026-11-18T10:00:00.000Z",
+            },
+          ])) as never)
+
+    const res = await get("http://localhost/api/crm/dashboard/detalhes?bloco=recentes")
+    expect(res.status).toBe(200)
+    expect(await res.json()).toMatchObject({
+      bloco: "recentes",
+      titulo: "Atividades recentes",
+      listagem: "/comercial/crm",
+      itens: [
+        {
+          id: 214,
+          status: "ACAO_PROSPECCAO",
+          href: "/comercial/crm/acoes-prospeccao/87",
+        },
+        {
+          id: 42,
+          status: "VISITA",
+          href: "/comercial/crm/visitas/42",
+        },
+      ],
+    })
   })
 })

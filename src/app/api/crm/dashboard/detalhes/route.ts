@@ -10,6 +10,7 @@ import { crmTarefas } from "@/lib/db/schema/crm-tarefas"
 import { crmTimelineEventos } from "@/lib/db/schema/crm-timeline-eventos"
 import { crmPrevisaoVendas } from "@/lib/db/schema/crm-previsao-vendas"
 import { clientes as clientesSchema } from "@/lib/db/schema/clientes"
+import { hrefEventoTimeline } from "@/lib/crm/href-evento-timeline"
 import { and, asc, count, desc, eq, sql } from "drizzle-orm"
 
 export const dynamic = "force-dynamic"
@@ -380,6 +381,7 @@ async function listarRecentes(limite: number): Promise<DetalheItem[]> {
       titulo: crmTimelineEventos.descricao,
       status: crmTimelineEventos.tipo,
       data: crmTimelineEventos.dataEvento,
+      metadados: crmTimelineEventos.metadados,
     })
     .from(crmTimelineEventos)
     .orderBy(desc(crmTimelineEventos.dataEvento))
@@ -394,7 +396,10 @@ async function listarRecentes(limite: number): Promise<DetalheItem[]> {
     .from(crmVisitas)
     .orderBy(desc(crmVisitas.dataVisita))
     .limit(limite)
-  return [...eventos, ...visitas]
+  return [
+    ...eventos,
+    ...visitas.map((visita: { id: number }) => ({ ...visita, metadados: { visitaId: visita.id } })),
+  ]
     .sort((a, b) => new Date(b.data ?? 0).getTime() - new Date(a.data ?? 0).getTime())
     .slice(0, limite)
     .map((row) => ({
@@ -402,12 +407,7 @@ async function listarRecentes(limite: number): Promise<DetalheItem[]> {
       titulo: row.titulo,
       status: row.status,
       data: dataTexto(row.data),
-      href:
-        row.status === "VISITA"
-          ? `/comercial/crm/visitas/${row.id}`
-          : row.status === "ACAO_PROSPECCAO"
-            ? `/comercial/crm/acoes-prospeccao/${row.id}`
-            : "/comercial/crm",
+      href: hrefEventoTimeline({ tipo: row.status, metadados: row.metadados }) ?? "/comercial/crm",
     }))
 }
 

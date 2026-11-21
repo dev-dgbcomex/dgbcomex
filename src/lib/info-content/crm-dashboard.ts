@@ -180,6 +180,7 @@ export const crmDashboardInfo = {
       rules: [
         "A API junta crm_timeline_eventos e crm_visitas, ordena por data em ordem decrescente e limita o resultado a 10 itens.",
         "Ações de prospecção aparecem com o texto 'Ação de prospecção ...' e abrem a ação; visitas aparecem com data, status e abrem a visita.",
+        "O link de cada item usa o ID da entidade salvo nos metadados do evento de timeline: a ação abre /comercial/crm/acoes-prospeccao/<id da ação>, não o ID do evento.",
         "Os tipos LEAD, OPORTUNIDADE, VISITA, TAREFA, PROPOSTA e ACAO_PROSPECCAO têm ícone e cor próprios; os demais usam o ícone de relógio.",
         "Clicar em uma linha abre o cadastro do evento; 'Ver todas' abre o modal com a lista completa.",
       ],

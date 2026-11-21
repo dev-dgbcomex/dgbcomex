@@ -44,7 +44,15 @@ const dashboardPayload = {
     valorConvertido: 720000,
   },
   totalPrevisaoConversao: { quantidade: 58, valor: 1200000 },
-  recentes: [],
+  recentes: [
+    {
+      id: 214,
+      tipo: "ACAO_PROSPECCAO",
+      descricao: "Ação de prospecção TELEFONE agendada para 19/11/2026",
+      dataEvento: "2026-11-19T11:45:00.000Z",
+      href: "/comercial/crm/acoes-prospeccao/87",
+    },
+  ],
   previsaoVendas: [],
   campanhas: { total: 0, ativas: 0, orcamentoTotal: 0 },
   emailMassa: { enviados: 0, lidos: 0, clicados: 0 },
@@ -213,6 +221,13 @@ describe("CrmDashboardPage", () => {
         .getAllByRole("link", { name: /Conforto Prime/ })
         .some((link) => link.getAttribute("href") === "/comercial/clientes/17")
     ).toBe(true)
+  })
+
+  it("abre a ação recente pelo ID da ação, não pelo ID do evento da timeline", async () => {
+    setup()
+
+    const link = await screen.findByRole("link", { name: /Ação de prospecção TELEFONE/ })
+    expect(link).toHaveAttribute("href", "/comercial/crm/acoes-prospeccao/87")
   })
 
   it("exibe as faixas compactas de ações rápidas no topo e em baixo com os seis atalhos", async () => {

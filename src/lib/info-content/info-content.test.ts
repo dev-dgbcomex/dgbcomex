@@ -804,6 +804,14 @@ describe("crmDashboardInfo", () => {
     }
   })
 
+  it("o feed de recentes explica que o link usa o ID da entidade nos metadados", () => {
+    const recentes = crmDashboardInfo.paineis.recentes
+    const texto = [recentes.description, ...(recentes.rules ?? [])].join("\n")
+
+    expect(texto).toMatch(/ID da entidade salvo nos metadados/i)
+    expect(texto).toMatch(/<id da ação>, não o ID do evento/i)
+  })
+
   it("o resumo explica a origem dos seis cards restantes", () => {
     const resumo = crmDashboardInfo.resumo
     const texto = [

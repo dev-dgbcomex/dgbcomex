@@ -44,6 +44,24 @@
 
 ---
 
+### Sessão 25 — Correção dos links de Atividades Recentes no dashboard CRM
+
+- **Data:** 2026-11-21
+- **Commit:** `fix(crm): corrige links de atividades recentes`
+- **Tarefa:** corrigir os links do card 'Atividades Recentes' e do modal 'Ver todas' do dashboard `/comercial/crm`, que abriam `/comercial/crm/acoes-prospeccao/214` e caíam em 'Ação de Prospecção não encontrada'.
+- **Decisões aprovadas:** o ID do evento de timeline nunca deve ser usado como ID da entidade; o link passa a ser resolvido pelo ID salvo em `metadados` (`acaoProspeccaoId`, `visitaId`, etc.); a mesma regra já usada pela timeline do CRM foi extraída para um helper puro e reaproveitada pelo dashboard e pelo modal; itens sem metadado válido voltam para `/comercial/crm` em vez de gerar URL quebrada.
+- **Resultado:**
+  - Criado `src/lib/crm/href-evento-timeline.ts` com `hrefEventoTimeline`, que aceita metadados em objeto ou JSON serializado e resolve os tipos LEAD, VISITANTE, OPORTUNIDADE, VISITA, ACAO_PROSPECCAO, TAREFA, PROPOSTA e CONVERSAO_CLIENTE.
+  - `CrmTimeline` deixou de manter uma cópia local do resolvedor e passou a usar o helper compartilhado.
+  - `GET /api/crm/dashboard` passa a selecionar `crmTimelineEventos.metadados` e monta `href` com o helper; visitas vindas de `crmVisitas` continuam usando o ID da visita.
+  - `GET /api/crm/dashboard/detalhes?bloco=recentes` aplica a mesma regra e sintetiza `visitaId` para as visitas vindas diretamente de `crmVisitas`.
+  - Modal 'i' de Atividades Recentes explica que o link usa o ID da entidade nos metadados, não o ID do evento de timeline.
+- **Arquivos Envolvidos:** `src/lib/crm/href-evento-timeline.ts`, `src/lib/crm/href-evento-timeline.test.ts`, `src/components/crm/crm-timeline.tsx`, `src/app/api/crm/dashboard/route.ts`, `src/app/api/crm/dashboard/route.test.ts`, `src/app/api/crm/dashboard/detalhes/route.ts`, `src/app/api/crm/dashboard/detalhes/route.test.ts`, `src/app/(dashboard)/comercial/crm/page.test.tsx`, `src/lib/info-content/crm-dashboard.ts`, `src/lib/info-content/info-content.test.ts`, `docs/Sessoes.md`.
+- **Testes:** testes unitários do helper (incluindo metadados em JSON e ausência de link quebrado), testes das duas APIs com evento `id=214`/`acaoProspeccaoId=87`, teste da página confirmando o `href` da ação recente e teste do modal 'i'; suíte completa `npm run test` → **466 arquivos / 2707 testes passados**.
+- **Verificação:** `npm run lint` sem erros (apenas warnings pré-existentes); `tsc --noEmit --pretty false` limpo com `NODE_OPTIONS=--max-old-space-size=8192`; `npm run build` OK com `NODE_OPTIONS=--max-old-space-size=8192`; `git diff --check` sem problemas.
+
+---
+
 ### Sessão 24 — Ações Rápidas compactas no topo e em baixo no dashboard CRM
 
 - **Data:** 2026-11-21
