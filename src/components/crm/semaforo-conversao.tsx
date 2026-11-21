@@ -1,22 +1,6 @@
+import type { CSSProperties } from "react"
+import { corPorTitulo, iconePorTitulo } from "@/lib/dracula"
 import { FAIXAS_CONVERSAO, type FaixaConversao } from "@/lib/crm/faixa-conversao"
-
-const CORES: Record<FaixaConversao, { borda: string; texto: string; ponto: string }> = {
-  QUENTE: {
-    borda: "border-r-red-500 dark:border-r-red-400",
-    texto: "text-red-700 dark:text-red-300",
-    ponto: "bg-red-500 dark:bg-red-400",
-  },
-  MORNO: {
-    borda: "border-r-amber-500 dark:border-r-amber-400",
-    texto: "text-amber-700 dark:text-amber-300",
-    ponto: "bg-amber-500 dark:bg-amber-400",
-  },
-  FRIO: {
-    borda: "border-r-blue-500 dark:border-r-blue-400",
-    texto: "text-blue-700 dark:text-blue-300",
-    ponto: "bg-blue-500 dark:bg-blue-400",
-  },
-}
 
 type SemaforoConversaoProps = {
   contagem: Record<FaixaConversao, number>
@@ -24,30 +8,57 @@ type SemaforoConversaoProps = {
 }
 
 export function SemaforoConversao({ contagem, entidade }: SemaforoConversaoProps) {
-  const sufixo = entidade === "leads" ? "leads" : "clientes"
+  const rotuloEntidade = entidade === "leads" ? "Leads" : "Clientes"
 
   return (
-    <section
-      aria-label="Semáforo de conversão"
-      className="grid grid-cols-1 gap-3 sm:grid-cols-3"
-    >
+    <section aria-label="Semáforo de conversão" className="grid grid-cols-1 gap-3 sm:grid-cols-3">
       {FAIXAS_CONVERSAO.map(({ faixa, rotulo, descricao }) => {
-        const cor = CORES[faixa]
+        const estilo = corPorTitulo(rotulo)
+        const Icone = iconePorTitulo(rotulo)
         const total = contagem[faixa]
 
         return (
           <div
             key={faixa}
-            aria-label={`${rotulo}: ${total} ${sufixo} — ${descricao}`}
-            className={`flex items-center justify-between gap-3 rounded-xl border border-slate-200 border-r-4 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900 ${cor.borda}`}
+            aria-label={`${rotulo}: ${total} ${entidade} — ${descricao}`}
+            style={
+              {
+                "--card-fundo": estilo.fundoClaro,
+                "--card-fundo-escuro": estilo.fundoEscuro,
+                "--card-borda": estilo.borda,
+                "--card-realce": estilo.cor,
+              } as CSSProperties
+            }
+            className="h-full flex flex-col rounded-xl border border-[color:var(--card-borda)] bg-white dark:bg-slate-900 bg-[image:var(--card-fundo)] dark:bg-[image:var(--card-fundo-escuro)] p-4 card-hover"
           >
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{rotulo}</p>
-              <p className="truncate text-xs text-slate-500 dark:text-slate-400">{descricao}</p>
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <h3
+                  className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate flex items-center gap-1.5"
+                  title={rotulo}
+                >
+                  <span
+                    className="inline-flex items-center justify-center w-5 h-5 rounded-md shrink-0"
+                    style={{ backgroundColor: estilo.fundoIcone, color: estilo.cor }}
+                    aria-hidden="true"
+                  >
+                    <Icone size={13} />
+                  </span>
+                  <span className="truncate">{rotulo}</span>
+                </h3>
+                <p className="text-[10px] text-slate-400 dark:text-slate-500 truncate" title={descricao}>
+                  {descricao}
+                </p>
+              </div>
             </div>
-            <div className="flex shrink-0 items-center gap-2">
-              <span className={`h-2.5 w-2.5 rounded-full ${cor.ponto}`} aria-hidden="true" />
-              <span className={`text-2xl font-bold tabular-nums ${cor.texto}`}>{total}</span>
+
+            <div className="mt-3 flex-1 divide-y divide-slate-100 dark:divide-slate-800">
+              <div className="flex items-baseline justify-between gap-3 py-1">
+                <span className="text-xs text-slate-500 dark:text-slate-400">{rotuloEntidade}</span>
+                <span className="text-xl font-bold tabular-nums text-right text-slate-900 dark:text-slate-100">
+                  {total}
+                </span>
+              </div>
             </div>
           </div>
         )

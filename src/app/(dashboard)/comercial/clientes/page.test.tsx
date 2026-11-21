@@ -91,10 +91,16 @@ describe("ClientesComercialPage - cards", () => {
     await screen.findByText("Tecidos Silva")
 
     const semaforo = screen.getByRole("region", { name: "Semáforo de conversão" })
-    expect(within(semaforo).getByLabelText("Quentes: 1 clientes — Em negociação")).toBeInTheDocument()
-    expect(within(semaforo).getByLabelText("Mornos: 1 clientes — Em proposta")).toBeInTheDocument()
     expect(
-      within(semaforo).getByLabelText("Frios: 1 clientes — Novo, qualificação ou sem oportunidade")
+      within(semaforo).getByLabelText("Quentes: 1 clientes — Oportunidade em negociação")
+    ).toBeInTheDocument()
+    expect(
+      within(semaforo).getByLabelText("Mornos: 1 clientes — Oportunidade em proposta")
+    ).toBeInTheDocument()
+    expect(
+      within(semaforo).getByLabelText(
+        "Frios: 1 clientes — Sem oportunidade em negociação ou proposta"
+      )
     ).toBeInTheDocument()
 
     const card = screen.getByText("Tecidos Silva").closest<HTMLElement>("div.rounded-lg")!

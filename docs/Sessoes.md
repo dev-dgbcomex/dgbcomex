@@ -26,6 +26,20 @@
 
 > Detalhe técnico completo em [`docs/crm-cliente-e-relatorios.md`](./crm-cliente-e-relatorios.md).
 
+### Sessão 30 — Semáforo por oportunidade e cards no padrão do BI
+
+- **Data:** 2026-11-21
+- **Commit:** `fix(crm): alinha semaforo ao padrao de cards do bi`
+- **Tarefa:** reforçar que Quentes/Mornos/Frios são definidos pelo status das oportunidades vinculadas (nunca pelo status cadastral da lead/cliente), válido também para clientes, e trocar o visual dos cards para o mesmo padrão usado em `/bi/integracoes`.
+- **Decisões aprovadas:** Quente = oportunidade em `NEGOCIACAO`; Morno = oportunidade em `PROPOSTA`; Frio = sem oportunidade em `NEGOCIACAO` ou `PROPOSTA`. Para clientes, entram as oportunidades do próprio cliente e as herdadas das pessoas promovidas.
+- **Resultado:**
+  - A consulta já usava `crm_oportunidades.status`; os textos dos cards e dos modais “i” que citavam `Novo`/`Qualificação` (status de lead) foram substituídos pela regra de oportunidade.
+  - `SemaforoConversao` agora usa `corPorTitulo`/`iconePorTitulo`, gradiente Dracula, badge de ícone, linha de resumo em `divide-y`, `card-hover`, `rounded-xl` e dark mode — o mesmo padrão dos cards de BI.
+  - `src/lib/dracula.ts` ganha ícones específicos para Quentes (`TrendingUp`), Mornos (`Clock`) e Frios (`TrendingDown`).
+  - Testes de API/página reforçam que o SQL não referencia `crm_leads.status` nem `clientes.status`.
+- **Arquivos Envolvidos:** `src/lib/crm/faixa-conversao.ts`, `src/components/crm/semaforo-conversao.tsx`, `src/lib/dracula.ts`, `src/lib/info-content/{crm,comercial}.ts`, `src/lib/crm/contadores-listagem.test.ts`, `src/components/crm/semaforo-conversao.test.tsx`, `src/app/(dashboard)/comercial/{crm/leads,clientes}/page.test.tsx`, `src/lib/info-content/info-content.test.ts`, `docs/Sessoes.md`.
+- **Verificação:** `npm run lint` sem erros (apenas warnings pré-existentes); `tsc --noEmit --pretty false` limpo com `NODE_OPTIONS=--max-old-space-size=8192`; suíte completa `npm run test` → **473 arquivos / 2743 testes passados**; `npm run build` OK com `NODE_OPTIONS=--max-old-space-size=8192`.
+
 ### Sessão 29 — Correção do contexto vazio no Resumo IA
 
 - **Data:** 2026-11-21

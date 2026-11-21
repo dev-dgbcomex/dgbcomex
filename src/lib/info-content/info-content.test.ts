@@ -616,6 +616,8 @@ describe("getInfoContent", () => {
     expect(listagemTexto).toMatch(/Quentes/)
     expect(listagemTexto).toMatch(/Mornos/)
     expect(listagemTexto).toMatch(/Frios/)
+    expect(listagemTexto).toMatch(/status das oportunidades vinculadas/i)
+    expect(listagemTexto).not.toMatch(/Frios \(Novo, Qualificação/)
 
     const detalheTexto = [
       detalhe?.description ?? "",
@@ -975,6 +977,7 @@ describe("crmDashboardInfo", () => {
     expect(textoClientes).toMatch(/Quentes/)
     expect(textoClientes).toMatch(/Mornos/)
     expect(textoClientes).toMatch(/Frios/)
+    expect(textoClientes).toMatch(/nunca o status cadastral/i)
 
     const textoLeads = [leads?.description ?? "", ...(leads?.rules ?? [])].join("\n")
     expect(textoLeads).toMatch(/Cards é a visualização padrão/)
@@ -984,6 +987,7 @@ describe("crmDashboardInfo", () => {
     expect(textoLeads).toMatch(/Quentes/)
     expect(textoLeads).toMatch(/Mornos/)
     expect(textoLeads).toMatch(/Frios/)
+    expect(textoLeads).toMatch(/nunca o status cadastral/i)
     expect(textoLeads).not.toMatch(/O Kanban é a visualização padrão/)
 
     const textoOportunidades = [

@@ -5,9 +5,9 @@ export const FAIXAS_CONVERSAO: Array<{
   rotulo: string
   descricao: string
 }> = [
-  { faixa: "QUENTE", rotulo: "Quentes", descricao: "Em negociação" },
-  { faixa: "MORNO", rotulo: "Mornos", descricao: "Em proposta" },
-  { faixa: "FRIO", rotulo: "Frios", descricao: "Novo, qualificação ou sem oportunidade" },
+  { faixa: "QUENTE", rotulo: "Quentes", descricao: "Oportunidade em negociação" },
+  { faixa: "MORNO", rotulo: "Mornos", descricao: "Oportunidade em proposta" },
+  { faixa: "FRIO", rotulo: "Frios", descricao: "Sem oportunidade em negociação ou proposta" },
 ]
 
 type ItemComFaixa = {

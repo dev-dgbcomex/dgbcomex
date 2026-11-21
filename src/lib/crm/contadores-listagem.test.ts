@@ -33,6 +33,8 @@ describe("contadores-listagem", () => {
     expect(texto).toContain("'QUENTE'")
     expect(texto).toContain("'MORNO'")
     expect(texto).toContain('"crm_leads"."cliente_id"')
+    expect(texto).not.toContain('"clientes"."status"')
+    expect(texto).not.toContain('"crm_leads"."status"')
   })
 
   it("contabiliza o relacionamento das leads", () => {
@@ -60,6 +62,7 @@ describe("contadores-listagem", () => {
     expect(texto).toContain("'PROPOSTA'")
     expect(texto).toContain("'QUENTE'")
     expect(texto).toContain("'MORNO'")
+    expect(texto).not.toContain('"crm_leads"."status"')
   })
 
   it("conta cada lead/cliente em uma única faixa de conversão", () => {
