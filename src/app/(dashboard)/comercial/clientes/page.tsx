@@ -32,6 +32,8 @@ import { ConfirmModal } from "@/components/ui/confirm-modal"
 import ImportarApiModal from "@/components/integracao/ImportarApiModal"
 import BuscarCnpjModal from "@/components/crm/buscar-cnpj-modal"
 import { ExportarDados } from "@/components/exportar/ExportarDados"
+import { SemaforoConversao } from "@/components/crm/semaforo-conversao"
+import { contarFaixasConversao } from "@/lib/crm/faixa-conversao"
 import { useStatuses, hexToRgba } from "@/hooks/use-statuses"
 import type { Cliente, SolicitacaoResumo, AmostraResumo } from "./types"
 
@@ -238,6 +240,8 @@ export default function ClientesPage() {
         filterState={filterState}
         placeholder="Buscar por nome, CNPJ, razão social, contato, email, telefone ou cidade..."
       />
+
+      <SemaforoConversao contagem={contarFaixasConversao(filteredData)} entidade="clientes" />
 
       <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
         {loading ? (

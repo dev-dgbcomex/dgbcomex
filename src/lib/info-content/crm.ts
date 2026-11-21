@@ -153,12 +153,14 @@ export const crmContent: Record<string, InfoContent> = {
       "O CNPJ é único — não é possível cadastrar duas leads com o mesmo CNPJ.",
       "Leads podem ser criadas manualmente ou convertidas de leads qualificados.",
       "Leads não podem ser excluídas: o cadastro é referenciado por contatos, oportunidades, propostas, visitas e timeline. Use 'Tornar cliente' para arquivar.",
-      "O botão 'Tornar cliente' cria (ou reaproveita) o cadastro de Clientes pelo CNPJ, marca a lead com tarja de cliente e preserva todo o histórico (oportunidades, propostas e visitas) nos relatórios. A ação não pode ser desfeita.",
+      "O botão 'Tornar cliente' cria (ou reaproveita) o cadastro de Clientes pelo CNPJ, marca a lead como convertida em cliente e preserva todo o histórico (oportunidades, propostas e visitas) nos relatórios. A ação não pode ser desfeita.",
       "Há três visualizações: Cards, Tabela e Kanban. A preferência fica salva neste navegador e os filtros valem para Cards e Tabela.",
       "Cards é a visualização padrão; Tabela e Kanban continuam disponíveis, e o Kanban organiza as leads por status.",
       "Os cards mostram as contagens de Oportunidades, Pedidos, Visitas e Ações no lugar do responsável do cadastro, que continua visível na Tabela e no detalhe da lead. Clique em qualquer contagem para abrir um modal com os registros vinculados a essa lead.",
-      "A listagem esconde por padrão as leads com tarja. Use o filtro 'Sem tarja / Com tarja / Todos' para alternar a visibilidade.",
-      "Leads com tarja continuam acessíveis pelo detalhe (link direto) e pelo relatório de Conversões.",
+      "A listagem esconde por padrão as leads convertidas em cliente. Use o filtro 'Sem conversão / Convertidos / Todos' para alternar a visibilidade.",
+      "Leads convertidas continuam acessíveis pelo detalhe (link direto) e pelo relatório de Conversões.",
+      "Os cards logo abaixo da busca formam o semáforo de conversão: Quentes (uma ou mais oportunidades em Negociação, em vermelho), Mornos (oportunidade em Proposta, em amarelo) e Frios (Novo, Qualificação ou sem oportunidade, em azul). Cada lead entra em uma única faixa, com prioridade de Quente sobre Morno e de Morno sobre Frio.",
+      "As quantidades do semáforo respeitam a busca, os filtros de status/período e o filtro de conversão ativos na tela.",
       "Ao clicar no nome da lead, você abre o detalhe completo com timeline, WhatsApp e resumo IA.",
     ],
     fields: [
@@ -167,8 +169,8 @@ export const crmContent: Record<string, InfoContent> = {
       { name: "Segmento", desc: "Ramo de atuação da lead" },
       { name: "Status", desc: "Novo, Qualificado, Convertido Cliente, Perdido, Inativo" },
       {
-        name: "Tarja de cliente",
-        desc: "Marca as leads já transformadas em cliente (arquivadas)",
+        name: "Conversão",
+        desc: "Separa as leads ainda sem conversão das que já viraram cliente (Convertidos)",
       },
     ],
     columns: [
@@ -183,7 +185,7 @@ export const crmContent: Record<string, InfoContent> = {
     examples: [
       {
         title: "Promoção",
-        desc: "Clica em 'Tornar cliente', confirma o aviso e a lead passa a ter tarja",
+        desc: "Clica em 'Tornar cliente', confirma o aviso e a lead passa a aparecer em Convertidos",
       },
       {
         title: "Promoção",

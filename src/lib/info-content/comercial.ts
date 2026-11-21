@@ -46,6 +46,8 @@ export const comercialContent: Record<string, InfoContent> = {
       "O botão 'Buscar CNPJ' consulta a Receita Federal, mostra clientes já cadastrados com aquele documento e permite criar um novo cliente com os dados retornados.",
       "A visualização padrão é em cards; o botão 'Tabela' mantém a lista disponível com os mesmos filtros.",
       "Cada card mostra as contagens de Oportunidades, Pedidos, Visitas e Ações do cliente; Solicitações e Amostras continuam acessíveis na visualização em tabela.",
+      "Os cards abaixo da busca formam o semáforo de conversão: Quentes (uma ou mais oportunidades em Negociação, em vermelho), Mornos (oportunidade em Proposta, em amarelo) e Frios (Novo, Qualificação ou sem oportunidade, em azul).",
+      "Cada cliente entra em uma única faixa, com prioridade de Quente sobre Morno e de Morno sobre Frio; as quantidades respeitam a busca ativa.",
       "Clientes ativos podem ser vinculados a solicitações.",
       "A desativação de um cliente não remove solicitações existentes.",
     ],

@@ -1,3 +1,5 @@
+import type { FaixaConversao } from "@/lib/crm/faixa-conversao"
+
 export type TipoLead = "PF" | "PJ"
 
 export type LeadForm = {
@@ -52,6 +54,7 @@ export type Lead = LeadForm & {
   totalPedidos?: number
   totalVisitas?: number
   totalAcoes?: number
+  faixaConversao?: FaixaConversao
   resumo?: {
     oportunidades: number
     valorOportunidades: number

@@ -27,6 +27,7 @@ const dados = [
     totalPedidos: 5,
     totalVisitas: 2,
     totalAcoes: 7,
+    faixaConversao: "QUENTE",
   },
   {
     id: 2,
@@ -41,6 +42,22 @@ const dados = [
     totalPedidos: 4,
     totalVisitas: 6,
     totalAcoes: 8,
+    faixaConversao: "MORNO",
+  },
+  {
+    id: 3,
+    nome: "Fios Brasileiros",
+    cnpj: "99.888.777/0001-66",
+    razaoSocial: "Fios Brasileiros Ltda",
+    email: "contato@fios.com",
+    telefone: "(11) 3333-2222",
+    cidade: "São Paulo",
+    uf: "SP",
+    totalOportunidades: 0,
+    totalPedidos: 0,
+    totalVisitas: 0,
+    totalAcoes: 0,
+    faixaConversao: "FRIO",
   },
 ]
 
@@ -71,7 +88,16 @@ describe("ClientesComercialPage - cards", () => {
     vi.stubGlobal("fetch", fetchMock.fn)
 
     renderPage(<ClientesPage />)
-    const card = (await screen.findByText("Tecidos Silva")).closest<HTMLElement>("div.rounded-lg")!
+    await screen.findByText("Tecidos Silva")
+
+    const semaforo = screen.getByRole("region", { name: "Semáforo de conversão" })
+    expect(within(semaforo).getByLabelText("Quentes: 1 clientes — Em negociação")).toBeInTheDocument()
+    expect(within(semaforo).getByLabelText("Mornos: 1 clientes — Em proposta")).toBeInTheDocument()
+    expect(
+      within(semaforo).getByLabelText("Frios: 1 clientes — Novo, qualificação ou sem oportunidade")
+    ).toBeInTheDocument()
+
+    const card = screen.getByText("Tecidos Silva").closest<HTMLElement>("div.rounded-lg")!
 
     expect(within(card).getByText("Oportunidades")).toBeInTheDocument()
     expect(within(card).getByText("3")).toBeInTheDocument()

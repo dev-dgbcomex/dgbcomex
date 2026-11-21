@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { PgDialect } from "drizzle-orm/pg-core/dialect"
 import { contadoresCliente, contadoresLead } from "./contadores-listagem"
+import { contarFaixasConversao } from "./faixa-conversao"
 
 const dialect = new PgDialect()
 const sqlTexto = (valor: unknown) => dialect.sqlToQuery(valor as never).sql
@@ -14,6 +15,7 @@ describe("contadores-listagem", () => {
       "totalPedidos",
       "totalVisitas",
       "totalAcoes",
+      "faixaConversao",
     ])
 
     const texto = Object.values(contadores).map(sqlTexto).join(" ")
@@ -26,6 +28,11 @@ describe("contadores-listagem", () => {
       '"crm_pedidos_venda"."oportunidade_id" = "crm_oportunidades"."id"'
     )
     expect(texto).not.toMatch(/where "cliente_id" = "id"/)
+    expect(texto).toContain("'NEGOCIACAO'")
+    expect(texto).toContain("'PROPOSTA'")
+    expect(texto).toContain("'QUENTE'")
+    expect(texto).toContain("'MORNO'")
+    expect(texto).toContain('"crm_leads"."cliente_id"')
   })
 
   it("contabiliza o relacionamento das leads", () => {
@@ -36,6 +43,7 @@ describe("contadores-listagem", () => {
       "totalPedidos",
       "totalVisitas",
       "totalAcoes",
+      "faixaConversao",
     ])
 
     const texto = Object.values(contadores).map(sqlTexto).join(" ")
@@ -48,5 +56,21 @@ describe("contadores-listagem", () => {
       '"crm_pedidos_venda"."oportunidade_id" = "crm_oportunidades"."id"'
     )
     expect(texto).not.toMatch(/where "lead_id" = "id"/)
+    expect(texto).toContain("'NEGOCIACAO'")
+    expect(texto).toContain("'PROPOSTA'")
+    expect(texto).toContain("'QUENTE'")
+    expect(texto).toContain("'MORNO'")
+  })
+
+  it("conta cada lead/cliente em uma única faixa de conversão", () => {
+    const contagem = contarFaixasConversao([
+      { faixaConversao: "QUENTE" },
+      { faixaConversao: "MORNO" },
+      { faixaConversao: "FRIO" },
+      { faixaConversao: null },
+      {},
+    ])
+
+    expect(contagem).toEqual({ QUENTE: 1, MORNO: 1, FRIO: 3 })
   })
 })

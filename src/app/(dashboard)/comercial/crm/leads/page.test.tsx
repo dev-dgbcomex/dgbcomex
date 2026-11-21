@@ -24,6 +24,7 @@ const leads = [
     totalPedidos: 6,
     totalVisitas: 3,
     totalAcoes: 9,
+    faixaConversao: "QUENTE",
   },
   {
     id: 2,
@@ -39,6 +40,22 @@ const leads = [
     totalPedidos: 5,
     totalVisitas: 1,
     totalAcoes: 8,
+    faixaConversao: "MORNO",
+  },
+  {
+    id: 4,
+    tipoPessoa: "PJ",
+    razaoSocial: "Malhas Frias",
+    cnpj: "33.333.333/0001-33",
+    segmento: "Malharia",
+    status: "NOVO",
+    responsavelNome: null,
+    createdAt: "2026-07-03T10:00:00Z",
+    totalOportunidades: 0,
+    totalPedidos: 0,
+    totalVisitas: 0,
+    totalAcoes: 0,
+    faixaConversao: "FRIO",
   },
 ]
 
@@ -139,6 +156,12 @@ describe("LeadsPage cards", () => {
     renderPage(<CrmLeadsPage />)
 
     await screen.findByText("Tecelagem Alpha")
+    const semaforo = screen.getByRole("region", { name: "Semáforo de conversão" })
+    expect(within(semaforo).getByLabelText("Quentes: 1 leads — Em negociação")).toBeInTheDocument()
+    expect(within(semaforo).getByLabelText("Mornos: 1 leads — Em proposta")).toBeInTheDocument()
+    expect(
+      within(semaforo).getByLabelText("Frios: 1 leads — Novo, qualificação ou sem oportunidade")
+    ).toBeInTheDocument()
     expect(screen.queryByRole("table")).not.toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Flutuar" })).not.toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Tecelagem Alpha" })).toBeInTheDocument()
@@ -236,6 +259,7 @@ describe("LeadsPage tarja de cliente", () => {
     promovidoEm: "2026-07-10T10:00:00Z",
     promovidoPorNome: "Tiago",
     createdAt: "2026-06-01T10:00:00Z",
+    faixaConversao: "FRIO",
   }
 
   let fetchMock: ReturnType<typeof createFetchMock>
@@ -256,6 +280,10 @@ describe("LeadsPage tarja de cliente", () => {
     renderPage(<CrmLeadsPage />)
 
     expect(await screen.findByText("Tecelagem Alpha")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Sem conversão" })).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    )
     expect(screen.queryByText("Tecelagem Convertida")).not.toBeInTheDocument()
   })
 
@@ -288,7 +316,7 @@ describe("LeadsPage tarja de cliente", () => {
     renderPage(<CrmLeadsPage />)
 
     await screen.findByText("Tecelagem Alpha")
-    fireEvent.click(screen.getByRole("button", { name: "Com tarja" }))
+    fireEvent.click(screen.getByRole("button", { name: "Convertidos" }))
 
     expect(await screen.findByText("Tecelagem Convertida")).toBeInTheDocument()
     expect(screen.queryByText("Tecelagem Alpha")).not.toBeInTheDocument()

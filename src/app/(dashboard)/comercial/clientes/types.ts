@@ -1,4 +1,5 @@
 import type { Contato } from "../crm/contatos/types"
+import type { FaixaConversao } from "@/lib/crm/faixa-conversao"
 
 export type Cliente = {
   id: number
@@ -22,6 +23,7 @@ export type Cliente = {
   totalPedidos?: number
   totalVisitas?: number
   totalAcoes?: number
+  faixaConversao?: FaixaConversao
 }
 
 export type VinculoRepresentante = {

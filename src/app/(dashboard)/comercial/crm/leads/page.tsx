@@ -32,6 +32,8 @@ import { PageSkeleton } from "@/components/ui/page-skeleton"
 import { ExportarRelatorio } from "@/components/crm/relatorios/exportar-relatorio"
 import { PromoverClienteBotao } from "@/components/crm/promover-cliente-botao"
 import { LeadMetricasModal, type TipoMetricaLead } from "@/components/crm/leads/metricas-modal"
+import { SemaforoConversao } from "@/components/crm/semaforo-conversao"
+import { contarFaixasConversao } from "@/lib/crm/faixa-conversao"
 import type { Lead } from "./types"
 
 async function fetchEmpresas(): Promise<Lead[]> {
@@ -48,7 +50,7 @@ const STATUS_CORES: Record<string, string> = {
   INATIVO: "text-slate-400 bg-slate-100 dark:bg-slate-800 dark:text-slate-500",
 }
 
-type TarjaFiltro = "sem" | "com" | "todos"
+type ConversaoFiltro = "sem" | "com" | "todos"
 type ModoLead = "cards" | "tabela" | "kanban"
 
 function CrmLeadsPageContent() {
@@ -69,7 +71,7 @@ function CrmLeadsPageContent() {
   }, [modo])
   const [showApiImport, setShowApiImport] = useState(false)
   const [showCnpjSearch, setShowCnpjSearch] = useState(false)
-  const [tarjaFiltro, setTarjaFiltro] = useState<TarjaFiltro>("sem")
+  const [conversaoFiltro, setConversaoFiltro] = useState<ConversaoFiltro>("sem")
   const [metricaAberta, setMetricaAberta] = useState<{ lead: Lead; tipo: TipoMetricaLead } | null>(
     null
   )
@@ -99,13 +101,13 @@ function CrmLeadsPageContent() {
     empresas || []
   )
 
-  const filtradasPorTarja = useMemo(() => {
+  const filtradasPorConversao = useMemo(() => {
     const lista = filterState.filtered
-    if (tarjaFiltro === "todos") return lista
-    return lista.filter((p) => Boolean(p.promovidaCliente) === (tarjaFiltro === "com"))
-  }, [filterState.filtered, tarjaFiltro])
+    if (conversaoFiltro === "todos") return lista
+    return lista.filter((p) => Boolean(p.promovidaCliente) === (conversaoFiltro === "com"))
+  }, [filterState.filtered, conversaoFiltro])
 
-  const filteredData = filtradasPorTarja
+  const filteredData = filtradasPorConversao
 
   function nomeExibicao(p: Lead) {
     if (p.tipoPessoa === "PF") return p.nome || "—"
@@ -127,11 +129,15 @@ function CrmLeadsPageContent() {
     () => ({
       filename: "leads-crm",
       title: "Relatório de Leads (Negócios)",
-      period: `${filtradasPorTarja.length} registro(s)${
-        tarjaFiltro === "com" ? " com tarja de cliente" : tarjaFiltro === "sem" ? " sem tarja" : ""
+      period: `${filtradasPorConversao.length} registro(s)${
+        conversaoFiltro === "com"
+          ? " convertidos em cliente"
+          : conversaoFiltro === "sem"
+            ? " sem conversão"
+            : ""
       }`,
-      headers: ["Nome", "Documento", "Tipo", "Segmento", "Status", "Tarja", "Data"],
-      rows: filtradasPorTarja.map((p) => [
+      headers: ["Nome", "Documento", "Tipo", "Segmento", "Status", "Conversão", "Data"],
+      rows: filtradasPorConversao.map((p) => [
         nomeExibicao(p),
         documento(p),
         p.tipoPessoa || "—",
@@ -141,12 +147,12 @@ function CrmLeadsPageContent() {
         p.createdAt ? new Date(p.createdAt).toLocaleDateString("pt-BR") : "—",
       ]),
       stats: {
-        Total: filtradasPorTarja.length,
-        "Com tarja": filtradasPorTarja.filter((p) => p.promovidaCliente).length,
-        "Sem tarja": filtradasPorTarja.filter((p) => !p.promovidaCliente).length,
+        Total: filtradasPorConversao.length,
+        Convertidos: filtradasPorConversao.filter((p) => p.promovidaCliente).length,
+        "Sem conversão": filtradasPorConversao.filter((p) => !p.promovidaCliente).length,
       },
     }),
-    [filtradasPorTarja, tarjaFiltro]
+    [filtradasPorConversao, conversaoFiltro]
   )
 
   return (
@@ -165,32 +171,39 @@ function CrmLeadsPageContent() {
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-0.5 shadow-sm">
             <button
-              onClick={() => setTarjaFiltro("sem")}
+              type="button"
+              aria-pressed={conversaoFiltro === "sem"}
+              onClick={() => setConversaoFiltro("sem")}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                tarjaFiltro === "sem"
+                conversaoFiltro === "sem"
                   ? "bg-blue-600 text-white shadow-sm"
                   : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
               }`}
               title="Mostrar apenas leads que ainda não viraram cliente"
             >
-              Sem tarja
+              <UserCircle size={14} />
+              Sem conversão
             </button>
             <button
-              onClick={() => setTarjaFiltro("com")}
+              type="button"
+              aria-pressed={conversaoFiltro === "com"}
+              onClick={() => setConversaoFiltro("com")}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                tarjaFiltro === "com"
+                conversaoFiltro === "com"
                   ? "bg-blue-600 text-white shadow-sm"
                   : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
               }`}
               title="Mostrar apenas leads que já viraram cliente"
             >
               <Archive size={14} />
-              Com tarja
+              Convertidos
             </button>
             <button
-              onClick={() => setTarjaFiltro("todos")}
+              type="button"
+              aria-pressed={conversaoFiltro === "todos"}
+              onClick={() => setConversaoFiltro("todos")}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                tarjaFiltro === "todos"
+                conversaoFiltro === "todos"
                   ? "bg-blue-600 text-white shadow-sm"
                   : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
               }`}
@@ -285,6 +298,8 @@ function CrmLeadsPageContent() {
         filterState={filterState}
         placeholder="Buscar leads..."
       />
+
+      <SemaforoConversao contagem={contarFaixasConversao(filteredData)} entidade="leads" />
 
       {modo === "cards" &&
         (isLoading ? (

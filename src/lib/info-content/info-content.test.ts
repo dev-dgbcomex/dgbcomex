@@ -598,7 +598,6 @@ describe("getInfoContent", () => {
       ].join("\n")
 
       expect(texto).toMatch(/Tornar cliente/)
-      expect(texto).toMatch(/tarja/i)
       expect(texto).toMatch(/histórico/i)
       expect(texto).toMatch(/não podem ser excluídas|não há exclusão/i)
     }
@@ -612,6 +611,11 @@ describe("getInfoContent", () => {
     expect(listagemTexto).toMatch(/Cards/)
     expect(listagemTexto).toMatch(/Tabela/)
     expect(listagemTexto).toMatch(/Kanban/)
+    expect(listagemTexto).toMatch(/Sem conversão/)
+    expect(listagemTexto).toMatch(/Convertidos/)
+    expect(listagemTexto).toMatch(/Quentes/)
+    expect(listagemTexto).toMatch(/Mornos/)
+    expect(listagemTexto).toMatch(/Frios/)
 
     const detalheTexto = [
       detalhe?.description ?? "",
@@ -619,6 +623,7 @@ describe("getInfoContent", () => {
       ...(detalhe?.fields ?? []).map((f) => `${f.name}: ${f.desc}`),
     ].join("\n")
 
+    expect(detalheTexto).toMatch(/tarja/i)
     expect(detalheTexto).toMatch(/Contatos/)
     expect(detalheTexto).toMatch(/Representantes/)
     expect(detalheTexto).toMatch(/ações/i)
@@ -966,11 +971,19 @@ describe("crmDashboardInfo", () => {
     expect(textoClientes).toMatch(/visualização padrão é em cards/i)
     expect(textoClientes).toMatch(/Oportunidades, Pedidos, Visitas e Ações/)
     expect(textoClientes).toMatch(/Solicitações e Amostras/)
+    expect(textoClientes).toMatch(/semáforo de conversão/i)
+    expect(textoClientes).toMatch(/Quentes/)
+    expect(textoClientes).toMatch(/Mornos/)
+    expect(textoClientes).toMatch(/Frios/)
 
     const textoLeads = [leads?.description ?? "", ...(leads?.rules ?? [])].join("\n")
     expect(textoLeads).toMatch(/Cards é a visualização padrão/)
     expect(textoLeads).toMatch(/Oportunidades, Pedidos, Visitas e Ações/)
     expect(textoLeads).toMatch(/Clique em qualquer contagem para abrir um modal/)
+    expect(textoLeads).toMatch(/semáforo de conversão/i)
+    expect(textoLeads).toMatch(/Quentes/)
+    expect(textoLeads).toMatch(/Mornos/)
+    expect(textoLeads).toMatch(/Frios/)
     expect(textoLeads).not.toMatch(/O Kanban é a visualização padrão/)
 
     const textoOportunidades = [

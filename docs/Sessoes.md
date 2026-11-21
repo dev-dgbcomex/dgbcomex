@@ -26,6 +26,22 @@
 
 > Detalhe técnico completo em [`docs/crm-cliente-e-relatorios.md`](./crm-cliente-e-relatorios.md).
 
+### Sessão 28 — Semáforo de conversão nas listagens de Leads e Clientes
+
+- **Data:** 2026-11-21
+- **Commit:** `feat(crm): adiciona semaforo de conversao em leads e clientes`
+- **Tarefa:** trocar os rótulos “Com tarja/Sem tarja” por “Convertidos/Sem conversão” e adicionar, logo abaixo da busca, três cards com as quantidades de leads/clientes quentes, mornos e frios.
+- **Decisões aprovadas:** Quente = uma ou mais oportunidades em Negociação (vermelho); Morno = oportunidade em Proposta (amarelo); Frio = Novo, Qualificação ou sem oportunidade (azul). Cada lead/cliente entra em uma única faixa, com prioridade Quente > Morno > Frio, e as contagens respeitam busca/filtros ativos na tela.
+- **Resultado:**
+  - `src/lib/crm/faixa-conversao.ts` centraliza o tipo `QUENTE|MORNO|FRIO`, o rol dos cards e `contarFaixasConversao`.
+  - `contadoresLead()` e `contadoresCliente()` passam a devolver `faixaConversao` por SQL (CASE com `exists` para Negociação e Proposta); para clientes, a regra inclui oportunidades lançadas diretamente no cliente e as herdadas das pessoas promovidas.
+  - `src/components/crm/semaforo-conversao.tsx` renderiza os três cards com rótulo textual, descrição e número colorido/direito, em light e dark.
+  - As telas `/comercial/crm/leads` e `/comercial/clientes` exibem o semáforo abaixo de `ListFilters`; a exportação de leads usa “Convertidos/Sem conversão”.
+  - Modais “i” das duas listagens atualizados para explicar as faixas, as cores, a prioridade e o recorte dos números.
+- **Arquivos Envolvidos:** `src/app/(dashboard)/comercial/{crm/leads,clientes}/page.tsx`, `src/app/(dashboard)/comercial/{crm/leads,clientes}/types.ts`, `src/app/api/{crm/leads,clientes}/route.ts`, `src/lib/crm/{contadores-listagem,faixa-conversao}.ts`, `src/components/crm/semaforo-conversao.tsx`, `src/lib/info-content/{crm,comercial}.ts`, `src/lib/info-content/info-content.test.ts`, `docs/Sessoes.md`.
+- **Testes:** novo em `semaforo-conversao.test.tsx`; ajustes em `contadores-listagem.test.ts` (inclusive `contarFaixasConversao`), APIs de leads/clientes, páginas de leads/clientes e `info-content.test.ts`.
+- **Verificação:** `npm run lint` sem erros (apenas warnings pré-existentes); `tsc --noEmit --pretty false` limpo com `NODE_OPTIONS=--max-old-space-size=8192`; suíte completa `npm run test` → **473 arquivos / 2742 testes passados**; `npm run build` OK com `NODE_OPTIONS=--max-old-space-size=8192`.
+
 ### Sessão 27 — Resumo IA com histórico e exportação no detalhe de Lead/Cliente
 
 - **Data:** 2026-11-21

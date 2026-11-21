@@ -47,6 +47,7 @@ describe("GET /api/clientes", () => {
           totalPedidos: 5,
           totalVisitas: 2,
           totalAcoes: 7,
+          faixaConversao: "FRIO",
         },
       ]) as never
     )
@@ -61,6 +62,7 @@ describe("GET /api/clientes", () => {
         totalPedidos: 5,
         totalVisitas: 2,
         totalAcoes: 7,
+        faixaConversao: "FRIO",
       },
     ])
 
@@ -71,6 +73,7 @@ describe("GET /api/clientes", () => {
         "totalPedidos",
         "totalVisitas",
         "totalAcoes",
+        "faixaConversao",
       ])
     )
     const sql = Object.entries(selecao)
@@ -81,6 +84,10 @@ describe("GET /api/clientes", () => {
     expect(sql).toMatch(/crm_pedidos_venda/)
     expect(sql).toMatch(/crm_visitas/)
     expect(sql).toMatch(/crm_acoes_prospeccao/)
+    const faixaSql = dialect.sqlToQuery(selecao.faixaConversao as never).sql
+    expect(faixaSql).toContain("'NEGOCIACAO'")
+    expect(faixaSql).toContain("'PROPOSTA'")
+    expect(faixaSql).toContain('"crm_leads"."cliente_id"')
   })
 })
 
