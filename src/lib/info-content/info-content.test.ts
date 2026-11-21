@@ -905,4 +905,30 @@ describe("crmDashboardInfo", () => {
     expect(acoes).not.toMatch(/Nova Campanha/)
     expect(acoes).not.toMatch(/Email Massa/)
   })
+
+  it("as listagens explicam o padrão em cards e as contagens exibidas", () => {
+    const clientes = getInfoContent("/comercial/clientes")
+    const leads = getInfoContent("/comercial/crm/leads")
+    const oportunidades = getInfoContent("/comercial/crm/oportunidades")
+
+    expect(clientes).not.toBeNull()
+    expect(leads).not.toBeNull()
+    expect(oportunidades).not.toBeNull()
+
+    const textoClientes = [clientes?.description ?? "", ...(clientes?.rules ?? [])].join("\n")
+    expect(textoClientes).toMatch(/visualização padrão é em cards/i)
+    expect(textoClientes).toMatch(/Oportunidades, Pedidos, Visitas e Ações/)
+    expect(textoClientes).toMatch(/Solicitações e Amostras/)
+
+    const textoLeads = [leads?.description ?? "", ...(leads?.rules ?? [])].join("\n")
+    expect(textoLeads).toMatch(/Cards é a visualização padrão/)
+    expect(textoLeads).toMatch(/Oportunidades, Pedidos, Visitas e Ações/)
+    expect(textoLeads).not.toMatch(/O Kanban é a visualização padrão/)
+
+    const textoOportunidades = [
+      oportunidades?.description ?? "",
+      ...(oportunidades?.rules ?? []),
+    ].join("\n")
+    expect(textoOportunidades).toMatch(/visualização padrão é em Cards/)
+  })
 })

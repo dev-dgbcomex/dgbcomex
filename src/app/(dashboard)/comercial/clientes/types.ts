@@ -18,6 +18,10 @@ export type Cliente = {
   idIntegracao: string | null
   createdAt: string | Date
   updatedAt: string | Date
+  totalOportunidades?: number
+  totalPedidos?: number
+  totalVisitas?: number
+  totalAcoes?: number
 }
 
 export type VinculoRepresentante = {

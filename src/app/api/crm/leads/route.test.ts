@@ -5,8 +5,9 @@ import { requireAuth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { registrarLog, notificar } from "@/lib/notificar"
 import { notificarAtividadeComercial } from "@/lib/crm/notificar-atividade"
+import { PgDialect } from "drizzle-orm/pg-core/dialect"
 import { createQueryBuilder, resetDb } from "@/test/route-db-mock"
-import { POST } from "./route"
+import { GET, POST } from "./route"
 
 vi.mock("@/lib/auth", () => ({ requireAuth: vi.fn() }))
 vi.mock("@/lib/db", () => ({ db: { select: vi.fn(), insert: vi.fn() } }))
@@ -19,6 +20,11 @@ vi.mock("@/lib/notificar", () => ({
 vi.mock("@/lib/crm/notificar-atividade", () => ({ notificarAtividadeComercial: vi.fn() }))
 
 const session = { session: { user: { id: "1", role: "ADMIN", name: "Tiago" } }, userId: 1 }
+const dialect = new PgDialect()
+
+function get() {
+  return GET(new NextRequest("http://localhost/api/crm/leads"))
+}
 
 function post(body: Record<string, unknown>) {
   return POST(new NextRequest("http://localhost/api/crm/leads", {
@@ -35,6 +41,54 @@ beforeEach(() => {
   vi.mocked(notificarAtividadeComercial).mockReset()
   resetDb(db)
   vi.mocked(requireAuth).mockResolvedValue(session as never)
+})
+
+describe("GET /api/crm/leads", () => {
+  it("retorna as contagens de relacionamento de cada lead", async () => {
+    vi.mocked(db.select).mockReturnValue(
+      createQueryBuilder([
+        {
+          id: 1,
+          razaoSocial: "Tecelagem Alpha",
+          totalOportunidades: 4,
+          totalPedidos: 6,
+          totalVisitas: 3,
+          totalAcoes: 9,
+        },
+      ]) as never
+    )
+
+    const res = await get()
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual([
+      {
+        id: 1,
+        razaoSocial: "Tecelagem Alpha",
+        totalOportunidades: 4,
+        totalPedidos: 6,
+        totalVisitas: 3,
+        totalAcoes: 9,
+      },
+    ])
+
+    const selecao = vi.mocked(db.select).mock.calls[0][0] as Record<string, unknown>
+    expect(Object.keys(selecao)).toEqual(
+      expect.arrayContaining([
+        "totalOportunidades",
+        "totalPedidos",
+        "totalVisitas",
+        "totalAcoes",
+      ])
+    )
+    const sql = Object.entries(selecao)
+      .filter(([chave]) => chave.startsWith("total"))
+      .map(([, valor]) => dialect.sqlToQuery(valor as never).sql)
+      .join(" ")
+    expect(sql).toMatch(/crm_oportunidades/)
+    expect(sql).toMatch(/crm_pedidos_venda/)
+    expect(sql).toMatch(/crm_visitas/)
+    expect(sql).toMatch(/crm_acoes_prospeccao/)
+  })
 })
 
 describe("POST /api/crm/leads", () => {

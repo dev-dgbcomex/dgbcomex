@@ -44,6 +44,23 @@
 
 ---
 
+### Sessão 21 — Cards como padrão com contagens de relacionamento
+
+- **Data:** 2026-11-21
+- **Commit:** `feat(crm): define cards como padrao e troca metricas dos cards`
+- **Tarefa:** tornar Cards a visualização padrão nas listagens que oferecem esse modo e substituir as métricas dos cards de Clientes e Leads por Oportunidades, Pedidos, Visitas e Ações.
+- **Decisões aprovadas:** Clientes já abriam em Cards; Leads passam a abrir em Cards (Tabela e Kanban continuam disponíveis e a preferência salva/`?view=` ainda pode substituir o padrão); Oportunidades passam a abrir em Cards. Nos cards de Clientes, Solicitações e Amostras saem do card e continuam na Tabela; nos cards de Leads, o Responsável do cadastro sai do card e continua na Tabela e no detalhe.
+- **Resultado:**
+  - `GET /api/clientes` e `GET /api/crm/leads` passam a devolver `totalOportunidades`, `totalPedidos`, `totalVisitas` e `totalAcoes` por registro; os pedidos são contados via junção com a oportunidade vinculada.
+  - Novo helper `src/lib/crm/contadores-listagem.ts` centraliza as subconsultas para cliente e lead.
+  - Cards de Clientes mostram as quatro contagens no lugar dos botões de Solicitações/Amostras; Cards de Leads mostram as quatro contagens no lugar de Responsável.
+  - Modal “i” das três listagens atualizado: padrão em Cards, origem das contagens e onde continuam Solicitações/Amostras e Responsável.
+- **Arquivos Envolvidos:** `src/lib/crm/contadores-listagem.ts`, `src/lib/crm/contadores-listagem.test.ts`, `src/app/api/clientes/route.ts`, `src/app/api/clientes/route.test.ts`, `src/app/api/crm/leads/route.ts`, `src/app/api/crm/leads/route.test.ts`, `src/app/(dashboard)/comercial/clientes/page.tsx`, `src/app/(dashboard)/comercial/clientes/page.test.tsx`, `src/app/(dashboard)/comercial/clientes/types.ts`, `src/app/(dashboard)/comercial/crm/leads/page.tsx`, `src/app/(dashboard)/comercial/crm/leads/page.test.tsx`, `src/app/(dashboard)/comercial/crm/leads/types.ts`, `src/app/(dashboard)/comercial/crm/oportunidades/page.tsx`, `src/app/(dashboard)/comercial/crm/oportunidades/page.test.tsx`, `src/lib/info-content/{comercial,crm}.ts`, `src/lib/info-content/info-content.test.ts`, `docs/Sessoes.md`.
+- **Testes:** focados `7 arquivos / 96 testes passados`, incluindo APIs, helper de contadores, listagens e modais “i”.
+- **Verificação:** `npm run lint` sem erros (apenas warnings pré-existentes); `tsc --noEmit` limpo com `NODE_OPTIONS=--max-old-space-size=8192`; suíte completa `npm run test` → **465 arquivos / 2691 testes passados**; `npm run build` OK com `NODE_OPTIONS=--max-old-space-size=8192`; `git diff --check` sem problemas.
+
+---
+
 ### Sessão 19 — Cards em Leads e Oportunidades
 
 - **Data:** 2026-11-21

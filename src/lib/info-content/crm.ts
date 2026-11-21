@@ -155,7 +155,8 @@ export const crmContent: Record<string, InfoContent> = {
       "Leads não podem ser excluídas: o cadastro é referenciado por contatos, oportunidades, propostas, visitas e timeline. Use 'Tornar cliente' para arquivar.",
       "O botão 'Tornar cliente' cria (ou reaproveita) o cadastro de Clientes pelo CNPJ, marca a lead com tarja de cliente e preserva todo o histórico (oportunidades, propostas e visitas) nos relatórios. A ação não pode ser desfeita.",
       "Há três visualizações: Cards, Tabela e Kanban. A preferência fica salva neste navegador e os filtros valem para Cards e Tabela.",
-      "O Kanban é a visualização padrão e organiza as leads por status; Cards e Tabela mostram o mesmo conjunto filtrado.",
+      "Cards é a visualização padrão; Tabela e Kanban continuam disponíveis, e o Kanban organiza as leads por status.",
+      "Os cards mostram as contagens de Oportunidades, Pedidos, Visitas e Ações no lugar do responsável do cadastro, que continua visível na Tabela e no detalhe da lead.",
       "A listagem esconde por padrão as leads com tarja. Use o filtro 'Sem tarja / Com tarja / Todos' para alternar a visibilidade.",
       "Leads com tarja continuam acessíveis pelo detalhe (link direto) e pelo relatório de Conversões.",
       "Ao clicar no nome da lead, você abre o detalhe completo com timeline, WhatsApp e resumo IA.",
@@ -298,7 +299,7 @@ export const crmContent: Record<string, InfoContent> = {
     rules: [
       "O pipeline segue o fluxo: Novo → Qualificação → Proposta → Negociação → Fechado Ganho/Perdido.",
       "Os estágios e rótulos vêm do cadastro de Status (Admin → Configurações → Status, tipo Oportunidade): um novo status ativo já aparece aqui e vira coluna no Kanban.",
-      "A listagem oferece Cards, Tabela e Kanban; Cards e Tabela usam os mesmos filtros e o Kanban organiza as oportunidades por status.",
+      "A visualização padrão é em Cards; Tabela e Kanban continuam disponíveis. Cards e Tabela usam os mesmos filtros e o Kanban organiza as oportunidades por status.",
       "Use o Kanban para arrastar oportunidades entre estágios do pipeline.",
       "Oportunidades FECHADO_PERDIDO podem ser reativadas pela IA após 90 dias.",
       "Ao fechar como GANHO, a lead é automaticamente sincronizada como Cliente no PDM.",

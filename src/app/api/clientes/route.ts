@@ -3,6 +3,8 @@ import { requireAuth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { clientes } from "@/lib/db/schema/clientes"
 import { ilike, or, desc, eq, sql } from "drizzle-orm"
+import { getTableColumns } from "drizzle-orm/utils"
+import { contadoresCliente } from "@/lib/crm/contadores-listagem"
 import { registrarLog } from "@/lib/notificar"
 import { digitosDocumento, formatarDocumento, validarDocumento } from "@/lib/documento"
 
@@ -18,7 +20,7 @@ export async function GET(req: NextRequest) {
 
     if (q.length >= 2) {
       resultados = await db
-        .select()
+        .select({ ...getTableColumns(clientes), ...contadoresCliente() })
         .from(clientes)
         .where(
           or(
@@ -30,7 +32,11 @@ export async function GET(req: NextRequest) {
         .orderBy(desc(clientes.createdAt))
         .limit(20)
     } else {
-      resultados = await db.select().from(clientes).orderBy(desc(clientes.createdAt)).limit(20)
+      resultados = await db
+        .select({ ...getTableColumns(clientes), ...contadoresCliente() })
+        .from(clientes)
+        .orderBy(desc(clientes.createdAt))
+        .limit(20)
     }
 
     return NextResponse.json(resultados)

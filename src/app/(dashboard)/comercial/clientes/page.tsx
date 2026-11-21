@@ -303,6 +303,24 @@ export default function ClientesPage() {
                   )}
                 </div>
 
+                <div className="mt-4 grid grid-cols-4 gap-1 rounded-lg border border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/30 p-2 text-center">
+                  {[
+                    { label: "Oportunidades", valor: cliente.totalOportunidades ?? 0 },
+                    { label: "Pedidos", valor: cliente.totalPedidos ?? 0 },
+                    { label: "Visitas", valor: cliente.totalVisitas ?? 0 },
+                    { label: "Ações", valor: cliente.totalAcoes ?? 0 },
+                  ].map((metrica) => (
+                    <div key={metrica.label} className="min-w-0">
+                      <div className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                        {metrica.valor}
+                      </div>
+                      <div className="truncate text-[10px] text-slate-500 dark:text-slate-400">
+                        {metrica.label}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
                 <div className="flex gap-2 mt-4 pt-3 border-t border-slate-100 dark:border-slate-700">
                   <Link
                     href={`/comercial/clientes/${cliente.id}`}
@@ -311,20 +329,6 @@ export default function ClientesPage() {
                     <Pencil size={12} />
                     Editar
                   </Link>
-                  <button
-                    onClick={() => abrirSolicitacoes(cliente)}
-                    className="inline-flex items-center gap-1 text-xs text-emerald-600 hover:underline"
-                  >
-                    <FileText size={12} />
-                    Solicitações
-                  </button>
-                  <button
-                    onClick={() => abrirAmostras(cliente)}
-                    className="inline-flex items-center gap-1 text-xs text-purple-600 hover:underline"
-                  >
-                    <FlaskConical size={12} />
-                    Amostras
-                  </button>
                   {isAdmin && (
                     <button
                       onClick={() => {

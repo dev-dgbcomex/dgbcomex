@@ -44,7 +44,8 @@ export const comercialContent: Record<string, InfoContent> = {
     rules: [
       "O CNPJ é validado para garantir unicidade no cadastro.",
       "O botão 'Buscar CNPJ' consulta a Receita Federal, mostra clientes já cadastrados com aquele documento e permite criar um novo cliente com os dados retornados.",
-      "A visualização padrão é em cards; o botão 'Lista' mantém a tabela disponível com os mesmos filtros.",
+      "A visualização padrão é em cards; o botão 'Tabela' mantém a lista disponível com os mesmos filtros.",
+      "Cada card mostra as contagens de Oportunidades, Pedidos, Visitas e Ações do cliente; Solicitações e Amostras continuam acessíveis na visualização em tabela.",
       "Clientes ativos podem ser vinculados a solicitações.",
       "A desativação de um cliente não remove solicitações existentes.",
     ],

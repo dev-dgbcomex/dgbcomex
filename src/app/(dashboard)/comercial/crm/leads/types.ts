@@ -48,6 +48,10 @@ export type Lead = LeadForm & {
   promovidoPor?: number | null
   promovidoPorNome?: string | null
   cliente?: { id: number; nome: string; cnpj?: string | null } | null
+  totalOportunidades?: number
+  totalPedidos?: number
+  totalVisitas?: number
+  totalAcoes?: number
   resumo?: {
     oportunidades: number
     valorOportunidades: number

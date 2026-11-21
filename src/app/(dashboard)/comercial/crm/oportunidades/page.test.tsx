@@ -85,6 +85,15 @@ describe("OportunidadesPage cards", () => {
     vi.stubGlobal("fetch", fetchMock.fn)
   })
 
+  it("abre em cards por padrão", async () => {
+    renderPage(<OportunidadesPage />)
+
+    await screen.findByText("Venda de malha 100% algodão")
+    expect(screen.queryByRole("table")).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Flutuar" })).not.toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "Venda de malha 100% algodão" })).toBeInTheDocument()
+  })
+
   it("alterna para cards mostrando os dados da oportunidade", async () => {
     renderPage(<OportunidadesPage />)
 
@@ -165,6 +174,8 @@ describe("OportunidadesPage exclusão", () => {
   it("abre modal e exclui a oportunidade confirmando", async () => {
     renderPage(<OportunidadesPage />)
     await screen.findByText("Venda de malha 100% algodão")
+    fireEvent.click(screen.getByRole("button", { name: "Tabela" }))
+    await screen.findByRole("table")
 
     const row = screen.getByText("Venda de malha 100% algodão").closest("tr")!
     fireEvent.click(within(row).getByRole("button", { name: "Excluir oportunidade" }))
@@ -193,6 +204,8 @@ describe("OportunidadesPage exclusão", () => {
 
     renderPage(<OportunidadesPage />)
     await screen.findByText("Venda de malha 100% algodão")
+    fireEvent.click(screen.getByRole("button", { name: "Tabela" }))
+    await screen.findByRole("table")
 
     const row = screen.getByText("Venda de malha 100% algodão").closest("tr")!
     fireEvent.click(within(row).getByRole("button", { name: "Excluir oportunidade" }))
@@ -206,6 +219,8 @@ describe("OportunidadesPage exclusão", () => {
   it("link de edição abre a oportunidade em modo de edição", async () => {
     renderPage(<OportunidadesPage />)
     await screen.findByText("Venda de malha 100% algodão")
+    fireEvent.click(screen.getByRole("button", { name: "Tabela" }))
+    await screen.findByRole("table")
     const edit = screen.getAllByTitle("Editar oportunidade")[0].closest("a")
     expect(edit).toHaveAttribute("href", "/comercial/crm/oportunidades/1?edit=true")
   })

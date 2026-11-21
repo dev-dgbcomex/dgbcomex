@@ -5,6 +5,7 @@ import { crmLeads } from "@/lib/db/schema/crm-leads"
 import { usuarios } from "@/lib/db/schema/usuarios"
 import { eq, desc, like, or, sql } from "drizzle-orm"
 import { registrarLog, notificar } from "@/lib/notificar"
+import { contadoresLead } from "@/lib/crm/contadores-listagem"
 import { notificarAtividadeComercial } from "@/lib/crm/notificar-atividade"
 import { digitosDocumento, formatarDocumento, validarDocumento } from "@/lib/documento"
 
@@ -67,6 +68,7 @@ export async function GET(req: NextRequest) {
         ativo: crmLeads.ativo,
         createdAt: crmLeads.createdAt,
         updatedAt: crmLeads.updatedAt,
+        ...contadoresLead(),
       })
       .from(crmLeads)
       .leftJoin(usuarios, eq(crmLeads.responsavelId, usuarios.id))

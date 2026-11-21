@@ -23,6 +23,10 @@ const dados = [
     telefone: "(11) 4000-0000",
     cidade: "São Paulo",
     uf: "SP",
+    totalOportunidades: 3,
+    totalPedidos: 5,
+    totalVisitas: 2,
+    totalAcoes: 7,
   },
   {
     id: 2,
@@ -33,6 +37,10 @@ const dados = [
     telefone: "(11) 5555-9999",
     cidade: "Campinas",
     uf: "SP",
+    totalOportunidades: 1,
+    totalPedidos: 4,
+    totalVisitas: 6,
+    totalAcoes: 8,
   },
 ]
 
@@ -52,6 +60,30 @@ listSmokeSpec({
   firstItemText: "Tecidos Silva",
   secondItemText: "Química Alfa",
   matchQuery: "silva",
+})
+
+describe("ClientesComercialPage - cards", () => {
+  it("mostra as contagens de relacionamento no lugar de solicitações e amostras", async () => {
+    const fetchMock = createFetchMock(({ method, url }) => {
+      if (method === "GET" && url === "/api/clientes") return { json: dados }
+      return { status: 404, json: { error: "Rota não mockada" } }
+    })
+    vi.stubGlobal("fetch", fetchMock.fn)
+
+    renderPage(<ClientesPage />)
+    const card = (await screen.findByText("Tecidos Silva")).closest<HTMLElement>("div.rounded-lg")!
+
+    expect(within(card).getByText("Oportunidades")).toBeInTheDocument()
+    expect(within(card).getByText("3")).toBeInTheDocument()
+    expect(within(card).getByText("Pedidos")).toBeInTheDocument()
+    expect(within(card).getByText("5")).toBeInTheDocument()
+    expect(within(card).getByText("Visitas")).toBeInTheDocument()
+    expect(within(card).getByText("2")).toBeInTheDocument()
+    expect(within(card).getByText("Ações")).toBeInTheDocument()
+    expect(within(card).getByText("7")).toBeInTheDocument()
+    expect(within(card).queryByText("Solicitações")).not.toBeInTheDocument()
+    expect(within(card).queryByText("Amostras")).not.toBeInTheDocument()
+  })
 })
 
 describe("ClientesComercialPage - excluir", () => {

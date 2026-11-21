@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { screen, fireEvent, waitFor } from "@testing-library/react"
+import { screen, fireEvent, waitFor, within } from "@testing-library/react"
 import CrmLeadsPage from "./page"
 import { createFetchMock, renderPage, findCall, toastMock } from "@/test/harness"
 import { listSmokeSpec } from "@/test/list-smoke-spec"
@@ -20,6 +20,10 @@ const leads = [
     status: "QUALIFICADO",
     responsavelNome: "Tiago",
     createdAt: "2026-07-01T10:00:00Z",
+    totalOportunidades: 4,
+    totalPedidos: 6,
+    totalVisitas: 3,
+    totalAcoes: 9,
   },
   {
     id: 2,
@@ -31,6 +35,10 @@ const leads = [
     status: "NOVO",
     responsavelNome: null,
     createdAt: "2026-07-02T10:00:00Z",
+    totalOportunidades: 2,
+    totalPedidos: 5,
+    totalVisitas: 1,
+    totalAcoes: 8,
   },
 ]
 
@@ -101,6 +109,18 @@ describe("LeadsPage cards", () => {
     expect(screen.queryByRole("button", { name: "Flutuar" })).not.toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Tecelagem Alpha" })).toBeInTheDocument()
     expect(screen.getByText("12.345.678/0001-90")).toBeInTheDocument()
+
+    const card = screen.getByRole("link", { name: "Tecelagem Alpha" }).closest("article")!
+    expect(within(card).getByText("Oportunidades")).toBeInTheDocument()
+    expect(within(card).getByText("4")).toBeInTheDocument()
+    expect(within(card).getByText("Pedidos")).toBeInTheDocument()
+    expect(within(card).getByText("6")).toBeInTheDocument()
+    expect(within(card).getByText("Visitas")).toBeInTheDocument()
+    expect(within(card).getByText("3")).toBeInTheDocument()
+    expect(within(card).getByText("Ações")).toBeInTheDocument()
+    expect(within(card).getByText("9")).toBeInTheDocument()
+    expect(within(card).queryByText("Responsável")).not.toBeInTheDocument()
+    expect(within(card).getByText("Cadastro")).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole("button", { name: "Tabela" }))
     expect(await screen.findByRole("table")).toBeInTheDocument()
@@ -209,12 +229,12 @@ describe("LeadsPage visualização padrão", () => {
     vi.stubGlobal("fetch", fetchMock.fn)
   })
 
-  it("abre em kanban por padrão e alterna para tabela", async () => {
+  it("abre em cards por padrão e alterna para tabela", async () => {
     renderPage(<CrmLeadsPage />)
 
     await screen.findByText("Tecelagem Alpha")
     expect(screen.queryByRole("table")).not.toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Flutuar" })).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "Tecelagem Alpha" })).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole("button", { name: "Tabela" }))
     expect(await screen.findByRole("table")).toBeInTheDocument()

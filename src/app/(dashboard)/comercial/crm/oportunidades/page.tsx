@@ -38,7 +38,7 @@ export default function OportunidadesPage() {
   const router = useRouter()
   const pathname = usePathname()
   const info = getInfoContent(pathname)
-  const [modo, setModo] = useState<"cards" | "tabela" | "kanban">("tabela")
+  const [modo, setModo] = useState<"cards" | "tabela" | "kanban">("cards")
 
   const [visitasFilter, setVisitasFilter] = useState<"todas" | "minhas">("minhas")
   const [deleteTarget, setDeleteTarget] = useState<Oportunidade | null>(null)

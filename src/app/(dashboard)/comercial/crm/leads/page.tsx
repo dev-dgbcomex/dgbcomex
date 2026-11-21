@@ -61,7 +61,7 @@ function CrmLeadsPageContent() {
     }
     const view = searchParams.get("view")
     if (view === "cards" || view === "tabela" || view === "kanban") return view
-    return "kanban"
+    return "cards"
   })
   useEffect(() => {
     localStorage.setItem("leads-modo", modo)
@@ -346,13 +346,25 @@ function CrmLeadsPageContent() {
                   )}
                 </div>
 
-                <div className="mt-4 space-y-2 text-xs text-slate-500 dark:text-slate-400">
-                  <div className="flex justify-between gap-3">
-                    <span>Responsável</span>
-                    <span className="text-right text-slate-700 dark:text-slate-200">
-                      {emp.responsavelNome || "—"}
-                    </span>
-                  </div>
+                <div className="mt-4 grid grid-cols-4 gap-1 rounded-lg border border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/30 p-2 text-center">
+                  {[
+                    { label: "Oportunidades", valor: emp.totalOportunidades ?? 0 },
+                    { label: "Pedidos", valor: emp.totalPedidos ?? 0 },
+                    { label: "Visitas", valor: emp.totalVisitas ?? 0 },
+                    { label: "Ações", valor: emp.totalAcoes ?? 0 },
+                  ].map((metrica) => (
+                    <div key={metrica.label} className="min-w-0">
+                      <div className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                        {metrica.valor}
+                      </div>
+                      <div className="truncate text-[10px] text-slate-500 dark:text-slate-400">
+                        {metrica.label}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-3 text-xs text-slate-500 dark:text-slate-400">
                   <div className="flex justify-between gap-3">
                     <span>Cadastro</span>
                     <span className="text-slate-700 dark:text-slate-200">
