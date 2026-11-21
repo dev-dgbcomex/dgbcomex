@@ -26,6 +26,21 @@
 
 > Detalhe técnico completo em [`docs/crm-cliente-e-relatorios.md`](./crm-cliente-e-relatorios.md).
 
+### Sessão 31 — Semáforo clicável, lista por faixa e “i” explicativo
+
+- **Data:** 2026-11-21
+- **Commit:** `feat(crm): abre lista e info dos cards do semaforo`
+- **Tarefa:** tornar os cards Quentes/Mornos/Frios clicáveis em Leads e Clientes, abrindo um modal com a lista da faixa; adicionar um “i” por card com regra e exemplos; manter os três cards com o mesmo tamanho e o número alinhado quando a descrição quebra linha.
+- **Decisões aprovadas:** a lista do modal usa os mesmos registros e filtros ativos da tela (`filteredData`), sem novo endpoint; a faixa continua sendo definida apenas por `crm_oportunidades.status` (prioridade `QUENTE > MORNO > FRIO`), com oportunidades herdadas das pessoas promovidas em Clientes.
+- **Resultado:**
+  - `SemaforoConversao` agora recebe `itens` e `listagem`, abre o modal por clique/Enter/Espaço e impede que o clique no “i” abra a lista.
+  - O modal lista nome, documento e status cadastral de cada registro, com link para o detalhe e atalho “Ver todas”; o status cadastral aparece apenas como informação, nunca como critério da faixa.
+  - `itensDaFaixa()` centraliza o filtro da lista com a mesma regra de `contarFaixasConversao()` (inclusive `null`/desconhecido → Frio).
+  - `semaforoConversaoInfo` traz regra, prioridade, clique, herança em clientes e exemplos práticos para cada faixa; os “i” das duas telas também passaram a explicar o clique e o “i” por card.
+  - Cards com `min-h-[9rem]`, descrição `line-clamp-2` e `min-h-[2.25rem]`, e total com `mt-auto`: altura igual e número alinhado mesmo com descrição de duas linhas.
+- **Arquivos Envolvidos:** `src/lib/crm/faixa-conversao.ts`, `src/components/crm/semaforo-conversao.tsx`, `src/components/crm/semaforo-conversao.test.tsx`, `src/app/(dashboard)/comercial/{crm/leads,clientes}/page.tsx`, `src/app/(dashboard)/comercial/{crm/leads,clientes}/page.test.tsx`, `src/lib/crm/contadores-listagem.test.ts`, `src/lib/info-content/{crm,comercial}.ts`, `src/lib/info-content/info-content.test.ts`, `docs/Sessoes.md`.
+- **Verificação:** `npm run lint` sem erros (apenas warnings pré-existentes); `tsc --noEmit --pretty false` limpo com `NODE_OPTIONS=--max-old-space-size=8192`; testes focados `5 arquivos / 87 testes passados`; suíte completa `npm run test` → **473 arquivos / 2750 testes passados**; `npm run build` OK com `NODE_OPTIONS=--max-old-space-size=8192`.
+
 ### Sessão 30 — Semáforo por oportunidade e cards no padrão do BI
 
 - **Data:** 2026-11-21

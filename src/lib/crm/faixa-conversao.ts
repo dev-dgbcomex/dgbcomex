@@ -10,8 +10,17 @@ export const FAIXAS_CONVERSAO: Array<{
   { faixa: "FRIO", rotulo: "Frios", descricao: "Sem oportunidade em negociação ou proposta" },
 ]
 
-type ItemComFaixa = {
+export type ItemComFaixa = {
   faixaConversao?: FaixaConversao | string | null
+}
+
+export function itensDaFaixa<T extends ItemComFaixa>(itens: T[], faixa: FaixaConversao): T[] {
+  if (faixa === "FRIO") {
+    return itens.filter(
+      (item) => item.faixaConversao !== "QUENTE" && item.faixaConversao !== "MORNO"
+    )
+  }
+  return itens.filter((item) => item.faixaConversao === faixa)
 }
 
 export function contarFaixasConversao<T extends ItemComFaixa>(

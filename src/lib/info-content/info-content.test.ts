@@ -1,6 +1,11 @@
 import { describe, it, expect } from "vitest"
 import { getInfoContent } from "./index"
-import { saudeProspeccaoAcoesInfo, saudeProspeccaoInfo, saudeProspeccaoLeadsInfo } from "./crm"
+import {
+  saudeProspeccaoAcoesInfo,
+  saudeProspeccaoInfo,
+  saudeProspeccaoLeadsInfo,
+  semaforoConversaoInfo,
+} from "./crm"
 import { crmDashboardInfo } from "./crm-dashboard"
 
 describe("getInfoContent", () => {
@@ -765,6 +770,29 @@ describe("saudeProspeccaoInfo", () => {
   })
 })
 
+describe("semaforoConversaoInfo", () => {
+  it("explica o clique, a prioridade e traz exemplos para cada faixa", () => {
+    expect(Object.keys(semaforoConversaoInfo)).toEqual(["QUENTE", "MORNO", "FRIO"])
+
+    for (const info of Object.values(semaforoConversaoInfo)) {
+      const texto = [
+        info.description,
+        ...(info.rules ?? []),
+        ...(info.examples ?? []).map((exemplo) => `${exemplo.title}: ${exemplo.desc}`),
+      ].join("\n")
+
+      expect(info.title).toMatch(/Quentes|Mornos|Frios/)
+      expect(texto).toMatch(/Clique no card/i)
+      expect(texto).toMatch(/status das oportunidades/i)
+      expect(texto).toMatch(/Exemplo em (leads|clientes)/)
+    }
+
+    expect(semaforoConversaoInfo.QUENTE.rules?.join(" ")).toMatch(/prioridade/i)
+    expect(semaforoConversaoInfo.MORNO.description).toMatch(/sem oportunidade em Negociação/i)
+    expect(semaforoConversaoInfo.FRIO.description).toMatch(/sem oportunidade em Negociação/i)
+  })
+})
+
 describe("saudeProspeccaoLeadsInfo", () => {
   it("explica visitas e ações lado a lado na tabela de saúde", () => {
     expect(saudeProspeccaoLeadsInfo.tabela.rules?.join(" ")).toMatch(/mesma métrica/i)
@@ -977,6 +1005,8 @@ describe("crmDashboardInfo", () => {
     expect(textoClientes).toMatch(/Quentes/)
     expect(textoClientes).toMatch(/Mornos/)
     expect(textoClientes).toMatch(/Frios/)
+    expect(textoClientes).toMatch(/Clique em um card do semáforo/i)
+    expect(textoClientes).toMatch(/no card explica a regra/i)
     expect(textoClientes).toMatch(/nunca o status cadastral/i)
 
     const textoLeads = [leads?.description ?? "", ...(leads?.rules ?? [])].join("\n")
@@ -987,6 +1017,8 @@ describe("crmDashboardInfo", () => {
     expect(textoLeads).toMatch(/Quentes/)
     expect(textoLeads).toMatch(/Mornos/)
     expect(textoLeads).toMatch(/Frios/)
+    expect(textoLeads).toMatch(/Clique em um card do semáforo/i)
+    expect(textoLeads).toMatch(/no card explica a regra/i)
     expect(textoLeads).toMatch(/nunca o status cadastral/i)
     expect(textoLeads).not.toMatch(/O Kanban é a visualização padrão/)
 

@@ -32,7 +32,7 @@ import { ConfirmModal } from "@/components/ui/confirm-modal"
 import ImportarApiModal from "@/components/integracao/ImportarApiModal"
 import BuscarCnpjModal from "@/components/crm/buscar-cnpj-modal"
 import { ExportarDados } from "@/components/exportar/ExportarDados"
-import { SemaforoConversao } from "@/components/crm/semaforo-conversao"
+import { SemaforoConversao, type SemaforoConversaoItem } from "@/components/crm/semaforo-conversao"
 import { contarFaixasConversao } from "@/lib/crm/faixa-conversao"
 import { useStatuses, hexToRgba } from "@/hooks/use-statuses"
 import type { Cliente, SolicitacaoResumo, AmostraResumo } from "./types"
@@ -65,6 +65,15 @@ export default function ClientesPage() {
     clientes
   )
   const filteredData = filterState.filtered
+  const itensSemaforo: SemaforoConversaoItem[] = filteredData.map((cliente) => ({
+    id: cliente.id,
+    faixaConversao: cliente.faixaConversao,
+    nome: cliente.nome,
+    subtitulo: cliente.razaoSocial,
+    documento: cliente.cnpj,
+    status: cliente.ativo === false ? "Inativo" : cliente.ativo ? "Ativo" : null,
+    href: `/comercial/clientes/${cliente.id}`,
+  }))
   const [showApiImport, setShowApiImport] = useState(false)
 
   const [solicModal, setSolicModal] = useState<{
@@ -241,7 +250,12 @@ export default function ClientesPage() {
         placeholder="Buscar por nome, CNPJ, razão social, contato, email, telefone ou cidade..."
       />
 
-      <SemaforoConversao contagem={contarFaixasConversao(filteredData)} entidade="clientes" />
+      <SemaforoConversao
+        contagem={contarFaixasConversao(filteredData)}
+        entidade="clientes"
+        itens={itensSemaforo}
+        listagem="/comercial/clientes"
+      />
 
       <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
         {loading ? (

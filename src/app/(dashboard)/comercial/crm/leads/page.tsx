@@ -32,7 +32,7 @@ import { PageSkeleton } from "@/components/ui/page-skeleton"
 import { ExportarRelatorio } from "@/components/crm/relatorios/exportar-relatorio"
 import { PromoverClienteBotao } from "@/components/crm/promover-cliente-botao"
 import { LeadMetricasModal, type TipoMetricaLead } from "@/components/crm/leads/metricas-modal"
-import { SemaforoConversao } from "@/components/crm/semaforo-conversao"
+import { SemaforoConversao, type SemaforoConversaoItem } from "@/components/crm/semaforo-conversao"
 import { contarFaixasConversao } from "@/lib/crm/faixa-conversao"
 import type { Lead } from "./types"
 
@@ -124,6 +124,16 @@ function CrmLeadsPageContent() {
     if (parts.length === 0) return null
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(parts.join(", "))}`
   }
+
+  const itensSemaforo: SemaforoConversaoItem[] = filteredData.map((emp) => ({
+    id: emp.id,
+    faixaConversao: emp.faixaConversao,
+    nome: nomeExibicao(emp),
+    subtitulo: emp.nomeFantasia && emp.nomeFantasia !== nomeExibicao(emp) ? emp.nomeFantasia : null,
+    documento: documento(emp),
+    status: emp.status ?? null,
+    href: `/comercial/crm/leads/${emp.id}`,
+  }))
 
   const dadosExportacao = useMemo(
     () => ({
@@ -299,7 +309,12 @@ function CrmLeadsPageContent() {
         placeholder="Buscar leads..."
       />
 
-      <SemaforoConversao contagem={contarFaixasConversao(filteredData)} entidade="leads" />
+      <SemaforoConversao
+        contagem={contarFaixasConversao(filteredData)}
+        entidade="leads"
+        itens={itensSemaforo}
+        listagem="/comercial/crm/leads"
+      />
 
       {modo === "cards" &&
         (isLoading ? (

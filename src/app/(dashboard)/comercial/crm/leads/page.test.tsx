@@ -192,6 +192,17 @@ describe("LeadsPage cards", () => {
     expect(await screen.findByRole("button", { name: "Flutuar" })).toBeInTheDocument()
   })
 
+  it("abre a lista de leads da faixa clicada no semáforo", async () => {
+    renderPage(<CrmLeadsPage />)
+
+    await screen.findByText("Tecelagem Alpha")
+    fireEvent.click(screen.getByLabelText("Quentes: 1 leads — Oportunidade em negociação"))
+
+    const dialog = screen.getByRole("dialog", { name: "Quentes — Leads" })
+    expect(within(dialog).getByText("Tecelagem Alpha")).toBeInTheDocument()
+    expect(within(dialog).queryByText("Confecções Lima")).not.toBeInTheDocument()
+  })
+
   it("abre modais com os registros de cada indicador", async () => {
     renderPage(<CrmLeadsPage />)
 

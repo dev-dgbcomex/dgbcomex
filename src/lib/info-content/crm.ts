@@ -1,5 +1,75 @@
 import type { InfoContent } from "./types"
 import { crmDashboardInfo } from "./crm-dashboard"
+import type { FaixaConversao } from "../crm/faixa-conversao"
+
+export const semaforoConversaoInfo = {
+  QUENTE: {
+    title: "Quentes — oportunidade em negociação",
+    description:
+      "Leads e clientes com pelo menos uma oportunidade vinculada no status Negociação. É a faixa de maior prioridade do semáforo.",
+    rules: [
+      "Clique no card para abrir a lista de registros da faixa; o 'i' explica a regra sem abrir a lista.",
+      "Quentes tem prioridade sobre Mornos e Frios: se existirem oportunidades em Negociação e Proposta ao mesmo tempo, o registro entra em Quentes.",
+      "A classificação usa apenas o status das oportunidades, nunca o status cadastral da lead ou do cliente.",
+      "Em clientes, entram também as oportunidades das pessoas promovidas e vinculadas ao cliente.",
+      "A lista e as quantidades respeitam os filtros ativos da tela e os registros carregados.",
+    ],
+    examples: [
+      {
+        title: "Exemplo em leads",
+        desc: "Lead com status cadastral NOVO e uma oportunidade em NEGOCIACAO aparece em Quentes.",
+      },
+      {
+        title: "Exemplo em clientes",
+        desc: "Cliente com oportunidade direta em NEGOCIACAO, ou com uma lead promovida nesse status, aparece em Quentes.",
+      },
+    ],
+  },
+  MORNO: {
+    title: "Mornos — oportunidade em proposta",
+    description:
+      "Leads e clientes sem oportunidade em Negociação, mas com pelo menos uma oportunidade em Proposta.",
+    rules: [
+      "Clique no card para abrir a lista de registros da faixa; o 'i' explica a regra sem abrir a lista.",
+      "Morno tem prioridade sobre Frio, mas perde para Quente quando existe negociação ativa.",
+      "A classificação usa apenas o status das oportunidades, nunca o status cadastral da lead ou do cliente.",
+      "Em clientes, entram também as oportunidades das pessoas promovidas e vinculadas ao cliente.",
+      "A lista e as quantidades respeitam os filtros ativos da tela e os registros carregados.",
+    ],
+    examples: [
+      {
+        title: "Exemplo em leads",
+        desc: "Lead com oportunidade em PROPOSTA e nenhuma em NEGOCIACAO aparece em Mornos.",
+      },
+      {
+        title: "Exemplo em clientes",
+        desc: "Cliente sem negociação ativa, mas com oportunidade de lead promovida em PROPOSTA, aparece em Mornos.",
+      },
+    ],
+  },
+  FRIO: {
+    title: "Frios — sem negociação nem proposta",
+    description:
+      "Leads e clientes sem oportunidade em Negociação nem em Proposta. Podem ter oportunidades fechadas ou nenhuma oportunidade.",
+    rules: [
+      "Clique no card para abrir a lista de registros da faixa; o 'i' explica a regra sem abrir a lista.",
+      "Também entram aqui os registros sem oportunidade e os que só têm oportunidades fechadas, ganhas ou perdidas.",
+      "A classificação usa apenas o status das oportunidades; o status cadastral (Novo, Qualificado, Ativo ou Inativo) não classifica a faixa.",
+      "Em clientes, são consideradas as oportunidades diretas e as herdadas das pessoas promovidas.",
+      "A lista e as quantidades respeitam os filtros ativos da tela e os registros carregados.",
+    ],
+    examples: [
+      {
+        title: "Exemplo em leads",
+        desc: "Lead com status cadastral QUALIFICADO e sem oportunidade aparece em Frios.",
+      },
+      {
+        title: "Exemplo em clientes",
+        desc: "Cliente com uma oportunidade FECHADO_GANHO e nenhuma em Negociação ou Proposta aparece em Frios.",
+      },
+    ],
+  },
+} satisfies Record<FaixaConversao, InfoContent>
 
 export const crmContent: Record<string, InfoContent> = {
   // ==================== DISPONIBILIDADE ====================
@@ -160,8 +230,9 @@ export const crmContent: Record<string, InfoContent> = {
       "A listagem esconde por padrão as leads convertidas em cliente. Use o filtro 'Sem conversão / Convertidos / Todos' para alternar a visibilidade.",
       "Leads convertidas continuam acessíveis pelo detalhe (link direto) e pelo relatório de Conversões.",
       "Os cards logo abaixo da busca formam o semáforo de conversão: Quentes (uma ou mais oportunidades em Negociação), Mornos (oportunidade em Proposta) e Frios (sem oportunidade em Negociação ou Proposta).",
+      "Clique em um card do semáforo para abrir a lista de leads daquela faixa; o 'i' no card explica a regra e mostra exemplos.",
       "A classificação usa o status das oportunidades vinculadas à lead, nunca o status cadastral da lead. Cada lead entra em uma única faixa, com prioridade de Quente sobre Morno e de Morno sobre Frio.",
-      "As quantidades do semáforo respeitam a busca, os filtros de status/período e o filtro de conversão ativos na tela.",
+      "As quantidades e a lista do modal respeitam a busca, os filtros de status/período e o filtro de conversão ativos na tela.",
       "Ao clicar no nome da lead, você abre o detalhe completo com timeline, WhatsApp e resumo IA.",
     ],
     fields: [

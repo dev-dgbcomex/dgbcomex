@@ -116,6 +116,23 @@ describe("ClientesComercialPage - cards", () => {
     expect(within(card).queryByText("Solicitações")).not.toBeInTheDocument()
     expect(within(card).queryByText("Amostras")).not.toBeInTheDocument()
   })
+
+  it("abre a lista de clientes da faixa clicada no semáforo", async () => {
+    const fetchMock = createFetchMock(({ method, url }) => {
+      if (method === "GET" && url === "/api/clientes") return { json: dados }
+      return { status: 404, json: { error: "Rota não mockada" } }
+    })
+    vi.stubGlobal("fetch", fetchMock.fn)
+
+    renderPage(<ClientesPage />)
+    await screen.findByText("Tecidos Silva")
+
+    fireEvent.click(screen.getByLabelText("Quentes: 1 clientes — Oportunidade em negociação"))
+
+    const dialog = screen.getByRole("dialog", { name: "Quentes — Clientes" })
+    expect(within(dialog).getByText("Tecidos Silva")).toBeInTheDocument()
+    expect(within(dialog).queryByText("Química Alfa")).not.toBeInTheDocument()
+  })
 })
 
 describe("ClientesComercialPage - excluir", () => {
