@@ -32,6 +32,30 @@ export function createQueryBuilder<T>(result: T): any {
   return builder
 }
 
+export function sqlParaTexto(valor: unknown): string {
+  const visitado = new Set<object>()
+
+  function percorrer(no: unknown): string {
+    if (no === null || no === undefined) return ""
+    if (typeof no === "string") return no
+    if (typeof no !== "object") return String(no)
+    if (visitado.has(no)) return ""
+    visitado.add(no)
+
+    const objeto = no as { queryChunks?: unknown; name?: unknown; value?: unknown }
+    const partes: string[] = []
+    if (typeof objeto.name === "string") partes.push(objeto.name)
+    if (typeof objeto.value === "string") partes.push(objeto.value)
+    if (objeto.queryChunks) partes.push(percorrer(objeto.queryChunks))
+    if (Array.isArray(no)) {
+      for (const item of no) partes.push(percorrer(item))
+    }
+    return partes.join(" ")
+  }
+
+  return percorrer(valor)
+}
+
 export function resetDb(db: any) {
   for (const key of ["select", "insert", "update", "delete", "execute"]) {
     if (typeof db[key]?.mockReset === "function") db[key].mockReset()

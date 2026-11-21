@@ -19,9 +19,7 @@ export const dynamic = "force-dynamic"
 
 type TopEmpresaRow = {
   empresaId: number | null
-  clienteId: number | null
   empresaNome: string | null
-  clienteNome: string | null
   totalValor: string | number | null
 }
 
@@ -216,22 +214,22 @@ export async function GET() {
             db
               .select({
                 empresaId: crmOportunidades.empresaId,
-                clienteId: crmOportunidades.clienteId,
-                empresaNome: sql<string>`COALESCE(NULLIF(${crmPessoas.nomeFantasia}, ''), NULLIF(${crmPessoas.razaoSocial}, ''), NULLIF(${crmPessoas.nome}, ''), ${clientes.nome}, 'Sem nome')`,
-                clienteNome: clientes.nome,
+                empresaNome: sql<string>`COALESCE(NULLIF(${crmPessoas.nomeFantasia}, ''), NULLIF(${crmPessoas.razaoSocial}, ''), NULLIF(${crmPessoas.nome}, ''), 'Sem nome')`,
                 totalValor: sql<string>`SUM(COALESCE(${crmOportunidades.valorEstimado}, 0)::numeric)`,
               })
               .from(crmOportunidades)
-              .leftJoin(crmPessoas, eq(crmOportunidades.empresaId, crmPessoas.id))
-              .leftJoin(clientes, eq(crmOportunidades.clienteId, clientes.id))
-              .where(sql`${crmOportunidades.status} NOT IN ('FECHADO_PERDIDO', 'FECHADO_GANHO')`)
+              .innerJoin(crmPessoas, eq(crmOportunidades.empresaId, crmPessoas.id))
+              .where(
+                sql`${crmOportunidades.status} NOT IN ('FECHADO_PERDIDO', 'FECHADO_GANHO')
+                  AND ${crmOportunidades.clienteId} IS NULL
+                  AND ${crmPessoas.clienteId} IS NULL
+                  AND COALESCE(${crmPessoas.promovidaCliente}, false) = false`
+              )
               .groupBy(
                 crmOportunidades.empresaId,
-                crmOportunidades.clienteId,
                 crmPessoas.nomeFantasia,
                 crmPessoas.razaoSocial,
-                crmPessoas.nome,
-                clientes.nome
+                crmPessoas.nome
               )
               .orderBy(desc(sql`SUM(COALESCE(${crmOportunidades.valorEstimado}, 0)::numeric)`))
               .limit(5),
@@ -423,8 +421,6 @@ export async function GET() {
       topEmpresas: (topEmpresasRaw as TopEmpresaRow[]).map((r) => ({
         empresaId: r.empresaId,
         empresaNome: r.empresaNome || "Sem nome",
-        clienteId: r.clienteId,
-        clienteNome: r.clienteNome,
         totalValor: Number(r.totalValor),
       })),
       topClientes: (topClientesRaw as TopClienteRow[]).map((r) => ({

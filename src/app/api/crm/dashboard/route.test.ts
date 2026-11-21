@@ -3,7 +3,7 @@ import { NextResponse } from "next/server"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { requireAuth } from "@/lib/auth"
 import { db } from "@/lib/db"
-import { createQueryBuilder, resetDb } from "@/test/route-db-mock"
+import { createQueryBuilder, resetDb, sqlParaTexto } from "@/test/route-db-mock"
 import { GET } from "./route"
 
 vi.mock("@/lib/auth", () => ({ requireAuth: vi.fn() }))
@@ -25,6 +25,11 @@ function isTopClientesQuery(campos: unknown) {
   return chaves.includes("oportunidadesConvertidas") && chaves.includes("valorAberto")
 }
 
+function isTopLeadsQuery(campos: unknown) {
+  const chaves = Object.keys((campos ?? {}) as Record<string, unknown>)
+  return chaves.includes("empresaNome") && chaves.includes("totalValor") && !chaves.includes("clienteNome")
+}
+
 beforeEach(() => {
   vi.mocked(requireAuth).mockReset()
   resetDb(db)
@@ -37,6 +42,37 @@ describe("GET /api/crm/dashboard", () => {
       new NextResponse(JSON.stringify({ error: "Não autorizado" }), { status: 401 }) as never
     )
     expect((await GET()).status).toBe(401)
+  })
+
+  it("inclui topEmpresas somente com leads não promovidas", async () => {
+    const leadBuilder = createQueryBuilder([
+      { empresaId: 7, empresaNome: "Tecelagem Y", totalValor: "120000.00" },
+    ])
+    vi.mocked(db.select).mockImplementation(
+      ((campos: unknown) =>
+        (isTopLeadsQuery(campos) ? leadBuilder : createQueryBuilder([])) as never) as never
+    )
+
+    const res = await GET()
+    expect(res.status).toBe(200)
+    const json = (await res.json()) as {
+      topEmpresas: {
+        empresaId: number
+        empresaNome: string
+        totalValor: number
+        clienteId?: number
+        clienteNome?: string
+      }[]
+    }
+
+    expect(json.topEmpresas).toEqual([
+      { empresaId: 7, empresaNome: "Tecelagem Y", totalValor: 120000 },
+    ])
+    const where = leadBuilder.where.mock.calls
+      .map((args: unknown[]) => sqlParaTexto(args[0]))
+      .join(" ")
+    expect(where).toContain("cliente_id")
+    expect(where).toContain("promovida_cliente")
   })
 
   it("inclui topClientes com soma, contagem e conversão", async () => {

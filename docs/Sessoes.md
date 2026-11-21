@@ -26,6 +26,23 @@
 
 > Detalhe técnico completo em [`docs/crm-cliente-e-relatorios.md`](./crm-cliente-e-relatorios.md).
 
+### Sessão 18 — Top Leads separado de Top Clientes no dashboard CRM
+
+- **Data:** 2026-11-21
+- **Commit:** `fix(crm): separa top leads de top clientes no dashboard`
+- **Tarefa:** garantir que o painel `Top Leads (Negócios)` mostre somente leads e que o `Top Clientes` mostre somente clientes no dashboard `/comercial/crm`.
+- **Decisões aprovadas:** lead promovida a cliente deixa de aparecer no Top Leads; negócio com `clienteId` preenchido na oportunidade ou na lead também sai do Top Leads e é contado no Top Clientes via `COALESCE(crm_oportunidades.clienteId, crm_pessoas.clienteId)`, mantendo a regra de que pessoa promovida é cliente.
+- **Resultado:**
+  - API `/api/crm/dashboard`: `topEmpresas` agora usa `INNER JOIN` com `crm_leads`, exige `empresaId`, `clienteId` nulo na oportunidade, `clienteId` nulo na lead e `promovidaCliente = false`; o payload não expõe mais `clienteNome` nesse bloco.
+  - API `/api/crm/dashboard/detalhes`: `listarTopLeads()` aplica os mesmos filtros, remove o fallback para cliente e o rodapê `Ver todas` passa a abrir `/comercial/crm/leads`; `listarTopClientes()` permanece com a resolução `COALESCE` para clientes diretos e promovidos.
+  - Tela `/comercial/crm`: o card Top Leads usa apenas `empresaNome` e link para `/comercial/crm/leads/[id]`, sem recair para nome/link de cliente.
+  - Modal “i” do dashboard explica a separação, os campos `clienteId`/`promovidaCliente` e o exemplo de oportunidade que sai do Top Leads e entra no Top Clientes.
+- **Arquivos Envolvidos:** `src/app/api/crm/dashboard/route.ts`, `src/app/api/crm/dashboard/detalhes/route.ts`, `src/app/(dashboard)/comercial/crm/page.tsx`, `src/lib/info-content/crm-dashboard.ts`, `src/test/route-db-mock.ts`, `docs/Sessoes.md`.
+- **Testes:** novos/ajustados em `src/app/api/crm/dashboard/route.test.ts`, `src/app/api/crm/dashboard/detalhes/route.test.ts`, `src/app/(dashboard)/comercial/crm/page.test.tsx` e `src/lib/info-content/info-content.test.ts`.
+- **Verificação:** focados `4 arquivos / 63 testes passados`; `npm run lint` sem erros (apenas warnings pré-existentes); `tsc --noEmit` limpo com `NODE_OPTIONS=--max-old-space-size=8192`; suíte completa `npm run test` → **464 arquivos / 2681 testes passados**; `npm run build` OK com `NODE_OPTIONS=--max-old-space-size=8192`; `git diff --check` sem problemas.
+
+---
+
 ### Sessão 17 — Dashboard de Leads com saúde de visitas e ações lado a lado
 
 - **Data:** 2026-11-21

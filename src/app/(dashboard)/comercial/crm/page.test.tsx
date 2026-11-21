@@ -18,7 +18,13 @@ const dashboardPayload = {
   propostas: { total: 0, byStatus: [] },
   visitas: { total: 1, hoje: 0 },
   tarefas: { pendentes: 0, vencendo: 0 },
-  topEmpresas: [],
+  topEmpresas: [
+    {
+      empresaId: 7,
+      empresaNome: "Tecelagem Y",
+      totalValor: 120000,
+    },
+  ],
   topClientes: [
     {
       clienteId: 17,
@@ -100,6 +106,17 @@ describe("CrmDashboardPage", () => {
     }
   })
 
+  it("mostra o painel Top Leads somente com leads", async () => {
+    setup()
+
+    const titulo = await screen.findByRole("heading", { name: "Top Leads (Negócios)" })
+    const painel = titulo.parentElement?.parentElement
+    expect(painel).not.toBeNull()
+    const lead = within(painel!).getByRole("link", { name: /Tecelagem Y/ })
+    expect(lead).toHaveAttribute("href", "/comercial/crm/leads/7")
+    expect(within(painel!).queryByText("Conforto Prime")).not.toBeInTheDocument()
+  })
+
   it("mostra o texto do card e abre o modal de detalhes ao clicar", async () => {
     const fetchMock = setup()
 
@@ -115,7 +132,7 @@ describe("CrmDashboardPage", () => {
     await waitFor(() =>
       expect(screen.getByRole("heading", { name: "Leads (Negócios)" })).toBeInTheDocument()
     )
-    expect(await screen.findByText("Tecelagem Y")).toBeInTheDocument()
+    expect((await screen.findAllByText("Tecelagem Y")).length).toBeGreaterThan(1)
     expect(
       findCall(fetchMock.calls, "/api/crm/dashboard/detalhes?bloco=leads", "GET")
     ).toBeDefined()

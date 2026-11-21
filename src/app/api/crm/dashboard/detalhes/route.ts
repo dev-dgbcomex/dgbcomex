@@ -35,11 +35,9 @@ type ListaRow = {
 
 type TopLeadRow = {
   empresaId: number | null
-  clienteId: number | null
   leadFantasia: string | null
   leadRazao: string | null
   leadNome: string | null
-  clienteNome: string | null
   totalValor: string | number | null
 }
 
@@ -98,7 +96,7 @@ const LISTAGENS: Record<string, string> = {
   "funil-convertidas": "/comercial/crm/oportunidades",
   "previsao-convertidas": "/comercial/crm/oportunidades",
   status: "/comercial/crm/oportunidades",
-  "top-leads": "/comercial/crm/oportunidades",
+  "top-leads": "/comercial/crm/leads",
   "top-clientes": "/comercial/clientes",
   recentes: "/comercial/crm",
 }
@@ -238,40 +236,34 @@ async function listarTopLeads(limite: number): Promise<DetalheItem[]> {
   const rows = await db
     .select({
       empresaId: crmOportunidades.empresaId,
-      clienteId: crmOportunidades.clienteId,
       leadRazao: crmPessoas.razaoSocial,
       leadFantasia: crmPessoas.nomeFantasia,
       leadNome: crmPessoas.nome,
-      clienteNome: clientesSchema.nome,
       totalValor: sql<string>`SUM(COALESCE(${crmOportunidades.valorEstimado}, 0)::numeric)`,
     })
     .from(crmOportunidades)
-    .leftJoin(crmPessoas, eq(crmOportunidades.empresaId, crmPessoas.id))
-    .leftJoin(clientesSchema, eq(crmOportunidades.clienteId, clientesSchema.id))
-    .where(sql`${crmOportunidades.status} NOT IN ('FECHADO_PERDIDO', 'FECHADO_GANHO')`)
+    .innerJoin(crmPessoas, eq(crmOportunidades.empresaId, crmPessoas.id))
+    .where(
+      sql`${crmOportunidades.status} NOT IN ('FECHADO_PERDIDO', 'FECHADO_GANHO')
+        AND ${crmOportunidades.clienteId} IS NULL
+        AND ${crmPessoas.clienteId} IS NULL
+        AND COALESCE(${crmPessoas.promovidaCliente}, false) = false`
+    )
     .groupBy(
       crmOportunidades.empresaId,
-      crmOportunidades.clienteId,
       crmPessoas.razaoSocial,
       crmPessoas.nomeFantasia,
-      crmPessoas.nome,
-      clientesSchema.nome
+      crmPessoas.nome
     )
     .orderBy(desc(sql`SUM(COALESCE(${crmOportunidades.valorEstimado}, 0)::numeric)`))
     .limit(limite)
-  return (rows as TopLeadRow[]).map((row, indice) => {
-    const titulo =
-      texto(row.leadFantasia) || texto(row.leadRazao) || texto(row.leadNome) || texto(row.clienteNome) || "Sem nome"
-    return {
-      id: row.empresaId ?? row.clienteId ?? indice + 1,
-      titulo,
-      subtitulo: row.empresaId ? "Lead (Negócio)" : "Cliente",
-      valor: Number(row.totalValor ?? 0),
-      href: row.empresaId
-        ? `/comercial/crm/leads/${row.empresaId}`
-        : `/comercial/clientes/${row.clienteId}`,
-    }
-  })
+  return (rows as TopLeadRow[]).map((row, indice) => ({
+    id: row.empresaId ?? indice + 1,
+    titulo: texto(row.leadFantasia) || texto(row.leadRazao) || texto(row.leadNome) || "Sem nome",
+    subtitulo: "Lead (Negócio)",
+    valor: Number(row.totalValor ?? 0),
+    href: `/comercial/crm/leads/${row.empresaId ?? indice + 1}`,
+  }))
 }
 
 async function listarTopClientes(limite: number): Promise<DetalheItem[]> {

@@ -46,8 +46,6 @@ type CrmDashboardData = {
   topEmpresas: {
     empresaId: number | null
     empresaNome: string
-    clienteId?: number | null
-    clienteNome?: string | null
     totalValor: number
   }[]
   topClientes: {
@@ -249,31 +247,23 @@ export default function CrmDashboardPage() {
               </div>
               {data?.topEmpresas && data.topEmpresas.length > 0 ? (
                 <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {data.topEmpresas.map((emp, i) => {
-                    const nome = emp.empresaNome === "Sem nome" && emp.clienteNome ? emp.clienteNome : emp.empresaNome
-                    const href = emp.empresaId
-                      ? `/comercial/crm/leads/${emp.empresaId}`
-                      : emp.clienteId
-                        ? `/comercial/clientes/${emp.clienteId}`
-                        : "/comercial/crm/oportunidades"
-                    return (
-                      <Link
-                        key={`${emp.empresaId ?? "cliente"}-${emp.clienteId ?? i}`}
-                        href={href}
-                        className="flex items-center justify-between p-3 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/60"
-                      >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <span className="text-xs font-bold text-slate-400 w-5">{i + 1}.</span>
-                          <p className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">
-                            {nome}
-                          </p>
-                        </div>
-                        <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                          {formatCurrency(emp.totalValor)}
+                  {data.topEmpresas.map((emp, i) => (
+                    <Link
+                      key={emp.empresaId ?? i}
+                      href={emp.empresaId ? `/comercial/crm/leads/${emp.empresaId}` : "/comercial/crm/leads"}
+                      className="flex items-center justify-between p-3 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className="text-xs font-bold text-slate-400 w-5">{i + 1}.</span>
+                        <p className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">
+                          {emp.empresaNome}
                         </p>
-                      </Link>
-                    )
-                  })}
+                      </div>
+                      <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                        {formatCurrency(emp.totalValor)}
+                      </p>
+                    </Link>
+                  ))}
                 </div>
               ) : (
                 <p className="text-sm text-slate-400 text-center py-8">

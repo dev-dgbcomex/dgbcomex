@@ -813,6 +813,22 @@ describe("crmDashboardInfo", () => {
     expect(texto).toMatch(/Ver todas/)
   })
 
+  it("o painel Top Leads explica que clientes e leads promovidas ficam de fora", () => {
+    const bloco = crmDashboardInfo.paineis.topLeads
+    const texto = [
+      bloco.title,
+      bloco.description,
+      ...(bloco.rules ?? []),
+      ...(bloco.examples ?? []).map((e) => `${e.title}: ${e.desc}`),
+    ].join("\n")
+
+    expect(texto).toMatch(/ligadas a uma lead por empresaId/)
+    expect(texto).toMatch(/clienteId preenchido/)
+    expect(texto).toMatch(/promovidaCliente/)
+    expect(texto).toMatch(/não aparecem neste painel/)
+    expect(texto).toMatch(/cadastro da lead/)
+  })
+
   it("o painel Top Clientes explica a promoção, a conversão e o exemplo", () => {
     const bloco = crmDashboardInfo.paineis.topClientes
     const texto = [

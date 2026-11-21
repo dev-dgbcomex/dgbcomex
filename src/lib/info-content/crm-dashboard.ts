@@ -8,7 +8,7 @@ export const crmDashboardInfo = {
     rules: [
       "O resumo mostra apenas Leads (Negócios), Clientes, Oportunidades, Visitas e Tarefas Pendentes. Visitantes, Propostas, Campanhas e E-mails Enviados continuam no JSON da API e nos atalhos.",
       "O funil mostra três contagens: Leads (crm_leads), Oportunidades e Oportunidades Convertidas; Propostas foi removido do gráfico.",
-      "A linha dos painéis mostra Top Leads, Top Clientes e Atividades Recentes; o Top Clientes considera oportunidades abertas e fechadas de clientes e de pessoas promovidas.",
+      "A linha dos painéis mostra Top Leads, Top Clientes e Atividades Recentes; o Top Leads considera só oportunidades de leads não promovidas, e o Top Clientes considera oportunidades abertas e fechadas de clientes e de pessoas promovidas.",
       "Clicar em um card, em 'Ver todas', em uma barra do funil ou em um status abre GET /api/crm/dashboard/detalhes com o bloco correspondente.",
       "O 'i' do título explica a tela como um todo; o 'i' de cada bloco explica a origem e o cálculo do número exibido naquele bloco.",
       "As Ações Rápidas são atalhos para cadastros e listagens; elas não alteram os números exibidos.",
@@ -109,17 +109,22 @@ export const crmDashboardInfo = {
   paineis: {
     topLeads: {
       title: "Top Leads (Negócios) — como a lista é montada",
-      description: "Ranking das cinco empresas com maior soma de valor estimado em oportunidades ainda abertas.",
+      description: "Ranking das cinco leads com maior soma de valor estimado em oportunidades ainda abertas.",
       rules: [
-        "A API soma valorEstimado de crm_oportunidades com status diferente de FECHADO_GANHO e FECHADO_PERDIDO, agrupa por empresaId/clienteId e ordena da maior soma para a menor, com limite de 5.",
-        "O nome vem de crm_leads (nome fantasia, razão social ou nome); quando a oportunidade está ligada só ao cliente, aparece o nome do cliente.",
-        "Clicar em uma linha abre o cadastro da lead ou do cliente; 'Ver todas' abre o modal com o mesmo ranking.",
-        "O valor ao lado é a soma das oportunidades abertas daquela empresa, não o faturamento e não o valor de propostas.",
+        "A API soma valorEstimado de crm_oportunidades com status diferente de FECHADO_GANHO e FECHADO_PERDIDO, considera só oportunidades ligadas a uma lead por empresaId e ordena da maior soma para a menor, com limite de 5.",
+        "Oportunidades com clienteId preenchido na oportunidade ou na lead, bem como leads com promovidaCliente ativo, ficam de fora do Top Leads e entram no Top Clientes.",
+        "O nome vem de crm_leads (nome fantasia, razão social ou nome); oportunidades ligadas a clientes não aparecem neste painel.",
+        "Clicar em uma linha abre o cadastro da lead; 'Ver todas' abre o modal com o mesmo ranking.",
+        "O valor ao lado é a soma das oportunidades abertas daquela lead, não o faturamento e não o valor de propostas.",
       ],
       examples: [
         {
           title: "Exemplo do ranking",
           desc: "Tecelagem Y tem duas oportunidades abertas de R$ 80.000 e R$ 40.000: aparece no topo da lista com R$ 120.000.",
+        },
+        {
+          title: "Exemplo de separação",
+          desc: "Uma oportunidade ligada ao cliente Conforto Prime não aparece no Top Leads; ela entra no Top Clientes quando o cliente vem da oportunidade ou de uma lead promovida.",
         },
       ],
     } satisfies InfoContent,
@@ -130,7 +135,7 @@ export const crmDashboardInfo = {
       rules: [
         "A origem é crm_oportunidades: a API soma valorEstimado de todas as oportunidades do cliente, abertas e fechadas, e ordena da maior soma para a menor com limite de 5.",
         "O cliente de cada oportunidade vem de COALESCE(crm_oportunidades.clienteId, crm_pessoas.clienteId): quando a oportunidade está ligada a uma pessoa promovida, ela entra para o cliente dessa pessoa.",
-        "O nome exibido vem da tabela clientes; oportunidades sem cliente resolvido não entram no ranking.",
+        "O nome do cliente exibido vem da tabela clientes; oportunidades sem cliente resolvido não entram no ranking.",
         "O texto 'X convertidas de Y' usa o total de oportunidades do cliente (Y) e a quantidade com status FECHADO_GANHO (X).",
         "O valor ao lado do nome é a soma de todas as oportunidades do cliente; o campo valorAberto separa apenas as que não estão FECHADO_GANHO nem FECHADO_PERDIDO.",
         "Clicar em uma linha abre /comercial/clientes/[id]; 'Ver todas' abre o modal com o mesmo ranking e o link final abre a listagem de clientes.",

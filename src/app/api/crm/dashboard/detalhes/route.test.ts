@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { requireAuth } from "@/lib/auth"
 import { db } from "@/lib/db"
-import { createQueryBuilder, resetDb } from "@/test/route-db-mock"
+import { createQueryBuilder, resetDb, sqlParaTexto } from "@/test/route-db-mock"
 import { GET } from "./route"
 
 vi.mock("@/lib/auth", () => ({ requireAuth: vi.fn() }))
@@ -63,6 +63,41 @@ describe("GET /api/crm/dashboard/detalhes", () => {
         },
       ],
     })
+  })
+
+  it("retorna o bloco top-leads somente com leads não promovidas", async () => {
+    const builder = createQueryBuilder([
+      {
+        empresaId: 7,
+        leadFantasia: "Tecelagem Y",
+        leadRazao: null,
+        leadNome: null,
+        totalValor: "120000.00",
+      },
+    ])
+    vi.mocked(db.select).mockReturnValue(builder as never)
+
+    const res = await get("http://localhost/api/crm/dashboard/detalhes?bloco=top-leads")
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({
+      bloco: "top-leads",
+      titulo: "Top Leads (Negócios)",
+      listagem: "/comercial/crm/leads",
+      itens: [
+        {
+          id: 7,
+          titulo: "Tecelagem Y",
+          subtitulo: "Lead (Negócio)",
+          valor: 120000,
+          href: "/comercial/crm/leads/7",
+        },
+      ],
+    })
+    const where = builder.where.mock.calls
+      .map((args: unknown[]) => sqlParaTexto(args[0]))
+      .join(" ")
+    expect(where).toContain("cliente_id")
+    expect(where).toContain("promovida_cliente")
   })
 
   it("retorna o bloco top-clientes com conversão e valor", async () => {
