@@ -117,23 +117,29 @@ export function analisarIntervalosContato(registros: Registro[]): Registro {
 }
 
 function calcularPreenchimento(entidade: Registro): Registro {
-  const campos = [
+  const camposComuns = [
     "nome",
     "razaoSocial",
-    "nomeFantasia",
     "documento",
     "segmento",
-    "porte",
     "email",
     "telefone",
     "celular",
-    "site",
     "endereco",
     "cidade",
     "uf",
-    "cep",
-    "observacoes",
   ]
+  const campos =
+    entidade.tipo === "cliente"
+      ? camposComuns
+      : [
+          ...camposComuns,
+          "nomeFantasia",
+          "porte",
+          "site",
+          "cep",
+          "observacoes",
+        ]
   const faltantes = campos.filter((campo) => !texto(entidade[campo], 40))
   return {
     camposPreenchidos: campos.length - faltantes.length,
@@ -183,8 +189,14 @@ export function compilarContexto(cru: unknown): ContextoResumoIA {
       documento: texto(entidade.documento, 40),
       segmento: texto(entidade.segmento, 100),
       porte: texto(entidade.porte, 60),
+      email: texto(entidade.email, 150),
+      telefone: texto(entidade.telefone, 40),
+      celular: texto(entidade.celular, 40),
+      site: texto(entidade.site, 200),
+      endereco: texto(entidade.endereco, 300),
       cidade: texto(entidade.cidade, 100),
       uf: texto(entidade.uf, 5),
+      cep: texto(entidade.cep, 20),
       status: texto(entidade.status, 40),
       observacoes: texto(entidade.observacoes, 400),
       promovidaCliente: entidade.promovidaCliente === true,
@@ -299,7 +311,7 @@ export async function buscarContextoResumoIA(
   params: { tipo: EntidadeResumoIA; id: number },
   client: typeof db = db
 ): Promise<ContextoResumoIA> {
-  const resultado = (await client.execute(sql`
+  const resultado: unknown = await client.execute(sql`
     WITH params AS (
       SELECT ${params.tipo}::text AS tipo, ${params.id}::integer AS id
     ),
@@ -541,7 +553,15 @@ export async function buscarContextoResumoIA(
       FROM escopo e
     )
     SELECT contexto FROM dados
-  `)) as { rows?: { contexto?: unknown }[] }
+  `)
 
-  return compilarContexto(resultado.rows?.[0]?.contexto)
+  const linhas = Array.isArray(resultado)
+    ? resultado
+    : ((resultado as { rows?: unknown[] }).rows ?? [])
+  const primeiraLinha =
+    linhas.length > 0 && linhas[0] !== null && typeof linhas[0] === "object"
+      ? (linhas[0] as Registro)
+      : {}
+
+  return compilarContexto(primeiraLinha.contexto)
 }

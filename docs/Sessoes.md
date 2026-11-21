@@ -26,6 +26,20 @@
 
 > Detalhe técnico completo em [`docs/crm-cliente-e-relatorios.md`](./crm-cliente-e-relatorios.md).
 
+### Sessão 29 — Correção do contexto vazio no Resumo IA
+
+- **Data:** 2026-11-21
+- **Commit:** `fix(crm): corrige contexto do resumo ia`
+- **Tarefa:** corrigir resumo gerado para o cliente UG DA AMAZONIA que classificava o relacionamento como FRIO e afirmava que nome, documento, contatos, oportunidades e ações estavam vazios, embora o cadastro tivesse CNPJ, uma oportunidade `FECHADO_GANHO` e sete ações.
+- **Causa raiz:** `buscarContextoResumoIA()` lia `db.execute()` como `{ rows: [...] }`, mas o driver `postgres-js` do Drizzle retorna um array de linhas; o contexto consolidado era descartado e `compilarContexto()` recebia `undefined`. A IA recebia, portanto, um cadastro integralmente vazio e seguia a instrução do prompt de dizer que não havia informação.
+- **Resultado:**
+  - A leitura do resultado agora aceita o `RowList` real do `postgres-js`, com fallback para o formato `rows` por compatibilidade.
+  - `compilarContexto()` passa a incluir `email`, `telefone`, `celular`, `site`, `endereco` e `cep` no objeto enviado ao modelo.
+  - `calcularPreenchimento()` usa apenas os campos existentes no cadastro de cliente; leads continuam com os 15 campos completos. Isso evita que um cliente preenchido apareça com 0% por campos que não existem na tabela.
+  - Os testes passaram a mockar o formato real de `db.execute()` e cobrem um cliente com oportunidade `FECHADO_GANHO`, ações e dados de contato/endereço no contexto.
+- **Arquivos Envolvidos:** `src/lib/crm/resumo-ia-contexto.ts`, `src/lib/crm/resumo-ia-contexto.test.ts`, `docs/Sessoes.md`.
+- **Verificação:** `npm run lint` sem erros (apenas warnings pré-existentes); `tsc --noEmit --pretty false` limpo com `NODE_OPTIONS=--max-old-space-size=8192`; suíte completa `npm run test` → **473 arquivos / 2743 testes passados**; `npm run build` OK com `NODE_OPTIONS=--max-old-space-size=8192`.
+
 ### Sessão 28 — Semáforo de conversão nas listagens de Leads e Clientes
 
 - **Data:** 2026-11-21

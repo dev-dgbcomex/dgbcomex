@@ -84,14 +84,57 @@ describe("resumo-ia-contexto", () => {
     expect(mensagens.user).toContain("</dados_entidade>")
   })
 
-  it("busca o contexto consolidado via uma única consulta", async () => {
-    vi.mocked(db.execute).mockResolvedValue({
-      rows: [{ contexto: { entidade: { tipo: "cliente", id: 12, nome: "Cliente" } } }],
-    } as any)
+  it("mantém os dados de contato e endereço no contexto do cliente", () => {
+    const contexto = compilarContexto({
+      entidade: {
+        tipo: "cliente",
+        nome: "UG DA AMAZONIA",
+        razaoSocial: "U G INDUSTRIA DE COLCHOES DA AMAZONIA LTDA",
+        documento: "03.387.691/0001-16",
+        email: "contato@ug.com",
+        telefone: "(92) 3333-4444",
+        endereco: "DA VERTENTE",
+        cidade: "MANAUS",
+        uf: "AM",
+      },
+      oportunidades: [{ titulo: "ORÇAMENTO UG", status: "FECHADO_GANHO", valorEstimado: 58782 }],
+      acoes: [{ dataAcao: "2026-11-16", relato: "Cliente em negociação, pagando títulos em atraso." }],
+    })
+
+    expect(contexto.entidade).toMatchObject({
+      nome: "UG DA AMAZONIA",
+      documento: "03.387.691/0001-16",
+      email: "contato@ug.com",
+      telefone: "(92) 3333-4444",
+      endereco: "DA VERTENTE",
+      cidade: "MANAUS",
+      uf: "AM",
+    })
+    expect(contexto.indicadores).toMatchObject({ oportunidades: 1, acoes: 1 })
+    expect(contexto.oportunidades[0].status).toBe("FECHADO_GANHO")
+    expect(contexto.preenchimento).toMatchObject({ camposPreenchidos: 8, totalCampos: 10, percentual: 80 })
+    expect(contexto.preenchimento.faltantes).not.toContain("email")
+    expect(contexto.preenchimento.faltantes).not.toContain("endereco")
+    expect(contexto.preenchimento.faltantes).not.toContain("site")
+  })
+
+  it("busca o contexto consolidado via uma única consulta no formato do postgres-js", async () => {
+    vi.mocked(db.execute).mockResolvedValue([
+      {
+        contexto: {
+          entidade: { tipo: "cliente", id: 12, nome: "Cliente", email: "cliente@exemplo.com" },
+          oportunidades: [{ titulo: "Oportunidade", status: "FECHADO_GANHO", valorEstimado: 1000 }],
+          acoes: [{ dataAcao: "2026-11-20", relato: "Contato realizado" }],
+        },
+      },
+    ] as never)
 
     const contexto = await buscarContextoResumoIA({ tipo: "cliente", id: 12 })
 
     expect(db.execute).toHaveBeenCalledTimes(1)
     expect(contexto.entidade.nome).toBe("Cliente")
+    expect(contexto.entidade.email).toBe("cliente@exemplo.com")
+    expect(contexto.indicadores).toMatchObject({ oportunidades: 1, acoes: 1 })
+    expect(contexto.oportunidades[0].status).toBe("FECHADO_GANHO")
   })
 })
