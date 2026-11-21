@@ -53,14 +53,25 @@ describe("DELETE /api/crm/propostas/[id]", () => {
     expect(res.status).toBe(401)
   })
 
-  it("retorna 403 para usuário não administrador", async () => {
+  it("retorna 403 para perfil comum", async () => {
     vi.mocked(requireAuth).mockResolvedValue({
-      session: { user: { id: "2", role: "CRM" } },
+      session: { user: { id: "2", role: "GERENTE" } },
       userId: 2,
     } as any)
     const res = await del("1")
     expect(res.status).toBe(403)
-    expect(await res.json()).toEqual({ error: "Apenas administradores podem excluir" })
+    expect(await res.json()).toEqual({ error: "Sem permissão para excluir" })
+  })
+
+  it.each(["COMERCIAL", "CRM"])("perfil %s exclui proposta", async (role) => {
+    vi.mocked(requireAuth).mockResolvedValue({
+      session: { user: { id: "2", role, name: "Ana" } },
+      userId: 2,
+    } as any)
+    const res = await del("9")
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({ success: true })
+    expect(db.transaction).toHaveBeenCalled()
   })
 
   it("exclui a proposta e limpa os eventos de timeline em transação", async () => {

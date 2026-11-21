@@ -20,6 +20,7 @@ import {
 import { toast } from "sonner"
 import { useSession } from "next-auth/react"
 import { ConfirmModal } from "@/components/ui/confirm-modal"
+import { podeGerenciarTudo } from "@/lib/permissoes"
 import type { Visitante, MensagemWhatsapp } from "../types"
 
 const STATUS_OPTIONS = ["NOVO", "CONTATADO", "QUALIFICADO", "CONVERTIDO", "PERDIDO"] as const
@@ -64,7 +65,7 @@ export default function VisitanteDetailPage() {
   const info = getInfoContent(pathname)
   const params = useParams()
   const { data: session } = useSession()
-  const isAdmin = session?.user?.role === "ADMIN" || session?.user?.role === "SUDO"
+  const podeExcluir = podeGerenciarTudo(session?.user?.role)
   const [visitante, setVisitante] = useState<Visitante | null>(null)
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(false)
@@ -263,7 +264,7 @@ export default function VisitanteDetailPage() {
               >
                 <Pencil size={14} /> Editar
               </button>
-              {isAdmin && (
+              {podeExcluir && (
                 <button
                   onClick={() => setShowDelete(true)}
                   className="flex items-center gap-1 text-xs font-medium text-red-600 hover:underline"

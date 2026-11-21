@@ -15,6 +15,7 @@ import { solicitacoes } from "@/lib/db/schema/solicitacoes"
 import { eq, inArray } from "drizzle-orm"
 import { notificar, notificarDelecao, registrarLog } from "@/lib/notificar"
 import { handleApiError } from "@/lib/api-error"
+import { podeGerenciarTudo } from "@/lib/permissoes"
 export const dynamic = "force-dynamic"
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -101,11 +102,10 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const id = parseInt((await params).id)
     const body = await req.json()
 
-    // Apenas COMERCIAL e ADMIN podem aprovar/reprovar produto
     if (body.status === "APROVADO" || body.status === "REPROVADO") {
-      if (!["COMERCIAL", "ADMIN", "SUDO"].includes(session.user?.role ?? "")) {
+      if (!podeGerenciarTudo(session.user?.role)) {
         return NextResponse.json(
-          { error: "Apenas COMERCIAL, ADMIN e SUDO podem aprovar/reprovar produtos" },
+          { error: "Sem permissão para aprovar/reprovar produtos" },
           { status: 403 }
         )
       }
@@ -217,11 +217,8 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   try {
     const session = await getServerSession(authOptions)
     if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
-    if (session.user.role !== "ADMIN" && session.user.role !== "SUDO") {
-      return NextResponse.json(
-        { error: "Apenas administradores podem excluir produtos" },
-        { status: 403 }
-      )
+    if (!podeGerenciarTudo(session.user.role)) {
+      return NextResponse.json({ error: "Sem permissão para excluir" }, { status: 403 })
     }
 
     const id = parseInt((await params).id)

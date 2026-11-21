@@ -24,6 +24,7 @@ import { ConfirmModal } from "@/components/ui/confirm-modal"
 import { toast } from "sonner"
 import { useStatuses, statusAtivos, hexToRgba } from "@/hooks/use-statuses"
 import { STATUS_PROPOSTA_PADRAO } from "@/lib/crm/status-proposta"
+import { podeGerenciarRegistro, podeGerenciarTudo } from "@/lib/permissoes"
 import type { Proposta, PropostaUpdate } from "../types"
 
 async function fetchProposta(id: string) {
@@ -138,9 +139,10 @@ function DetalhePropostaPageContent() {
 
   const userRole = session?.user?.role
   const userId = session?.user?.id ? parseInt(session.user.id) : null
-  const isAdmin = userRole === "ADMIN" || userRole === "SUDO"
-  const isOwner = userId != null && proposta?.criadoPor === userId
-  const canEdit = isAdmin || isOwner
+  const podeExcluir = podeGerenciarTudo(userRole)
+  const canEdit = userId != null
+    ? podeGerenciarRegistro(userRole, proposta.criadoPor, userId)
+    : podeExcluir
 
   const labelStatus = (nome: string) => statusLookup.find((s) => s.nome === nome)?.rotulo || nome
   const corStatus = (nome: string) => statusLookup.find((s) => s.nome === nome)?.cor || "#94a3b8"
@@ -173,7 +175,7 @@ function DetalhePropostaPageContent() {
                 <Pencil size={14} /> Editar
               </button>
             )}
-            {isAdmin && (
+            {podeExcluir && (
               <button
                 onClick={() => setShowDelete(true)}
                 className="inline-flex items-center gap-1 text-xs font-medium text-red-600 hover:underline"

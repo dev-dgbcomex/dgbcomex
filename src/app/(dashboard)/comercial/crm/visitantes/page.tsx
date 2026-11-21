@@ -26,6 +26,7 @@ import VisitantesKanban from "@/components/crm/visitantes-kanban"
 import { ConfirmModal } from "@/components/ui/confirm-modal"
 import ListFilters, { useListFilters } from "@/components/ui/list-filters"
 import { PageSkeleton } from "@/components/ui/page-skeleton"
+import { podeGerenciarTudo } from "@/lib/permissoes"
 
 async function fetchVisitantes(): Promise<Visitante[]> {
   const res = await fetch("/api/crm/visitantes")
@@ -79,7 +80,7 @@ function CrmVisitantesPageContent() {
   const [visitanteToExcluir, setVisitanteToExcluir] = useState<Visitante | null>(null)
   const { data: session } = useSession()
   const role = (session?.user as Session["user"] | undefined)?.role
-  const isAdmin = role === "ADMIN" || role === "SUDO"
+  const podeExcluir = podeGerenciarTudo(role)
 
   const {
     data: visitantes,
@@ -414,7 +415,7 @@ function CrmVisitantesPageContent() {
                                 <XCircle size={15} />
                               </button>
                             )}
-                            {isAdmin && (
+                            {podeExcluir && (
                               <button
                                 onClick={() => setVisitanteToExcluir(visitante)}
                                 title="Excluir visitante"

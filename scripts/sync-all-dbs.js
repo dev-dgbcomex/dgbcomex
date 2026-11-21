@@ -1094,6 +1094,26 @@ WHERE um.titulo = 'Reuniões'
     WHERE umi.user_menu_id = um.id AND umi.url = '/reunioes/projetos'
   );
 
+INSERT INTO user_menu_itens (user_menu_id, titulo, url, ordem)
+SELECT um.id, v.titulo, v.url,
+  COALESCE((SELECT MAX(umi.ordem) FROM user_menu_itens umi WHERE umi.user_menu_id = um.id), -1)
+    + ROW_NUMBER() OVER (PARTITION BY um.id ORDER BY v.ordem)
+FROM user_menus um
+CROSS JOIN (
+  VALUES
+    ('Clientes', '/comercial/clientes', 1),
+    ('Representantes', '/cadastros/representantes', 2)
+) AS v(titulo, url, ordem)
+WHERE um.titulo = 'CRM'
+  AND (
+    (um.usuario_id IS NULL AND um.role IN ('CRM', 'COMERCIAL'))
+    OR um.usuario_id IS NOT NULL
+  )
+  AND NOT EXISTS (
+    SELECT 1 FROM user_menu_itens umi
+    WHERE umi.user_menu_id = um.id AND umi.url = v.url
+  );
+
 -- ==================== Ativos e Vistorias ====================
 CREATE TABLE IF NOT EXISTS ativos_categorias (
   id SERIAL PRIMARY KEY,

@@ -24,6 +24,7 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import ListFilters, { useListFilters } from "@/components/ui/list-filters"
+import { podeGerenciarTudo } from "@/lib/permissoes"
 import type { Contato } from "./types"
 
 async function fetchContatos(): Promise<Contato[]> {
@@ -37,7 +38,7 @@ export default function CrmContatosPage() {
   const pathname = usePathname()
   const info = getInfoContent(pathname)
   const { data: session } = useSession()
-  const isAdmin = session?.user?.role === "ADMIN" || session?.user?.role === "SUDO"
+  const podeExcluir = podeGerenciarTudo(session?.user?.role)
   const [deleteTarget, setDeleteTarget] = useState<Contato | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
   const {
@@ -233,7 +234,7 @@ export default function CrmContatosPage() {
                           <Pencil size={12} />
                           Editar
                         </Link>
-                        {isAdmin && (
+                        {podeExcluir && (
                           <button
                             onClick={() => setDeleteTarget(c)}
                             title="Excluir contato"

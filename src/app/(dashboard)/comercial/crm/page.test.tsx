@@ -34,22 +34,22 @@ function setup() {
 }
 
 describe("CrmDashboardPage", () => {
-  it("renderiza o heading e os cards de resumo", async () => {
+  it("renderiza o heading e apenas os cinco cards de resumo restantes", async () => {
     setup()
     expect(screen.getByRole("heading", { name: "CRM" })).toBeInTheDocument()
 
     for (const label of [
-      "Visitantes",
       "Leads (Negócios)",
       "Clientes",
       "Oportunidades",
-      "Propostas",
       "Visitas",
       "Tarefas Pendentes",
-      "Campanhas",
-      "Emails Enviados",
     ]) {
       expect(await screen.findByText(label)).toBeInTheDocument()
+    }
+
+    for (const label of ["Visitantes", "Propostas", "Campanhas", "Emails Enviados"]) {
+      expect(screen.queryByText(label)).not.toBeInTheDocument()
     }
   })
 
@@ -62,5 +62,31 @@ describe("CrmDashboardPage", () => {
     const card = screen.getByTitle("Leads (Negócios)")
     expect(card).toHaveAttribute("href", "/comercial/crm/leads")
     expect(card).toHaveClass("overflow-hidden")
+  })
+
+  it("mantém os atalhos dos domínios sem card", async () => {
+    setup()
+
+    for (const label of ["Novo Lead", "Nova Proposta", "Nova Campanha", "Email Massa"]) {
+      expect(await screen.findByText(label)).toBeInTheDocument()
+    }
+  })
+
+  it("exibe o botão de informações na visão geral, nos cards, painéis e ações rápidas", async () => {
+    setup()
+
+    expect(
+      screen.getByRole("button", { name: "Informações da visão geral do CRM" })
+    ).toBeInTheDocument()
+    expect(await screen.findAllByRole("button", { name: /^Informações do card / })).toHaveLength(5)
+    expect(
+      await screen.findByRole("button", { name: "Informações do painel Top Leads" })
+    ).toBeInTheDocument()
+    expect(
+      await screen.findByRole("button", { name: "Informações do painel Atividades Recentes" })
+    ).toBeInTheDocument()
+    expect(
+      await screen.findByRole("button", { name: "Informações das Ações Rápidas" })
+    ).toBeInTheDocument()
   })
 })

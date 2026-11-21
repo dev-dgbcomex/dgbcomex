@@ -50,13 +50,19 @@ describe("DELETE /api/cadastros/representantes/[id]", () => {
     expect(res.status).toBe(401)
   })
 
-  it("retorna 403 para usuário não administrador", async () => {
+  it("retorna 403 para perfil comum", async () => {
     vi.mocked(getServerSession).mockResolvedValue({ user: { name: "Jo", role: "VENDEDOR" } } as any)
     const res = await del("3")
     expect(res.status).toBe(403)
-    expect(await res.json()).toEqual({
-      error: "Apenas administradores podem excluir representantes",
-    })
+    expect(await res.json()).toEqual({ error: "Sem permissão para excluir" })
+  })
+
+  it.each(["COMERCIAL", "CRM"])("perfil %s exclui representante", async (role) => {
+    vi.mocked(getServerSession).mockResolvedValue({ user: { name: "Ana", role } } as any)
+    const res = await del("3")
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({ success: true })
+    expect(db.transaction).toHaveBeenCalled()
   })
 
   it("exclui o representante e seus vínculos em transação", async () => {

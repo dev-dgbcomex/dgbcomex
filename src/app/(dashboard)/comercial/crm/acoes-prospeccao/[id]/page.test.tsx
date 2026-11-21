@@ -9,8 +9,12 @@ vi.mock("./actions", () => ({
   propostaVinculadaAcaoProspeccaoVisivel: vi.fn(async () => true),
 }))
 
+const { sessionMock } = vi.hoisted(() => ({
+  sessionMock: { data: { user: { id: "1", role: "ADMIN" as string } } },
+}))
+
 vi.mock("next-auth/react", () => ({
-  useSession: () => ({ data: { user: { id: "1", role: "ADMIN" } } }),
+  useSession: () => sessionMock,
 }))
 
 vi.mock("@/components/crm/acao-prospeccao-report-button", () => ({
@@ -178,6 +182,8 @@ describe("DetalheAcaoProspeccaoPage", () => {
   let fetchMock: ReturnType<typeof createFetchMock>
 
   beforeEach(() => {
+    sessionMock.data.user.id = "1"
+    sessionMock.data.user.role = "ADMIN"
     fetchMock = createFetchMock(buildHandler())
     vi.stubGlobal("fetch", fetchMock.fn)
     navMock.setPathname("/comercial/crm/acoes-prospeccao/42")
@@ -196,6 +202,22 @@ describe("DetalheAcaoProspeccaoPage", () => {
     expect(screen.getByText("Ana")).toBeInTheDocument()
     expect(screen.getByText("Rua das Rosas")).toBeInTheDocument()
     expect(screen.getByText("Proposta 11")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Fazer Check-in" })).toBeInTheDocument()
+  })
+
+  it("permite que CRM gerencie ação de outro usuário", async () => {
+    sessionMock.data.user.id = "99"
+    sessionMock.data.user.role = "CRM"
+    fetchMock = createFetchMock(buildHandler())
+    vi.stubGlobal("fetch", fetchMock.fn)
+
+    renderPage(<DetalheAcaoProspeccaoPage />)
+
+    expect(
+      await screen.findByRole("heading", { name: /Ação de Prospecção — Tecelagem Alpha/ })
+    ).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Editar" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Excluir" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Fazer Check-in" })).toBeInTheDocument()
   })
 

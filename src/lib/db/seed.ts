@@ -94,6 +94,13 @@ async function seed() {
       ordem: 16,
     },
     { userMenuId: menuCrm.id, titulo: "Relatórios", url: "/comercial/crm/relatorios", ordem: 17 },
+    { userMenuId: menuCrm.id, titulo: "Clientes", url: "/comercial/clientes", ordem: 18 },
+    {
+      userMenuId: menuCrm.id,
+      titulo: "Representantes",
+      url: "/cadastros/representantes",
+      ordem: 19,
+    },
   ])
 
   // Menu CRM para role CRM
@@ -154,6 +161,13 @@ async function seed() {
       titulo: "Notificações",
       url: "/comercial/crm/relatorios",
       ordem: 17,
+    },
+    { userMenuId: menuCrmRole.id, titulo: "Clientes", url: "/comercial/clientes", ordem: 18 },
+    {
+      userMenuId: menuCrmRole.id,
+      titulo: "Representantes",
+      url: "/cadastros/representantes",
+      ordem: 19,
     },
   ])
 

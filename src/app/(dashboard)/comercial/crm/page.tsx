@@ -1,9 +1,9 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
-import { usePathname } from "next/navigation"
 import { InfoButton } from "@/components/ui/info-button"
-import { getInfoContent } from "@/lib/info-content"
+import type { InfoContent } from "@/lib/info-content"
+import { crmDashboardInfo } from "@/lib/info-content/crm-dashboard"
 import Link from "next/link"
 import dynamic from "next/dynamic"
 import {
@@ -16,14 +16,10 @@ import {
   FileText,
   Calendar,
   ArrowRight,
-  Handshake,
-  XCircle,
   AlertCircle,
   BarChart3,
   Megaphone,
   Mail,
-  Eye,
-  MousePointerClick,
 } from "lucide-react"
 
 const CrmCharts = dynamic(() => import("./charts").then((m) => m.CrmCharts), { ssr: false })
@@ -105,8 +101,6 @@ function getTipoBg(tipo: string) {
 }
 
 export default function CrmDashboardPage() {
-  const pathname = usePathname()
-  const info = getInfoContent(pathname)
   const { data, isLoading, isError } = useQuery<CrmDashboardData>({
     queryKey: ["crm-dashboard"],
     queryFn: async () => {
@@ -122,7 +116,11 @@ export default function CrmDashboardPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-50">
-            CRM{info && <InfoButton content={info} />}
+            CRM
+            <InfoButton
+              content={crmDashboardInfo.pagina}
+              label="Informações da visão geral do CRM"
+            />
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
             Dashboard comercial com métricas de pipeline, atividades e previsão
@@ -147,21 +145,13 @@ export default function CrmDashboardPage() {
       ) : (
         <>
           {/* Linha 1: Cards de resumo */}
-          <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-8">
-            <SummaryCard
-              href="/comercial/crm/visitantes"
-              icon={<UserPlus size={20} />}
-              value={data?.visitantes.total ?? 0}
-              label="Visitantes"
-              sub={`${data?.visitantes.esteMes ?? 0} este mês`}
-              bgColor="bg-emerald-100 dark:bg-emerald-950/50"
-              iconColor="text-emerald-600 dark:text-emerald-400"
-            />
+          <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
             <SummaryCard
               href="/comercial/crm/leads"
               icon={<Building2 size={20} />}
               value={data?.leads.total ?? 0}
               label="Leads (Negócios)"
+              info={crmDashboardInfo.resumo}
               bgColor="bg-blue-100 dark:bg-blue-950/50"
               iconColor="text-blue-600 dark:text-blue-400"
             />
@@ -170,6 +160,7 @@ export default function CrmDashboardPage() {
               icon={<Users size={20} />}
               value={data?.clientes.total ?? 0}
               label="Clientes"
+              info={crmDashboardInfo.resumo}
               bgColor="bg-indigo-100 dark:bg-indigo-950/50"
               iconColor="text-indigo-600 dark:text-indigo-400"
             />
@@ -179,16 +170,9 @@ export default function CrmDashboardPage() {
               value={data?.oportunidades.total ?? 0}
               label="Oportunidades"
               sub={`${data?.oportunidades.esteMes ?? 0} este mês`}
+              info={crmDashboardInfo.resumo}
               bgColor="bg-purple-100 dark:bg-purple-950/50"
               iconColor="text-purple-600 dark:text-purple-400"
-            />
-            <SummaryCard
-              href="/comercial/crm/propostas"
-              icon={<FileText size={20} />}
-              value={data?.propostas.total ?? 0}
-              label="Propostas"
-              bgColor="bg-cyan-100 dark:bg-cyan-950/50"
-              iconColor="text-cyan-600 dark:text-cyan-400"
             />
             <SummaryCard
               href="/comercial/crm/visitas"
@@ -196,6 +180,7 @@ export default function CrmDashboardPage() {
               value={data?.visitas.total ?? 0}
               label="Visitas"
               sub={data?.visitas.hoje ? `${data.visitas.hoje} hoje` : undefined}
+              info={crmDashboardInfo.resumo}
               bgColor="bg-amber-100 dark:bg-amber-950/50"
               iconColor="text-amber-600 dark:text-amber-400"
             />
@@ -205,26 +190,9 @@ export default function CrmDashboardPage() {
               value={data?.tarefas.pendentes ?? 0}
               label="Tarefas Pendentes"
               sub={data?.tarefas.vencendo ? `${data.tarefas.vencendo} vencidas` : undefined}
+              info={crmDashboardInfo.resumo}
               bgColor="bg-rose-100 dark:bg-rose-950/50"
               iconColor="text-rose-600 dark:text-rose-400"
-            />
-            <SummaryCard
-              href="/comercial/crm/campanhas"
-              icon={<Megaphone size={20} />}
-              value={data?.campanhas.total ?? 0}
-              label="Campanhas"
-              sub={`${data?.campanhas.ativas ?? 0} ativas`}
-              bgColor="bg-violet-100 dark:bg-violet-950/50"
-              iconColor="text-violet-600 dark:text-violet-400"
-            />
-            <SummaryCard
-              href="/admin/email-massa"
-              icon={<Mail size={20} />}
-              value={data?.emailMassa.enviados ?? 0}
-              label="Emails Enviados"
-              sub={`${data?.emailMassa.clicados ?? 0} cliques · ${data?.emailMassa.lidos ?? 0} abertos`}
-              bgColor="bg-teal-100 dark:bg-teal-950/50"
-              iconColor="text-teal-600 dark:text-teal-400"
             />
           </div>
 
@@ -241,6 +209,10 @@ export default function CrmDashboardPage() {
                 <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-50 flex items-center gap-2">
                   <Building2 size={16} className="text-blue-500" />
                   Top Leads (Negócios)
+                  <InfoButton
+                    content={crmDashboardInfo.paineis.topLeads}
+                    label="Informações do painel Top Leads"
+                  />
                 </h2>
                 <Link
                   href="/comercial/crm/leads"
@@ -278,6 +250,10 @@ export default function CrmDashboardPage() {
                 <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-50 flex items-center gap-2">
                   <Clock size={16} className="text-slate-500" />
                   Atividades Recentes
+                  <InfoButton
+                    content={crmDashboardInfo.paineis.recentes}
+                    label="Informações do painel Atividades Recentes"
+                  />
                 </h2>
               </div>
               {data?.recentes && data.recentes.length > 0 ? (
@@ -318,8 +294,12 @@ export default function CrmDashboardPage() {
 
           {/* Quick Actions */}
           <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
-            <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">
+            <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3 flex items-center">
               Ações Rápidas
+              <InfoButton
+                content={crmDashboardInfo.acoesRapidas}
+                label="Informações das Ações Rápidas"
+              />
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-9 gap-3">
               <QuickAction
@@ -399,6 +379,7 @@ function SummaryCard({
   value,
   label,
   sub,
+  info,
   bgColor,
   iconColor,
 }: {
@@ -407,6 +388,7 @@ function SummaryCard({
   value: number
   label: string
   sub?: string
+  info: InfoContent
   bgColor: string
   iconColor: string
 }) {
@@ -424,6 +406,13 @@ function SummaryCard({
           <p className="text-2xl font-bold text-slate-900 dark:text-slate-50 truncate">{value}</p>
           <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{label}</p>
         </div>
+        <span
+          className="shrink-0"
+          onClick={(event) => event.stopPropagation()}
+          onKeyDown={(event) => event.stopPropagation()}
+        >
+          <InfoButton content={info} label={`Informações do card ${label}`} />
+        </span>
       </div>
       {sub && <p className="text-[10px] text-slate-400 mt-1.5 truncate">{sub}</p>}
     </Link>

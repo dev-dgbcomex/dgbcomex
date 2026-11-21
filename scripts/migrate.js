@@ -1504,6 +1504,29 @@ async function migrate() {
     `
     console.log("✓ Pedidos de Venda adicionado em menus de usuários específicos")
 
+    await sql`
+      INSERT INTO user_menu_itens (user_menu_id, titulo, url, ordem)
+      SELECT um.id, v.titulo, v.url,
+        COALESCE((SELECT MAX(umi.ordem) FROM user_menu_itens umi WHERE umi.user_menu_id = um.id), -1)
+          + ROW_NUMBER() OVER (PARTITION BY um.id ORDER BY v.ordem)
+      FROM user_menus um
+      CROSS JOIN (
+        VALUES
+          ('Clientes', '/comercial/clientes', 1),
+          ('Representantes', '/cadastros/representantes', 2)
+      ) AS v(titulo, url, ordem)
+      WHERE um.titulo = 'CRM'
+        AND (
+          (um.usuario_id IS NULL AND um.role IN ('CRM', 'COMERCIAL'))
+          OR um.usuario_id IS NOT NULL
+        )
+        AND NOT EXISTS (
+          SELECT 1 FROM user_menu_itens umi
+          WHERE umi.user_menu_id = um.id AND umi.url = v.url
+        )
+    `
+    console.log("✓ Clientes e Representantes adicionados nos menus CRM (COMERCIAL, CRM)")
+
     // ── Reuniões — projetos (CRUD) ──────────────────────────────────────────────
     // Idempotente. A coluna projeto pode já ter sido dropada pelo drizzle (0050).
     await sql`

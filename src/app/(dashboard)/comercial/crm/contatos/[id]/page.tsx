@@ -21,6 +21,7 @@ import {
 import { toast } from "sonner"
 import { useSession } from "next-auth/react"
 import { ConfirmModal } from "@/components/ui/confirm-modal"
+import { podeGerenciarTudo } from "@/lib/permissoes"
 import type { ClienteResumo, Contato, ContatoFormState, EmpresaResumo, VinculoTipo } from "../types"
 
 function contatoToForm(c: Contato): ContatoFormState {
@@ -50,7 +51,7 @@ export default function ContatoDetailPage() {
   const info = getInfoContent(pathname)
   const params = useParams()
   const { data: session } = useSession()
-  const isAdmin = session?.user?.role === "ADMIN" || session?.user?.role === "SUDO"
+  const podeExcluir = podeGerenciarTudo(session?.user?.role)
   const [contato, setContato] = useState<Contato | null>(null)
   const [loading, setLoading] = useState(true)
   const [erro, setErro] = useState<string | null>(null)
@@ -245,7 +246,7 @@ export default function ContatoDetailPage() {
               >
                 <Pencil size={14} /> Editar
               </button>
-              {isAdmin && (
+              {podeExcluir && (
                 <button
                   onClick={() => setShowDelete(true)}
                   className="flex items-center gap-1 text-xs font-medium text-red-600 hover:underline"

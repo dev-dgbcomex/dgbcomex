@@ -85,6 +85,19 @@ describe("ContatosPage exclusão", () => {
     )
   })
 
+  it.each(["COMERCIAL", "CRM"])("%s exclui contato pela tabela via modal", async (role) => {
+    sessionMock.data.user.role = role
+    renderPage(<CrmContatosPage />)
+
+    fireEvent.click(await screen.findByRole("button", { name: "Excluir contato" }))
+    const dialog = screen.getByRole("dialog", { name: "Excluir contato?" })
+    fireEvent.click(within(dialog).getByRole("button", { name: "Excluir" }))
+
+    await waitFor(() => {
+      expect(findCall(fetchMock.calls, "/api/crm/contatos/1", "DELETE")).toBeDefined()
+    })
+  })
+
   it("não mostra o botão de excluir para não-administradores", async () => {
     sessionMock.data.user.role = "VENDEDOR"
     renderPage(<CrmContatosPage />)

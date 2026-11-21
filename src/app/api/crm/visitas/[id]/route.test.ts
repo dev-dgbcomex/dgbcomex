@@ -30,6 +30,11 @@ vi.mock("@/lib/crm/geocode", () => ({ geocodificarCamposEndereco: vi.fn() }))
 vi.mock("@/lib/campos-visiveis", () => ({ propostaVinculadaVisivelPara: vi.fn() }))
 
 const sessionAdmin = { session: { user: { id: "1", role: "ADMIN", name: "Tiago" } }, userId: 1 }
+const sessionComercial = {
+  session: { user: { id: "2", role: "COMERCIAL", name: "Ana" } },
+  userId: 2,
+}
+const sessionCrm = { session: { user: { id: "3", role: "CRM", name: "Bia" } }, userId: 3 }
 
 function del(id: string) {
   return DELETE(new NextRequest(`http://localhost/api/crm/visitas/${id}`), {
@@ -106,7 +111,21 @@ describe("DELETE /api/crm/visitas/[id]", () => {
     } as any)
     const res = await del("1")
     expect(res.status).toBe(403)
-    expect(await res.json()).toEqual({ error: "Apenas administradores podem excluir" })
+    expect(await res.json()).toEqual({ error: "Sem permissão para excluir" })
+  })
+
+  it.each([
+    ["COMERCIAL", sessionComercial],
+    ["CRM", sessionCrm],
+  ])("perfil %s exclui visita de outro usuário", async (_, session) => {
+    vi.mocked(requireAuth).mockResolvedValue(session as any)
+    db.select = vi.fn(() => createQueryBuilder([{ criadoPor: 99, googleEventId: null }]))
+
+    const res = await del("10")
+
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({ success: true })
+    expect(db.transaction).toHaveBeenCalled()
   })
 
   it("exclui a visita e limpa os eventos de timeline em transação", async () => {
@@ -198,6 +217,33 @@ describe("PUT /api/crm/visitas/[id]", () => {
     )
     const res = await put("10", {})
     expect(res.status).toBe(401)
+  })
+
+  it("retorna 403 quando perfil comum edita visita de outro usuário", async () => {
+    vi.mocked(requireAuth).mockResolvedValue({
+      session: { user: { id: "2", role: "GERENTE" } },
+      userId: 2,
+    } as any)
+    db.select = vi.fn(() => createQueryBuilder([visitaExistente({ criadoPor: 99 })]))
+
+    const res = await put("10", { relato: "teste" })
+
+    expect(res.status).toBe(403)
+    expect(await res.json()).toEqual({ error: "Sem permissão para editar" })
+  })
+
+  it.each([
+    ["COMERCIAL", sessionComercial],
+    ["CRM", sessionCrm],
+  ])("perfil %s edita visita de outro usuário", async (_, session) => {
+    vi.mocked(requireAuth).mockResolvedValue(session as any)
+    db.select = vi.fn(() => createQueryBuilder([visitaExistente({ criadoPor: 99 })]))
+    db.update = vi.fn(() => createQueryBuilder([visitaExistente({ criadoPor: 99 })]))
+
+    const res = await put("10", { relato: "teste" })
+
+    expect(res.status).toBe(200)
+    expect(db.update).toHaveBeenCalled()
   })
 
   it("geocodifica e salva as coordenadas ao atualizar o endereço da visita", async () => {

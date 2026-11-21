@@ -69,4 +69,13 @@ describe("InfoButton", () => {
 
     expect(screen.queryByText("Exemplos Práticos")).not.toBeInTheDocument()
   })
+
+  it("usa o rótulo informado no botão", () => {
+    render(<InfoButton content={content} label="Informações do card Leads (Negócios)" />)
+
+    expect(
+      screen.getByRole("button", { name: "Informações do card Leads (Negócios)" })
+    ).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Informações da tela" })).not.toBeInTheDocument()
+  })
 })

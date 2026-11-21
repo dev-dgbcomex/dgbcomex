@@ -4,6 +4,7 @@ import {
   CAMPO_PROPOSTA_VINCOLADA,
   CADASTRO_VISITA_DETALHE,
   CADASTRO_ACAO_PROSPECCAO_DETALHE,
+  roleEhAdministrativa,
 } from "./campos-visiveis/catalogo"
 
 vi.mock("@/lib/db", () => ({ db: { select: vi.fn() } }))
@@ -18,29 +19,41 @@ const {
 } = await import("./campos-visiveis")
 
 describe("campos-visiveis", () => {
-  it("normaliza papéis ocultos removendo inválidos, administrativos e duplicados", () => {
+  it("normaliza papéis ocultos removendo inválidos, administrativos, COMERCIAL/CRM e duplicados", () => {
     expect(
       normalizarRolesOcultos([
-        "COMERCIAL",
-        "COMERCIAL",
+        "TECELAGEM",
+        "TECELAGEM",
         "ADMIN",
         "SUDO",
+        "COMERCIAL",
+        "CRM",
         "INVALIDO",
         42,
         null,
       ])
-    ).toEqual(["COMERCIAL"])
+    ).toEqual(["TECELAGEM"])
   })
 
-  it("mantém ADMIN e SUDO sempre visíveis", () => {
+  it("mantém ADMIN, SUDO, COMERCIAL e CRM sempre visíveis", () => {
     expect(campoEstaVisivel("ADMIN", ["COMERCIAL", "ADMIN"])).toBe(true)
     expect(campoEstaVisivel("SUDO", ["COMERCIAL", "SUDO"])).toBe(true)
+    expect(campoEstaVisivel("COMERCIAL", ["COMERCIAL", "CRM"])).toBe(true)
+    expect(campoEstaVisivel("CRM", ["COMERCIAL", "CRM"])).toBe(true)
   })
 
   it("oculta o campo apenas para os papéis configurados", () => {
-    expect(campoEstaVisivel("COMERCIAL", ["COMERCIAL"])).toBe(false)
-    expect(campoEstaVisivel("CRM", ["COMERCIAL"])).toBe(true)
-    expect(campoEstaVisivel("COMERCIAL", [])).toBe(true)
+    expect(campoEstaVisivel("TECELAGEM", ["TECELAGEM"])).toBe(false)
+    expect(campoEstaVisivel("PCP", ["TECELAGEM"])).toBe(true)
+    expect(campoEstaVisivel("TECELAGEM", [])).toBe(true)
+  })
+
+  it("trata COMERCIAL e CRM como perfis com acesso total no catálogo", () => {
+    expect(roleEhAdministrativa("ADMIN")).toBe(true)
+    expect(roleEhAdministrativa("SUDO")).toBe(true)
+    expect(roleEhAdministrativa("COMERCIAL")).toBe(true)
+    expect(roleEhAdministrativa("CRM")).toBe(true)
+    expect(roleEhAdministrativa("TECELAGEM")).toBe(false)
   })
 
   it("considera campo visível quando não há regra cadastrada", () => {
@@ -51,10 +64,20 @@ describe("campos-visiveis", () => {
 
   it("aplica a regra do campo no retorno por cadastro", () => {
     expect(
+      camposVisiveisPara(CADASTRO_VISITA_DETALHE, "TECELAGEM", {
+        [`${CADASTRO_VISITA_DETALHE}:${CAMPO_PROPOSTA_VINCOLADA}`]: ["TECELAGEM"],
+      })
+    ).toEqual({ [CAMPO_PROPOSTA_VINCOLADA]: false })
+    expect(
       camposVisiveisPara(CADASTRO_VISITA_DETALHE, "COMERCIAL", {
         [`${CADASTRO_VISITA_DETALHE}:${CAMPO_PROPOSTA_VINCOLADA}`]: ["COMERCIAL"],
       })
-    ).toEqual({ [CAMPO_PROPOSTA_VINCOLADA]: false })
+    ).toEqual({ [CAMPO_PROPOSTA_VINCOLADA]: true })
+    expect(
+      camposVisiveisPara(CADASTRO_VISITA_DETALHE, "CRM", {
+        [`${CADASTRO_VISITA_DETALHE}:${CAMPO_PROPOSTA_VINCOLADA}`]: ["CRM"],
+      })
+    ).toEqual({ [CAMPO_PROPOSTA_VINCOLADA]: true })
   })
 
   it("considera campo visível no detalhe da ação de prospecção sem regra", () => {
@@ -64,6 +87,11 @@ describe("campos-visiveis", () => {
     expect(
       camposVisiveisPara(CADASTRO_ACAO_PROSPECCAO_DETALHE, "COMERCIAL", {
         [`${CADASTRO_ACAO_PROSPECCAO_DETALHE}:${CAMPO_PROPOSTA_VINCOLADA}`]: ["COMERCIAL"],
+      })
+    ).toEqual({ [CAMPO_PROPOSTA_VINCOLADA]: true })
+    expect(
+      camposVisiveisPara(CADASTRO_ACAO_PROSPECCAO_DETALHE, "TECELAGEM", {
+        [`${CADASTRO_ACAO_PROSPECCAO_DETALHE}:${CAMPO_PROPOSTA_VINCOLADA}`]: ["TECELAGEM"],
       })
     ).toEqual({ [CAMPO_PROPOSTA_VINCOLADA]: false })
   })
@@ -77,17 +105,19 @@ describe("campos-visiveis", () => {
     vi.mocked(db.select).mockReturnValue(consulta as never)
 
     expect(await propostaVinculadaAcaoProspeccaoVisivelPara("COMERCIAL")).toBe(true)
+    expect(await propostaVinculadaAcaoProspeccaoVisivelPara("CRM")).toBe(true)
     expect(await propostaVinculadaAcaoProspeccaoVisivelPara("ADMIN")).toBe(true)
 
     consulta.orderBy.mockResolvedValueOnce([
       {
         cadastro: CADASTRO_ACAO_PROSPECCAO_DETALHE,
         campo: CAMPO_PROPOSTA_VINCOLADA,
-        rolesOcultos: ["COMERCIAL"],
+        rolesOcultos: ["TECELAGEM"],
       },
     ])
 
-    expect(await propostaVinculadaAcaoProspeccaoVisivelPara("COMERCIAL")).toBe(false)
+    expect(await propostaVinculadaAcaoProspeccaoVisivelPara("TECELAGEM")).toBe(false)
+    expect(await propostaVinculadaAcaoProspeccaoVisivelPara("COMERCIAL")).toBe(true)
     expect(await propostaVinculadaAcaoProspeccaoVisivelPara("ADMIN")).toBe(true)
   })
 })

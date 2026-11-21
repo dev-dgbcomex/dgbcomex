@@ -17,7 +17,7 @@ vi.mock("@/lib/db", () => ({
 }))
 
 const sessionAdmin = { user: { role: "ADMIN" } }
-const sessionComercial = { user: { role: "COMERCIAL" } }
+const sessionTecelagem = { user: { role: "TECELAGEM" } }
 
 function put(body: unknown) {
   return PUT(
@@ -39,27 +39,27 @@ describe("/api/admin/campos-visiveis", () => {
     db.update = vi.fn(() => createQueryBuilder(undefined))
   })
 
-  it("nega acesso a perfil não administrativo", async () => {
-    vi.mocked(getServerSession).mockResolvedValue(sessionComercial as any)
+  it("nega acesso a perfil sem acesso total", async () => {
+    vi.mocked(getServerSession).mockResolvedValue(sessionTecelagem as any)
 
     const get = await GET()
     const putResponse = await put({
       cadastro: "CRM_VISITA_DETALHE",
       campo: "proposta_vinculada",
-      rolesOcultos: ["COMERCIAL"],
+      rolesOcultos: ["TECELAGEM"],
     })
 
     expect(get.status).toBe(401)
     expect(putResponse.status).toBe(401)
   })
 
-  it("retorna catálogo e regras com papéis administrativos removidos", async () => {
+  it("retorna catálogo e regras com perfis de acesso total removidos", async () => {
     db.select = vi.fn(() =>
       createQueryBuilder([
         {
           cadastro: "CRM_VISITA_DETALHE",
           campo: "proposta_vinculada",
-          rolesOcultos: ["COMERCIAL", "ADMIN"],
+          rolesOcultos: ["TECELAGEM", "COMERCIAL", "CRM", "ADMIN", "SUDO"],
         },
       ])
     )
@@ -70,25 +70,25 @@ describe("/api/admin/campos-visiveis", () => {
     expect(response.status).toBe(200)
     expect(data.catalogo).toHaveLength(2)
     expect(data.catalogo.some((item: { cadastro: string }) => item.cadastro === "CRM_ACAO_PROSPECCAO_DETALHE")).toBe(true)
-    expect(data.regras["CRM_VISITA_DETALHE:proposta_vinculada"]).toEqual(["COMERCIAL"])
+    expect(data.regras["CRM_VISITA_DETALHE:proposta_vinculada"]).toEqual(["TECELAGEM"])
   })
 
   it("rejeita cadastro ou campo fora do catálogo", async () => {
     const response = await put({
       cadastro: "CADASTRO_INVALIDO",
       campo: "proposta_vinculada",
-      rolesOcultos: ["COMERCIAL"],
+      rolesOcultos: ["TECELAGEM"],
     })
 
     expect(response.status).toBe(400)
     expect((await response.json()).error).toBe("Cadastro ou campo inválido")
   })
 
-  it("rejeita ADMIN e SUDO como perfis ocultos", async () => {
+  it("rejeita perfis com acesso total como ocultos", async () => {
     const response = await put({
       cadastro: "CRM_VISITA_DETALHE",
       campo: "proposta_vinculada",
-      rolesOcultos: ["COMERCIAL", "ADMIN"],
+      rolesOcultos: ["COMERCIAL", "CRM", "ADMIN", "SUDO"],
     })
 
     expect(response.status).toBe(400)
@@ -99,7 +99,7 @@ describe("/api/admin/campos-visiveis", () => {
     const response = await put({
       cadastro: "CRM_VISITA_DETALHE",
       campo: "proposta_vinculada",
-      rolesOcultos: ["COMERCIAL"],
+      rolesOcultos: ["TECELAGEM"],
     })
 
     expect(response.status).toBe(200)
@@ -108,7 +108,7 @@ describe("/api/admin/campos-visiveis", () => {
       regra: {
         cadastro: "CRM_VISITA_DETALHE",
         campo: "proposta_vinculada",
-        rolesOcultos: ["COMERCIAL"],
+        rolesOcultos: ["TECELAGEM"],
       },
     })
     expect(db.insert).toHaveBeenCalledTimes(1)
@@ -121,7 +121,7 @@ describe("/api/admin/campos-visiveis", () => {
     const response = await put({
       cadastro: "CRM_VISITA_DETALHE",
       campo: "proposta_vinculada",
-      rolesOcultos: ["COMERCIAL", "CRM"],
+      rolesOcultos: ["TECELAGEM", "PCP"],
     })
 
     expect(response.status).toBe(200)

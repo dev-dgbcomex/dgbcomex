@@ -7,6 +7,7 @@ import { eq } from "drizzle-orm"
 import { handleApiError } from "@/lib/api-error"
 import { notificarDelecao } from "@/lib/notificar"
 import { excluirRepresentanteCascade } from "@/lib/representante-cascade"
+import { podeGerenciarTudo } from "@/lib/permissoes"
 export const dynamic = "force-dynamic"
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -87,11 +88,8 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   try {
     const session = await getServerSession(authOptions)
     if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
-    if (session.user.role !== "ADMIN" && session.user.role !== "SUDO") {
-      return NextResponse.json(
-        { error: "Apenas administradores podem excluir representantes" },
-        { status: 403 }
-      )
+    if (!podeGerenciarTudo(session.user.role)) {
+      return NextResponse.json({ error: "Sem permissão para excluir" }, { status: 403 })
     }
 
     const { id } = await params

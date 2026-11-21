@@ -172,6 +172,18 @@ describe("ContatoDetailPage", () => {
     expect(navMock.router.push).toHaveBeenCalledWith("/comercial/crm/contatos")
   })
 
+  it.each(["COMERCIAL", "CRM"])("%s vê o botão de excluir no detalhe do contato", async (role) => {
+    sessionMock.data.user.role = role
+    const fetchMock = createFetchMock(({ method, url }) => {
+      if (method === "GET" && url === "/api/crm/contatos/1") return { json: contato }
+      return { json: null }
+    })
+    vi.stubGlobal("fetch", fetchMock.fn)
+    renderPage(<ContatoDetailPage />)
+
+    expect(await screen.findByRole("button", { name: "Excluir" })).toBeInTheDocument()
+  })
+
   it("mostra mensagem quando o contato não é encontrado", async () => {
     const fetchMock = createFetchMock(() => ({
       status: 404,

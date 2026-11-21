@@ -125,7 +125,24 @@ describe("PUT /api/crm/viagens/[id]", () => {
     db.select.mockReturnValue(createQueryBuilder([{ id: 1, criadoPor: 1 }]))
     const res = await put("1", { titulo: "X" })
     expect(res.status).toBe(403)
-    expect(await res.json()).toEqual({ error: "Apenas o criador da viagem pode editá-la" })
+    expect(await res.json()).toEqual({ error: "Sem permissão para editar" })
+  })
+
+  it.each(["COMERCIAL", "CRM"])("perfil %s edita viagem de outro usuário", async (role) => {
+    vi.mocked(requireAuth).mockResolvedValue({
+      session: { user: { id: "2", role, name: "Ana" } },
+      userId: 2,
+    } as any)
+    db.select.mockReturnValue(createQueryBuilder([{ id: 1, criadoPor: 1, titulo: "Feira" }]))
+    db.transaction = vi.fn((cb: any) =>
+      cb({ update: vi.fn(() => createQueryBuilder([{ id: 1, titulo: "Feira 2026" }])) })
+    )
+
+    const res = await put("1", { titulo: "Feira 2026" })
+
+    expect(res.status).toBe(200)
+    expect((await res.json()).titulo).toBe("Feira 2026")
+    expect(db.transaction).toHaveBeenCalled()
   })
 
   it("atualiza a viagem e substitui investimentos em transação", async () => {
@@ -182,7 +199,29 @@ describe("DELETE /api/crm/viagens/[id]", () => {
     db.select.mockReturnValue(createQueryBuilder([{ id: 1, criadoPor: 1 }]))
     const res = await del("1")
     expect(res.status).toBe(403)
-    expect(await res.json()).toEqual({ error: "Apenas o criador da viagem pode excluí-la" })
+    expect(await res.json()).toEqual({ error: "Sem permissão para excluir" })
+  })
+
+  it.each(["COMERCIAL", "CRM"])("perfil %s exclui viagem de outro usuário", async (role) => {
+    vi.mocked(requireAuth).mockResolvedValue({
+      session: { user: { id: "2", role, name: "Ana" } },
+      userId: 2,
+    } as any)
+    db.select.mockReturnValue(
+      createQueryBuilder([{ id: 1, criadoPor: 1, titulo: "Feira" }])
+    )
+    db.transaction = vi.fn((cb: any) =>
+      cb({
+        update: vi.fn(() => createQueryBuilder(undefined)),
+        delete: vi.fn(() => createQueryBuilder(undefined)),
+      })
+    )
+
+    const res = await del("1")
+
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({ success: true })
+    expect(db.transaction).toHaveBeenCalled()
   })
 
   it("desvincula visitas e exclui a viagem em transação", async () => {

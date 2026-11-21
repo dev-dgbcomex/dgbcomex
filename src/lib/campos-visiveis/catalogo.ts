@@ -1,8 +1,8 @@
+import { podeGerenciarTudo } from "@/lib/permissoes"
+
 export const CADASTRO_VISITA_DETALHE = "CRM_VISITA_DETALHE"
 export const CADASTRO_ACAO_PROSPECCAO_DETALHE = "CRM_ACAO_PROSPECCAO_DETALHE"
 export const CAMPO_PROPOSTA_VINCOLADA = "proposta_vinculada"
-
-export const ROLES_ADMINISTRATIVAS = ["ADMIN", "SUDO"] as const
 
 export const ROLES_CAMPO_VISIBILIDADE = [
   "COMERCIAL",
@@ -57,7 +57,7 @@ export const CATALOGO_CAMPOS_VISIVEIS: CadastroVisibilidadeCatalogo[] = [
 ]
 
 export function roleEhAdministrativa(role?: string | null): boolean {
-  return !!role && (ROLES_ADMINISTRATIVAS as readonly string[]).includes(role)
+  return podeGerenciarTudo(role)
 }
 
 export function encontrarCadastro(cadastro: string): CadastroVisibilidadeCatalogo | undefined {

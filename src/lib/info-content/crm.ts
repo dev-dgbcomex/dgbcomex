@@ -1,4 +1,5 @@
 import type { InfoContent } from "./types"
+import { crmDashboardInfo } from "./crm-dashboard"
 
 export const crmContent: Record<string, InfoContent> = {
   // ==================== DISPONIBILIDADE ====================
@@ -93,27 +94,7 @@ export const crmContent: Record<string, InfoContent> = {
     ],
   },
   // ==================== DASHBOARD ====================
-  "/comercial/crm": {
-    title: "Dashboard CRM",
-    description:
-      "Visão geral do CRM com métricas de leads, visitantes, pipeline comercial, atividades recentes e previsão de receita. Central de comando para o time comercial.",
-    rules: [
-      "Os cards de resumo (Leads, Visitantes, Oportunidades) são clicáveis — levam direto para a lista correspondente.",
-      "O funil mostra a quantidade de oportunidades em cada etapa do pipeline.",
-      "A previsão de receita é calculada com base no valor estimado das oportunidades em aberto.",
-      "O gráfico de previsão mensal é atualizado automaticamente com dados da IA Comercial.",
-      "Use as Ações Rápidas para criar novos registros sem sair do dashboard.",
-    ],
-    fields: [
-      {
-        name: "Pipeline (Funil)",
-        desc: "Quantidade de oportunidades por estágio (Novo → Qualificação → Proposta → Negociação → Fechado)",
-      },
-      { name: "Previsão de Receita", desc: "Soma dos valores estimados das oportunidades abertas" },
-      { name: "Top Leads", desc: "5 leads com maior valor total em pipeline" },
-      { name: "Atividades Recentes", desc: "Últimas 10 movimentações registradas na timeline" },
-    ],
-  },
+  "/comercial/crm": crmDashboardInfo.pagina,
 
   // ==================== LEADS ====================
   "/comercial/crm/visitantes": {

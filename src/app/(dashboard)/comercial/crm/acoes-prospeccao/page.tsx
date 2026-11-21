@@ -112,7 +112,7 @@ function AcoesProspeccaoPageContent() {
   const debounceRef = useRef<NodeJS.Timeout | null>(null)
   const queryClient = useQueryClient()
 
-  const [acoesFilter, setAcoesFilter] = useState<"todas" | "minhas">("minhas")
+  const [acoesFilter, setAcoesFilter] = useState<"todas" | "minhas">("todas")
   const [filterAvulsas, setFilterAvulsas] = useState(false)
 
   const handleSearchChange = useCallback((value: string) => {

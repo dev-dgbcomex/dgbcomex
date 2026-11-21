@@ -11,6 +11,7 @@ import { ConfirmModal } from "@/components/ui/confirm-modal"
 import { useStatuses } from "@/hooks/use-statuses"
 import { normalizeAcaoProspeccaoFotos } from "@/lib/crm/acao-prospeccao-fotos"
 import type { AcaoProspeccaoFoto } from "@/lib/crm/acao-prospeccao-fotos"
+import { podeGerenciarRegistro, podeGerenciarTudo } from "@/lib/permissoes"
 import type {
   Conflito,
   ContatoResult,
@@ -408,9 +409,9 @@ export default function DetalheAcaoProspeccaoPage() {
 
   const userRole = session?.user?.role
   const userId = session?.user?.id ? parseInt(session.user.id) : null
-  const isOwner = userId != null && acao.criadoPor === userId
-  const isAdmin = userRole === "ADMIN" || userRole === "SUDO"
-  const canEdit = isAdmin || isOwner
+  const canEdit = userId != null
+    ? podeGerenciarRegistro(userRole, acao.criadoPor, userId)
+    : podeGerenciarTudo(userRole)
 
   return (
     <div className="space-y-6 animate-fade-in max-w-4xl">

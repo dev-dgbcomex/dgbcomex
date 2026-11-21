@@ -3,6 +3,7 @@ import { requireAuth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { crmVisitas } from "@/lib/db/schema/crm-visitas"
 import { eq } from "drizzle-orm"
+import { podeGerenciarRegistro } from "@/lib/permissoes"
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -35,12 +36,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: "Visita não encontrada" }, { status: 404 })
     }
 
-    const userRole = auth.session.user?.role ?? ""
-    if (userRole !== "ADMIN" && userRole !== "SUDO" && visita.criadoPor !== auth.userId) {
-      return NextResponse.json(
-        { error: "Apenas o criador da visita pode registrar check-in/out" },
-        { status: 403 }
-      )
+    if (!podeGerenciarRegistro(auth.session.user?.role, visita.criadoPor, auth.userId)) {
+      return NextResponse.json({ error: "Sem permissão para registrar check-in/out" }, { status: 403 })
     }
 
     if (tipo === "check_in" && visita.checkInTime) {

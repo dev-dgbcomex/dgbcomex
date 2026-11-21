@@ -3,6 +3,7 @@ import { requireAuth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { crmAcoesProspeccao } from "@/lib/db/schema/crm-acoes-prospeccao"
 import { eq } from "drizzle-orm"
+import { podeGerenciarRegistro } from "@/lib/permissoes"
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -35,12 +36,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: "Ação de prospecção não encontrada" }, { status: 404 })
     }
 
-    const userRole = auth.session.user?.role ?? ""
-    if (userRole !== "ADMIN" && userRole !== "SUDO" && acao.criadoPor !== auth.userId) {
-      return NextResponse.json(
-        { error: "Apenas o criador da ação de prospecção pode registrar check-in/out" },
-        { status: 403 }
-      )
+    if (!podeGerenciarRegistro(auth.session.user?.role, acao.criadoPor, auth.userId)) {
+      return NextResponse.json({ error: "Sem permissão para registrar check-in/out" }, { status: 403 })
     }
 
     if (tipo === "check_in" && acao.checkInTime) {

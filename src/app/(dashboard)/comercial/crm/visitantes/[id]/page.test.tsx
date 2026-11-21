@@ -147,6 +147,19 @@ describe("VisitanteDetailPage", () => {
     expect(await screen.findByText("Visitante não encontrado")).toBeInTheDocument()
   })
 
+  it.each(["COMERCIAL", "CRM"])("%s vê o botão de excluir no detalhe do visitante", async (role) => {
+    sessionMock.data.user.role = role
+    const fetchMock = createFetchMock(({ method, url }) => {
+      if (method === "GET" && url === "/api/crm/visitantes/1") return { json: visitante }
+      if (method === "GET" && url === "/api/crm/visitantes/1/whatsapp") return { json: [] }
+      return { json: null }
+    })
+    vi.stubGlobal("fetch", fetchMock.fn)
+    renderPage(<VisitanteDetailPage />)
+
+    expect(await screen.findByRole("button", { name: "Excluir" })).toBeInTheDocument()
+  })
+
   it("não mostra o botão de excluir para não-administradores", async () => {
     sessionMock.data.user.role = "VENDEDOR"
     const fetchMock = createFetchMock(({ method, url }) => {

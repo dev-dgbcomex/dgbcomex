@@ -29,7 +29,7 @@ describe("CamposVisiveisAdminPage", () => {
         return {
           json: {
             catalogo,
-            regras: { "CRM_VISITA_DETALHE:proposta_vinculada": ["COMERCIAL"] },
+            regras: { "CRM_VISITA_DETALHE:proposta_vinculada": ["TECELAGEM"] },
           },
         }
       }
@@ -41,7 +41,7 @@ describe("CamposVisiveisAdminPage", () => {
     vi.stubGlobal("fetch", fetchMock.fn)
   })
 
-  it("carrega o catálogo e marca o perfil oculto", async () => {
+  it("carrega o catálogo, marca o perfil oculto e desabilita os perfis com acesso total", async () => {
     renderPage(<CamposVisiveisAdminPage />)
 
     expect(
@@ -49,11 +49,13 @@ describe("CamposVisiveisAdminPage", () => {
     ).toBeInTheDocument()
     expect(screen.getByText("Proposta Vinculada")).toBeInTheDocument()
     expect(
-      screen.getByRole("checkbox", { name: "Ocultar Proposta Vinculada para COMERCIAL" })
+      screen.getByRole("checkbox", { name: "Ocultar Proposta Vinculada para TECELAGEM" })
     ).toBeChecked()
-    expect(
-      screen.getByRole("checkbox", { name: "Ocultar Proposta Vinculada para ADMIN" })
-    ).toBeDisabled()
+    for (const role of ["COMERCIAL", "CRM", "ADMIN", "SUDO"]) {
+      expect(
+        screen.getByRole("checkbox", { name: `Ocultar Proposta Vinculada para ${role}` })
+      ).toBeDisabled()
+    }
     expect(screen.getByRole("button", { name: "Salvar Regras" })).toBeDisabled()
   })
 
@@ -61,8 +63,8 @@ describe("CamposVisiveisAdminPage", () => {
     renderPage(<CamposVisiveisAdminPage />)
     await screen.findByRole("heading", { name: /Campos Visíveis/ })
 
-    const crm = screen.getByRole("checkbox", { name: "Ocultar Proposta Vinculada para CRM" })
-    crm.click()
+    const pcp = screen.getByRole("checkbox", { name: "Ocultar Proposta Vinculada para PCP" })
+    pcp.click()
 
     const salvar = screen.getByRole("button", { name: "Salvar Regras" })
     expect(salvar).toBeEnabled()
@@ -74,7 +76,7 @@ describe("CamposVisiveisAdminPage", () => {
       expect(call!.body).toEqual({
         cadastro: "CRM_VISITA_DETALHE",
         campo: "proposta_vinculada",
-        rolesOcultos: ["COMERCIAL", "CRM"],
+        rolesOcultos: ["TECELAGEM", "PCP"],
       })
     })
     expect(toastMock.success).toHaveBeenCalledWith("Regras de visibilidade salvas!")

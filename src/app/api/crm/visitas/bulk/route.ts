@@ -4,6 +4,7 @@ import { db } from "@/lib/db"
 import { crmVisitas } from "@/lib/db/schema/crm-visitas"
 import { inArray } from "drizzle-orm"
 import { notificar } from "@/lib/notificar"
+import { podeGerenciarRegistro, podeGerenciarTudo } from "@/lib/permissoes"
 
 export async function PATCH(req: NextRequest) {
   try {
@@ -26,15 +27,14 @@ export async function PATCH(req: NextRequest) {
     }
 
     const userId = auth.userId
-    const role = auth.session.user?.role ?? ""
-    const isAdminOrSudo = role === "ADMIN" || role === "SUDO"
+    const role = auth.session.user?.role
 
-    if (!isAdminOrSudo) {
+    if (!podeGerenciarTudo(role)) {
       const visitas: { id: number; criadoPor: number | null }[] = await db
         .select({ id: crmVisitas.id, criadoPor: crmVisitas.criadoPor })
         .from(crmVisitas)
         .where(inArray(crmVisitas.id, idList))
-      const unauthorized = visitas.filter((v) => v.criadoPor !== userId)
+      const unauthorized = visitas.filter((v) => !podeGerenciarRegistro(role, v.criadoPor, userId))
       if (unauthorized.length > 0) {
         return NextResponse.json(
           { error: `${unauthorized.length} visita(s) sem permissao para alterar` },
@@ -64,27 +64,8 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "ids e obrigatorios" }, { status: 400 })
     }
 
-    const userId = auth.userId
-    const role = auth.session.user?.role ?? ""
-    const isAdminOrSudo = role === "ADMIN" || role === "SUDO"
-    const canDelete = isAdminOrSudo || ["COMERCIAL", "CRM"].includes(role)
-
-    if (!canDelete) {
+    if (!podeGerenciarTudo(auth.session.user?.role)) {
       return NextResponse.json({ error: "Sem permissao" }, { status: 403 })
-    }
-
-    if (!isAdminOrSudo) {
-      const visitas = await db
-        .select({ id: crmVisitas.id, criadoPor: crmVisitas.criadoPor })
-        .from(crmVisitas)
-        .where(inArray(crmVisitas.id, ids))
-      const unauthorized = visitas.filter((v: any) => v.criadoPor !== userId)
-      if (unauthorized.length > 0) {
-        return NextResponse.json(
-          { error: `${unauthorized.length} visita(s) sem permissao para excluir` },
-          { status: 403 }
-        )
-      }
     }
 
     await db.delete(crmVisitas).where(inArray(crmVisitas.id, ids))

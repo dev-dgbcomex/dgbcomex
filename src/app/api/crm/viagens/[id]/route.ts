@@ -15,6 +15,7 @@ import { usuarios } from "@/lib/db/schema/usuarios"
 import { eq, asc, desc, sql } from "drizzle-orm"
 import { registrarLog, notificar, notificarDelecao } from "@/lib/notificar"
 import { handleApiError } from "@/lib/api-error"
+import { podeGerenciarRegistro } from "@/lib/permissoes"
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -104,12 +105,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       return NextResponse.json({ error: "Viagem não encontrada" }, { status: 404 })
     }
 
-    const userRole = auth.session.user?.role ?? ""
-    if (userRole !== "ADMIN" && userRole !== "SUDO" && existente.criadoPor !== auth.userId) {
-      return NextResponse.json(
-        { error: "Apenas o criador da viagem pode editá-la" },
-        { status: 403 }
-      )
+    if (!podeGerenciarRegistro(auth.session.user?.role, existente.criadoPor, auth.userId)) {
+      return NextResponse.json({ error: "Sem permissão para editar" }, { status: 403 })
     }
 
     const values: Record<string, any> = { updatedAt: new Date() }
@@ -184,7 +181,6 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     const auth = await requireAuth()
     if (auth instanceof NextResponse) return auth
     const session = auth.session
-    const userRole = auth.session.user?.role ?? ""
 
     const { id } = await params
     const viagemId = parseInt(id)
@@ -199,11 +195,8 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
       return NextResponse.json({ error: "Viagem não encontrada" }, { status: 404 })
     }
 
-    if (userRole !== "ADMIN" && userRole !== "SUDO" && existente.criadoPor !== auth.userId) {
-      return NextResponse.json(
-        { error: "Apenas o criador da viagem pode excluí-la" },
-        { status: 403 }
-      )
+    if (!podeGerenciarRegistro(auth.session.user?.role, existente.criadoPor, auth.userId)) {
+      return NextResponse.json({ error: "Sem permissão para excluir" }, { status: 403 })
     }
 
     await db.transaction(async (tx: any) => {

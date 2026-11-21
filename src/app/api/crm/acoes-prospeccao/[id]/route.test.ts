@@ -34,6 +34,11 @@ vi.mock("@/lib/crm-timeline", () => ({
 }))
 
 const sessionAdmin = { session: { user: { id: "1", role: "ADMIN", name: "Tiago" } }, userId: 1 }
+const sessionComercial = {
+  session: { user: { id: "2", role: "COMERCIAL", name: "Ana" } },
+  userId: 2,
+}
+const sessionCrm = { session: { user: { id: "3", role: "CRM", name: "Bia" } }, userId: 3 }
 
 function del(id: string) {
   return DELETE(new NextRequest("http://localhost/api/crm/acoes-prospeccao/" + id), {
@@ -112,6 +117,20 @@ describe("DELETE /api/crm/acoes-prospeccao/[id]", () => {
     expect(res.status).toBe(403)
   })
 
+  it.each([
+    ["COMERCIAL", sessionComercial],
+    ["CRM", sessionCrm],
+  ])("perfil %s exclui ação de outro usuário", async (_, session) => {
+    vi.mocked(requireAuth).mockResolvedValue(session as any)
+    db.select = vi.fn(() => createQueryBuilder([{ criadoPor: 99, googleEventId: null }]))
+
+    const res = await del("10")
+
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({ success: true })
+    expect(db.transaction).toHaveBeenCalled()
+  })
+
   it("exclui a a��o de prospec��o e limpa os eventos de timeline em transa��o", async () => {
     const res = await del("10")
     expect(res.status).toBe(200)
@@ -181,6 +200,20 @@ describe("PUT /api/crm/acoes-prospeccao/[id]", () => {
     )
     const res = await put("10", {})
     expect(res.status).toBe(401)
+  })
+
+  it.each([
+    ["COMERCIAL", sessionComercial],
+    ["CRM", sessionCrm],
+  ])("perfil %s edita ação de outro usuário", async (_, session) => {
+    vi.mocked(requireAuth).mockResolvedValue(session as any)
+    db.select = vi.fn(() => createQueryBuilder([acaoExistente({ criadoPor: 99 })]))
+    db.update = vi.fn(() => createQueryBuilder([acaoExistente({ criadoPor: 99 })]))
+
+    const res = await put("10", { relato: "teste" })
+
+    expect(res.status).toBe(200)
+    expect(db.update).toHaveBeenCalled()
   })
 
   it("geocodifica e salva as coordenadas ao atualizar o endere�o", async () => {

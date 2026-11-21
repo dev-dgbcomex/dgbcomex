@@ -133,7 +133,7 @@ export default function VisitasDashboardPage() {
   const [selectedVisita, setSelectedVisita] = useState<{ id: number; nome: string } | null>(null)
   const [modalFiltro, setModalFiltro] = useState<string | null>(null)
   const [modalTitle, setModalTitle] = useState("")
-  const [visitasFilter, setVisitasFilter] = useState<"todas" | "minhas">("minhas")
+  const [visitasFilter, setVisitasFilter] = useState<"todas" | "minhas">("todas")
   const [selectedViagem, setSelectedViagem] = useState<{
     viagemId: number
     viagemTitulo: string

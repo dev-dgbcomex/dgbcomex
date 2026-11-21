@@ -16,6 +16,7 @@ import {
 } from "@/lib/campos-visiveis/catalogo"
 import { normalizeVisitaFotos } from "@/lib/crm/visita-fotos"
 import type { VisitaFoto } from "@/lib/crm/visita-fotos"
+import { podeGerenciarRegistro, podeGerenciarTudo } from "@/lib/permissoes"
 import type {
   Conflito,
   ContatoResult,
@@ -399,9 +400,9 @@ export default function DetalheVisitaPage() {
 
   const userRole = session?.user?.role
   const userId = session?.user?.id ? parseInt(session.user.id) : null
-  const isOwner = userId != null && visita?.criadoPor === userId
-  const isAdmin = userRole === "ADMIN" || userRole === "SUDO"
-  const canEdit = isAdmin || isOwner
+  const canEdit = userId != null
+    ? podeGerenciarRegistro(userRole, visita.criadoPor, userId)
+    : podeGerenciarTudo(userRole)
 
   return (
     <div className="space-y-6 animate-fade-in max-w-4xl">

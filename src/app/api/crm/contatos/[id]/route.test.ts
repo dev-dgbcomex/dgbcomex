@@ -123,12 +123,23 @@ describe("DELETE /api/crm/contatos/[id]", () => {
     expect(res.status).toBe(401)
   })
 
-  it("retorna 403 para usuário não administrador", async () => {
+  it("retorna 403 para perfil comum", async () => {
     vi.mocked(requireAuth).mockResolvedValue(sessionVendedor as any)
     const res = await del("1")
     expect(res.status).toBe(403)
-    expect(await res.json()).toEqual({ error: "Apenas administradores podem excluir" })
+    expect(await res.json()).toEqual({ error: "Sem permissão para excluir" })
     expect(db.transaction).not.toHaveBeenCalled()
+  })
+
+  it.each(["COMERCIAL", "CRM"])("perfil %s exclui contato", async (role) => {
+    vi.mocked(requireAuth).mockResolvedValue({
+      session: { user: { id: "2", role, name: "Ana" } },
+      userId: 2,
+    } as any)
+    const res = await del("4")
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({ success: true })
+    expect(db.transaction).toHaveBeenCalled()
   })
 
   it("exclui o contato e desvincula referências em transação", async () => {
@@ -185,6 +196,18 @@ describe("PUT /api/crm/contatos/[id]", () => {
     const res = await put("99", { nome: "Ana" })
     expect(res.status).toBe(404)
     expect(await res.json()).toEqual({ error: "Contato não encontrado" })
+  })
+
+  it.each(["COMERCIAL", "CRM"])("perfil %s edita contato", async (role) => {
+    vi.mocked(requireAuth).mockResolvedValue({
+      session: { user: { id: "2", role, name: "Ana" } },
+      userId: 2,
+    } as any)
+
+    const res = await put("1", { nome: "Ana Maria" })
+
+    expect(res.status).toBe(200)
+    expect(db.update).toHaveBeenCalled()
   })
 
   it("vincula a um cliente e limpa o vínculo anterior com pessoa", async () => {

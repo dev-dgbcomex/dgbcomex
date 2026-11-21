@@ -126,9 +126,23 @@ describe("AcoesProspeccaoPage", () => {
     )
   })
 
-  it("carrega por padrão apenas as minhas ações (mine=true)", async () => {
+  it("carrega por padrão todas as ações (sem mine)", async () => {
     renderPage(<AcoesProspeccaoPage />)
     fireEvent.click(screen.getByRole("button", { name: "Tabela" }))
+
+    await screen.findByText("Tecelagem Alpha")
+    await waitFor(() =>
+      expect(
+        findCall(fetchMock.calls, "/api/crm/acoes-prospeccao?page=1&limit=50", "GET")
+      ).toBeDefined()
+    )
+    expect(screen.getByRole("button", { name: "Todas" })).toHaveClass("bg-blue-600")
+  })
+
+  it("filtra as minhas ações ao clicar em Minhas Ações", async () => {
+    renderPage(<AcoesProspeccaoPage />)
+    fireEvent.click(screen.getByRole("button", { name: "Tabela" }))
+    fireEvent.click(screen.getByRole("button", { name: /Minhas Ações/ }))
 
     await screen.findByText("Tecelagem Alpha")
     await waitFor(() =>
@@ -218,7 +232,7 @@ describe("AcoesProspeccaoPage", () => {
         expect(
           findCall(
             fetchMock.calls,
-            "/api/crm/acoes-prospeccao?page=1&limit=50&mine=true&q=Tecelagem",
+            "/api/crm/acoes-prospeccao?page=1&limit=50&q=Tecelagem",
             "GET"
           )
         ).toBeDefined(),

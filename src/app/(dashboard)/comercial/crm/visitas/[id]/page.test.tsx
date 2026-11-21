@@ -142,6 +142,7 @@ describe("DetalheVisitaPage", () => {
   let fetchMock: ReturnType<typeof createFetchMock>
 
   beforeEach(() => {
+    sessao.id = "3"
     sessao.role = "ADMIN"
     fetchMock = createFetchMock(buildHandler(visita))
     vi.stubGlobal("fetch", fetchMock.fn)
@@ -171,6 +172,20 @@ describe("DetalheVisitaPage", () => {
     expect(screen.getByRole("button", { name: "Excluir" })).toBeInTheDocument()
   })
 
+  it("permite que COMERCIAL gerencie visita de outro usuário", async () => {
+    sessao.id = "99"
+    sessao.role = "COMERCIAL"
+    fetchMock = createFetchMock(buildHandler(visita))
+    vi.stubGlobal("fetch", fetchMock.fn)
+
+    renderPage(<DetalheVisitaPage />)
+    await screen.findByRole("heading", { name: "Visita — Tecelagem Alpha" })
+
+    expect(screen.getByRole("button", { name: "Editar" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Excluir" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Fazer Check-in" })).toBeInTheDocument()
+  })
+
   it("edita a visita via PUT", async () => {
     renderPage(<DetalheVisitaPage />)
     await screen.findByRole("heading", { name: "Visita — Tecelagem Alpha" })
@@ -190,7 +205,7 @@ describe("DetalheVisitaPage", () => {
     await waitFor(() => expect(toastMock.success).toHaveBeenCalledWith("Visita atualizada"))
   })
 
-  it("oculta a proposta vinculada para o perfil COMERCIAL", async () => {
+  it("oculta a proposta vinculada quando a API indica ocultação", async () => {
     sessao.role = "COMERCIAL"
     const visitaComProposta = {
       ...visita,

@@ -125,9 +125,21 @@ describe("VisitasPage", () => {
     )
   })
 
-  it("carrega por padrao apenas as minhas visitas (mine=true)", async () => {
+  it("carrega por padrão todas as visitas (sem mine)", async () => {
     renderPage(<VisitasPage />)
     fireEvent.click(screen.getByRole("button", { name: "Tabela" }))
+
+    await screen.findByText("Tecelagem Alpha")
+    await waitFor(() =>
+      expect(findCall(fetchMock.calls, "/api/crm/visitas?page=1&limit=50", "GET")).toBeDefined()
+    )
+    expect(screen.getByRole("button", { name: "Todas" })).toHaveClass("bg-blue-600")
+  })
+
+  it("filtra as minhas visitas ao clicar em Minhas Visitas", async () => {
+    renderPage(<VisitasPage />)
+    fireEvent.click(screen.getByRole("button", { name: "Tabela" }))
+    fireEvent.click(screen.getByRole("button", { name: /Minhas Visitas/ }))
 
     await screen.findByText("Tecelagem Alpha")
     await waitFor(() =>
@@ -212,7 +224,7 @@ describe("VisitasPage", () => {
     await waitFor(
       () =>
         expect(
-          findCall(fetchMock.calls, "/api/crm/visitas?page=1&limit=50&mine=true&q=Tecelagem", "GET")
+          findCall(fetchMock.calls, "/api/crm/visitas?page=1&limit=50&q=Tecelagem", "GET")
         ).toBeDefined(),
       { timeout: 2000 }
     )

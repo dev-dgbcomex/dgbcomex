@@ -206,7 +206,7 @@ function mockRoutes(rotas: Record<string, unknown> = {}) {
 describe("AcoesProspeccaoDashboardPage", () => {
   it("renderiza o heading e as seções", async () => {
     const fetchMock = mockRoutes({
-      "GET /api/crm/acoes-prospeccao/dashboard?mine=true": dashboardPayload(false),
+      "GET /api/crm/acoes-prospeccao/dashboard": dashboardPayload(false),
     })
     vi.stubGlobal("fetch", fetchMock.fn)
     renderPage(<AcoesProspeccaoDashboardPage />)
@@ -227,22 +227,22 @@ describe("AcoesProspeccaoDashboardPage", () => {
 
   it("marca a aba ativa do filtro com aria-pressed", async () => {
     const fetchMock = mockRoutes({
-      "GET /api/crm/acoes-prospeccao/dashboard?mine=true": dashboardPayload(),
+      "GET /api/crm/acoes-prospeccao/dashboard": dashboardPayload(),
     })
     vi.stubGlobal("fetch", fetchMock.fn)
     renderPage(<AcoesProspeccaoDashboardPage />)
 
     await screen.findByText("Ações Rápidas")
+    expect(screen.getByRole("button", { name: "Todas" })).toHaveAttribute("aria-pressed", "true")
     expect(screen.getByRole("button", { name: /Minhas Ações/ })).toHaveAttribute(
       "aria-pressed",
-      "true"
+      "false"
     )
-    expect(screen.getByRole("button", { name: "Todas" })).toHaveAttribute("aria-pressed", "false")
   })
 
   it("renderiza viagens e performance por gerente comercial com KPIs", async () => {
     const fetchMock = mockRoutes({
-      "GET /api/crm/acoes-prospeccao/dashboard?mine=true": {
+      "GET /api/crm/acoes-prospeccao/dashboard": {
         ...dashboardPayload(),
         porGerente: [
           {
@@ -271,7 +271,7 @@ describe("AcoesProspeccaoDashboardPage", () => {
 
   it("mostra investimento realizado, possível retorno e retorno real no card da viagem", async () => {
     const fetchMock = mockRoutes({
-      "GET /api/crm/acoes-prospeccao/dashboard?mine=true": dashboardPayload(),
+      "GET /api/crm/acoes-prospeccao/dashboard": dashboardPayload(),
     })
     vi.stubGlobal("fetch", fetchMock.fn)
     renderPage(<AcoesProspeccaoDashboardPage />)
@@ -286,7 +286,7 @@ describe("AcoesProspeccaoDashboardPage", () => {
 
   it("mostra '—' no card da viagem quando não há vendas nem retorno real", async () => {
     const fetchMock = mockRoutes({
-      "GET /api/crm/acoes-prospeccao/dashboard?mine=true": dashboardPayload(true, {
+      "GET /api/crm/acoes-prospeccao/dashboard": dashboardPayload(true, {
         retornoReal: 0,
         vendas: 0,
       }),
@@ -300,7 +300,7 @@ describe("AcoesProspeccaoDashboardPage", () => {
 
   it("mostra resumo da viagem (período e realizadas) no card", async () => {
     const fetchMock = mockRoutes({
-      "GET /api/crm/acoes-prospeccao/dashboard?mine=true": dashboardPayload(),
+      "GET /api/crm/acoes-prospeccao/dashboard": dashboardPayload(),
     })
     vi.stubGlobal("fetch", fetchMock.fn)
     renderPage(<AcoesProspeccaoDashboardPage />)
@@ -311,7 +311,7 @@ describe("AcoesProspeccaoDashboardPage", () => {
 
   it("abre o cronograma da viagem com mapa, resumo e linha do tempo", async () => {
     const fetchMock = mockRoutes({
-      "GET /api/crm/acoes-prospeccao/dashboard?mine=true": dashboardPayload(),
+      "GET /api/crm/acoes-prospeccao/dashboard": dashboardPayload(),
       "GET /api/crm/acoes-prospeccao/dashboard/viagem?viagemId=1": viagemCronograma,
     })
     vi.stubGlobal("fetch", fetchMock.fn)
@@ -342,7 +342,7 @@ describe("AcoesProspeccaoDashboardPage", () => {
 
   it("fecha o cronograma ao clicar no botão Fechar", async () => {
     const fetchMock = mockRoutes({
-      "GET /api/crm/acoes-prospeccao/dashboard?mine=true": dashboardPayload(),
+      "GET /api/crm/acoes-prospeccao/dashboard": dashboardPayload(),
       "GET /api/crm/acoes-prospeccao/dashboard/viagem?viagemId=1": viagemCronograma,
     })
     vi.stubGlobal("fetch", fetchMock.fn)
@@ -360,7 +360,7 @@ describe("AcoesProspeccaoDashboardPage", () => {
 
   it("carrega e exibe a saúde da prospecção com scores", async () => {
     const fetchMock = mockRoutes({
-      "GET /api/crm/acoes-prospeccao/dashboard?mine=true": dashboardPayload(false),
+      "GET /api/crm/acoes-prospeccao/dashboard": dashboardPayload(false),
     })
     vi.stubGlobal("fetch", fetchMock.fn)
     renderPage(<AcoesProspeccaoDashboardPage />)
@@ -373,14 +373,12 @@ describe("AcoesProspeccaoDashboardPage", () => {
       screen.getByRole("button", { name: /Itens de engajamento de Cliente Alpha/i })
     ).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "CSV" })).toBeInTheDocument()
-    expect(
-      findCall(fetchMock.calls, "/api/crm/acoes-prospeccao/dashboard/clientes?mine=true")
-    ).toBeDefined()
+    expect(findCall(fetchMock.calls, "/api/crm/acoes-prospeccao/dashboard/clientes")).toBeDefined()
   })
 
   it("abre o detalhamento da saúde ao clicar no cliente", async () => {
     const fetchMock = mockRoutes({
-      "GET /api/crm/acoes-prospeccao/dashboard?mine=true": dashboardPayload(false),
+      "GET /api/crm/acoes-prospeccao/dashboard": dashboardPayload(false),
     })
     vi.stubGlobal("fetch", fetchMock.fn)
     renderPage(<AcoesProspeccaoDashboardPage />)
@@ -396,7 +394,7 @@ describe("AcoesProspeccaoDashboardPage", () => {
 
   it("abre os itens de engajamento ao clicar na coluna", async () => {
     const fetchMock = mockRoutes({
-      "GET /api/crm/acoes-prospeccao/dashboard?mine=true": dashboardPayload(false),
+      "GET /api/crm/acoes-prospeccao/dashboard": dashboardPayload(false),
     })
     vi.stubGlobal("fetch", fetchMock.fn)
     renderPage(<AcoesProspeccaoDashboardPage />)
@@ -412,21 +410,27 @@ describe("AcoesProspeccaoDashboardPage", () => {
     expect(within(dialog).getByText("Check-in/check-out")).toBeInTheDocument()
   })
 
-  it("recarrega o recorte ao alternar para Todas as ações", async () => {
+  it("recarrega o recorte ao alternar para Minhas ações", async () => {
     const fetchMock = mockRoutes({
-      "GET /api/crm/acoes-prospeccao/dashboard?mine=true": dashboardPayload(false),
       "GET /api/crm/acoes-prospeccao/dashboard": dashboardPayload(false),
+      "GET /api/crm/acoes-prospeccao/dashboard?mine=true": dashboardPayload(false),
     })
     vi.stubGlobal("fetch", fetchMock.fn)
     renderPage(<AcoesProspeccaoDashboardPage />)
 
     await screen.findByText("Cliente Alpha")
-    fireEvent.click(screen.getByRole("button", { name: "Todas" }))
+    fireEvent.click(screen.getByRole("button", { name: /Minhas Ações/ }))
 
     await waitFor(() =>
-      expect(findCall(fetchMock.calls, "/api/crm/acoes-prospeccao/dashboard/clientes")).toBeDefined()
+      expect(
+        findCall(fetchMock.calls, "/api/crm/acoes-prospeccao/dashboard/clientes?mine=true")
+      ).toBeDefined()
     )
-    expect(findCall(fetchMock.calls, "/api/crm/acoes-prospeccao/dashboard")).toBeDefined()
+    expect(findCall(fetchMock.calls, "/api/crm/acoes-prospeccao/dashboard?mine=true")).toBeDefined()
+    expect(screen.getByRole("button", { name: /Minhas Ações/ })).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    )
   })
 
   it("exporta últimas ações em CSV, PDF e Markdown", async () => {
@@ -452,7 +456,7 @@ describe("AcoesProspeccaoDashboardPage", () => {
       ],
     }
     const fetchMock = mockRoutes({
-      "GET /api/crm/acoes-prospeccao/dashboard?mine=true": payload,
+      "GET /api/crm/acoes-prospeccao/dashboard": payload,
     })
     vi.stubGlobal("fetch", fetchMock.fn)
     renderPage(<AcoesProspeccaoDashboardPage />)

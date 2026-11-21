@@ -117,6 +117,16 @@ describe("PropostaDetailPage", () => {
     )
   })
 
+  it("permite que COMERCIAL edite e exclua proposta de outro usuário", async () => {
+    sessionMock.data.user.id = "99"
+    sessionMock.data.user.role = "COMERCIAL"
+    renderPage(<PropostaDetailPage />)
+
+    await screen.findByRole("heading", { name: /Proposta Comercial - Tecido X/ })
+    expect(screen.getByRole("button", { name: /Editar/ })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /Excluir/ })).toBeInTheDocument()
+  })
+
   it("não mostra editar/excluir para usuário que não é admin nem criador", async () => {
     sessionMock.data.user.id = "2"
     sessionMock.data.user.role = "VENDEDOR"

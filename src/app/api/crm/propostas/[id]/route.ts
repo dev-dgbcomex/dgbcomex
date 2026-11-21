@@ -10,6 +10,7 @@ import { notificarAtividadeComercial } from "@/lib/crm/notificar-atividade"
 import { inserirTimelineEvento, excluirTimelineEventosEntidade } from "@/lib/crm-timeline"
 import { handleApiError } from "@/lib/api-error"
 import { executarGatilhos } from "@/lib/crm/status-gatilhos"
+import { podeGerenciarTudo } from "@/lib/permissoes"
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -161,8 +162,8 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   try {
     const auth = await requireAuth()
     if (auth instanceof NextResponse) return auth
-    if ((auth.session.user?.role ?? "") !== "ADMIN" && (auth.session.user?.role ?? "") !== "SUDO") {
-      return NextResponse.json({ error: "Apenas administradores podem excluir" }, { status: 403 })
+    if (!podeGerenciarTudo(auth.session.user?.role)) {
+      return NextResponse.json({ error: "Sem permissão para excluir" }, { status: 403 })
     }
 
     const { id } = await params

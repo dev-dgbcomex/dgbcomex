@@ -13,31 +13,68 @@ vi.mock("@/lib/notificar", () => ({ notificar: vi.fn() }))
 
 const sessionAdmin = { session: { user: { id: "1", role: "ADMIN", name: "Tiago" } }, userId: 1 }
 
+function patch(body: Record<string, unknown>) {
+  return new NextRequest("http://localhost/api/crm/acoes-prospeccao/bulk", {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  })
+}
+
+function del(body: Record<string, unknown>) {
+  return new NextRequest("http://localhost/api/crm/acoes-prospeccao/bulk", {
+    method: "DELETE",
+    body: JSON.stringify(body),
+  })
+}
+
 describe("PATCH /api/crm/acoes-prospeccao/bulk", () => {
   beforeEach(() => {
     vi.mocked(requireAuth).mockReset()
     vi.mocked(notificar).mockReset()
     resetDb(db)
     vi.mocked(requireAuth).mockResolvedValue(sessionAdmin as any)
+    db.update = vi.fn(() => createQueryBuilder(undefined))
   })
 
-  it("retorna 401 sem autentica��o", async () => {
-    vi.mocked(requireAuth).mockResolvedValue(new NextResponse(JSON.stringify({ error: "N�o autorizado" }), { status: 401 }) as any)
-    const res = await PATCH(new NextRequest("http://localhost/api/crm/acoes-prospeccao/bulk", { method: "PATCH", body: JSON.stringify({ ids: [1], status: "CANCELADA" }) }))
+  it("retorna 401 sem autenticação", async () => {
+    vi.mocked(requireAuth).mockResolvedValue(
+      new NextResponse(JSON.stringify({ error: "Não autorizado" }), { status: 401 }) as any
+    )
+    const res = await PATCH(patch({ ids: [1], status: "CANCELADA" }))
     expect(res.status).toBe(401)
   })
 
   it("atualiza status em lote", async () => {
-    ;(db.update as ReturnType<typeof vi.fn>).mockReturnValue(createQueryBuilder(undefined))
-    const res = await PATCH(new NextRequest("http://localhost/api/crm/acoes-prospeccao/bulk", { method: "PATCH", body: JSON.stringify({ ids: [1, 2], status: "CANCELADA" }) }))
+    const res = await PATCH(patch({ ids: [1, 2], status: "CANCELADA" }))
     expect(res.status).toBe(200)
     expect(await res.json()).toEqual({ updated: 2 })
   })
 
-  it("retorna 403 para n�o-admin alterando a��es de outros", async () => {
-    vi.mocked(requireAuth).mockResolvedValue({ session: { user: { id: "2", role: "COMERCIAL" } }, userId: 2 } as any)
-    ;(db.select as ReturnType<typeof vi.fn>).mockReturnValue(createQueryBuilder([{ id: 1, criadoPor: 99 }]))
-    const res = await PATCH(new NextRequest("http://localhost/api/crm/acoes-prospeccao/bulk", { method: "PATCH", body: JSON.stringify({ ids: [1], status: "CANCELADA" }) }))
+  it.each(["COMERCIAL", "CRM"])(
+    "perfil %s altera ações de outros usuários",
+    async (role) => {
+      vi.mocked(requireAuth).mockResolvedValue({
+        session: { user: { id: "2", role, name: "Ana" } },
+        userId: 2,
+      } as any)
+
+      const res = await PATCH(patch({ ids: [1], status: "CANCELADA" }))
+
+      expect(res.status).toBe(200)
+      expect(await res.json()).toEqual({ updated: 1 })
+      expect(db.update).toHaveBeenCalled()
+    }
+  )
+
+  it("retorna 403 para perfil comum alterando ações de outros", async () => {
+    vi.mocked(requireAuth).mockResolvedValue({
+      session: { user: { id: "2", role: "GERENTE" } },
+      userId: 2,
+    } as any)
+    db.select = vi.fn(() => createQueryBuilder([{ id: 1, criadoPor: 99 }]))
+
+    const res = await PATCH(patch({ ids: [1], status: "CANCELADA" }))
+
     expect(res.status).toBe(403)
   })
 })
@@ -48,25 +85,50 @@ describe("DELETE /api/crm/acoes-prospeccao/bulk", () => {
     vi.mocked(notificar).mockReset()
     resetDb(db)
     vi.mocked(requireAuth).mockResolvedValue(sessionAdmin as any)
+    db.delete = vi.fn(() => createQueryBuilder(undefined))
   })
 
-  it("retorna 401 sem autentica��o", async () => {
-    vi.mocked(requireAuth).mockResolvedValue(new NextResponse(JSON.stringify({ error: "N�o autorizado" }), { status: 401 }) as any)
-    const res = await DELETE(new NextRequest("http://localhost/api/crm/acoes-prospeccao/bulk", { method: "DELETE", body: JSON.stringify({ ids: [1] }) }))
+  it("retorna 401 sem autenticação", async () => {
+    vi.mocked(requireAuth).mockResolvedValue(
+      new NextResponse(JSON.stringify({ error: "Não autorizado" }), { status: 401 }) as any
+    )
+    const res = await DELETE(del({ ids: [1] }))
     expect(res.status).toBe(401)
   })
 
   it("exclui em lote e notifica com tipo ACAO_PROSPECCAO_EXCLUIDA", async () => {
-    ;(db.delete as ReturnType<typeof vi.fn>).mockReturnValue(createQueryBuilder(undefined))
-    const res = await DELETE(new NextRequest("http://localhost/api/crm/acoes-prospeccao/bulk", { method: "DELETE", body: JSON.stringify({ ids: [1, 2] }) }))
+    const res = await DELETE(del({ ids: [1, 2] }))
     expect(res.status).toBe(200)
     expect(await res.json()).toEqual({ deleted: 2 })
-    expect(notificar).toHaveBeenCalledWith("ACAO_PROSPECCAO_EXCLUIDA", expect.stringContaining("excluída"), "/comercial/crm/acoes-prospeccao", "Tiago")
+    expect(notificar).toHaveBeenCalledWith(
+      "ACAO_PROSPECCAO_EXCLUIDA",
+      expect.stringContaining("excluída"),
+      "/comercial/crm/acoes-prospeccao",
+      "Tiago"
+    )
   })
 
-  it("retorna 403 para papel sem permiss�o", async () => {
-    vi.mocked(requireAuth).mockResolvedValue({ session: { user: { id: "2", role: "GERENTE" } }, userId: 2 } as any)
-    const res = await DELETE(new NextRequest("http://localhost/api/crm/acoes-prospeccao/bulk", { method: "DELETE", body: JSON.stringify({ ids: [1] }) }))
+  it.each(["COMERCIAL", "CRM"])("perfil %s exclui ações de outros usuários", async (role) => {
+    vi.mocked(requireAuth).mockResolvedValue({
+      session: { user: { id: "2", role, name: "Ana" } },
+      userId: 2,
+    } as any)
+
+    const res = await DELETE(del({ ids: [1, 2] }))
+
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({ deleted: 2 })
+    expect(db.delete).toHaveBeenCalled()
+  })
+
+  it("retorna 403 para papel sem permissão", async () => {
+    vi.mocked(requireAuth).mockResolvedValue({
+      session: { user: { id: "2", role: "GERENTE" } },
+      userId: 2,
+    } as any)
+
+    const res = await DELETE(del({ ids: [1] }))
+
     expect(res.status).toBe(403)
   })
 })

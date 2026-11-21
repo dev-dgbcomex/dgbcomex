@@ -14,6 +14,7 @@ import { eq } from "drizzle-orm"
 import { registrarLog, notificar, notificarDelecao } from "@/lib/notificar"
 import { inserirTimelineEvento, excluirTimelineEventosEntidade } from "@/lib/crm-timeline"
 import { handleApiError } from "@/lib/api-error"
+import { podeGerenciarRegistro, podeGerenciarTudo } from "@/lib/permissoes"
 import { sendCrmEmail } from "@/lib/email"
 import { temEndereco, type EnderecoCampos } from "@/lib/crm/endereco"
 import { geocodificarCamposEndereco } from "@/lib/crm/geocode"
@@ -131,11 +132,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     }
 
     const userRole = auth.session.user?.role ?? ""
-    if (userRole !== "ADMIN" && userRole !== "SUDO" && existente.criadoPor !== auth.userId) {
-      return NextResponse.json(
-        { error: "Apenas o criador da visita pode editá-la" },
-        { status: 403 }
-      )
+    if (!podeGerenciarRegistro(userRole, existente.criadoPor, auth.userId)) {
+      return NextResponse.json({ error: "Sem permissão para editar" }, { status: 403 })
     }
 
     const propostaVisivel = await propostaVinculadaVisivelPara(userRole)
@@ -245,14 +243,8 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   try {
     const auth = await requireAuth()
     if (auth instanceof NextResponse) return auth
-    const userRole = auth.session.user?.role ?? ""
-    if (
-      userRole !== "ADMIN" &&
-      userRole !== "SUDO" &&
-      userRole !== "COMERCIAL" &&
-      userRole !== "CRM"
-    ) {
-      return NextResponse.json({ error: "Apenas administradores podem excluir" }, { status: 403 })
+    if (!podeGerenciarTudo(auth.session.user?.role)) {
+      return NextResponse.json({ error: "Sem permissão para excluir" }, { status: 403 })
     }
 
     const { id } = await params
@@ -263,12 +255,6 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
       .from(crmVisitas)
       .where(eq(crmVisitas.id, visitaId))
       .limit(1)
-    if (userRole !== "ADMIN" && userRole !== "SUDO" && existente?.criadoPor !== auth.userId) {
-      return NextResponse.json(
-        { error: "Apenas o criador da visita pode excluí-la" },
-        { status: 403 }
-      )
-    }
 
     if (existente?.googleEventId) {
       try {

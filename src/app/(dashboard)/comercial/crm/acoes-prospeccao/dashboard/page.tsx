@@ -95,7 +95,7 @@ export default function AcoesProspeccaoDashboardPage() {
   const [selectedAcao, setSelectedAcao] = useState<{ id: number; nome: string } | null>(null)
   const [modalFiltro, setModalFiltro] = useState<string | null>(null)
   const [modalTitle, setModalTitle] = useState("")
-  const [acoesFilter, setAcoesFilter] = useState<"todas" | "minhas">("minhas")
+  const [acoesFilter, setAcoesFilter] = useState<"todas" | "minhas">("todas")
   const [selectedViagem, setSelectedViagem] = useState<{
     viagemId: number
     viagemTitulo: string

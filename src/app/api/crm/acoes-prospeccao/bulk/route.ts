@@ -4,6 +4,8 @@ import { db } from "@/lib/db"
 import { crmAcoesProspeccao } from "@/lib/db/schema/crm-acoes-prospeccao"
 import { inArray } from "drizzle-orm"
 import { notificar } from "@/lib/notificar"
+import { podeGerenciarRegistro, podeGerenciarTudo } from "@/lib/permissoes"
+
 
 export async function PATCH(req: NextRequest) {
   try {
@@ -26,15 +28,14 @@ export async function PATCH(req: NextRequest) {
     }
 
     const userId = auth.userId
-    const role = auth.session.user?.role ?? ""
-    const isAdminOrSudo = role === "ADMIN" || role === "SUDO"
+    const role = auth.session.user?.role
 
-    if (!isAdminOrSudo) {
+    if (!podeGerenciarTudo(role)) {
       const acoes: { id: number; criadoPor: number | null }[] = await db
         .select({ id: crmAcoesProspeccao.id, criadoPor: crmAcoesProspeccao.criadoPor })
         .from(crmAcoesProspeccao)
         .where(inArray(crmAcoesProspeccao.id, idList))
-      const unauthorized = acoes.filter((v) => v.criadoPor !== userId)
+      const unauthorized = acoes.filter((v) => !podeGerenciarRegistro(role, v.criadoPor, userId))
       if (unauthorized.length > 0) {
         return NextResponse.json(
           { error: `${unauthorized.length} ação(ões) de prospecção sem permissão para alterar` },
@@ -64,27 +65,8 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "ids é obrigatório" }, { status: 400 })
     }
 
-    const userId = auth.userId
-    const role = auth.session.user?.role ?? ""
-    const isAdminOrSudo = role === "ADMIN" || role === "SUDO"
-    const canDelete = isAdminOrSudo || ["COMERCIAL", "CRM"].includes(role)
-
-    if (!canDelete) {
+    if (!podeGerenciarTudo(auth.session.user?.role)) {
       return NextResponse.json({ error: "Sem permissão" }, { status: 403 })
-    }
-
-    if (!isAdminOrSudo) {
-      const acoes = await db
-        .select({ id: crmAcoesProspeccao.id, criadoPor: crmAcoesProspeccao.criadoPor })
-        .from(crmAcoesProspeccao)
-        .where(inArray(crmAcoesProspeccao.id, ids))
-      const unauthorized = acoes.filter((v: any) => v.criadoPor !== userId)
-      if (unauthorized.length > 0) {
-        return NextResponse.json(
-          { error: `${unauthorized.length} ação(ões) de prospecção sem permissão para excluir` },
-          { status: 403 }
-        )
-      }
     }
 
     await db.delete(crmAcoesProspeccao).where(inArray(crmAcoesProspeccao.id, ids))

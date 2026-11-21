@@ -26,6 +26,22 @@
 
 > Detalhe técnico completo em [`docs/crm-cliente-e-relatorios.md`](./crm-cliente-e-relatorios.md).
 
+### Sessão 14 — Dashboard CRM, recorte padrão e acesso comercial
+
+- **Data:** 2026-11-20
+- **Commit:** `feat(crm): ajusta dashboard e permissoes comerciais`
+- **Tarefa:** remover do dashboard `/comercial/crm` somente os cards de Visitantes, Propostas, Campanhas e Emails Enviados; adicionar botão de informação em todos os blocos do dashboard; abrir visitas e ações de prospecção sempre no recorte “Todas”; conceder acesso total de ver/editar/deletar aos perfis COMERCIAL e CRM, incluindo Clientes e Representantes.
+- **Decisões aprovadas:** manter atalhos, consultas/JSON da API e barras do funil dos domínios removidos; “i” no H1, KPIs restantes, gráficos, Top Leads, Atividades Recentes e Ações Rápidas; acesso total para `ADMIN`, `SUDO`, `COMERCIAL` e `CRM`; áreas administrativas sensíveis permanecem restritas a `ADMIN`/`SUDO`.
+- **Resultado:**
+  - `src/lib/permissoes.ts` centraliza `ROLES_ACESSO_TOTAL`, `podeGerenciarTudo` e `podeGerenciarRegistro`; APIs e UI passaram a usar o helper, preservando autenticação e transações.
+  - `roleEhAdministrativa` agora usa o helper, liberando “Proposta Vinculada” para COMERCIAL/CRM sem alterar o banco.
+  - Menus role-based de COMERCIAL e CRM receberam `Clientes` (`/comercial/clientes`) e `Representantes` (`/cadastros/representantes`); seed, `migrate.js`, `sync-all-dbs.js` e `seed-crm-menus.sql` atualizados. Após `sync-all-dbs.js` + `sync-principal.js`: `user_menu_itens` Neon=368, local=376.
+  - `src/lib/info-content/crm-dashboard.ts` concentra os textos de cada bloco com origem dos dados, regra/cálculo e exemplo; `InfoButton` aceita `label?` para acessibilidade.
+  - Dashboard mantém 5 KPIs, 3 gráficos, 2 painéis, Ações Rápidas e todo o payload da API; o “i” dos cards clicáveis usa `stopPropagation` para não navegar.
+- **Arquivos Envolvidos:** `src/lib/{permissoes.ts,info-content/crm-dashboard.ts,info-content/crm.ts,campos-visiveis/catalogo.ts,db/seed.ts}`, `src/app/api/**`, `src/app/(dashboard)/comercial/crm/**`, `src/components/ui/info-button.tsx`, `scripts/{migrate.js,sync-all-dbs.js,seed-crm-menus.sql}`.
+- **Testes:** novos em `permissoes.test.ts`, `crm-dashboard`/`info-content.test.ts`, `charts.test.tsx`, `info-button.test.tsx` e rotas de API/UI; suíte completa `npm run test` → **448 arquivos / 2611 testes passados**.
+- **Verificação:** `npm run lint` sem erros, `tsc --noEmit` limpo, `npm run build` OK; `db:verificar-local` (**0 divergências, local ⊇ Neon**) e `db:comparar` (`All databases are IDENTICAL`).
+
 ### Sessão 13 — Limpeza dos dados de visitas com backup restaurável
 
 - **Data:** 2026-11-20

@@ -17,6 +17,8 @@ import {
 import { BarChart3, TrendingUp, PieChart, Handshake } from "lucide-react"
 import { ChartTooltip } from "@/components/ui/chart-tooltip"
 import { AnimatedLine } from "@/components/ui/animated-line"
+import { InfoButton } from "@/components/ui/info-button"
+import { crmDashboardInfo } from "@/lib/info-content/crm-dashboard"
 
 type CrmDashboardData = {
   visitantes: { total: number; esteMes: number }
@@ -76,6 +78,10 @@ export function CrmCharts({ data }: { data: CrmDashboardData | undefined }) {
           <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-50">
             Pipeline (Funil)
           </h2>
+          <InfoButton
+            content={crmDashboardInfo.graficos.pipeline}
+            label="Informações do gráfico Pipeline (Funil)"
+          />
         </div>
         <ResponsiveContainer width="100%" height={220}>
           <BarChart data={pipelineData} layout="vertical" margin={{ left: 10, right: 10 }}>
@@ -114,6 +120,10 @@ export function CrmCharts({ data }: { data: CrmDashboardData | undefined }) {
           <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-50">
             Previsão & Conversão
           </h2>
+          <InfoButton
+            content={crmDashboardInfo.graficos.previsaoConversao}
+            label="Informações da previsão de receita e conversão"
+          />
         </div>
         <div className="space-y-4">
           <div className="rounded-lg bg-indigo-50 dark:bg-indigo-950/30 p-4">
@@ -189,6 +199,10 @@ export function CrmCharts({ data }: { data: CrmDashboardData | undefined }) {
           <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-50">
             Oportunidades por Status
           </h2>
+          <InfoButton
+            content={crmDashboardInfo.graficos.status}
+            label="Informações do gráfico Oportunidades por Status"
+          />
         </div>
         {data?.oportunidades.byStatus && data.oportunidades.byStatus.length > 0 ? (
           <>

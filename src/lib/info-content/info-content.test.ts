@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest"
 import { getInfoContent } from "./index"
 import { saudeProspeccaoAcoesInfo, saudeProspeccaoInfo } from "./crm"
+import { crmDashboardInfo } from "./crm-dashboard"
 
 describe("getInfoContent", () => {
   it("returns exact match for known path", () => {
@@ -33,6 +34,24 @@ describe("getInfoContent", () => {
   it("matches crm paths", () => {
     const result = getInfoContent("/comercial/crm")
     expect(result).not.toBeNull()
+  })
+
+  it("o dashboard do CRM descreve os blocos atuais sem afirmações obsoletas", () => {
+    const conteudo = getInfoContent("/comercial/crm")
+    const texto = [
+      conteudo?.title ?? "",
+      conteudo?.description ?? "",
+      ...(conteudo?.rules ?? []),
+      ...(conteudo?.fields ?? []).map((f) => `${f.name}: ${f.desc}`),
+      ...(conteudo?.examples ?? []).map((e) => `${e.title}: ${e.desc}`),
+    ].join("\n")
+
+    expect(texto).toMatch(/cinco cards/i)
+    expect(texto).toMatch(/Top Leads/)
+    expect(texto).toMatch(/Ações Rápidas/)
+    expect(texto).toMatch(/não ocupam mais um card/i)
+    expect(texto).not.toMatch(/funil de 5 etapas|IA Comercial/i)
+    expect(texto).not.toMatch(/Novo → Qualificação → Proposta → Negociação → Fechado/)
   })
 
   it("returns result with required fields", () => {
@@ -706,5 +725,76 @@ describe("saudeProspeccaoAcoesInfo", () => {
       /ID da ação/i
     )
     expect(saudeProspeccaoAcoesInfo.engajados.examples?.length).toBeGreaterThan(0)
+  })
+})
+
+describe("crmDashboardInfo", () => {
+  const entradas = [
+    ["pagina", crmDashboardInfo.pagina],
+    ["resumo", crmDashboardInfo.resumo],
+    ["graficos.pipeline", crmDashboardInfo.graficos.pipeline],
+    ["graficos.previsaoConversao", crmDashboardInfo.graficos.previsaoConversao],
+    ["graficos.status", crmDashboardInfo.graficos.status],
+    ["paineis.topLeads", crmDashboardInfo.paineis.topLeads],
+    ["paineis.recentes", crmDashboardInfo.paineis.recentes],
+    ["acoesRapidas", crmDashboardInfo.acoesRapidas],
+  ] as const
+
+  it("todo bloco explica dados ou fórmula e traz pelo menos um exemplo concreto", () => {
+    for (const [nome, entrada] of entradas) {
+      expect(entrada.title, nome).toBeTruthy()
+      expect(entrada.description.length, nome).toBeGreaterThan(20)
+      expect(entrada.rules?.length, nome).toBeGreaterThan(0)
+      expect(entrada.examples?.length, nome).toBeGreaterThan(0)
+      expect(entrada.examples?.[0].desc.length, nome).toBeGreaterThan(20)
+    }
+  })
+
+  it("o resumo explica a origem dos cinco cards restantes", () => {
+    const resumo = crmDashboardInfo.resumo
+    const texto = [
+      resumo.description,
+      ...(resumo.rules ?? []),
+      ...(resumo.fields ?? []).map((f) => `${f.name}: ${f.desc}`),
+      ...(resumo.examples ?? []).map((e) => `${e.title}: ${e.desc}`),
+    ].join("\n")
+
+    expect(texto).toMatch(/crm_pessoas/)
+    expect(texto).toMatch(/tabela clientes/)
+    expect(texto).toMatch(/crm_oportunidades/)
+    expect(texto).toMatch(/dataVisita/)
+    expect(texto).toMatch(/dataPrevista/)
+    expect(texto).toMatch(/185 leads/)
+  })
+
+  it("os gráficos e painéis explicam contagens, somas e exemplos", () => {
+    const textoBlocos = [
+      ...Object.values(crmDashboardInfo.graficos),
+      ...Object.values(crmDashboardInfo.paineis),
+    ]
+      .flatMap((bloco) => [
+        bloco.description,
+        ...(bloco.rules ?? []),
+        ...(bloco.examples ?? []).map((e) => `${e.title}: ${e.desc}`),
+      ])
+      .join("\n")
+
+    expect(textoBlocos).toMatch(/240 visitantes/)
+    expect(textoBlocos).toMatch(/FECHADO_GANHO/)
+    expect(textoBlocos).toMatch(/crm_previsaoVendas/)
+    expect(textoBlocos).toMatch(/GROUP BY status/)
+    expect(textoBlocos).toMatch(/limite de 5/)
+    expect(textoBlocos).toMatch(/crm_timeline_eventos/)
+    expect(textoBlocos).toMatch(/R\$ 120\.000/)
+
+    const acoes = [
+      crmDashboardInfo.acoesRapidas.description,
+      ...(crmDashboardInfo.acoesRapidas.rules ?? []),
+      ...(crmDashboardInfo.acoesRapidas.examples ?? []).map((e) => e.desc),
+    ].join("\n")
+
+    expect(acoes).toMatch(/Nova Campanha/)
+    expect(acoes).toMatch(/Email Massa/)
+    expect(acoes).toMatch(/\/admin\/email-massa/)
   })
 })
