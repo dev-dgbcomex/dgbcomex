@@ -52,6 +52,7 @@ describe("POST /api/crm/leads/[id]/promover-cliente", () => {
         oportunidades: 2,
         propostas: 1,
         visitas: 3,
+        acoes: 4,
         valorPropostas: 10,
         valorOportunidades: 20,
       },

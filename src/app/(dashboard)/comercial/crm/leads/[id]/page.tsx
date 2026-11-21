@@ -15,7 +15,6 @@ import { LeadHeader } from "./components/lead-header"
 import { DadosLeadCard } from "./components/dados-lead-card"
 import { ContatosCard } from "./components/contatos-card"
 import { RepresentantesCard } from "./components/representantes-card"
-import { VisitantesCard } from "./components/visitantes-card"
 import { OportunidadesCard } from "@/components/crm/oportunidades-card"
 import { AcoesProspeccaoCard } from "@/components/crm/acoes-prospeccao-card"
 import { VisitasCard } from "@/components/crm/visitas-card"
@@ -345,14 +344,6 @@ function LeadDetailPageContent() {
             <p className="text-sm text-slate-400 text-center py-6">Nenhum resumo disponível</p>
           )}
         </div>
-
-        <ContatosCard
-          contatos={lead.contatos || []}
-          orfaos={orfaos}
-          onAdd={addContato}
-          onVincular={vincularContato}
-          onRemover={removerContato}
-        />
       </div>
 
       <RepresentantesCard
@@ -369,7 +360,13 @@ function LeadDetailPageContent() {
       <HistoricoConversaoCard lead={lead} />
 
       <div className="grid gap-6 md:grid-cols-2">
-        <VisitantesCard empresaId={params.id as string} />
+        <ContatosCard
+          contatos={lead.contatos || []}
+          orfaos={orfaos}
+          onAdd={addContato}
+          onVincular={vincularContato}
+          onRemover={removerContato}
+        />
         <OportunidadesCard empresaId={params.id as string} />
         <AcoesProspeccaoCard empresaId={params.id as string} />
         <VisitasCard empresaId={params.id as string} />
@@ -407,7 +404,7 @@ function LeadDetailPageContent() {
         open={showPromover}
         title="Transformar em cliente?"
         message={`Ao transformar "${lead.nome || lead.razaoSocial}" em cliente, a lead será arquivada e não aparecerá mais na listagem de leads.`}
-        subMessage="Tudo o que foi feito no cadastro (oportunidades, propostas e visitas) continua disponível nos relatórios e no histórico do cliente. Esta ação não pode ser desfeita."
+        subMessage="Tudo o que foi feito no cadastro (oportunidades, ações e visitas) continua disponível nos relatórios e no histórico do cliente. Esta ação não pode ser desfeita."
         confirmLabel="Transformar em cliente"
         cancelLabel="Cancelar"
         variant="warning"

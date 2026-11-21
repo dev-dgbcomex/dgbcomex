@@ -71,11 +71,10 @@ export function HistoricoConversaoCard({ historico, carregando }: Props) {
                 <p className="text-[11px] text-slate-500">{numero(historico.valorOportunidades)}</p>
               </div>
               <div className="rounded-lg border border-slate-200 dark:border-slate-800 p-3">
-                <p className="text-[10px] uppercase tracking-wide text-slate-400">Propostas</p>
+                <p className="text-[10px] uppercase tracking-wide text-slate-400">Ações</p>
                 <p className="text-lg font-semibold text-slate-900 dark:text-slate-50">
-                  {historico.propostas}
+                  {historico.acoes}
                 </p>
-                <p className="text-[11px] text-slate-500">{numero(historico.valorPropostas)}</p>
               </div>
               <div className="rounded-lg border border-slate-200 dark:border-slate-800 p-3">
                 <p className="text-[10px] uppercase tracking-wide text-slate-400">Visitas</p>

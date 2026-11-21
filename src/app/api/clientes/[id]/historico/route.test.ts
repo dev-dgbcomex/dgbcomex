@@ -20,6 +20,7 @@ const historico = {
   oportunidades: 2,
   propostas: 1,
   visitas: 3,
+  acoes: 4,
   valorPropostas: 5000,
   valorOportunidades: 8000,
 }

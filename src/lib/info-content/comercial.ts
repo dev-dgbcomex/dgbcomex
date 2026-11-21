@@ -62,7 +62,7 @@ export const comercialContent: Record<string, InfoContent> = {
       "Campos marcados com * são obrigatórios: Nome / Fantasia e CNPJ.",
       "O botão Salvar grava as alterações via PUT e atualiza o cadastro do cliente.",
       "A exclusão é restrita a ADMIN e SUDO e remove também os vínculos de representantes e contatos.",
-      "O card 'Histórico de conversão em cliente' mostra de qual pessoa do CRM o cliente veio, quando virou cliente, quem promoveu e o negócio acumulado (oportunidades e visitas).",
+      "O card 'Histórico de conversão em cliente' mostra de qual pessoa do CRM o cliente veio, quando virou cliente, quem promoveu e o negócio acumulado (oportunidades, ações e visitas).",
       "Clientes cadastrados manualmente (sem origem no CRM) aparece no histórico com a mensagem de que não vieram de uma pessoa do CRM.",
       "Na seção 'Relacionamentos do CRM' o cliente tem os cards de Contatos, Representantes, Oportunidades, Ações de Prospecção, Visitas, Timeline e WhatsApp.",
       "Não há card de Propostas nesta tela; as propostas continuam disponíveis na listagem geral e nos relatórios.",

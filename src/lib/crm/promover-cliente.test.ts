@@ -40,6 +40,7 @@ describe("promoverLeadParaCliente", () => {
       .mockImplementationOnce(() => createQueryBuilder([{ total: 2, valor: 8000 }]))
       .mockImplementationOnce(() => createQueryBuilder([{ total: 1, valor: 5000 }]))
       .mockImplementationOnce(() => createQueryBuilder([{ total: 3 }]))
+      .mockImplementationOnce(() => createQueryBuilder([{ total: 4 }]))
       .mockImplementationOnce(() => createQueryBuilder([]))
 
     ;(db as any).insert = vi.fn(() =>
@@ -62,10 +63,11 @@ describe("promoverLeadParaCliente", () => {
     expect(resultado.resumo.oportunidades).toBe(2)
     expect(resultado.resumo.propostas).toBe(1)
     expect(resultado.resumo.visitas).toBe(3)
+    expect(resultado.resumo.acoes).toBe(4)
 
-    // Atualização da pessoa + o negócio (oportunidades, propostas e visitas)
+    // Atualização da pessoa + o negócio (oportunidades, propostas, visitas e ações)
     const updates = (db.update as ReturnType<typeof vi.fn>).mock.results
-    expect(updates).toHaveLength(4)
+    expect(updates).toHaveLength(5)
     for (const resultado of updates.slice(1)) {
       expect(resultado.value.set.mock.calls[0][0]).toEqual({ clienteId: 5 })
     }

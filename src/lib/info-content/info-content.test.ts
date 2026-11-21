@@ -515,6 +515,7 @@ describe("getInfoContent", () => {
     expect(texto).toMatch(/Histórico de conversão/)
     expect(texto).toMatch(/lead/i)
     expect(texto).toMatch(/oportunidades/i)
+    expect(texto).toMatch(/ações/i)
   })
 
   it("a tela do cliente explica os relacionamentos do CRM", () => {
@@ -611,6 +612,7 @@ describe("getInfoContent", () => {
 
     expect(detalheTexto).toMatch(/Contatos/)
     expect(detalheTexto).toMatch(/Representantes/)
+    expect(detalheTexto).toMatch(/ações/i)
     expect(detalheTexto).toMatch(/Ações de Prospecção/)
     expect(detalheTexto).toMatch(/Visitas/)
     expect(detalheTexto).toMatch(/análise de IA/i)

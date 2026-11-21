@@ -46,7 +46,7 @@ export function PromoverClienteBotao({
       const resumo = data?.resumo
       toast.success(`"${nome}" agora é cliente`, {
         description: resumo
-          ? `Histórico preservado: ${resumo.oportunidades} oportunidade(s), ${resumo.propostas} proposta(s) e ${resumo.visitas} visita(s).`
+          ? `Histórico preservado: ${resumo.oportunidades} oportunidade(s), ${resumo.acoes} ação(ões) e ${resumo.visitas} visita(s).`
           : "O histórico do cadastro continua disponível nos relatórios.",
       })
       setOpen(false)
@@ -76,7 +76,7 @@ export function PromoverClienteBotao({
         open={open}
         title="Transformar em cliente?"
         message={`Ao transformar "${nome}" em cliente, a lead será arquivada e não aparecerá mais na listagem de leads.`}
-        subMessage="Tudo o que foi feito no cadastro (oportunidades, propostas e visitas) continua disponível nos relatórios e no histórico do cliente. Esta ação não pode ser desfeita."
+        subMessage="Tudo o que foi feito no cadastro (oportunidades, ações e visitas) continua disponível nos relatórios e no histórico do cliente. Esta ação não pode ser desfeita."
         confirmLabel="Transformar em cliente"
         cancelLabel="Cancelar"
         variant="warning"

@@ -7,6 +7,7 @@ import { crmContatos } from "@/lib/db/schema/crm-contatos"
 import { crmOportunidades } from "@/lib/db/schema/crm-oportunidades"
 import { crmPropostas } from "@/lib/db/schema/crm-propostas"
 import { crmVisitas } from "@/lib/db/schema/crm-visitas"
+import { crmAcoesProspeccao } from "@/lib/db/schema/crm-acoes-prospeccao"
 import { eq, and, ne, sql } from "drizzle-orm"
 import { registrarLog, notificar } from "@/lib/notificar"
 import { promoverLeadParaCliente } from "@/lib/crm/promover-cliente"
@@ -63,6 +64,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       .from(crmVisitas)
       .where(eq(crmVisitas.empresaId, empresa.id))
 
+    const [acoes] = await db
+      .select({ total: sql<number>`count(*)::int` })
+      .from(crmAcoesProspeccao)
+      .where(eq(crmAcoesProspeccao.empresaId, empresa.id))
+
     return NextResponse.json({
       ...empresa,
       contatos,
@@ -73,6 +79,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         propostas: propostas?.total || 0,
         valorPropostas: Number(propostas?.valor || 0),
         visitas: visitas?.total || 0,
+        acoes: acoes?.total || 0,
       },
     })
   } catch (error) {

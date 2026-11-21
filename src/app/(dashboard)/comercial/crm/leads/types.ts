@@ -54,6 +54,7 @@ export type Lead = LeadForm & {
     propostas: number
     valorPropostas: number
     visitas: number
+    acoes: number
   }
   createdAt?: string
   error?: string

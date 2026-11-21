@@ -26,6 +26,14 @@ const lead = {
   cep: "01000-000",
   observacoes: "",
   status: "QUALIFICADO",
+  resumo: {
+    oportunidades: 1,
+    propostas: 1,
+    visitas: 0,
+    acoes: 2,
+    valorPropostas: 0,
+    valorOportunidades: 0,
+  },
   resumoIa: null,
   sugestaoIa: null,
   createdAt: "2026-07-01T10:00:00Z",
@@ -43,18 +51,6 @@ const representantes = [
     telefone: "(11) 9999-9999",
     cidade: "Campinas",
     uf: "SP",
-  },
-]
-
-const leads = [
-  {
-    id: 10,
-    nome: "Pedro Souza",
-    celular: "(11) 97777-0001",
-    cargo: "Gerente",
-    origem: "OUTRO",
-    status: "NOVO",
-    empresaId: 1,
   },
 ]
 
@@ -80,7 +76,6 @@ describe("LeadDetailPage", () => {
       if (method === "GET" && url === "/api/crm/leads/1") return { json: lead }
       if (method === "GET" && url === "/api/crm/leads/1/representantes")
         return { json: representantes }
-      if (method === "GET" && url === "/api/crm/visitantes?empresaId=1") return { json: leads }
       if (method === "GET" && url === "/api/crm/oportunidades?empresaId=1")
         return { json: oportunidades }
       if (method === "GET" && url === "/api/crm/acoes-prospeccao?all=true&empresaId=1") {
@@ -116,9 +111,6 @@ describe("LeadDetailPage", () => {
           },
         }
       }
-      if (method === "POST" && url === "/api/crm/visitantes") {
-        return { json: { id: 99, nome: "Novo Lead Teste", empresaId: 1 } }
-      }
       if (method === "GET" && url === "/api/crm/estados") {
         return { json: [{ id: 35, uf: "SP", nome: "São Paulo" }] }
       }
@@ -138,6 +130,7 @@ describe("LeadDetailPage", () => {
               oportunidades: 1,
               propostas: 1,
               visitas: 0,
+              acoes: 2,
               valorPropostas: 0,
               valorOportunidades: 0,
             },
@@ -171,7 +164,7 @@ describe("LeadDetailPage", () => {
     vi.stubGlobal("fetch", fetchMock.fn)
   })
 
-  it("exibe os dados da lead com contatos, representantes, visitantes e oportunidades", async () => {
+  it("exibe os dados da lead com contatos, representantes, oportunidades e ações", async () => {
     navMock.setParams({ id: "1" })
     navMock.setPathname("/comercial/crm/leads/1")
     renderPage(<LeadDetailPage />)
@@ -187,9 +180,10 @@ describe("LeadDetailPage", () => {
     expect(await screen.findByText("Representante Beta")).toBeInTheDocument()
     expect(screen.getByText("11.222.333/0001-44")).toBeInTheDocument()
 
-    expect(await screen.findByText("Pedro Souza")).toBeInTheDocument()
     expect(screen.getByText("Oportunidade Grande")).toBeInTheDocument()
+    expect(screen.getAllByText("Ações").length).toBeGreaterThan(0)
     expect(screen.queryByRole("heading", { name: "Propostas" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("heading", { name: "Visitantes" })).not.toBeInTheDocument()
     expect(await screen.findByText("Nenhuma mensagem")).toBeInTheDocument()
   })
 
@@ -223,6 +217,7 @@ describe("LeadDetailPage", () => {
       ).toBeDefined()
       expect(findCall(fetchMock.calls, "/api/crm/visitas?all=true&empresaId=1")).toBeDefined()
       expect(findCall(fetchMock.calls, "/api/crm/propostas?empresaId=1")).toBeUndefined()
+      expect(findCall(fetchMock.calls, "/api/crm/visitantes", "POST")).toBeUndefined()
     })
   })
 
@@ -258,31 +253,6 @@ describe("LeadDetailPage", () => {
     })
   })
 
-  it("cria um visitante vinculado à lead pelo card de visitantes", async () => {
-    navMock.setParams({ id: "1" })
-    navMock.setPathname("/comercial/crm/leads/1")
-    renderPage(<LeadDetailPage />)
-
-    fireEvent.click(await screen.findByTitle("Cadastrar novo visitante"))
-
-    const dialog = screen.getByRole("dialog", { name: "Novo Visitante" })
-    fireEvent.change(within(dialog).getAllByRole("textbox")[0], {
-      target: { value: "Novo Visitante Teste" },
-    })
-    fireEvent.click(within(dialog).getByRole("button", { name: "Criar" }))
-
-    await waitFor(() => {
-      const call = findCall(fetchMock.calls, "/api/crm/visitantes", "POST")
-      expect(call).toBeDefined()
-      expect(call!.body).toEqual(
-        expect.objectContaining({ nome: "Novo Visitante Teste", empresaId: 1 })
-      )
-    })
-    await waitFor(() =>
-      expect(toastMock.success).toHaveBeenCalledWith("Visitante criado com sucesso")
-    )
-  })
-
   it("edita a lead via PUT", async () => {
     navMock.setParams({ id: "1" })
     navMock.setPathname("/comercial/crm/leads/1")
@@ -314,6 +284,7 @@ describe("LeadDetailPage", () => {
 
     const dialog = screen.getByRole("dialog", { name: "Transformar em cliente?" })
     expect(dialog).toHaveTextContent("será arquivada")
+    expect(dialog).toHaveTextContent("oportunidades, ações e visitas")
     fireEvent.click(within(dialog).getByRole("button", { name: "Transformar em cliente" }))
 
     await waitFor(() => {

@@ -4,6 +4,7 @@ import { crmPessoas } from "@/lib/db/schema/crm-pessoas"
 import { crmOportunidades } from "@/lib/db/schema/crm-oportunidades"
 import { crmPropostas } from "@/lib/db/schema/crm-propostas"
 import { crmVisitas } from "@/lib/db/schema/crm-visitas"
+import { crmAcoesProspeccao } from "@/lib/db/schema/crm-acoes-prospeccao"
 import { clientes } from "@/lib/db/schema/clientes"
 import { registrarLog } from "@/lib/notificar"
 import { notificarAtividadeComercial } from "@/lib/crm/notificar-atividade"
@@ -22,6 +23,7 @@ export type ResumoPromocao = {
   oportunidades: number
   propostas: number
   visitas: number
+  acoes: number
   valorPropostas: number
   valorOportunidades: number
 }
@@ -78,6 +80,11 @@ export async function promoverLeadParaCliente(params: {
     .select({ total: sql<number>`count(*)::int` })
     .from(crmVisitas)
     .where(eq(crmVisitas.empresaId, pessoaId))
+
+  const [acoes] = await db
+    .select({ total: sql<number>`count(*)::int` })
+    .from(crmAcoesProspeccao)
+    .where(eq(crmAcoesProspeccao.empresaId, pessoaId))
 
   let clienteId = pessoa.clienteId
   let clienteCriado = false
@@ -136,11 +143,16 @@ export async function promoverLeadParaCliente(params: {
     .where(eq(crmOportunidades.empresaId, pessoaId))
   await db.update(crmPropostas).set({ clienteId }).where(eq(crmPropostas.empresaId, pessoaId))
   await db.update(crmVisitas).set({ clienteId }).where(eq(crmVisitas.empresaId, pessoaId))
+  await db
+    .update(crmAcoesProspeccao)
+    .set({ clienteId })
+    .where(eq(crmAcoesProspeccao.empresaId, pessoaId))
 
   const resumo: ResumoPromocao = {
     oportunidades: oportunidades?.total || 0,
     propostas: propostas?.total || 0,
     visitas: visitas?.total || 0,
+    acoes: acoes?.total || 0,
     valorPropostas: Number(propostas?.valor || 0),
     valorOportunidades: Number(oportunidades?.valor || 0),
   }
@@ -160,6 +172,7 @@ export async function promoverLeadParaCliente(params: {
       oportunidades: resumo.oportunidades,
       propostas: resumo.propostas,
       visitas: resumo.visitas,
+      acoes: resumo.acoes,
     },
   })
 
@@ -175,6 +188,7 @@ export async function promoverLeadParaCliente(params: {
       oportunidades: resumo.oportunidades,
       propostas: resumo.propostas,
       visitas: resumo.visitas,
+      acoes: resumo.acoes,
     },
   })
 

@@ -4,6 +4,7 @@ import { crmPessoas } from "@/lib/db/schema/crm-pessoas"
 import { crmOportunidades } from "@/lib/db/schema/crm-oportunidades"
 import { crmPropostas } from "@/lib/db/schema/crm-propostas"
 import { crmVisitas } from "@/lib/db/schema/crm-visitas"
+import { crmAcoesProspeccao } from "@/lib/db/schema/crm-acoes-prospeccao"
 import { clientes } from "@/lib/db/schema/clientes"
 
 export type OrigemPromocao = "promocao" | "vinculo_anterior"
@@ -20,6 +21,7 @@ export type HistoricoPromocao = {
   oportunidades: number
   propostas: number
   visitas: number
+  acoes: number
   valorPropostas: number
   valorOportunidades: number
 }
@@ -102,6 +104,11 @@ export async function consultarHistoricoPromocao(
     .from(crmVisitas)
     .where(eq(crmVisitas.empresaId, pessoa.id))
 
+  const [acoes] = await db
+    .select({ total: sql<number>`count(*)::int` })
+    .from(crmAcoesProspeccao)
+    .where(eq(crmAcoesProspeccao.empresaId, pessoa.id))
+
   const virouClienteEm = pessoa.promovidoEm || cliente?.createdAt || null
   const origem: OrigemPromocao = pessoa.promovidoEm ? "promocao" : "vinculo_anterior"
 
@@ -117,6 +124,7 @@ export async function consultarHistoricoPromocao(
     oportunidades: oportunidades?.total || 0,
     propostas: propostas?.total || 0,
     visitas: visitas?.total || 0,
+    acoes: acoes?.total || 0,
     valorPropostas: Number(propostas?.valor || 0),
     valorOportunidades: Number(oportunidades?.valor || 0),
   }

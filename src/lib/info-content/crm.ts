@@ -272,7 +272,7 @@ export const crmContent: Record<string, InfoContent> = {
       "Para editar os dados, clique em Editar no topo da página.",
       "Não há exclusão de lead: o cadastro é referenciado por veículos, oportunidades, propostas e visitas. O botão 'Tornar cliente' faz a promoção (cria ou reaproveita o cliente pelo CNPJ) e preserva o histórico.",
       "Promovida, a lead recebe a tarja 'Cliente' no topo e some da listagem padrão — o histórico continua aqui e nos relatórios.",
-      "O card 'Histórico de conversão em cliente' mostra quando a lead virou cliente, quem promoveu, o cliente vinculado e o total de oportunidades e visitas acumulados.",
+      "O card 'Histórico de conversão em cliente' mostra quando a lead virou cliente, quem promoveu, o cliente vinculado e o total de oportunidades, ações e visitas acumulados.",
     ],
     fields: [
       { name: "Contatos", desc: "Contatos da lead com cargo, e-mail e telefone e link para o cadastro" },

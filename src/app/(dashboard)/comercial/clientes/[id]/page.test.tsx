@@ -62,6 +62,7 @@ describe("EditarClientePage", () => {
               oportunidades: 2,
               propostas: 1,
               visitas: 3,
+              acoes: 4,
               valorPropostas: 5000,
               valorOportunidades: 8000,
             },
@@ -257,7 +258,9 @@ describe("EditarClientePage", () => {
       "/comercial/crm/leads/7"
     )
     expect(screen.getByText("Por Tiago")).toBeInTheDocument()
-    expect(screen.getAllByText("R$ 5.000,00").length).toBeGreaterThan(0)
+    expect(screen.getAllByText("Ações").length).toBeGreaterThan(0)
+    expect(screen.queryByRole("heading", { name: "Propostas" })).not.toBeInTheDocument()
+    expect(screen.getAllByText("R$ 8.000,00").length).toBeGreaterThan(0)
   })
 
   it("mostra os relacionamentos do CRM do cliente sem o card de Propostas", async () => {

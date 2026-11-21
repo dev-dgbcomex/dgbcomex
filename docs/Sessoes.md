@@ -26,6 +26,24 @@
 
 > Detalhe técnico completo em [`docs/crm-cliente-e-relatorios.md`](./crm-cliente-e-relatorios.md).
 
+### Sessão 20 — Histórico de conversão com Ações e Contatos no detalhe
+
+- **Data:** 2026-11-21
+- **Commit:** `fix(crm): troca propostas por acoes no historico de conversao`
+- **Tarefa:** ajustar o detalhe de Lead e Cliente para que o histórico de conversão mostre Ações em vez de Propostas, e o card de Contatos ocupe o lugar do card de Visitantes no detalhe da lead.
+- **Decisões aprovadas:** o rótulo do indicador no histórico é apenas **Ações** (não “Ações de prospecção”); Propostas deixa de aparecer nesse card, mas continua no restante do sistema; o card de Visitantes é removido do detalhe da lead (a listagem/rotina de visitantes permanece intacta); em Clientes, onde já não havia Visitantes, apenas o histórico é ajustado.
+- **Resultado:**
+  - Lead: `ContatosCard` sai do topo e passa a ocupar o primeiro lugar do grid inferior, junto de Oportunidades, Ações de Prospecção e Visitas; `VisitantesCard` é removido.
+  - API do detalhe da lead passa a devolver `resumo.acoes`; o tipo `Lead` e o card de histórico foram atualizados para exibir a contagem.
+  - `consultarHistoricoPromocao` e a API `/api/clientes/[id]/historico` passam a devolver `historico.acoes`; o card de histórico do cliente troca Propostas por Ações.
+  - `promoverLeadParaCliente` conta/copia as ações para o cliente na promoção e inclui `acoes` no resumo, log e metadados da timeline; o toast/modal de promoção fala em oportunidades, ações e visitas.
+  - Modais “i” do detalhe de Lead e Cliente atualizados para citar ações no histórico.
+- **Arquivos Envolvidos:** `src/app/api/crm/leads/[id]/route.ts`, `src/app/api/crm/leads/[id]/promover-cliente/route.test.ts`, `src/app/api/clientes/[id]/historico/route.test.ts`, `src/app/(dashboard)/comercial/crm/leads/[id]/page.tsx`, `src/app/(dashboard)/comercial/crm/leads/[id]/page.test.tsx`, `src/app/(dashboard)/comercial/crm/leads/[id]/types.ts`, `src/app/(dashboard)/comercial/crm/leads/[id]/components/historico-conversao-card.tsx`, `src/app/(dashboard)/comercial/crm/leads/[id]/components/visitantes-card.tsx` (removido), `src/app/(dashboard)/comercial/clientes/[id]/components/historico-conversao-card.tsx`, `src/lib/crm/historico-promocao.ts`, `src/lib/crm/promover-cliente.ts`, `src/lib/crm/promover-cliente.test.ts`, `src/components/crm/promover-cliente-botao.tsx`, `src/lib/info-content/{crm,comercial}.ts`, `src/lib/info-content/info-content.test.ts`, `docs/Sessoes.md`.
+- **Testes:** ajustes em 6 arquivos focados (72 testes verdes), incluindo detalhe de Lead/Cliente, promoção, histórico da API e modais “i”.
+- **Verificação:** `npm run lint` sem erros (apenas warnings pré-existentes); `tsc --noEmit` limpo com `NODE_OPTIONS=--max-old-space-size=8192`; suíte completa `npm run test` → **464 arquivos / 2684 testes passados**; `npm run build` OK com `NODE_OPTIONS=--max-old-space-size=8192`; `git diff --check` sem problemas.
+
+---
+
 ### Sessão 19 — Cards em Leads e Oportunidades
 
 - **Data:** 2026-11-21
