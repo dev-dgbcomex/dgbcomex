@@ -44,6 +44,23 @@
 
 ---
 
+### Sessão 24 — Ações Rápidas compactas no topo e em baixo no dashboard CRM
+
+- **Data:** 2026-11-21
+- **Commit:** `feat(crm): compacta e duplica acoes rapidas do dashboard`
+- **Tarefa:** manter as Ações Rápidas no topo do dashboard `/comercial/crm`, deixar a faixa mais fina, incluir o atalho 'Nova Ação de Prospecção' e repetir a faixa ao final da página por acessibilidade.
+- **Decisões aprovadas:** a mesma faixa compacta aparece acima dos seis cards de resumo e depois dos painéis, com altura reduzida (`h-7`), ícones menores e sem blocos de fundo por atalho; a duplicação permite alcançar os atalhos por teclado sem voltar ao topo; os atalhos continuam sendo links simples, sem criar dados; a nova ação aponta para `/comercial/crm/acoes-prospeccao/novo`.
+- **Resultado:**
+  - O componente `QuickActionsBar` é reutilizado no topo, antes do estado de carregamento e dos cards, e ao final, depois de Atividades Recentes.
+  - Os seis atalhos passam a ser 'Novo Lead (Negócio)', 'Nova Oportunidade', 'Nova Ação de Prospecção', 'Kanban', 'Nova Visita' e 'Minhas Tarefas'.
+  - O layout usa `flex-wrap` com `px-3 py-2`, rótulo `<h2>` inline, links `h-7` e cores com variante `dark:`; o texto dos links não quebra.
+  - Modais 'i' da visão geral e das Ações Rápidas atualizados para descrever as faixas no topo e ao final, o motivo de acessibilidade e o novo atalho.
+- **Arquivos Envolvidos:** `src/app/(dashboard)/comercial/crm/page.tsx`, `src/app/(dashboard)/comercial/crm/page.test.tsx`, `src/lib/info-content/crm-dashboard.ts`, `src/lib/info-content/info-content.test.ts`, `docs/Sessoes.md`.
+- **Testes:** teste das Ações Rápidas atualizado para duas faixas com seis atalhos cada, posições no topo/e ao final e `href` da nova ação; teste dos modais 'i' ampliado com 'seis atalhos', 'faixa compacta', 'topo e ao final' e 'Nova Ação de Prospecção'; suíte completa `npm run test` → **465 arquivos / 2698 testes passados**.
+- **Verificação:** `npm run lint` sem erros (apenas warnings pré-existentes); `tsc --noEmit --pretty false` limpo com `NODE_OPTIONS=--max-old-space-size=8192`; `npm run build` OK com `NODE_OPTIONS=--max-old-space-size=8192`; `git diff --check` sem problemas.
+
+---
+
 ### Sessão 23 — Ações realizadas e detalhes da previsão no dashboard CRM
 
 - **Data:** 2026-11-21

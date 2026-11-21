@@ -4,7 +4,7 @@ export const crmDashboardInfo = {
   pagina: {
     title: "Dashboard CRM — visão geral",
     description:
-      "Painel inicial do CRM com seis cards de resumo, três gráficos, Top Leads, Top Clientes, Atividades Recentes e Ações Rápidas. Cards, gráficos e painéis abrem um modal com a lista de registros; cada registro abre o cadastro correspondente.",
+      "Painel inicial do CRM com faixas compactas de Ações Rápidas no topo e ao final, seis cards de resumo, três gráficos, Top Leads, Top Clientes e Atividades Recentes. Cards, gráficos e painéis abrem um modal com a lista de registros; cada registro abre o cadastro correspondente.",
     rules: [
       "O resumo mostra Leads (Negócios), Clientes, Oportunidades, Visitas, Ações de Prospecção e Tarefas Pendentes. Visitantes, Propostas, Campanhas e E-mails Enviados continuam no JSON da API e nos atalhos.",
       "Clicar em 'Previsão de Receita (Pipeline)' abre o modal com as oportunidades em aberto da previsão, com total e botão de exportação; 'Convertidas' abre as oportunidades FECHADO_GANHO com o mesmo total e exportação.",
@@ -12,7 +12,7 @@ export const crmDashboardInfo = {
       "A linha dos painéis mostra Top Leads, Top Clientes e Atividades Recentes; o Top Leads considera só oportunidades de leads não promovidas, e o Top Clientes considera oportunidades abertas e fechadas de clientes e de pessoas promovidas.",
       "Clicar em um card, em 'Ver todas', em uma barra do funil ou em um status abre GET /api/crm/dashboard/detalhes com o bloco correspondente.",
       "O 'i' do título explica a tela como um todo; o 'i' de cada bloco explica a origem e o cálculo do número exibido naquele bloco.",
-      "As Ações Rápidas são atalhos para cadastros e listagens; elas não alteram os números exibidos.",
+      "As Ações Rápidas ficam em faixas compactas acima dos cards e ao final da página, são atalhos para cadastros e listagens e não alteram os números exibidos; a repetição no final permite acessar os atalhos sem voltar ao topo, inclusive por teclado.",
     ],
     examples: [
       {
@@ -194,16 +194,16 @@ export const crmDashboardInfo = {
   acoesRapidas: {
     title: "Ações Rápidas — atalhos do dashboard",
     description:
-      "Cinco atalhos para criar registros ou abrir listagens do CRM diretamente do dashboard.",
+      "Seis atalhos em faixas compactas no topo e ao final do dashboard para criar registros ou abrir listagens do CRM.",
     rules: [
-      "Os atalhos disponíveis são: Novo Lead (Negócio), Nova Oportunidade, Kanban, Nova Visita e Minhas Tarefas.",
-      "A grade mostra apenas estes cinco atalhos.",
+      "Os atalhos disponíveis são: Novo Lead (Negócio), Nova Oportunidade, Nova Ação de Prospecção, Kanban, Nova Visita e Minhas Tarefas.",
+      "As faixas ficam acima dos cards de resumo e ao final da página, com os mesmos seis atalhos, para facilitar o acesso por teclado sem voltar ao topo.",
       "Os links apenas navegam: nenhum dado é criado ou alterado ao clicar em um atalho.",
     ],
     examples: [
       {
         title: "Exemplo de atalho",
-        desc: "Clicar em 'Novo Lead (Negócio)' abre /comercial/crm/leads/novo e clicar em 'Minhas Tarefas' abre /comercial/crm/tarefas, sem modificar os números do dashboard.",
+        desc: "Clicar em 'Nova Ação de Prospecção' abre /comercial/crm/acoes-prospeccao/novo e clicar em 'Minhas Tarefas' abre /comercial/crm/tarefas, sem modificar os números do dashboard.",
       },
     ],
   } satisfies InfoContent,

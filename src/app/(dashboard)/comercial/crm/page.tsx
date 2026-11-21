@@ -155,6 +155,8 @@ export default function CrmDashboardPage() {
         </div>
       </div>
 
+      <QuickActionsBar />
+
       {isLoading ? (
         <div className="flex justify-center py-20">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
@@ -400,53 +402,7 @@ export default function CrmDashboardPage() {
             </div>
           </div>
 
-          {/* Quick Actions */}
-          <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
-            <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3 flex items-center">
-              Ações Rápidas
-              <InfoButton
-                content={crmDashboardInfo.acoesRapidas}
-                label="Informações das Ações Rápidas"
-              />
-            </h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-              <QuickAction
-                href="/comercial/crm/leads/novo"
-                icon={<Building2 size={18} />}
-                label="Novo Lead (Negócio)"
-                color="text-blue-600"
-                bg="bg-blue-100 dark:bg-blue-950/50"
-              />
-              <QuickAction
-                href="/comercial/crm/oportunidades/novo"
-                icon={<Target size={18} />}
-                label="Nova Oportunidade"
-                color="text-purple-600"
-                bg="bg-purple-100 dark:bg-purple-950/50"
-              />
-              <QuickAction
-                href="/comercial/crm/oportunidades/kanban"
-                icon={<BarChart3 size={18} />}
-                label="Kanban"
-                color="text-indigo-600"
-                bg="bg-indigo-100 dark:bg-indigo-950/50"
-              />
-              <QuickAction
-                href="/comercial/crm/visitas/novo"
-                icon={<Calendar size={18} />}
-                label="Nova Visita"
-                color="text-amber-600"
-                bg="bg-amber-100 dark:bg-amber-950/50"
-              />
-              <QuickAction
-                href="/comercial/crm/tarefas"
-                icon={<CheckCircle2 size={18} />}
-                label="Minhas Tarefas"
-                color="text-rose-600"
-                bg="bg-rose-100 dark:bg-rose-950/50"
-              />
-            </div>
-          </div>
+          <QuickActionsBar />
 
           {detalhe && <DashboardDetalhesModal detalhe={detalhe} onClose={() => setDetalhe(null)} />}
         </>
@@ -510,28 +466,73 @@ function SummaryCard({
   )
 }
 
+function QuickActionsBar() {
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2">
+      <h2 className="flex items-center gap-1 text-xs font-semibold text-slate-700 dark:text-slate-300">
+        Ações Rápidas
+        <InfoButton content={crmDashboardInfo.acoesRapidas} label="Informações das Ações Rápidas" />
+      </h2>
+      <div className="flex flex-1 flex-wrap items-center gap-1.5">
+        <QuickAction
+          href="/comercial/crm/leads/novo"
+          icon={<Building2 size={14} />}
+          label="Novo Lead (Negócio)"
+          color="text-blue-600 dark:text-blue-400"
+        />
+        <QuickAction
+          href="/comercial/crm/oportunidades/novo"
+          icon={<Target size={14} />}
+          label="Nova Oportunidade"
+          color="text-purple-600 dark:text-purple-400"
+        />
+        <QuickAction
+          href="/comercial/crm/acoes-prospeccao/novo"
+          icon={<Megaphone size={14} />}
+          label="Nova Ação de Prospecção"
+          color="text-violet-600 dark:text-violet-400"
+        />
+        <QuickAction
+          href="/comercial/crm/oportunidades/kanban"
+          icon={<BarChart3 size={14} />}
+          label="Kanban"
+          color="text-indigo-600 dark:text-indigo-400"
+        />
+        <QuickAction
+          href="/comercial/crm/visitas/novo"
+          icon={<Calendar size={14} />}
+          label="Nova Visita"
+          color="text-amber-600 dark:text-amber-400"
+        />
+        <QuickAction
+          href="/comercial/crm/tarefas"
+          icon={<CheckCircle2 size={14} />}
+          label="Minhas Tarefas"
+          color="text-rose-600 dark:text-rose-400"
+        />
+      </div>
+    </div>
+  )
+}
+
 function QuickAction({
   href,
   icon,
   label,
   color,
-  bg,
 }: {
   href: string
   icon: React.ReactNode
   label: string
   color: string
-  bg: string
 }) {
   return (
     <Link
       href={href}
-      className="flex items-center gap-2 p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors border border-transparent hover:border-slate-200 dark:hover:border-slate-700"
+      className="inline-flex h-7 items-center gap-1.5 rounded-md border border-transparent px-2 text-[11px] font-medium text-slate-700 dark:text-slate-300 transition-colors hover:border-slate-200 hover:bg-slate-50 dark:hover:border-slate-700 dark:hover:bg-slate-800"
     >
-      <div className={`rounded-lg ${bg} p-2`}>
-        <span className={color}>{icon}</span>
-      </div>
-      <span className="text-xs font-medium text-slate-700 dark:text-slate-300">{label}</span>
+      <span className={color}>{icon}</span>
+      <span className="whitespace-nowrap">{label}</span>
     </Link>
   )
 }

@@ -53,6 +53,8 @@ describe("getInfoContent", () => {
     expect(texto).toMatch(/Top Leads/)
     expect(texto).toMatch(/Top Clientes/)
     expect(texto).toMatch(/Ações Rápidas/)
+    expect(texto).toMatch(/faixas compactas/i)
+    expect(texto).toMatch(/topo e ao final/i)
     expect(texto).toMatch(/continuam no JSON da API/i)
     expect(texto).not.toMatch(/funil de 5 etapas|IA Comercial/i)
     expect(texto).not.toMatch(/Novo → Qualificação → Proposta → Negociação → Fechado/)
@@ -896,8 +898,12 @@ describe("crmDashboardInfo", () => {
       ...(crmDashboardInfo.acoesRapidas.examples ?? []).map((e) => e.desc),
     ].join("\n")
 
+    expect(acoes).toMatch(/seis atalhos/i)
+    expect(acoes).toMatch(/faixas compactas/i)
+    expect(acoes).toMatch(/topo e ao final/i)
     expect(acoes).toMatch(/Novo Lead \(Negócio\)/)
     expect(acoes).toMatch(/Nova Oportunidade/)
+    expect(acoes).toMatch(/Nova Ação de Prospecção/)
     expect(acoes).toMatch(/Kanban/)
     expect(acoes).toMatch(/Nova Visita/)
     expect(acoes).toMatch(/Minhas Tarefas/)

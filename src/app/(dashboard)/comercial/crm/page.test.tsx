@@ -215,18 +215,42 @@ describe("CrmDashboardPage", () => {
     ).toBe(true)
   })
 
-  it("mantém apenas os cinco atalhos de ação rápida", async () => {
+  it("exibe as faixas compactas de ações rápidas no topo e em baixo com os seis atalhos", async () => {
     setup()
+
+    await waitFor(() =>
+      expect(screen.getAllByRole("heading", { name: "Ações Rápidas" })).toHaveLength(2)
+    )
+    const [barraTopo, barraBaixo] = screen.getAllByRole("heading", {
+      name: "Ações Rápidas",
+    })
 
     for (const label of [
       "Novo Lead (Negócio)",
       "Nova Oportunidade",
+      "Nova Ação de Prospecção",
       "Kanban",
       "Nova Visita",
       "Minhas Tarefas",
     ]) {
-      expect(await screen.findByText(label)).toBeInTheDocument()
+      expect(screen.getAllByText(label)).toHaveLength(2)
     }
+
+    const acoesNova = screen.getAllByRole("link", { name: "Nova Ação de Prospecção" })
+    expect(acoesNova).toHaveLength(2)
+    for (const link of acoesNova) {
+      expect(link).toHaveAttribute("href", "/comercial/crm/acoes-prospeccao/novo")
+    }
+
+    const primeiroCard = await screen.findByText("Leads (Negócios)")
+    const ultimoPainel = await screen.findByRole("heading", { name: "Atividades Recentes" })
+    expect(
+      barraTopo.compareDocumentPosition(primeiroCard) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy()
+    expect(
+      barraBaixo.compareDocumentPosition(ultimoPainel) & Node.DOCUMENT_POSITION_PRECEDING
+    ).toBeTruthy()
+
     for (const label of ["Novo Lead", "Nova Proposta", "Nova Campanha", "Email Massa"]) {
       expect(screen.queryByText(label)).not.toBeInTheDocument()
     }
@@ -249,7 +273,7 @@ describe("CrmDashboardPage", () => {
       await screen.findByRole("button", { name: "Informações do painel Atividades Recentes" })
     ).toBeInTheDocument()
     expect(
-      await screen.findByRole("button", { name: "Informações das Ações Rápidas" })
-    ).toBeInTheDocument()
+      await screen.findAllByRole("button", { name: "Informações das Ações Rápidas" })
+    ).toHaveLength(2)
   })
 })
