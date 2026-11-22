@@ -14,6 +14,7 @@ import {
 import { InfoButton } from "@/components/ui/info-button"
 import { semaforoConversaoInfo } from "@/lib/info-content/crm"
 import { corPorTitulo, iconePorTitulo } from "@/lib/dracula"
+import { STATUS_OPORTUNIDADE_PADRAO } from "@/lib/crm/status-oportunidade"
 import {
   FAIXAS_CONVERSAO,
   itensDaFaixa,
@@ -27,7 +28,34 @@ export type SemaforoConversaoItem = ItemComFaixa & {
   subtitulo?: string | null
   documento?: string | null
   status?: string | null
+  totalOportunidades?: number
+  totalPedidos?: number
+  totalVisitas?: number
+  totalAcoes?: number
+  totalOportunidadesProposta?: number
+  totalOportunidadesNegociacao?: number
   href: string
+}
+
+function StatusOportunidade({
+  nome,
+  quantidade,
+}: {
+  nome: "PROPOSTA" | "NEGOCIACAO"
+  quantidade: number
+}) {
+  const status = STATUS_OPORTUNIDADE_PADRAO.find((item) => item.nome === nome)
+
+  return (
+    <span className="inline-flex items-center gap-1 whitespace-nowrap">
+      <span
+        className="h-1.5 w-1.5 shrink-0 rounded-full"
+        style={{ backgroundColor: status?.cor ?? "#94a3b8" }}
+        aria-hidden="true"
+      />
+      {quantidade} {status?.rotulo ?? nome}
+    </span>
+  )
 }
 
 type SemaforoConversaoProps = {
@@ -140,7 +168,7 @@ export function SemaforoConversao({
           if (!aberto) fechar()
         }}
       >
-        <DialogContent className="flex max-h-[88vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-3xl">
+        <DialogContent className="flex max-h-[88vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-5xl">
           <DialogHeader className="border-b border-slate-100 p-5 pr-12 dark:border-slate-800">
             <DialogTitle className="text-lg font-semibold text-slate-900 dark:text-slate-50">
               {faixaSelecionada ? `${faixaSelecionada.rotulo} — ${rotuloEntidade}` : ""}
@@ -157,48 +185,80 @@ export function SemaforoConversao({
                 Nenhum {entidadeNoSingular} nesta faixa com os filtros atuais.
               </p>
             ) : (
-              <table className="w-full text-xs">
-                <thead className="sticky top-0 bg-white dark:bg-slate-900">
-                  <tr className="border-b border-slate-200 text-left text-slate-500 dark:border-slate-700 dark:text-slate-400">
-                    <th scope="col" className="px-2 py-2 font-medium">
-                      Nome
-                    </th>
-                    <th scope="col" className="px-2 py-2 font-medium">
-                      Documento
-                    </th>
-                    <th scope="col" className="px-2 py-2 font-medium">
-                      Status cadastral
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {itensSelecionados.map((item) => (
-                    <tr key={item.id}>
-                      <td className="px-2 py-2 font-medium text-slate-800 dark:text-slate-100">
-                        <Link
-                          href={item.href}
-                          onClick={fechar}
-                          className="inline-flex items-center gap-1.5 hover:text-blue-600 hover:underline dark:hover:text-blue-400"
-                        >
-                          {item.nome}
-                          <ExternalLink size={12} aria-hidden="true" />
-                        </Link>
-                        {item.subtitulo && (
-                          <p className="text-[10px] font-normal text-slate-500 dark:text-slate-400">
-                            {item.subtitulo}
-                          </p>
-                        )}
-                      </td>
-                      <td className="px-2 py-2 font-mono text-slate-500 dark:text-slate-400">
-                        {item.documento || "—"}
-                      </td>
-                      <td className="px-2 py-2 text-slate-500 dark:text-slate-400">
-                        {item.status || "—"}
-                      </td>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[760px] text-xs">
+                  <thead className="sticky top-0 bg-white dark:bg-slate-900">
+                    <tr className="border-b border-slate-200 text-left text-slate-500 dark:border-slate-700 dark:text-slate-400">
+                      <th scope="col" className="px-2 py-2 font-medium">
+                        Nome
+                      </th>
+                      <th scope="col" className="px-2 py-2 text-right font-medium">
+                        Oportunidades
+                      </th>
+                      <th scope="col" className="px-2 py-2 text-right font-medium">
+                        Pedidos
+                      </th>
+                      <th scope="col" className="px-2 py-2 text-right font-medium">
+                        Visitas
+                      </th>
+                      <th scope="col" className="px-2 py-2 text-right font-medium">
+                        Ações
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                    {itensSelecionados.map((item) => {
+                      const proposta = item.totalOportunidadesProposta ?? 0
+                      const negociacao = item.totalOportunidadesNegociacao ?? 0
+
+                      return (
+                        <tr key={item.id}>
+                          <td className="px-2 py-2 font-medium text-slate-800 dark:text-slate-100">
+                            <Link
+                              href={item.href}
+                              onClick={fechar}
+                              className="inline-flex items-center gap-1.5 hover:text-blue-600 hover:underline dark:hover:text-blue-400"
+                            >
+                              {item.nome}
+                              <ExternalLink size={12} aria-hidden="true" />
+                            </Link>
+                            {item.subtitulo && (
+                              <p className="text-[10px] font-normal text-slate-500 dark:text-slate-400">
+                                {item.subtitulo}
+                              </p>
+                            )}
+                            <p className="mt-0.5 font-mono text-[10px] font-normal text-slate-500 dark:text-slate-400">
+                              {item.documento || "—"}
+                            </p>
+                          </td>
+                          <td
+                            className="px-2 py-2 text-right text-slate-600 dark:text-slate-300"
+                            title={`${item.totalOportunidades ?? 0} oportunidade(s)`}
+                          >
+                            {proposta + negociacao === 0 ? (
+                              "—"
+                            ) : (
+                              <span className="inline-flex flex-wrap items-center justify-end gap-x-2 gap-y-1">
+                                <StatusOportunidade nome="PROPOSTA" quantidade={proposta} />
+                                <StatusOportunidade nome="NEGOCIACAO" quantidade={negociacao} />
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-2 py-2 text-right tabular-nums text-slate-600 dark:text-slate-300">
+                            {item.totalPedidos ?? 0}
+                          </td>
+                          <td className="px-2 py-2 text-right tabular-nums text-slate-600 dark:text-slate-300">
+                            {item.totalVisitas ?? 0}
+                          </td>
+                          <td className="px-2 py-2 text-right tabular-nums text-slate-600 dark:text-slate-300">
+                            {item.totalAcoes ?? 0}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
 

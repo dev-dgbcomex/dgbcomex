@@ -26,6 +26,21 @@
 
 > Detalhe técnico completo em [`docs/crm-cliente-e-relatorios.md`](./crm-cliente-e-relatorios.md).
 
+### Sessão 33 — Modal do semáforo com métricas e cards de leads alinhados
+
+- **Data:** 2026-11-22
+- **Commit:** `feat(crm): detalha modal do semaforo e alinha cards de leads`
+- **Tarefa:** ajustar o modal aberto pelos cards Quentes/Mornos/Frios: documento abaixo do nome, colunas `Oportunidades`, `Pedidos`, `Visitas` e `Ações`, com oportunidades separadas em Proposta e Negociação; alinhar os cards de Leads ao padrão já correto dos Clientes.
+- **Decisões aprovadas:** `2` e `3` informados pelo usuário são quantidades, não códigos de status; o detalhe usa os rótulos padrão `Proposta`/`Negociação`; sem oportunidades a célula mostra `—`. Nenhuma migration ou novo endpoint: os contadores são derivados em SQL na listagem. A regra do semáforo e os cards de Clientes permanecem intactos.
+- **Resultado:**
+  - `contadoresCliente()`/`contadoresLead()` agora expõem `totalOportunidadesProposta` e `totalOportunidadesNegociacao`, ambos pela mesma base de oportunidades usada na faixa; o total de oportunidades de Clientes também passou a incluir as pessoas promovidas.
+  - Os tipos de Lead/Cliente e o `itensSemaforo` das duas listagens propagam as novas contagens e as já existentes de pedidos, visitas e ações.
+  - `SemaforoConversao` passou a abrir um modal `sm:max-w-5xl` com rolagem horizontal, documento abaixo do nome e as quatro colunas de métricas; a coluna de oportunidades mostra, por exemplo, `2 Proposta · 3 Negociação`.
+  - Os cards de Leads ganharam `flex-1` no bloco de cadastro/contatos, badges em linha com truncamento, nome e documento truncados e grid `lg:grid-cols-3`, equalizando o alinhamento dos cards de Clientes.
+  - Os “i” das faixas e das telas de CRM/Clientes explicam o novo layout do modal; testes de contadores, componente e modais de informação foram atualizados.
+- **Arquivos Envolvidos:** `src/lib/crm/contadores-listagem.ts`, `src/lib/crm/contadores-listagem.test.ts`, `src/components/crm/semaforo-conversao.tsx`, `src/components/crm/semaforo-conversao.test.tsx`, `src/app/(dashboard)/comercial/crm/leads/types.ts`, `src/app/(dashboard)/comercial/crm/leads/page.tsx`, `src/app/(dashboard)/comercial/crm/leads/page.test.tsx`, `src/app/(dashboard)/comercial/clientes/types.ts`, `src/app/(dashboard)/comercial/clientes/page.tsx`, `src/app/(dashboard)/comercial/clientes/page.test.tsx`, `src/lib/info-content/{crm,comercial,info-content.test}.ts`, `docs/Sessoes.md`.
+- **Verificação:** `npm run lint` sem erros (apenas warnings pré-existentes); `tsc --noEmit --pretty false` limpo com `NODE_OPTIONS=--max-old-space-size=8192`; testes focados `5 arquivos / 88 testes passados`; suíte completa `npm run test` → **473 arquivos / 2758 testes passados**; `npm run build` OK com `NODE_OPTIONS=--max-old-space-size=8192` (255/255 páginas estáticas).
+
 ### Sessão 32 — Semáforo por mês/trimestre, status Lead/Cliente e cards de clientes completos
 
 - **Data:** 2026-11-22

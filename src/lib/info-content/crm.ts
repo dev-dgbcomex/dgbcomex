@@ -9,6 +9,8 @@ export const semaforoConversaoInfo = {
       "Leads e clientes com oportunidade em Negociação, oportunidade ganha atualizada no mês atual ou pedido emitido no mês atual.",
     rules: [
       "Clique no card para abrir a lista de registros da faixa; o 'i' explica a regra sem abrir a lista.",
+      "No modal, o documento fica abaixo do nome e as colunas mostram Oportunidades, Pedidos, Visitas e Ações.",
+      "Em Oportunidades, as quantidades aparecem separadas por Proposta e Negociação; sem oportunidades, a célula mostra '—'.",
       "Quentes tem prioridade sobre Mornos e Frios: Negociação, ganho no mês e pedido no mês entram aqui mesmo quando existe Proposta.",
       "O ganho usa a data da última atualização da oportunidade FECHADO_GANHO; o pedido usa a data de emissão, com fallback para a criação.",
       "O status cadastral da lead ou do cliente nunca classifica a faixa; a classificação usa o status das oportunidades e a data dos pedidos.",
@@ -32,6 +34,8 @@ export const semaforoConversaoInfo = {
       "Leads e clientes sem QUENTE, mas com oportunidade em Proposta, oportunidade ganha atualizada no trimestre ou pedido emitido no trimestre.",
     rules: [
       "Clique no card para abrir a lista de registros da faixa; o 'i' explica a regra sem abrir a lista.",
+      "No modal, o documento fica abaixo do nome e as colunas mostram Oportunidades, Pedidos, Visitas e Ações.",
+      "Em Oportunidades, as quantidades aparecem separadas por Proposta e Negociação; sem oportunidades, a célula mostra '—'.",
       "Morno tem prioridade sobre Frio, mas perde para Quente quando há Negociação, ganho no mês ou pedido no mês.",
       "Ganho e pedido no trimestre, mas fora do mês, entram em Mornos; a data do ganho é a última atualização da oportunidade.",
       "O status cadastral da lead ou do cliente nunca classifica a faixa; a classificação usa o status das oportunidades e a data dos pedidos.",
@@ -55,6 +59,8 @@ export const semaforoConversaoInfo = {
       "Leads e clientes sem Negociação ou Proposta e sem ganho ou pedido no trimestre atual.",
     rules: [
       "Clique no card para abrir a lista de registros da faixa; o 'i' explica a regra sem abrir a lista.",
+      "No modal, o documento fica abaixo do nome e as colunas mostram Oportunidades, Pedidos, Visitas e Ações.",
+      "Em Oportunidades, as quantidades aparecem separadas por Proposta e Negociação; sem oportunidades, a célula mostra '—'.",
       "Também entram aqui oportunidades perdidas, sem movimento no trimestre e registros sem oportunidade ou pedido.",
       "A classificação usa o status das oportunidades e a data dos pedidos; o status cadastral (Novo, Qualificado, Ativo ou Inativo) não classifica a faixa.",
       "Em clientes, são consideradas as oportunidades e os pedidos diretos e os herdados das pessoas promovidas.",
@@ -233,6 +239,7 @@ export const crmContent: Record<string, InfoContent> = {
       "Leads convertidas continuam acessíveis pelo detalhe (link direto) e pelo relatório de Conversões.",
       "Os cards logo abaixo da busca formam o semáforo de conversão: Quentes (Negociação, ganho ou pedido no mês), Mornos (Proposta, ganho ou pedido no trimestre) e Frios (sem nenhum desses movimentos no trimestre).",
       "Clique em um card do semáforo para abrir a lista de leads daquela faixa; o 'i' no card explica a regra e mostra exemplos.",
+      "No modal da faixa, o documento aparece abaixo do nome e as colunas trazem Oportunidades (com Proposta e Negociação), Pedidos, Visitas e Ações.",
       "A classificação usa o status das oportunidades e a data dos pedidos vinculados à lead, nunca o status cadastral da lead. Cada lead entra em uma única faixa, com prioridade de Quente sobre Morno e de Morno sobre Frio.",
       "As quantidades e a lista do modal respeitam a busca, os filtros de status/período e o filtro de conversão ativos na tela.",
       "Ao clicar no nome da lead, você abre o detalhe completo com timeline, WhatsApp e resumo IA.",

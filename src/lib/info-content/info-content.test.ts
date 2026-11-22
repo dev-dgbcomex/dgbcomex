@@ -787,6 +787,9 @@ describe("semaforoConversaoInfo", () => {
       expect(texto).toMatch(/Clique no card/i)
       expect(texto).toMatch(/status das oportunidades/i)
       expect(texto).toMatch(/Exemplo em (leads|clientes)/)
+      expect(texto).toMatch(/documento fica abaixo do nome/i)
+      expect(texto).toMatch(/Oportunidades, Pedidos, Visitas e Ações/)
+      expect(texto).toMatch(/Proposta e Negociação/)
     }
 
     expect(semaforoConversaoInfo.QUENTE.rules?.join(" ")).toMatch(/prioridade/i)

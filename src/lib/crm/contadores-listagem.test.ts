@@ -12,11 +12,21 @@ describe("contadores-listagem", () => {
 
     expect(Object.keys(contadores)).toEqual([
       "totalOportunidades",
+      "totalOportunidadesProposta",
+      "totalOportunidadesNegociacao",
       "totalPedidos",
       "totalVisitas",
       "totalAcoes",
       "faixaConversao",
     ])
+
+    expect(sqlTexto(contadores.totalOportunidades)).toContain('"crm_leads"."cliente_id"')
+    expect(sqlTexto(contadores.totalOportunidadesProposta)).toContain(
+      '"crm_oportunidades"."status" = $'
+    )
+    expect(sqlTexto(contadores.totalOportunidadesNegociacao)).toContain(
+      '"crm_oportunidades"."status" = $'
+    )
 
     const texto = Object.values(contadores).map(sqlTexto).join(" ")
     expect(texto).toMatch(/crm_oportunidades/)
@@ -38,14 +48,14 @@ describe("contadores-listagem", () => {
     expect(texto).toContain('"crm_oportunidades"."updated_at"')
     expect(texto).toContain("date_trunc('month', current_date)")
     expect(texto).toContain("date_trunc('quarter', current_date)")
-    expect(texto.indexOf("'NEGOCIACAO'")).toBeLessThan(
-      texto.indexOf("date_trunc('month', current_date)")
+    expect(sqlTexto(contadores.faixaConversao).indexOf("'NEGOCIACAO'")).toBeLessThan(
+      sqlTexto(contadores.faixaConversao).indexOf("date_trunc('month', current_date)")
     )
-    expect(texto.indexOf("date_trunc('month', current_date)")).toBeLessThan(
-      texto.indexOf("'PROPOSTA'")
+    expect(sqlTexto(contadores.faixaConversao).indexOf("date_trunc('month', current_date)")).toBeLessThan(
+      sqlTexto(contadores.faixaConversao).indexOf("'PROPOSTA'")
     )
-    expect(texto.indexOf("'PROPOSTA'")).toBeLessThan(
-      texto.indexOf("date_trunc('quarter', current_date)")
+    expect(sqlTexto(contadores.faixaConversao).indexOf("'PROPOSTA'")).toBeLessThan(
+      sqlTexto(contadores.faixaConversao).indexOf("date_trunc('quarter', current_date)")
     )
     expect(texto).not.toContain('"clientes"."status"')
     expect(texto).not.toContain('"crm_leads"."status"')
@@ -56,11 +66,21 @@ describe("contadores-listagem", () => {
 
     expect(Object.keys(contadores)).toEqual([
       "totalOportunidades",
+      "totalOportunidadesProposta",
+      "totalOportunidadesNegociacao",
       "totalPedidos",
       "totalVisitas",
       "totalAcoes",
       "faixaConversao",
     ])
+
+    expect(sqlTexto(contadores.totalOportunidades)).toContain('"crm_oportunidades"."lead_id"')
+    expect(sqlTexto(contadores.totalOportunidadesProposta)).toContain(
+      '"crm_oportunidades"."status" = $'
+    )
+    expect(sqlTexto(contadores.totalOportunidadesNegociacao)).toContain(
+      '"crm_oportunidades"."status" = $'
+    )
 
     const texto = Object.values(contadores).map(sqlTexto).join(" ")
     expect(texto).toMatch(/crm_oportunidades/)
@@ -81,14 +101,14 @@ describe("contadores-listagem", () => {
     expect(texto).toContain('"crm_oportunidades"."updated_at"')
     expect(texto).toContain("date_trunc('month', current_date)")
     expect(texto).toContain("date_trunc('quarter', current_date)")
-    expect(texto.indexOf("'NEGOCIACAO'")).toBeLessThan(
-      texto.indexOf("date_trunc('month', current_date)")
+    expect(sqlTexto(contadores.faixaConversao).indexOf("'NEGOCIACAO'")).toBeLessThan(
+      sqlTexto(contadores.faixaConversao).indexOf("date_trunc('month', current_date)")
     )
-    expect(texto.indexOf("date_trunc('month', current_date)")).toBeLessThan(
-      texto.indexOf("'PROPOSTA'")
+    expect(sqlTexto(contadores.faixaConversao).indexOf("date_trunc('month', current_date)")).toBeLessThan(
+      sqlTexto(contadores.faixaConversao).indexOf("'PROPOSTA'")
     )
-    expect(texto.indexOf("'PROPOSTA'")).toBeLessThan(
-      texto.indexOf("date_trunc('quarter', current_date)")
+    expect(sqlTexto(contadores.faixaConversao).indexOf("'PROPOSTA'")).toBeLessThan(
+      sqlTexto(contadores.faixaConversao).indexOf("date_trunc('quarter', current_date)")
     )
     expect(texto).not.toContain('"crm_leads"."status"')
   })

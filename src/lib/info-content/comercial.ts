@@ -49,6 +49,7 @@ export const comercialContent: Record<string, InfoContent> = {
       "No rodapé do card, 'Ver' abre o cadastro, 'Editar' abre o formulário e 'Mapa' abre o endereço no Google Maps quando o cliente tem endereço cadastrado.",
       "Os cards abaixo da busca formam o semáforo de conversão: Quentes (Negociação, ganho ou pedido no mês), Mornos (Proposta, ganho ou pedido no trimestre) e Frios (sem nenhum desses movimentos no trimestre).",
       "Clique em um card do semáforo para abrir a lista de clientes daquela faixa; o 'i' no card explica a regra e mostra exemplos.",
+      "No modal da faixa, o documento aparece abaixo do nome e as colunas trazem Oportunidades (com Proposta e Negociação), Pedidos, Visitas e Ações.",
       "A classificação usa o status das oportunidades e a data dos pedidos vinculados ao cliente, incluindo os das pessoas promovidas, e nunca o status cadastral do cliente.",
       "Cada cliente entra em uma única faixa, com prioridade de Quente sobre Morno e de Morno sobre Frio; as quantidades e a lista do modal respeitam a busca ativa.",
       "Clientes ativos podem ser vinculados a solicitações.",

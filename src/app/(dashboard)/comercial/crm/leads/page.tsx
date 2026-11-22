@@ -137,6 +137,12 @@ function CrmLeadsPageContent() {
     subtitulo: emp.nomeFantasia && emp.nomeFantasia !== nomeExibicao(emp) ? emp.nomeFantasia : null,
     documento: documento(emp),
     status: emp.status ?? null,
+    totalOportunidades: emp.totalOportunidades ?? 0,
+    totalPedidos: emp.totalPedidos ?? 0,
+    totalVisitas: emp.totalVisitas ?? 0,
+    totalAcoes: emp.totalAcoes ?? 0,
+    totalOportunidadesProposta: emp.totalOportunidadesProposta ?? 0,
+    totalOportunidadesNegociacao: emp.totalOportunidadesNegociacao ?? 0,
     href: `/comercial/crm/leads/${emp.id}`,
   }))
 
@@ -328,17 +334,17 @@ function CrmLeadsPageContent() {
             </p>
           </div>
         ) : (
-          <div className="grid gap-4 p-4 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-4 p-4 md:grid-cols-2 lg:grid-cols-3">
             {filteredData.map((emp) => (
               <article
                 key={emp.id}
                 className="flex flex-col rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50"
               >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
+                <div className="mb-3 flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
                     <Link
                       href={`/comercial/crm/leads/${emp.id}`}
-                      className="text-sm font-semibold text-slate-900 dark:text-slate-100 hover:underline"
+                      className="block truncate text-sm font-semibold text-slate-900 dark:text-slate-100 hover:underline"
                     >
                       {nomeExibicao(emp)}
                     </Link>
@@ -347,11 +353,11 @@ function CrmLeadsPageContent() {
                         {emp.nomeFantasia}
                       </p>
                     )}
-                    <p className="mt-1 font-mono text-xs text-slate-500 dark:text-slate-400">
+                    <p className="mt-1 truncate font-mono text-xs text-slate-500 dark:text-slate-400">
                       {documento(emp)}
                     </p>
                   </div>
-                  <div className="flex shrink-0 flex-col items-end gap-1">
+                  <div className="flex max-w-[45%] shrink-0 flex-wrap items-center justify-end gap-1">
                     <span className="rounded-full bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-[10px] font-medium text-slate-600 dark:text-slate-300">
                       {emp.tipoPessoa || "—"}
                     </span>
@@ -364,16 +370,16 @@ function CrmLeadsPageContent() {
                   </div>
                 </div>
 
-                <div className="mt-4 flex flex-wrap items-center gap-2">
+                <div className="mt-1 flex min-h-[1.5rem] items-center gap-2 overflow-hidden">
                   <span
-                    className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                    className={`inline-flex shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${
                       STATUS_CORES[emp.status ?? ""] || "text-slate-600 bg-slate-100"
                     }`}
                   >
                     {emp.status || "—"}
                   </span>
                   {emp.segmento && (
-                    <span className="rounded-full bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-[10px] font-medium text-slate-600 dark:text-slate-300">
+                    <span className="truncate rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                       {emp.segmento}
                     </span>
                   )}
@@ -408,40 +414,40 @@ function CrmLeadsPageContent() {
                   ))}
                 </div>
 
-                <div className="mt-3 text-xs text-slate-500 dark:text-slate-400">
-                  <div className="flex justify-between gap-3">
+                <div className="mt-3 flex-1 space-y-3 text-xs">
+                  <div className="flex justify-between gap-3 text-slate-500 dark:text-slate-400">
                     <span>Cadastro</span>
                     <span className="text-slate-700 dark:text-slate-200">
                       {emp.createdAt ? new Date(emp.createdAt).toLocaleDateString("pt-BR") : "—"}
                     </span>
                   </div>
-                </div>
 
-                {(emp.email || emp.telefone || emp.cidade) && (
-                  <div className="mt-3 space-y-1 border-t border-slate-100 dark:border-slate-800 pt-3 text-xs text-slate-600 dark:text-slate-400">
-                    {emp.email && (
-                      <div className="flex items-center gap-2">
-                        <Mail size={12} className="shrink-0 text-slate-400" />
-                        <span className="truncate">{emp.email}</span>
-                      </div>
-                    )}
-                    {emp.telefone && (
-                      <div className="flex items-center gap-2">
-                        <Phone size={12} className="shrink-0 text-slate-400" />
-                        <span>{emp.telefone}</span>
-                      </div>
-                    )}
-                    {emp.cidade && (
-                      <div className="flex items-center gap-2">
-                        <MapPin size={12} className="shrink-0 text-slate-400" />
-                        <span className="truncate">
-                          {emp.cidade}
-                          {emp.uf ? `, ${emp.uf}` : ""}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                )}
+                  {(emp.email || emp.telefone || emp.cidade) && (
+                    <div className="space-y-1 border-t border-slate-100 pt-3 text-slate-600 dark:border-slate-800 dark:text-slate-400">
+                      {emp.email && (
+                        <div className="flex items-center gap-2">
+                          <Mail size={12} className="shrink-0 text-slate-400" />
+                          <span className="truncate">{emp.email}</span>
+                        </div>
+                      )}
+                      {emp.telefone && (
+                        <div className="flex items-center gap-2">
+                          <Phone size={12} className="shrink-0 text-slate-400" />
+                          <span>{emp.telefone}</span>
+                        </div>
+                      )}
+                      {emp.cidade && (
+                        <div className="flex items-center gap-2">
+                          <MapPin size={12} className="shrink-0 text-slate-400" />
+                          <span className="truncate">
+                            {emp.cidade}
+                            {emp.uf ? `, ${emp.uf}` : ""}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
 
                 <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-100 dark:border-slate-800 pt-3">
                   <Link

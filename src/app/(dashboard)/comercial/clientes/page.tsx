@@ -82,6 +82,12 @@ export default function ClientesPage() {
     subtitulo: cliente.razaoSocial,
     documento: cliente.cnpj,
     status: cliente.status || (cliente.ativo === false ? "Inativo" : cliente.ativo ? "Ativo" : null),
+    totalOportunidades: cliente.totalOportunidades ?? 0,
+    totalPedidos: cliente.totalPedidos ?? 0,
+    totalVisitas: cliente.totalVisitas ?? 0,
+    totalAcoes: cliente.totalAcoes ?? 0,
+    totalOportunidadesProposta: cliente.totalOportunidadesProposta ?? 0,
+    totalOportunidadesNegociacao: cliente.totalOportunidadesNegociacao ?? 0,
     href: `/comercial/clientes/${cliente.id}`,
   }))
   const [showApiImport, setShowApiImport] = useState(false)

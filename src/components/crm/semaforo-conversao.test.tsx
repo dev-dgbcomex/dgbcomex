@@ -11,6 +11,12 @@ const itens: SemaforoConversaoItem[] = [
     subtitulo: "Alpha Confecções",
     documento: "12.345.678/0001-90",
     status: "QUALIFICADO",
+    totalOportunidades: 5,
+    totalPedidos: 1,
+    totalVisitas: 4,
+    totalAcoes: 2,
+    totalOportunidadesProposta: 2,
+    totalOportunidadesNegociacao: 3,
     href: "/comercial/crm/leads/1",
   },
   {
@@ -19,6 +25,12 @@ const itens: SemaforoConversaoItem[] = [
     nome: "Confecções Lima",
     documento: "98.765.432/0001-10",
     status: "NOVO",
+    totalOportunidades: 1,
+    totalPedidos: 0,
+    totalVisitas: 2,
+    totalAcoes: 1,
+    totalOportunidadesProposta: 1,
+    totalOportunidadesNegociacao: 0,
     href: "/comercial/crm/leads/2",
   },
   {
@@ -27,6 +39,12 @@ const itens: SemaforoConversaoItem[] = [
     nome: "Malhas Frias",
     documento: "33.333.333/0001-33",
     status: "NOVO",
+    totalOportunidades: 0,
+    totalPedidos: 0,
+    totalVisitas: 0,
+    totalAcoes: 0,
+    totalOportunidadesProposta: 0,
+    totalOportunidadesNegociacao: 0,
     href: "/comercial/crm/leads/3",
   },
   {
@@ -35,6 +53,12 @@ const itens: SemaforoConversaoItem[] = [
     nome: "Sem Oportunidade",
     documento: "44.444.444/0001-44",
     status: "INATIVO",
+    totalOportunidades: 0,
+    totalPedidos: 0,
+    totalVisitas: 0,
+    totalAcoes: 0,
+    totalOportunidadesProposta: 0,
+    totalOportunidadesNegociacao: 0,
     href: "/comercial/crm/leads/4",
   },
 ]
@@ -87,6 +111,14 @@ describe("SemaforoConversao", () => {
     expect(within(dialog).getByText("Tecelagem Alpha")).toBeInTheDocument()
     expect(within(dialog).getByText("Alpha Confecções")).toBeInTheDocument()
     expect(within(dialog).queryByText("Confecções Lima")).not.toBeInTheDocument()
+    expect(within(dialog).queryByRole("columnheader", { name: "Status cadastral" })).not.toBeInTheDocument()
+    for (const coluna of ["Oportunidades", "Pedidos", "Visitas", "Ações"]) {
+      expect(within(dialog).getByRole("columnheader", { name: coluna })).toBeInTheDocument()
+    }
+    const linha = within(dialog).getByRole("row", { name: /Tecelagem Alpha/ })
+    expect(within(linha).getByText("12.345.678/0001-90")).toBeInTheDocument()
+    expect(within(linha).getByText("2 Proposta")).toBeInTheDocument()
+    expect(within(linha).getByText("3 Negociação")).toBeInTheDocument()
     expect(within(dialog).getByRole("link", { name: /Tecelagem Alpha/ })).toHaveAttribute(
       "href",
       "/comercial/crm/leads/1"
@@ -105,6 +137,8 @@ describe("SemaforoConversao", () => {
     const dialog = screen.getByRole("dialog", { name: "Frios — Leads" })
     expect(within(dialog).getByText("Malhas Frias")).toBeInTheDocument()
     expect(within(dialog).getByText("Sem Oportunidade")).toBeInTheDocument()
+    const linha = within(dialog).getByRole("row", { name: /Malhas Frias/ })
+    expect(within(linha).getAllByText("—").length).toBeGreaterThan(0)
   })
 
   it("mostra explicação e exemplos no i sem abrir a lista", () => {

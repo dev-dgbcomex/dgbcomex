@@ -42,6 +42,10 @@ function basePedidos(tipo: TipoContagem) {
     where ${oportunidadeId} in (select ${oportunidadeId} ${baseOportunidades(tipo)})`
 }
 
+function totalOportunidadesStatus(tipo: TipoContagem, status: string) {
+  return sql<number>`(select count(*)::int ${baseOportunidades(tipo)} and ${crmOportunidades.status} = ${status})`
+}
+
 function ganhoNoPeriodo(tipo: TipoContagem, inicio: SQLWrapper) {
   return sql`exists (select 1 ${baseOportunidades(tipo)} and ${crmOportunidades.status} in ('FECHADO_GANHO', 'GANHO') and ${crmOportunidades.updatedAt} >= ${inicio})`
 }
@@ -64,7 +68,9 @@ function faixaConversao(tipo: TipoContagem) {
 
 export function contadoresCliente() {
   return {
-    totalOportunidades: sql<number>`(select count(*)::int from ${crmOportunidades} where ${oportunidadeClienteId} = ${clienteId})`,
+    totalOportunidades: sql<number>`(select count(*)::int ${baseOportunidades("cliente")})`,
+    totalOportunidadesProposta: totalOportunidadesStatus("cliente", "PROPOSTA"),
+    totalOportunidadesNegociacao: totalOportunidadesStatus("cliente", "NEGOCIACAO"),
     totalPedidos: sql<number>`(select count(*)::int ${basePedidos("cliente")})`,
     totalVisitas: sql<number>`(select count(*)::int from ${crmVisitas} where ${visitaClienteId} = ${clienteId})`,
     totalAcoes: sql<number>`(select count(*)::int from ${crmAcoesProspeccao} where ${acaoClienteId} = ${clienteId})`,
@@ -74,7 +80,9 @@ export function contadoresCliente() {
 
 export function contadoresLead() {
   return {
-    totalOportunidades: sql<number>`(select count(*)::int from ${crmOportunidades} where ${oportunidadeEmpresaId} = ${leadId})`,
+    totalOportunidades: sql<number>`(select count(*)::int ${baseOportunidades("lead")})`,
+    totalOportunidadesProposta: totalOportunidadesStatus("lead", "PROPOSTA"),
+    totalOportunidadesNegociacao: totalOportunidadesStatus("lead", "NEGOCIACAO"),
     totalPedidos: sql<number>`(select count(*)::int ${basePedidos("lead")})`,
     totalVisitas: sql<number>`(select count(*)::int from ${crmVisitas} where ${visitaEmpresaId} = ${leadId})`,
     totalAcoes: sql<number>`(select count(*)::int from ${crmAcoesProspeccao} where ${acaoEmpresaId} = ${leadId})`,

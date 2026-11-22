@@ -21,6 +21,8 @@ export type Cliente = {
   createdAt: string | Date
   updatedAt: string | Date
   totalOportunidades?: number
+  totalOportunidadesProposta?: number
+  totalOportunidadesNegociacao?: number
   totalPedidos?: number
   totalVisitas?: number
   totalAcoes?: number
