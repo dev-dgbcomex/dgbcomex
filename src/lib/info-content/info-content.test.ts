@@ -930,6 +930,7 @@ describe("crmDashboardInfo", () => {
     ["paineis.topLeads", crmDashboardInfo.paineis.topLeads],
     ["paineis.topClientes", crmDashboardInfo.paineis.topClientes],
     ["paineis.recentes", crmDashboardInfo.paineis.recentes],
+    ["temperatura", crmDashboardInfo.temperatura],
     ["acoesRapidas", crmDashboardInfo.acoesRapidas],
   ] as const
 
@@ -1052,11 +1053,41 @@ describe("crmDashboardInfo", () => {
     expect(acoes).toMatch(/Nova Oportunidade/)
     expect(acoes).toMatch(/Nova Ação de Prospecção/)
     expect(acoes).toMatch(/Kanban/)
+    expect(acoes).toMatch(/temperatura/i)
     expect(acoes).toMatch(/Nova Visita/)
     expect(acoes).toMatch(/Minhas Tarefas/)
     expect(acoes).not.toMatch(/Nova Proposta/)
     expect(acoes).not.toMatch(/Nova Campanha/)
     expect(acoes).not.toMatch(/Email Massa/)
+  })
+
+  it("a temperatura do dashboard e o kanban explicam dedupe, regras e busca", () => {
+    const temperatura = [
+      crmDashboardInfo.temperatura.description,
+      ...(crmDashboardInfo.temperatura.rules ?? []),
+      ...(crmDashboardInfo.temperatura.examples ?? []).map((e) => e.desc),
+    ].join("\n")
+    expect(temperatura).toMatch(/promovidos a cliente/i)
+    expect(temperatura).toMatch(/cliente/)
+    expect(temperatura).toMatch(/kanban/i)
+    expect(temperatura).toMatch(/mês/i)
+    expect(temperatura).toMatch(/trimestre/i)
+
+    const kanban = getInfoContent("/comercial/crm/temperatura/kanban")
+    expect(kanban).not.toBeNull()
+    const textoKanban = [
+      kanban?.description ?? "",
+      ...(kanban?.rules ?? []),
+      ...(kanban?.examples ?? []).map((e) => `${e.title}: ${e.desc}`),
+    ].join("\n")
+    expect(textoKanban).toMatch(/arraste/i)
+    expect(textoKanban).toMatch(/Negociação/i)
+    expect(textoKanban).toMatch(/Proposta/i)
+    expect(textoKanban).toMatch(/FECHADO_PERDIDO com motivo/i)
+    expect(textoKanban).toMatch(/CPF\/CNPJ/i)
+    expect(textoKanban).toMatch(/Com oportunidade/i)
+    expect(textoKanban).toMatch(/Com pedido/i)
+    expect(textoKanban).toMatch(/apenas como Cliente/i)
   })
 
   it("as listagens explicam o padrão em cards e as contagens exibidas", () => {

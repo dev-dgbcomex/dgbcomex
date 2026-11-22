@@ -11,6 +11,26 @@ vi.mock("next-auth/react", () => ({
 }))
 
 const dashboardPayload = {
+  temperatura: {
+    contagem: { QUENTE: 0, MORNO: 1, FRIO: 0 },
+    itens: [
+      {
+        id: "cliente-17",
+        tipo: "cliente",
+        entidadeId: 17,
+        nome: "Conforto Prime",
+        documento: "12.345.678/0001-90",
+        faixaConversao: "MORNO",
+        totalOportunidades: 5,
+        totalOportunidadesProposta: 1,
+        totalOportunidadesNegociacao: 0,
+        totalPedidos: 1,
+        totalVisitas: 0,
+        totalAcoes: 0,
+        href: "/comercial/clientes/17",
+      },
+    ],
+  },
   visitantes: { total: 0, esteMes: 0 },
   leads: { total: 185 },
   clientes: { total: 12 },
@@ -137,6 +157,14 @@ describe("CrmDashboardPage", () => {
     for (const label of ["Visitantes", "Propostas", "Campanhas", "Emails Enviados"]) {
       expect(screen.queryByText(label)).not.toBeInTheDocument()
     }
+
+    expect(
+      await screen.findByRole("heading", { name: "Temperatura — leads e clientes" })
+    ).toBeInTheDocument()
+    expect(screen.getByText("Mornos")).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "Informações da faixa Mornos" })
+    ).toBeInTheDocument()
   })
 
   it("mostra o painel Top Leads somente com leads", async () => {
@@ -257,6 +285,12 @@ describe("CrmDashboardPage", () => {
       expect(link).toHaveAttribute("href", "/comercial/crm/acoes-prospeccao/novo")
     }
 
+    const kanbans = screen.getAllByRole("link", { name: "Kanban" })
+    expect(kanbans).toHaveLength(2)
+    for (const link of kanbans) {
+      expect(link).toHaveAttribute("href", "/comercial/crm/temperatura/kanban")
+    }
+
     const primeiroCard = await screen.findByText("Leads (Negócios)")
     const ultimoPainel = await screen.findByRole("heading", { name: "Atividades Recentes" })
     expect(
@@ -290,5 +324,8 @@ describe("CrmDashboardPage", () => {
     expect(
       await screen.findAllByRole("button", { name: "Informações das Ações Rápidas" })
     ).toHaveLength(2)
+    expect(
+      screen.getByRole("button", { name: "Informações da temperatura de leads e clientes" })
+    ).toBeInTheDocument()
   })
 })

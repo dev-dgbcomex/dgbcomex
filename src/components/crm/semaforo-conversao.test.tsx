@@ -141,6 +141,29 @@ describe("SemaforoConversao", () => {
     expect(within(linha).getAllByText("—").length).toBeGreaterThan(0)
   })
 
+  it("mostra a coluna Tipo quando combina leads e clientes", () => {
+    render(
+      <SemaforoConversao
+        contagem={{ QUENTE: 1, MORNO: 0, FRIO: 0 }}
+        entidade="leads-clientes"
+        itens={[{ ...itens[0], tipo: "cliente" }]}
+        listagem="/comercial/crm/temperatura/kanban"
+      />
+    )
+
+    fireEvent.click(
+      screen.getByLabelText("Quentes: 1 leads-clientes — Negociação ou ganho/pedido no mês")
+    )
+
+    const dialog = screen.getByRole("dialog", { name: "Quentes — Leads e clientes" })
+    expect(within(dialog).getByRole("columnheader", { name: "Tipo" })).toBeInTheDocument()
+    expect(within(dialog).getByText("Cliente")).toBeInTheDocument()
+    expect(within(dialog).getByRole("link", { name: /Ver todas/ })).toHaveAttribute(
+      "href",
+      "/comercial/crm/temperatura/kanban"
+    )
+  })
+
   it("mostra explicação e exemplos no i sem abrir a lista", () => {
     renderSemaforo()
 

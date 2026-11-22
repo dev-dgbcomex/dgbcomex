@@ -540,6 +540,39 @@ export const crmContent: Record<string, InfoContent> = {
       },
     ],
   },
+  "/comercial/crm/temperatura/kanban": {
+    title: "Kanban de Temperatura — leads e clientes",
+    description:
+      "Quadro com as colunas Quentes, Mornos e Frios. Reúne leads ativos não promovidos e clientes; mover um card entre colunas altera oportunidades conforme a regra de temperatura e sempre pede confirmação.",
+    rules: [
+      "Colunas: Quente = Negociação ou ganho/pedido no mês; Morno = Proposta ou ganho/pedido no trimestre; Frio = sem Negociação, Proposta ou ganho/pedido no trimestre.",
+      "Lead promovido a cliente aparece apenas como Cliente; a faixa do cliente já inclui as oportunidades das pessoas promovidas.",
+      "A busca aceita nome, razão social, fantasia, CPF/CNPJ com ou sem pontuação, segmento, responsável, contato, e-mail, telefone e cidade; acentos são ignorados.",
+      "Os filtros são combináveis: Tipo (Todos/Leads/Clientes), Com oportunidade (totalOportunidades > 0) e Com pedido (totalPedidos > 0).",
+      "Ao subir para Morno, o sistema cria uma oportunidade em Proposta ou pergunta qual oportunidade existente deve ir para Proposta; ao subir para Quente, faz o mesmo com Negociação.",
+      "Ao descer de Quente para Morno, todas as oportunidades em Negociação devem ser rebaixadas para Proposta. Se houver ganho ou pedido no mês, a descida é bloqueada.",
+      "Ao descer para Frio, todas as oportunidades em Proposta/Negociação devem ir para FECHADO_PERDIDO com motivo. Se houver ganho ou pedido no trimestre, a descida é bloqueada.",
+      "Se a última oportunidade de uma lead for perdida, o sistema pergunta se a lead deve ser marcada como Perdida ou mantida como Qualificada com uma nova oportunidade.",
+      "Além do arraste, cada card oferece botões para mover entre faixas por teclado.",
+      "Se um movimento fizer o card deixar de atender aos filtros ativos, ele desaparece da lista após a atualização e um aviso é exibido.",
+    ],
+    fields: [
+      { name: "Buscar leads e clientes", desc: "Campo de busca com limpar busca" },
+      {
+        name: "Tipo",
+        desc: "Segmentado Todos, Leads ou Clientes",
+      },
+      { name: "Com oportunidade", desc: "Mostra apenas itens com pelo menos uma oportunidade" },
+      { name: "Com pedido", desc: "Mostra apenas itens com pelo menos um pedido de venda" },
+      { name: "Card", desc: "Lead ou cliente com métricas, links e ações de mover" },
+    ],
+    examples: [
+      {
+        title: "Frio para Morno sem oportunidade",
+        desc: "Ao mover um lead frio para Morno, o sistema pergunta se deseja criar uma oportunidade em Proposta. Confirmando, a faixa recalculada passa a Morno.",
+      },
+    ],
+  },
 
   // ==================== VISITAS ====================
   "/comercial/crm/visitas": {

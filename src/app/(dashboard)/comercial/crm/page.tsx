@@ -11,6 +11,9 @@ import {
   DashboardDetalhesModal,
   type DetalheDashboard,
 } from "@/components/crm/dashboard/detalhes-modal"
+import { SemaforoConversao } from "@/components/crm/semaforo-conversao"
+import type { FaixaConversao } from "@/lib/crm/faixa-conversao"
+import type { TemperaturaItem } from "@/lib/crm/temperatura"
 import {
   Building2,
   Users,
@@ -29,6 +32,7 @@ import {
 const CrmCharts = dynamic(() => import("./charts").then((m) => m.CrmCharts), { ssr: false })
 
 type CrmDashboardData = {
+  temperatura: { itens: TemperaturaItem[]; contagem: Record<FaixaConversao, number> }
   visitantes: { total: number; esteMes: number }
   leads: { total: number }
   clientes: { total: number }
@@ -234,6 +238,32 @@ export default function CrmDashboardPage() {
               iconColor="text-rose-600 dark:text-rose-400"
             />
           </div>
+
+          {data?.temperatura && (
+            <section aria-label="Temperatura de leads e clientes" className="space-y-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-slate-100">
+                  Temperatura — leads e clientes
+                  <InfoButton
+                    content={crmDashboardInfo.temperatura}
+                    label="Informações da temperatura de leads e clientes"
+                  />
+                </h2>
+                <Link
+                  href="/comercial/crm/temperatura/kanban"
+                  className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:underline dark:text-blue-400"
+                >
+                  Abrir kanban de temperatura <ArrowRight size={12} />
+                </Link>
+              </div>
+              <SemaforoConversao
+                contagem={data.temperatura.contagem}
+                entidade="leads-clientes"
+                itens={data.temperatura.itens}
+                listagem="/comercial/crm/temperatura/kanban"
+              />
+            </section>
+          )}
 
           {/* Linha 2: Pipeline, Forecast, Conversão */}
           <div className="grid gap-6 md:grid-cols-3">
@@ -493,7 +523,7 @@ function QuickActionsBar() {
           color="text-violet-600 dark:text-violet-400"
         />
         <QuickAction
-          href="/comercial/crm/oportunidades/kanban"
+          href="/comercial/crm/temperatura/kanban"
           icon={<BarChart3 size={14} />}
           label="Kanban"
           color="text-indigo-600 dark:text-indigo-400"

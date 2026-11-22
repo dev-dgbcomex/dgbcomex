@@ -4,9 +4,9 @@ export const crmDashboardInfo = {
   pagina: {
     title: "Dashboard CRM — visão geral",
     description:
-      "Painel inicial do CRM com faixas compactas de Ações Rápidas no topo e ao final, seis cards de resumo, três gráficos, Top Leads, Top Clientes e Atividades Recentes. Cards, gráficos e painéis abrem um modal com a lista de registros; cada registro abre o cadastro correspondente.",
+      "Painel inicial do CRM com faixas compactas de Ações Rápidas no topo e ao final, seis cards de resumo, semáforo de temperatura de leads e clientes, três gráficos, Top Leads, Top Clientes e Atividades Recentes. Cards, gráficos e painéis abrem um modal com a lista de registros; cada registro abre o cadastro correspondente.",
     rules: [
-      "O resumo mostra Leads (Negócios), Clientes, Oportunidades, Visitas, Ações de Prospecção e Tarefas Pendentes. Visitantes, Propostas, Campanhas e E-mails Enviados continuam no JSON da API e nos atalhos.",
+      "O resumo mostra Leads (Negócios), Clientes, Oportunidades, Visitas, Ações de Prospecção e Tarefas Pendentes. Abaixo dele, o semáforo combina leads não promovidos e clientes em Quentes, Mornos e Frios. Visitantes, Propostas, Campanhas e E-mails Enviados continuam no JSON da API e nos atalhos.",
       "Clicar em 'Previsão de Receita (Pipeline)' abre o modal com as oportunidades em aberto da previsão, com total e botão de exportação; 'Convertidas' abre as oportunidades FECHADO_GANHO com o mesmo total e exportação.",
       "O funil mostra três contagens: Leads (crm_leads), Oportunidades e Oportunidades Convertidas; Propostas foi removido do gráfico.",
       "A linha dos painéis mostra Top Leads, Top Clientes e Atividades Recentes; o Top Leads considera só oportunidades de leads não promovidas, e o Top Clientes considera oportunidades abertas e fechadas de clientes e de pessoas promovidas.",
@@ -61,6 +61,25 @@ export const crmDashboardInfo = {
       {
         title: "Exemplo de leitura",
         desc: "185 leads, 12 clientes, 85 oportunidades (9 criadas este mês), 1 visita hoje, 30 ações realizadas (4 hoje e 22 no mês) e 8 tarefas pendentes (3 com prazo até hoje): os cards mostram 185, 12, 85, 1, 30 e 8, com os complementos '9 este mês', '1 hoje', '4 hoje · 22 no mês' e '3 vencidas'.",
+      },
+    ],
+  } satisfies InfoContent,
+  temperatura: {
+    title: "Temperatura — leads e clientes juntos",
+    description:
+      "Semáforo de Quentes, Mornos e Frios colocado abaixo dos cards de resumo. Conta leads ativos ainda não promovidos e todos os clientes; cada faixa abre o modal com a lista e o rodapé leva ao kanban de temperatura.",
+    rules: [
+      "Quente: oportunidade em Negociação, ou ganho/pedido com data no mês corrente.",
+      "Morno: oportunidade em Proposta, ou ganho/pedido no trimestre corrente sem ganho/pedido no mês.",
+      "Frio: sem Negociação, Proposta ou ganho/pedido no trimestre.",
+      "Leads já promovidos a cliente aparecem apenas como Cliente, porque a faixa do cliente já inclui as oportunidades das pessoas promovidas. Por isso a soma pode divergir do card 'Leads (Negócios)'.",
+      "Clicar em uma faixa abre o modal com nome, tipo, documento e totais; 'Ver todas' abre o kanban de temperatura.",
+      "O kanban permite mover cards entre faixas; a mudança depende da criação, do rebaixamento ou da perda de oportunidades e sempre pede confirmação.",
+    ],
+    examples: [
+      {
+        title: "Cliente com proposta",
+        desc: "Um cliente com uma oportunidade em Proposta e nenhuma em Negociação aparece em Mornos, com 1 oportunidade em Proposta no modal.",
       },
     ],
   } satisfies InfoContent,
@@ -197,14 +216,14 @@ export const crmDashboardInfo = {
     description:
       "Seis atalhos em faixas compactas no topo e ao final do dashboard para criar registros ou abrir listagens do CRM.",
     rules: [
-      "Os atalhos disponíveis são: Novo Lead (Negócio), Nova Oportunidade, Nova Ação de Prospecção, Kanban, Nova Visita e Minhas Tarefas.",
+      "Os atalhos disponíveis são: Novo Lead (Negócio), Nova Oportunidade, Nova Ação de Prospecção, Kanban (temperatura de leads e clientes), Nova Visita e Minhas Tarefas.",
       "As faixas ficam acima dos cards de resumo e ao final da página, com os mesmos seis atalhos, para facilitar o acesso por teclado sem voltar ao topo.",
       "Os links apenas navegam: nenhum dado é criado ou alterado ao clicar em um atalho.",
     ],
     examples: [
       {
         title: "Exemplo de atalho",
-        desc: "Clicar em 'Nova Ação de Prospecção' abre /comercial/crm/acoes-prospeccao/novo e clicar em 'Minhas Tarefas' abre /comercial/crm/tarefas, sem modificar os números do dashboard.",
+        desc: "Clicar em 'Nova Ação de Prospecção' abre /comercial/crm/acoes-prospeccao/novo, clicar em 'Kanban' abre /comercial/crm/temperatura/kanban e clicar em 'Minhas Tarefas' abre /comercial/crm/tarefas, sem modificar os números do dashboard.",
       },
     ],
   } satisfies InfoContent,

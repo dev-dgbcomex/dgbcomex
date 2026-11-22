@@ -26,6 +26,25 @@
 
 > Detalhe técnico completo em [`docs/crm-cliente-e-relatorios.md`](./crm-cliente-e-relatorios.md).
 
+### Sessão 38 — Temperatura combinada no CRM e kanban de conversão
+
+- **Data:** 2026-11-22
+- **Commit:** `feat(crm): adiciona kanban de temperatura`
+- **Tarefa:** unir leads e clientes em um único semáforo Quentes/Mornos/Frios no `/comercial/crm` e criar o kanban `/comercial/crm/temperatura/kanban`, com arraste, regras de criação/ajuste de oportunidade e filtros combináveis.
+- **Decisões aprovadas:** o atalho `Kanban` passa a abrir a nova rota; lead promovido aparece somente como Cliente; subida cria ou reaproveita oportunidade (`MORNO` → `PROPOSTA`, `QUENTE` → `NEGOCIACAO`); `QUENTE → MORNO` exige mover todas as negociações para proposta e bloqueia se houver ganho/pedido no mês; qualquer ida para `FRIO` bloqueia se houver ganho/pedido no trimestre e exige `FECHADO_PERDIDO` com motivo na última oportunidade. Filtros e busca ficam só no kanban; o dashboard mantém cards e modal atuais, agora combinados.
+- **Resultado:**
+  - `src/lib/crm/temperatura.ts` centraliza busca sem acentos (nome, razão/fantasia, CPF/CNPJ pontuado ou não, segmento, responsável, contato, e-mail, telefones e cidade), filtros `Tipo`/`Com oportunidade`/`Com pedido` e `planoDaTransicao()` com as regras de oportunidade.
+  - `src/lib/crm/temperatura-server.ts` carrega leads ativos não promovidos e clientes com contadores, flags de ganho/pedido e oportunidades resumidas; `GET /api/crm/temperatura` devolve itens e contagem, e `GET /api/crm/dashboard/route.ts` passa a incluir `temperatura`.
+  - `POST /api/crm/temperatura/mover` valida destino, usa `validateRequest`, devolve `409 decisaoPendente` quando necessário, chama `processarAutomacaoCRM` e recarrega a listagem; cartão que sai dos filtros ganha aviso no toast.
+  - `SemaforoConversao` aceita `entidade="leads-clientes"`, mostra a coluna `Tipo` no modal e abre `/comercial/crm/temperatura/kanban`; a página do CRM ganhou o semáforo combinado e o atalho atualizado.
+  - O kanban usa `@dnd-kit/core` com `PointerSensor`/`TouchSensor`, colunas arrastáveis e botões de mover acessíveis; há modal de confirmação para escolher oportunidade existente/nova e decisão de perda da última oportunidade.
+  - Modais “i” do CRM, do kanban, das faixas e da busca global foram atualizados; nenhuma migration ou alteração de banco nesta sessão.
+- **Arquivos Envolvidos:** `src/lib/crm/{temperatura.ts,temperatura.test.ts,temperatura-server.ts,contadores-listagem.ts,automacoes-crm.ts}`, `src/app/api/crm/temperatura/{route.ts,route.test.ts,mover/route.ts,mover/route.test.ts}`, `src/app/api/crm/dashboard/route.ts`, `src/app/(dashboard)/comercial/crm/{page.tsx,page.test.tsx,temperatura/kanban/page.tsx,temperatura/kanban/page.test.tsx}`, `src/components/crm/{semaforo-conversao.tsx,semaforo-conversao.test.tsx,decisao-automacao-modal.tsx,leads/metricas-modal.tsx,kanban-column.tsx}`, `src/lib/info-content/{crm.ts,crm-dashboard.ts,info-content.test.ts}`, `src/lib/search-registry.ts`, `src/types/dnd-kit.d.ts`, `docs/Sessoes.md`.
+- **Testes:** novos em `temperatura.test.ts`, `temperatura/kanban/page.test.tsx`, `temperatura/route.test.ts` e `temperatura/mover/route.test.ts`; ajustes em `page.test.tsx` do CRM, `semaforo-conversao.test.tsx` e `info-content.test.ts`. Focados `7 arquivos / 88 testes passados`; suíte completa `npm run test` → **482 arquivos / 2810 testes passados**.
+- **Verificação:** `npm run lint` sem erros (apenas warnings pré-existentes); `tsc --noEmit --pretty false` limpo com `NODE_OPTIONS=--max-old-space-size=8192`; `npm run build` OK com `NODE_OPTIONS=--max-old-space-size=8192` (258/258 páginas estáticas).
+
+---
+
 ### Sessão 34 — Filtro superior de status em visitas e ações de prospecção
 
 - **Data:** 2026-11-22

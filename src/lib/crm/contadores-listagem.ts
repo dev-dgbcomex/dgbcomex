@@ -18,8 +18,8 @@ const visitaEmpresaId = sql.raw('"crm_visitas"."lead_id"')
 const acaoClienteId = sql.raw('"crm_acoes_prospeccao"."cliente_id"')
 const acaoEmpresaId = sql.raw('"crm_acoes_prospeccao"."lead_id"')
 
-const inicioMes = sql`date_trunc('month', current_date)`
-const inicioTrimestre = sql`date_trunc('quarter', current_date)`
+export const inicioMes = sql`date_trunc('month', current_date)`
+export const inicioTrimestre = sql`date_trunc('quarter', current_date)`
 const dataPedido = sql`coalesce(${crmPedidosVenda.dataEmissao}::timestamp, ${crmPedidosVenda.createdAt})`
 
 type TipoContagem = "cliente" | "lead"
@@ -46,11 +46,11 @@ function totalOportunidadesStatus(tipo: TipoContagem, status: string) {
   return sql<number>`(select count(*)::int ${baseOportunidades(tipo)} and ${crmOportunidades.status} = ${status})`
 }
 
-function ganhoNoPeriodo(tipo: TipoContagem, inicio: SQLWrapper) {
+export function ganhoNoPeriodo(tipo: TipoContagem, inicio: SQLWrapper) {
   return sql`exists (select 1 ${baseOportunidades(tipo)} and ${crmOportunidades.status} in ('FECHADO_GANHO', 'GANHO') and ${crmOportunidades.updatedAt} >= ${inicio})`
 }
 
-function pedidoNoPeriodo(tipo: TipoContagem, inicio: SQLWrapper) {
+export function pedidoNoPeriodo(tipo: TipoContagem, inicio: SQLWrapper) {
   return sql`exists (select 1 ${basePedidos(tipo)} and ${dataPedido} >= ${inicio})`
 }
 

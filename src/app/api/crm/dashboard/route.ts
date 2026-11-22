@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { carregarItensTemperatura } from "@/lib/crm/temperatura-server"
 import { requireAuth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { crmVisitantes } from "@/lib/db/schema/crm-visitantes"
@@ -460,7 +461,18 @@ export async function GET() {
       .sort((a, b) => new Date(b.dataEvento ?? 0).getTime() - new Date(a.dataEvento ?? 0).getTime())
       .slice(0, 10)
 
+    let temperatura: Awaited<ReturnType<typeof carregarItensTemperatura>> = {
+      itens: [],
+      contagem: { QUENTE: 0, MORNO: 0, FRIO: 0 },
+    }
+    try {
+      temperatura = await carregarItensTemperatura()
+    } catch (error) {
+      console.error("[GET /api/crm/dashboard] temperatura", error)
+    }
+
     return NextResponse.json({
+      temperatura,
       visitantes: { total: getCount(leadsTotal), esteMes: getCount(leadsMes) },
       leads: { total: getCount(empresasTotal) },
       clientes: { total: getCount(clientesTotal) },

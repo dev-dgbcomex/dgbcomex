@@ -24,6 +24,7 @@ import {
 
 export type SemaforoConversaoItem = ItemComFaixa & {
   id: number | string
+  tipo?: "lead" | "cliente"
   nome: string
   subtitulo?: string | null
   documento?: string | null
@@ -60,7 +61,7 @@ function StatusOportunidade({
 
 type SemaforoConversaoProps = {
   contagem: Record<FaixaConversao, number>
-  entidade: "leads" | "clientes"
+  entidade: "leads" | "clientes" | "leads-clientes"
   itens: SemaforoConversaoItem[]
   listagem: string
 }
@@ -72,8 +73,9 @@ export function SemaforoConversao({
   listagem,
 }: SemaforoConversaoProps) {
   const [faixaAberta, setFaixaAberta] = useState<FaixaConversao | null>(null)
-  const rotuloEntidade = entidade === "leads" ? "Leads" : "Clientes"
-  const entidadeNoSingular = entidade === "leads" ? "lead" : "cliente"
+  const combinado = entidade === "leads-clientes"
+  const rotuloEntidade = combinado ? "Leads e clientes" : entidade === "leads" ? "Leads" : "Clientes"
+  const entidadeNoSingular = combinado ? "lead ou cliente" : entidade === "leads" ? "lead" : "cliente"
   const faixaSelecionada = FAIXAS_CONVERSAO.find(({ faixa }) => faixa === faixaAberta)
   const itensSelecionados = faixaAberta ? itensDaFaixa(itens, faixaAberta) : []
 
@@ -192,6 +194,11 @@ export function SemaforoConversao({
                       <th scope="col" className="px-2 py-2 font-medium">
                         Nome
                       </th>
+                      {combinado && (
+                        <th scope="col" className="px-2 py-2 font-medium">
+                          Tipo
+                        </th>
+                      )}
                       <th scope="col" className="px-2 py-2 text-right font-medium">
                         Oportunidades
                       </th>
@@ -231,6 +238,13 @@ export function SemaforoConversao({
                               {item.documento || "—"}
                             </p>
                           </td>
+                          {combinado && (
+                            <td className="px-2 py-2 text-slate-600 dark:text-slate-300">
+                              <span className="inline-flex rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium dark:bg-slate-800">
+                                {item.tipo === "cliente" ? "Cliente" : "Lead"}
+                              </span>
+                            </td>
+                          )}
                           <td
                             className="px-2 py-2 text-right text-slate-600 dark:text-slate-300"
                             title={`${item.totalOportunidades ?? 0} oportunidade(s)`}
