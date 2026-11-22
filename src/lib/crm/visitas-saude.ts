@@ -287,6 +287,8 @@ export type ResumoConversao = {
   percentual: number
   rotulo: string
   tom: "vermelho" | "amarelo" | "azul" | "verde"
+  total?: number
+  rotuloTotal?: string
 }
 
 export function calcularConversao(

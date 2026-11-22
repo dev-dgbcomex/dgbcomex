@@ -4,7 +4,7 @@ import Link from "next/link"
 import { Check, Circle, ExternalLink } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { InfoButton } from "@/components/ui/info-button"
-import { obterEngajamento, type ClienteSaude } from "@/lib/crm/visitas-saude"
+import { obterEngajamento as obterEngajamentoPadrao, type ClienteSaude } from "@/lib/crm/visitas-saude"
 import { saudeProspeccaoInfo } from "@/lib/info-content/crm"
 import { EngajamentoBadge } from "./engajamento-badge"
 
@@ -15,9 +15,13 @@ function formatarPeso(peso: number): string {
 export function ItensEngajamentoModal({
   cliente,
   onClose,
+  obterEngajamento = obterEngajamentoPadrao,
+  conteudo = saudeProspeccaoInfo.itensEngajamento,
 }: {
   cliente: ClienteSaude | null
   onClose: () => void
+  obterEngajamento?: typeof obterEngajamentoPadrao
+  conteudo?: typeof saudeProspeccaoInfo.itensEngajamento
 }) {
   const engajamento = cliente ? obterEngajamento(cliente) : null
 
@@ -36,7 +40,7 @@ export function ItensEngajamentoModal({
                 <DialogTitle className="text-lg font-semibold text-slate-900 dark:text-slate-50">
                   {cliente.nome} — itens de engajamento
                 </DialogTitle>
-                <InfoButton content={saudeProspeccaoInfo.itensEngajamento} />
+                <InfoButton content={conteudo} />
               </div>
               <div className="flex flex-wrap items-center gap-2 pt-2">
                 <EngajamentoBadge resumo={engajamento.resumo} nome={cliente.nome} />

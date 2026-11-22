@@ -172,6 +172,24 @@ describe("LeadsDashboardPage", () => {
     expect(findCall(fetchMock.calls, "/api/crm/acoes-prospeccao/dashboard/clientes")).toBeDefined()
   })
 
+  it("não mostra visitas derivadas quando só há ações reais", async () => {
+    const fetchMock = mockRotas([], [linhaAcoes])
+    vi.stubGlobal("fetch", fetchMock.fn)
+    renderPage(<LeadsDashboardPage />)
+
+    await screen.findByRole("columnheader", { name: "Visitas R/A/C" })
+    expect(
+      screen.getByRole("button", {
+        name: /Visitas R\/A\/C de Cliente Alpha: 0\/0\/0\. Ver lista/i,
+      })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", {
+        name: /Ações R\/A\/C de Cliente Alpha: 3\/1\/0\. Ver lista/i,
+      })
+    ).toBeInTheDocument()
+  })
+
   it("abre as listas R/A/C de visitas e ações", async () => {
     const fetchMock = mockRotas()
     vi.stubGlobal("fetch", fetchMock.fn)

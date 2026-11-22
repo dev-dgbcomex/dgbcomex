@@ -280,14 +280,15 @@ export const crmContent: Record<string, InfoContent> = {
   "/comercial/crm/leads/dashboard": {
     title: "Dashboard de Leads — saúde da prospecção",
     description:
-      "Painel de saúde da prospecção por cliente ou lead. Reúne visitas e ações de prospecção do ano corrente lado a lado, com a mesma métrica de realizadas, agendadas e canceladas.",
+      "Painel de saúde da prospecção por cliente ou lead. Reúne visitas reais e ações reais de prospecção do ano corrente lado a lado, com a mesma métrica de realizadas, agendadas e canceladas.",
     rules: [
       "O recorte padrão é o ano corrente; a listagem de leads continua em /comercial/crm/leads.",
       "Lead promovida a cliente é agrupada com o cliente. Quem não virou cliente aparece pelo nome da lead.",
-      "Visitas e ações usam a mesma métrica: realizadas, agendadas e canceladas no ano corrente.",
+      "Cada coluna mostra somente dados reais da sua origem: ações não são espelhadas como visitas e visitas não são espelhadas como ações.",
+      "Visitas e ações usam a mesma métrica de realizadas/agendadas/canceladas e entram juntas no esforço e no engajamento com os mesmos pesos; se não houver visitas reais, a coluna de visitas fica zerada e a saúde é calculada pelas ações.",
       "Esforço e engajamento aparecem apenas como percentual de 0 a 100%; não há mais campo de diferença.",
       "Os cards usam os dois percentuais: esforço até 35% é BEC; esforço e engajamento acima de 35% com diferença menor que 20 pontos é EQL, exceto quando o engajamento está pelo menos 10 pontos à frente (Engajados); esforço pelo menos 20 pontos à frente é AEC.",
-      "Conversão = (pedidos de venda + faturamentos) ÷ total de visitas da linha, arredondado e limitado a 100%.",
+      "Conversão = (pedidos de venda + faturamentos) ÷ total de registros de prospecção (visitas reais + ações reais) da linha, arredondado e limitado a 100%.",
       "No badge de itens de engajamento, proposta e oportunidade valem 36% cada; ata/relato, check-in/check-out e contato dividem os 28% restantes (9,33% cada).",
       "Clique em Visitas R/A/C para listar as visitas e em Ações R/A/C para listar as ações; cada item da lista abre o cadastro correspondente.",
       "Clique no nome do cliente/lead para ver visitas, ações, contatos, propostas, oportunidades e valores do período.",
@@ -300,11 +301,20 @@ export const crmContent: Record<string, InfoContent> = {
       { name: "Segmento/Porte", desc: "Dados do cliente ou da lead, quando preenchidos." },
       {
         name: "Visitas R/A/C",
-        desc: "Visitas realizadas / agendadas / canceladas no ano corrente.",
+        desc: "Visitas reais realizadas / agendadas / canceladas no ano corrente; fica zerada quando não há visitas.",
       },
-      { name: "Ações R/A/C", desc: "Ações realizadas / agendadas / canceladas no ano corrente." },
-      { name: "Última visita", desc: "Data da visita mais recente já realizada no recorte." },
-      { name: "Próxima visita", desc: "Data da próxima visita agendada." },
+      {
+        name: "Ações R/A/C",
+        desc: "Ações reais realizadas / agendadas / canceladas no ano corrente.",
+      },
+      {
+        name: "Última visita",
+        desc: "Data da visita real mais recente já realizada no recorte; mostra — quando não há visitas.",
+      },
+      {
+        name: "Próxima visita",
+        desc: "Data da próxima visita real agendada; mostra — quando não há visitas.",
+      },
       {
         name: "Itens de engajamento",
         desc: "Quantidade de itens presentes e percentual ponderado.",
@@ -314,7 +324,10 @@ export const crmContent: Record<string, InfoContent> = {
         name: "Valor estimado / Prob.",
         desc: "Soma dos valores das oportunidades e média das probabilidades.",
       },
-      { name: "Conversão", desc: "Percentual de pedidos + faturamentos sobre o total de visitas." },
+      {
+        name: "Conversão",
+        desc: "Percentual de pedidos + faturamentos sobre o total de visitas reais + ações reais.",
+      },
       { name: "Esforço / Engajamento", desc: "Scores de 0 a 100%; clique para ver os critérios." },
     ],
     fields: [
@@ -330,8 +343,8 @@ export const crmContent: Record<string, InfoContent> = {
     ],
     examples: [
       {
-        title: "Visitas e ações alinhadas",
-        desc: "Cliente com 4 visitas e 4 ações realizadas, 1 agendada e 0 canceladas aparece com 4/1/0 nas duas colunas R/A/C.",
+        title: "Sem dados de visitas",
+        desc: "Cliente com 0 visitas reais e 4 ações reais (3 realizadas e 1 agendada) aparece com 0/0/0 em Visitas R/A/C e 3/1/0 em Ações R/A/C; esforço e engajamento usam as ações.",
       },
       {
         title: "AEC",
@@ -1756,51 +1769,92 @@ export const saudeProspeccaoLeadsInfo = {
   tabela: {
     title: "Tabela — saúde da prospecção por leads",
     description:
-      "Cada linha é um cliente ou lead com visitas e ações de prospecção no ano corrente. As duas métricas aparecem lado a lado para comparar esforço comercial, engajamento e conversão.",
+      "Cada linha é um cliente ou lead com visitas reais e ações reais de prospecção no ano corrente. As duas métricas aparecem lado a lado para comparar esforço comercial, engajamento e conversão.",
     rules: [
-      "Visitas e ações usam a mesma métrica: realizadas, agendadas e canceladas no ano corrente.",
+      "Cada coluna mostra somente dados reais da sua origem: ações não são espelhadas como visitas e visitas não são espelhadas como ações.",
+      "Visitas e ações usam a mesma métrica: realizadas, agendadas e canceladas no ano corrente, e entram juntas nos scores com os mesmos pesos.",
+      "Quando não há visitas reais, Visitas R/A/C fica 0/0/0 e Última/Próxima visita fica —; a saúde é calculada pelas ações reais.",
       "Visitas R/A/C abre a lista de visitas; Ações R/A/C abre a lista de ações; cada item da lista leva ao cadastro correspondente.",
       "Fórmula do esforço: visita/ação realizada (+12,5) + relato/ata (+12,5) + check-in (+12,5) + contato (+12,5) + proposta (+25) + oportunidade (+25), limitado a 100%.",
       "Fórmula do engajamento: visita/ação realizada (+20) + visita/ação agendada (+10) + proposta negociada (+20) + oportunidade negociada (+20) + pedido de venda (+15) + faturamento (+15), limitado a 100%.",
-      "Fórmula da conversão: (pedidos de venda + faturamentos) ÷ total de visitas da linha, arredondado e limitado a 100%.",
+      "Fórmula da conversão: (pedidos de venda + faturamentos) ÷ total de visitas reais + ações reais da linha, arredondado e limitado a 100%.",
       "No badge de itens de engajamento, proposta e oportunidade valem 36% cada e os outros três itens dividem 28% (9,33% cada); a coluna mostra quantos itens estão presentes e o percentual ponderado.",
       "Clique no nome para ver todas as visitas, ações, vínculos e valores do cliente/lead.",
     ],
     columns: [
       {
         name: "Visitas R/A/C",
-        desc: "Realizadas / agendadas / canceladas. Clique para listar as visitas.",
+        desc: "Visitas reais realizadas / agendadas / canceladas; fica zerada quando não há visitas.",
       },
       {
         name: "Ações R/A/C",
-        desc: "Realizadas / agendadas / canceladas. Clique para listar as ações.",
+        desc: "Ações reais realizadas / agendadas / canceladas. Clique para listar as ações.",
       },
       {
         name: "Última / Próxima visita",
-        desc: "Última visita já realizada e próxima visita agendada.",
+        desc: "Datas das visitas reais; mostra — quando não há visitas cadastradas.",
       },
       {
         name: "Itens de engajamento",
-        desc: "Ata, check-in/out, contato, proposta e oportunidade: quantidade, percentual e detalhe.",
+        desc: "Ata, check-in/out, contato, proposta e oportunidade de visitas e ações: quantidade, percentual e detalhe.",
       },
       {
         name: "Conversão",
-        desc: "Percentual de pedidos + faturamentos sobre o total de visitas; clique para ver quantidades e valores.",
+        desc: "Percentual de pedidos + faturamentos sobre visitas reais + ações reais; clique para ver quantidades e valores.",
       },
       {
         name: "Esforço / Engajamento",
-        desc: "Scores de 0 a 100% calculados pelas fórmulas acima.",
+        desc: "Scores de 0 a 100% com visitas e ações na mesma ponderação; clique para ver os critérios.",
       },
     ],
     examples: [
       {
-        title: "Visitas e ações alinhadas",
-        desc: "Cliente com 4 visitas e 4 ações realizadas, 1 agendada e 0 canceladas aparece com 4/1/0 nas duas colunas R/A/C.",
+        title: "Sem dados de visitas",
+        desc: "Cliente com 0 visitas reais e 4 ações reais (3 realizadas e 1 agendada) aparece com 0/0/0 em Visitas R/A/C e 3/1/0 em Ações R/A/C; esforço e engajamento usam as ações.",
       },
       {
         title: "Conversão de 50%",
-        desc: "Cliente com 4 visitas, 1 pedido de venda e 1 faturamento: (1 + 1) ÷ 4 = 50%. O badge fica verde e, ao clicar, mostra as quantidades e os valores.",
+        desc: "Cliente com 4 registros de prospecção (visitas + ações), 1 pedido de venda e 1 faturamento: (1 + 1) ÷ 4 = 50%. O badge fica verde e, ao clicar, mostra as quantidades e os valores.",
       },
+    ],
+  },
+  itensEngajamento: {
+    ...saudeProspeccaoInfo.itensEngajamento,
+    rules: [
+      "Proposta e oportunidade valem 36% cada.",
+      "Ata/relato, check-in/check-out e contato dividem os 28% restantes: 9,33% cada.",
+      "Itens de visitas e de ações de prospecção entram na mesma conta; registros repetidos são contados uma única vez.",
+      "Clique em um registro vinculado para abrir a visita, a ação, a proposta ou a oportunidade.",
+    ],
+  },
+  esforco: {
+    ...saudeProspeccaoInfo.esforco,
+    description:
+      "O score de esforço mede o trabalho comercial feito com o cliente ou lead em visitas reais e ações de prospecção no período.",
+    rules: [
+      "Fórmula: visita/ação realizada (+12,5) + relato/ata (+12,5) + check-in (+12,5) + contato (+12,5) + proposta (+25) + oportunidade (+25).",
+      "Visitas e ações usam os mesmos pesos e são somadas antes de aplicar a pontuação binária de cada critério.",
+      "O total é limitado a 100%.",
+      "Clique na porcentagem na tabela para ver o detalhe de cada critério.",
+    ],
+  },
+  engajamento: {
+    ...saudeProspeccaoInfo.engajamento,
+    rules: [
+      "Fórmula: visita/ação realizada (+20) + visita/ação agendada (+10) + proposta negociada (+20) + oportunidade negociada (+20) + pedido de venda (+15) + faturamento (+15).",
+      "Visitas e ações usam os mesmos pesos e são somadas antes de aplicar a pontuação binária de cada critério.",
+      "O total é limitado a 100%.",
+      "Clique na porcentagem na tabela para ver o detalhe de cada critério.",
+    ],
+  },
+  registros: {
+    ...saudeProspeccaoInfo.registros,
+    description:
+      "Quantidade de clientes e leads distintos que aparecem na saúde da prospecção depois dos filtros da tabela — não é a quantidade de visitas.",
+    rules: [
+      "Cada cliente ou lead com pelo menos uma visita real ou ação real no ano corrente conta como um registro, mesmo com vários registros.",
+      "Lead promovida a cliente é contada uma única vez, junto com o cliente.",
+      "Registro avulso aparece como lead.",
     ],
   },
 } satisfies Record<string, InfoContent>

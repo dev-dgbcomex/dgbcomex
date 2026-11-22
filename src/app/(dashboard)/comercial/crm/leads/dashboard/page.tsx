@@ -9,10 +9,15 @@ import { InfoButton } from "@/components/ui/info-button"
 import { ClienteSaudeModal } from "@/components/crm/visitas/dashboard/cliente-saude-modal"
 import { ItensEngajamentoModal } from "@/components/crm/visitas/dashboard/itens-engajamento-modal"
 import { ClienteSaudeLeadsTable } from "@/components/crm/leads/dashboard/cliente-saude-table"
-import { mesclarSaudeProspeccao, type ClienteSaudeLeads } from "@/lib/crm/leads-saude"
+import {
+  mesclarSaudeProspeccao,
+  obterEngajamentoLeads,
+  type ClienteSaudeLeads,
+} from "@/lib/crm/leads-saude"
 import type { ClienteSaude as ClienteSaudeAcoes } from "@/lib/crm/acoes-prospeccao-saude"
 import type { ClienteSaude as ClienteSaudeVisitas } from "@/lib/crm/visitas-saude"
 import { getInfoContent } from "@/lib/info-content"
+import { saudeProspeccaoLeadsInfo } from "@/lib/info-content/crm"
 
 export default function LeadsDashboardPage() {
   const pathname = usePathname()
@@ -113,6 +118,8 @@ export default function LeadsDashboardPage() {
       <ItensEngajamentoModal
         cliente={itensSelecionados}
         onClose={() => setItensSelecionados(null)}
+        obterEngajamento={obterEngajamentoLeads}
+        conteudo={saudeProspeccaoLeadsInfo.itensEngajamento}
       />
     </div>
   )

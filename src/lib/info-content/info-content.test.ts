@@ -419,6 +419,8 @@ describe("getInfoContent", () => {
     expect(texto).toMatch(/Visitas R\/A\/C/i)
     expect(texto).toMatch(/Ações R\/A\/C/i)
     expect(texto).toMatch(/mesma métrica/i)
+    expect(texto).toMatch(/somente dados reais da sua origem/i)
+    expect(texto).toMatch(/visitas reais/i)
     expect(texto).toMatch(/AEC/i)
     expect(texto).toMatch(/Engajados/i)
     expect(texto).toMatch(/EQL/i)
@@ -836,11 +838,20 @@ describe("saudeProspeccaoLeadsInfo", () => {
     expect(saudeProspeccaoLeadsInfo.tabela.columns?.map((coluna) => coluna.name).join(" ")).toMatch(
       /Visitas R\/A\/C.*Ações R\/A\/C/
     )
+    expect(saudeProspeccaoLeadsInfo.tabela.rules?.join(" ")).toMatch(
+      /não são espelhadas como visitas/i
+    )
+    expect(saudeProspeccaoLeadsInfo.tabela.rules?.join(" ")).toMatch(
+      /visitas reais \+ ações reais/i
+    )
     expect(
       saudeProspeccaoLeadsInfo.tabela.examples?.map((exemplo) => exemplo.desc).join(" ")
-    ).toMatch(/4\/1\/0 nas duas colunas R\/A\/C/)
+    ).toMatch(/0\/0\/0 em Visitas R\/A\/C e 3\/1\/0 em Ações R\/A\/C/)
     expect(saudeProspeccaoLeadsInfo.aec.rules?.join(" ")).toMatch(/Esforço > 35/i)
     expect(saudeProspeccaoLeadsInfo.itensEngajamento.rules?.join(" ")).toMatch(/9,33% cada/i)
+    expect(saudeProspeccaoLeadsInfo.itensEngajamento.rules?.join(" ")).toMatch(
+      /Itens de visitas e de ações de prospecção/i
+    )
     expect(saudeProspeccaoLeadsInfo.registros.description).toMatch(/não é a quantidade de visitas/i)
   })
 })

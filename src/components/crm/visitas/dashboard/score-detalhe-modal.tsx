@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { InfoButton } from "@/components/ui/info-button"
 import {
   formatarPontos,
-  obterDetalheScore,
+  obterDetalheScore as obterDetalheScorePadrao,
   type ClienteSaude,
   type TipoScore,
 } from "@/lib/crm/visitas-saude"
@@ -19,9 +19,19 @@ export type SelecaoScore = {
 export function ScoreDetalheModal({
   selecao,
   onClose,
+  obterDetalheScore = obterDetalheScorePadrao,
+  conteudos = {
+    esforco: saudeProspeccaoInfo.esforco,
+    engajamento: saudeProspeccaoInfo.engajamento,
+  },
 }: {
   selecao: SelecaoScore | null
   onClose: () => void
+  obterDetalheScore?: typeof obterDetalheScorePadrao
+  conteudos?: {
+    esforco: typeof saudeProspeccaoInfo.esforco
+    engajamento: typeof saudeProspeccaoInfo.engajamento
+  }
 }) {
   const detalhe = selecao ? obterDetalheScore(selecao.linha, selecao.tipo) : null
 
@@ -42,9 +52,7 @@ export function ScoreDetalheModal({
                 </DialogTitle>
                 <InfoButton
                   content={
-                    selecao.tipo === "Esforço"
-                      ? saudeProspeccaoInfo.esforco
-                      : saudeProspeccaoInfo.engajamento
+                    selecao.tipo === "Esforço" ? conteudos.esforco : conteudos.engajamento
                   }
                 />
               </div>

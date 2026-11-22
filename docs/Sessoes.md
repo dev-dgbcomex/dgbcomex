@@ -61,6 +61,24 @@
 
 ---
 
+### Sessão 36 — Dashboard de leads sem visitas derivadas e saúde unificada
+
+- **Data:** 2026-11-22
+- **Commit:** `fix(crm): remove visitas derivadas no dashboard de leads`
+- **Tarefa:** corrigir `/comercial/crm/leads/dashboard`, onde `Visitas R/A/C`, `Última visita` e `Próxima visita` continuavam preenchidos mesmo sem dados reais em visitas.
+- **Decisão aprovada:** cada coluna mostra apenas dados reais da sua origem — ações não são espelhadas como visitas e visitas não são espelhadas como ações. Visitas reais e ações reais entram juntas no esforço, no engajamento, nos itens de engajamento e na conversão com a mesma ponderação; quando não há visitas, a coluna fica `0/0/0` e `—` nas datas.
+- **Resultado:**
+  - `src/lib/crm/leads-saude.ts` reescrito: removidos `acoesDerivadasDasVisitas()` e `visitasDerivadasDasAcoes()`; novo `mesclarSaudeProspeccao()` preserva visitas/ações reais e recalcula scores com `calcularScoresProspeccao()`.
+  - Novos helpers unificados: `obterEngajamentoLeads()`, `calcularConversaoLeads()` (denominador `visitas reais + ações reais`), `obterDetalheScoreLeads()`, `classificarAlertaLeads()` e `filtrarClientesSaudeLeads()` (filtra status/tipo em visitas **ou** ações).
+  - `ResumoConversao` ganhou `total` e `rotuloTotal` opcionais; modais compartilhados (`ConversaoModal`, `ScoreDetalheModal`, `ItensEngajamentoModal`) aceitam cálculos e textos de informação customizados sem quebrar os dashboards de visitas e ações.
+  - Tabela do dashboard de leads e modais passaram a usar os helpers unificados; exportação e filtros também consideram ações reais.
+  - Modal “i” do dashboard e dos modais atualizado: visitas/ações sem espelhamento, mesma métrica, mesma ponderação e conversão sobre registros de prospecção.
+- **Arquivos Envolvidos:** `src/lib/crm/leads-saude.ts`, `src/lib/crm/leads-saude.test.ts`, `src/lib/crm/visitas-saude.ts`, `src/components/crm/leads/dashboard/cliente-saude-table.tsx`, `src/components/crm/visitas/dashboard/{conversao-modal,score-detalhe-modal,itens-engajamento-modal}.tsx`, `src/app/(dashboard)/comercial/crm/leads/dashboard/{page,page.test}.tsx`, `src/lib/info-content/crm.ts`, `src/lib/info-content/info-content.test.ts`, `docs/Sessoes.md`.
+- **Testes:** focados `7 arquivos / 114 testes passados`; suíte completa `npm run test` → **478 arquivos / 2787 testes passados**.
+- **Verificação:** `npm run lint` sem erros (apenas warnings pré-existentes); `tsc --noEmit --pretty false` limpo com `NODE_OPTIONS=--max-old-space-size=8192`; `npm run build` OK com `NODE_OPTIONS=--max-old-space-size=8192` (257/257 páginas estáticas). Nenhuma migration ou mudança de banco nesta sessão.
+
+---
+
 ### Sessão 33 — Modal do semáforo com métricas e cards de leads alinhados
 
 - **Data:** 2026-11-22

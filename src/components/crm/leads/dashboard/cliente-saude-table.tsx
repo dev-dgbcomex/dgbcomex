@@ -4,16 +4,15 @@ import { useMemo, useState, type CSSProperties } from "react"
 import { FileDown, FileSpreadsheet, FileText, Loader2, Search } from "lucide-react"
 import { exportCSV, exportMarkdown, exportPDFRelatorio } from "@/lib/export-utils"
 import { corPorTitulo, iconePorTitulo } from "@/lib/dracula"
+import { formatarPontos, labelStatusOportunidade, type FiltrosSaude } from "@/lib/crm/visitas-saude"
 import {
-  calcularConversao,
-  classificarAlerta,
-  filtrarClientesSaude,
-  formatarPontos,
-  labelStatusOportunidade,
-  obterEngajamento,
-  type FiltrosSaude,
-} from "@/lib/crm/visitas-saude"
-import type { ClienteSaudeLeads } from "@/lib/crm/leads-saude"
+  calcularConversaoLeads,
+  classificarAlertaLeads,
+  filtrarClientesSaudeLeads,
+  obterDetalheScoreLeads,
+  obterEngajamentoLeads,
+  type ClienteSaudeLeads,
+} from "@/lib/crm/leads-saude"
 import { InfoButton } from "@/components/ui/info-button"
 import { saudeProspeccaoLeadsInfo } from "@/lib/info-content/crm"
 import { AlertaListaModal } from "@/components/crm/visitas/dashboard/alerta-lista-modal"
@@ -127,22 +126,26 @@ export function ClienteSaudeLeadsTable({
     ]
   )
 
-  const filtradas = useMemo(() => filtrarClientesSaude(linhas, filtros), [linhas, filtros])
+  const filtradas = useMemo(() => filtrarClientesSaudeLeads(linhas, filtros), [linhas, filtros])
 
   const opcoes = useMemo(
     () => ({
       segmentos: opcoesUnicas(linhas.map((linha) => linha.segmento ?? "")),
       portes: opcoesUnicas(linhas.map((linha) => linha.porte ?? "")),
       responsaveis: opcoesUnicas(linhas.flatMap((linha) => linha.responsaveis)),
-      statusVisitas: opcoesUnicas(linhas.flatMap((linha) => linha.statusVisitas)),
+      statusVisitas: opcoesUnicas(
+        linhas.flatMap((linha) => [...linha.statusVisitas, ...linha.statusAcoes])
+      ),
       statusOportunidades: opcoesUnicas(linhas.flatMap((linha) => linha.statusOportunidades)),
-      tiposVisita: opcoesUnicas(linhas.flatMap((linha) => linha.tiposVisita)),
+      tiposVisita: opcoesUnicas(
+        linhas.flatMap((linha) => [...linha.tiposVisita, ...linha.tiposAcao])
+      ),
     }),
     [linhas]
   )
 
   const dadosExportacao = filtradas.map((linha) => {
-    const { resumo } = obterEngajamento(linha)
+    const { resumo } = obterEngajamentoLeads(linha)
     return [
       linha.nome,
       linha.documento,
@@ -155,16 +158,16 @@ export function ClienteSaudeLeadsTable({
       labelStatusOportunidade(linha.statusOportunidadeDominante),
       formatarMoeda(linha.valorEstimadoTotal),
       `${linha.probabilidadeMedia}%`,
-      `${calcularConversao(linha).percentual}% (${linha.pedidosVenda} pedidos / ${linha.faturamentos} faturamentos)`,
+      `${calcularConversaoLeads(linha).percentual}% (${linha.pedidosVenda} pedidos / ${linha.faturamentos} faturamentos)`,
       `${formatarPontos(linha.scoreEsforco)}%`,
       `${formatarPontos(linha.scoreEngajamento)}%`,
     ]
   })
 
-  const aec = filtradas.filter((linha) => classificarAlerta(linha).rotulo === "AEC")
-  const engajados = filtradas.filter((linha) => classificarAlerta(linha).rotulo === "Engajados")
-  const eql = filtradas.filter((linha) => classificarAlerta(linha).rotulo === "EQL")
-  const bec = filtradas.filter((linha) => classificarAlerta(linha).rotulo === "BEC")
+  const aec = filtradas.filter((linha) => classificarAlertaLeads(linha).rotulo === "AEC")
+  const engajados = filtradas.filter((linha) => classificarAlertaLeads(linha).rotulo === "Engajados")
+  const eql = filtradas.filter((linha) => classificarAlertaLeads(linha).rotulo === "EQL")
+  const bec = filtradas.filter((linha) => classificarAlertaLeads(linha).rotulo === "BEC")
 
   const estatisticas = {
     Registros: filtradas.length,
@@ -530,8 +533,8 @@ export function ClienteSaudeLeadsTable({
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {filtradas.map((linha) => {
-                const { resumo } = obterEngajamento(linha)
-                const conversao = calcularConversao(linha)
+                const { resumo } = obterEngajamentoLeads(linha)
+                const conversao = calcularConversaoLeads(linha)
                 return (
                   <tr
                     key={`${linha.tipo}-${linha.id}`}
@@ -637,6 +640,7 @@ export function ClienteSaudeLeadsTable({
       <ConversaoModal
         cliente={conversaoSelecionada}
         onClose={() => setConversaoSelecionada(null)}
+        calcularConversao={calcularConversaoLeads}
       />
       <VisitasRacModal
         cliente={visitasSelecionadas}
@@ -649,6 +653,11 @@ export function ClienteSaudeLeadsTable({
       <ScoreDetalheModal
         selecao={selecaoScore}
         onClose={() => setSelecaoScore(null)}
+        obterDetalheScore={obterDetalheScoreLeads}
+        conteudos={{
+          esforco: saudeProspeccaoLeadsInfo.esforco,
+          engajamento: saudeProspeccaoLeadsInfo.engajamento,
+        }}
       />
     </section>
   )
