@@ -5,12 +5,12 @@ import { requireAuth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { registrarLog } from "@/lib/notificar"
 import { createQueryBuilder, resetDb } from "@/test/route-db-mock"
-import { DELETE } from "./route"
+import { DELETE, PUT } from "./route"
 
 vi.mock("@/lib/auth", () => ({ requireAuth: vi.fn() }))
 vi.mock("@/lib/notificar", () => ({ registrarLog: vi.fn() }))
 vi.mock("@/lib/db", () => ({
-  db: { transaction: vi.fn(), select: vi.fn() },
+  db: { transaction: vi.fn(), select: vi.fn(), update: vi.fn() },
 }))
 
 const sessionAdmin = { session: { user: { id: "1", role: "ADMIN", name: "Tiago" } }, userId: 1 }
@@ -19,6 +19,17 @@ function del(id: string) {
   return DELETE(new NextRequest(`http://localhost/api/clientes/${id}`), {
     params: Promise.resolve({ id }),
   })
+}
+
+function put(body: Record<string, unknown>) {
+  return PUT(
+    new NextRequest("http://localhost/api/clientes/5", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }),
+    { params: Promise.resolve({ id: "5" }) }
+  )
 }
 
 function txMock() {
@@ -93,5 +104,27 @@ describe("DELETE /api/clientes/[id]", () => {
     })
     const res = await del("5")
     expect(res.status).toBe(500)
+  })
+})
+
+describe("PUT /api/clientes/[id]", () => {
+  beforeEach(() => {
+    vi.mocked(requireAuth).mockReset()
+    vi.mocked(registrarLog).mockReset()
+    resetDb(db)
+    vi.mocked(requireAuth).mockResolvedValue(sessionAdmin as any)
+    vi.mocked(registrarLog).mockResolvedValue(undefined as any)
+  })
+
+  it("salva o status informado na edição", async () => {
+    vi.mocked(db.select).mockReturnValue(createQueryBuilder([{ id: 5 }]) as never)
+    const updateBuilder = createQueryBuilder(undefined)
+    updateBuilder.returning = vi.fn(() => Promise.resolve([{ id: 5, nome: "Tecidos Silva" }]))
+    vi.mocked(db.update).mockReturnValue(updateBuilder as never)
+
+    const res = await put({ nome: "Tecidos Silva", cnpj: "47646133000101", status: "INATIVO" })
+
+    expect(res.status).toBe(200)
+    expect(updateBuilder.set).toHaveBeenCalledWith(expect.objectContaining({ status: "INATIVO" }))
   })
 })

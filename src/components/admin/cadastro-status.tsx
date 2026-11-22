@@ -29,6 +29,8 @@ const TIPO_CORES: Record<string, string> = {
   PRODUTO_CRU: "text-purple-600 bg-purple-50 dark:bg-purple-950/50",
   AMOSTRA: "text-amber-600 bg-amber-50 dark:bg-amber-950/50",
   REQUISICAO_CORTE: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/50",
+  LEAD: "text-sky-600 bg-sky-50 dark:bg-sky-950/50",
+  CLIENTE: "text-teal-600 bg-teal-50 dark:bg-teal-950/50",
 }
 
 const TIPO_LABELS: Record<string, string> = {
@@ -38,6 +40,8 @@ const TIPO_LABELS: Record<string, string> = {
   PRODUTO_CRU: "Produto",
   AMOSTRA: "Amostra",
   REQUISICAO_CORTE: "Req. Corte",
+  LEAD: "Lead",
+  CLIENTE: "Cliente",
 }
 
 const TIPOS_COM_KANBAN = ["OPORTUNIDADE", "PROPOSTA"]
@@ -215,8 +219,10 @@ export function CadastroStatus({
               />
             </div>
             <div className="space-y-2">
-              <Label>Tipo</Label>
+              <Label htmlFor="tipo-status">Tipo</Label>
               <select
+                id="tipo-status"
+                aria-label="Tipo do status"
                 value={form.tipo}
                 onChange={(e) => setForm({ ...form, tipo: e.target.value })}
                 className="w-full rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-3 py-2 text-sm"
@@ -293,6 +299,7 @@ export function CadastroStatus({
         <div className="flex items-center gap-3">
           <Label className="text-sm whitespace-nowrap">Filtrar por tipo:</Label>
           <select
+            aria-label="Filtrar por tipo"
             value={filtroTipo}
             onChange={(e) => setFiltroTipo(e.target.value)}
             className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-3 py-2 text-sm max-w-xs"

@@ -4,68 +4,70 @@ import type { FaixaConversao } from "../crm/faixa-conversao"
 
 export const semaforoConversaoInfo = {
   QUENTE: {
-    title: "Quentes — oportunidade em negociação",
+    title: "Quentes — negociação ou movimento do mês",
     description:
-      "Leads e clientes com pelo menos uma oportunidade vinculada no status Negociação. É a faixa de maior prioridade do semáforo.",
+      "Leads e clientes com oportunidade em Negociação, oportunidade ganha atualizada no mês atual ou pedido emitido no mês atual.",
     rules: [
       "Clique no card para abrir a lista de registros da faixa; o 'i' explica a regra sem abrir a lista.",
-      "Quentes tem prioridade sobre Mornos e Frios: se existirem oportunidades em Negociação e Proposta ao mesmo tempo, o registro entra em Quentes.",
-      "A classificação usa apenas o status das oportunidades, nunca o status cadastral da lead ou do cliente.",
-      "Em clientes, entram também as oportunidades das pessoas promovidas e vinculadas ao cliente.",
+      "Quentes tem prioridade sobre Mornos e Frios: Negociação, ganho no mês e pedido no mês entram aqui mesmo quando existe Proposta.",
+      "O ganho usa a data da última atualização da oportunidade FECHADO_GANHO; o pedido usa a data de emissão, com fallback para a criação.",
+      "O status cadastral da lead ou do cliente nunca classifica a faixa; a classificação usa o status das oportunidades e a data dos pedidos.",
+      "Em clientes, entram também oportunidades e pedidos das pessoas promovidas e vinculadas ao cliente.",
       "A lista e as quantidades respeitam os filtros ativos da tela e os registros carregados.",
     ],
     examples: [
       {
         title: "Exemplo em leads",
-        desc: "Lead com status cadastral NOVO e uma oportunidade em NEGOCIACAO aparece em Quentes.",
+        desc: "Lead com oportunidade em NEGOCIACAO, ou com pedido emitido neste mês, aparece em Quentes.",
       },
       {
         title: "Exemplo em clientes",
-        desc: "Cliente com oportunidade direta em NEGOCIACAO, ou com uma lead promovida nesse status, aparece em Quentes.",
+        desc: "Cliente com oportunidade FECHADO_GANHO atualizada neste mês, ou com pedido de lead promovida neste mês, aparece em Quentes.",
       },
     ],
   },
   MORNO: {
-    title: "Mornos — oportunidade em proposta",
+    title: "Mornos — proposta ou movimento do trimestre",
     description:
-      "Leads e clientes sem oportunidade em Negociação, mas com pelo menos uma oportunidade em Proposta.",
+      "Leads e clientes sem QUENTE, mas com oportunidade em Proposta, oportunidade ganha atualizada no trimestre ou pedido emitido no trimestre.",
     rules: [
       "Clique no card para abrir a lista de registros da faixa; o 'i' explica a regra sem abrir a lista.",
-      "Morno tem prioridade sobre Frio, mas perde para Quente quando existe negociação ativa.",
-      "A classificação usa apenas o status das oportunidades, nunca o status cadastral da lead ou do cliente.",
-      "Em clientes, entram também as oportunidades das pessoas promovidas e vinculadas ao cliente.",
+      "Morno tem prioridade sobre Frio, mas perde para Quente quando há Negociação, ganho no mês ou pedido no mês.",
+      "Ganho e pedido no trimestre, mas fora do mês, entram em Mornos; a data do ganho é a última atualização da oportunidade.",
+      "O status cadastral da lead ou do cliente nunca classifica a faixa; a classificação usa o status das oportunidades e a data dos pedidos.",
+      "Em clientes, entram também oportunidades e pedidos das pessoas promovidas e vinculadas ao cliente.",
       "A lista e as quantidades respeitam os filtros ativos da tela e os registros carregados.",
     ],
     examples: [
       {
         title: "Exemplo em leads",
-        desc: "Lead com oportunidade em PROPOSTA e nenhuma em NEGOCIACAO aparece em Mornos.",
+        desc: "Lead com oportunidade em PROPOSTA, ou com pedido emitido neste trimestre mas no mês anterior, aparece em Mornos.",
       },
       {
         title: "Exemplo em clientes",
-        desc: "Cliente sem negociação ativa, mas com oportunidade de lead promovida em PROPOSTA, aparece em Mornos.",
+        desc: "Cliente com oportunidade de lead promovida em PROPOSTA, ou com ganho atualizado neste trimestre, aparece em Mornos.",
       },
     ],
   },
   FRIO: {
-    title: "Frios — sem negociação nem proposta",
+    title: "Frios — fora do trimestre",
     description:
-      "Leads e clientes sem oportunidade em Negociação nem em Proposta. Podem ter oportunidades fechadas ou nenhuma oportunidade.",
+      "Leads e clientes sem Negociação ou Proposta e sem ganho ou pedido no trimestre atual.",
     rules: [
       "Clique no card para abrir a lista de registros da faixa; o 'i' explica a regra sem abrir a lista.",
-      "Também entram aqui os registros sem oportunidade e os que só têm oportunidades fechadas, ganhas ou perdidas.",
-      "A classificação usa apenas o status das oportunidades; o status cadastral (Novo, Qualificado, Ativo ou Inativo) não classifica a faixa.",
-      "Em clientes, são consideradas as oportunidades diretas e as herdadas das pessoas promovidas.",
+      "Também entram aqui oportunidades perdidas, sem movimento no trimestre e registros sem oportunidade ou pedido.",
+      "A classificação usa o status das oportunidades e a data dos pedidos; o status cadastral (Novo, Qualificado, Ativo ou Inativo) não classifica a faixa.",
+      "Em clientes, são consideradas as oportunidades e os pedidos diretos e os herdados das pessoas promovidas.",
       "A lista e as quantidades respeitam os filtros ativos da tela e os registros carregados.",
     ],
     examples: [
       {
         title: "Exemplo em leads",
-        desc: "Lead com status cadastral QUALIFICADO e sem oportunidade aparece em Frios.",
+        desc: "Lead com status cadastral QUALIFICADO e sem oportunidade ou pedido neste trimestre aparece em Frios.",
       },
       {
         title: "Exemplo em clientes",
-        desc: "Cliente com uma oportunidade FECHADO_GANHO e nenhuma em Negociação ou Proposta aparece em Frios.",
+        desc: "Cliente com oportunidade FECHADO_GANHO atualizada no trimestre anterior e nenhum pedido recente aparece em Frios.",
       },
     ],
   },
@@ -229,9 +231,9 @@ export const crmContent: Record<string, InfoContent> = {
       "Os cards mostram as contagens de Oportunidades, Pedidos, Visitas e Ações no lugar do responsável do cadastro, que continua visível na Tabela e no detalhe da lead. Clique em qualquer contagem para abrir um modal com os registros vinculados a essa lead.",
       "A listagem esconde por padrão as leads convertidas em cliente. Use o filtro 'Sem conversão / Convertidos / Todos' para alternar a visibilidade.",
       "Leads convertidas continuam acessíveis pelo detalhe (link direto) e pelo relatório de Conversões.",
-      "Os cards logo abaixo da busca formam o semáforo de conversão: Quentes (uma ou mais oportunidades em Negociação), Mornos (oportunidade em Proposta) e Frios (sem oportunidade em Negociação ou Proposta).",
+      "Os cards logo abaixo da busca formam o semáforo de conversão: Quentes (Negociação, ganho ou pedido no mês), Mornos (Proposta, ganho ou pedido no trimestre) e Frios (sem nenhum desses movimentos no trimestre).",
       "Clique em um card do semáforo para abrir a lista de leads daquela faixa; o 'i' no card explica a regra e mostra exemplos.",
-      "A classificação usa o status das oportunidades vinculadas à lead, nunca o status cadastral da lead. Cada lead entra em uma única faixa, com prioridade de Quente sobre Morno e de Morno sobre Frio.",
+      "A classificação usa o status das oportunidades e a data dos pedidos vinculados à lead, nunca o status cadastral da lead. Cada lead entra em uma única faixa, com prioridade de Quente sobre Morno e de Morno sobre Frio.",
       "As quantidades e a lista do modal respeitam a busca, os filtros de status/período e o filtro de conversão ativos na tela.",
       "Ao clicar no nome da lead, você abre o detalhe completo com timeline, WhatsApp e resumo IA.",
     ],

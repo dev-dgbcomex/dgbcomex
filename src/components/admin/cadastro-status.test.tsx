@@ -171,6 +171,37 @@ describe("CadastroStatus", () => {
     await waitFor(() => expect(toastMock.success).toHaveBeenCalledWith("Status criado"))
   })
 
+  it("permite cadastrar status para leads e clientes", async () => {
+    renderPage(<CadastroStatus />)
+
+    await screen.findByText("FECHADO_GANHO")
+    const filtro = screen.getByRole("combobox", { name: "Filtrar por tipo" })
+    expect(within(filtro).getByRole("option", { name: "Lead" })).toBeInTheDocument()
+    expect(within(filtro).getByRole("option", { name: "Cliente" })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole("button", { name: /Novo Status/ }))
+    fireEvent.change(screen.getByPlaceholderText("EX: PENDENTE"), {
+      target: { value: "EM_ANALISE" },
+    })
+    fireEvent.change(screen.getByPlaceholderText("Ex: Pendente"), {
+      target: { value: "Em análise" },
+    })
+    fireEvent.change(screen.getByRole("combobox", { name: "Tipo do status" }), {
+      target: { value: "CLIENTE" },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Criar" }))
+
+    await waitFor(() => {
+      const call = findCall(fetchMock.calls, "/api/admin/status", "POST")
+      expect(call).toBeDefined()
+      expect(call!.body).toMatchObject({
+        nome: "EM_ANALISE",
+        rotulo: "Em análise",
+        tipo: "CLIENTE",
+      })
+    })
+  })
+
   it("cadastra um gatilho para o status selecionado", async () => {
     renderPage(<CadastroStatus tipoInicial="OPORTUNIDADE" />)
 

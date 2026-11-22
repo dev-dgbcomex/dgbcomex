@@ -3,7 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { NextRequest, NextResponse } from "next/server"
 import { requireAuth } from "@/lib/auth"
 import { db } from "@/lib/db"
-import { createQueryBuilder, resetDb } from "@/test/route-db-mock"
+import { idsPessoasDoCliente } from "@/lib/crm/cliente-relacionamentos"
+import { createQueryBuilder, resetDb, sqlParaTexto } from "@/test/route-db-mock"
 import { GET, POST } from "./route"
 
 vi.mock("@/lib/auth", () => ({ requireAuth: vi.fn() }))
@@ -16,6 +17,7 @@ vi.mock("@/lib/notificar", () => ({
 vi.mock("@/lib/db", () => ({
   db: { select: vi.fn(), transaction: vi.fn() },
 }))
+vi.mock("@/lib/crm/cliente-relacionamentos", () => ({ idsPessoasDoCliente: vi.fn() }))
 
 const sessionAdmin = { session: { user: { id: "1", role: "ADMIN", name: "Tiago" } }, userId: 1 }
 
@@ -95,6 +97,20 @@ describe("GET /api/crm/pedidos-venda", () => {
     await get("http://localhost/api/crm/pedidos-venda?empresaId=7")
     const builder = (db.select as ReturnType<typeof vi.fn>).mock.results[0].value
     expect(builder.where).toHaveBeenCalled()
+  })
+
+  it("filtra pedidos do cliente e das pessoas promovidas", async () => {
+    vi.mocked(idsPessoasDoCliente).mockResolvedValue([2, 3])
+    const query = createQueryBuilder([])
+    db.select.mockReturnValueOnce(query)
+
+    const res = await get("http://localhost/api/crm/pedidos-venda?all=true&clienteId=5")
+
+    expect(res.status).toBe(200)
+    expect(idsPessoasDoCliente).toHaveBeenCalledWith(5)
+    const texto = sqlParaTexto(query.where.mock.calls[0][0])
+    expect(texto).toContain("cliente_id")
+    expect(texto).toContain("lead_id")
   })
 
   it("retorna array simples quando all=true (para dropdowns)", async () => {

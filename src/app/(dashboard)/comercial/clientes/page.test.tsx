@@ -21,8 +21,10 @@ const dados = [
     razaoSocial: "Tecidos Silva Ltda",
     email: "contato@tecidos.com",
     telefone: "(11) 4000-0000",
+    endereco: "Rua das Flores, 100",
     cidade: "São Paulo",
     uf: "SP",
+    status: "ATIVO",
     totalOportunidades: 3,
     totalPedidos: 5,
     totalVisitas: 2,
@@ -70,7 +72,7 @@ listSmokeSpec({
   searchPlaceholder: "Buscar por nome, CNPJ, razão social, contato, email, telefone ou cidade...",
   newLinkText: "Novo Cliente",
   newHref: "/comercial/clientes/novo",
-  editHref: (item) => `/comercial/clientes/${item.id}`,
+  editHref: (item) => `/comercial/clientes/${item.id}?edit=true`,
   editLinkText: "Editar",
   primaryField: "nome",
   data: dados,
@@ -92,14 +94,14 @@ describe("ClientesComercialPage - cards", () => {
 
     const semaforo = screen.getByRole("region", { name: "Semáforo de conversão" })
     expect(
-      within(semaforo).getByLabelText("Quentes: 1 clientes — Oportunidade em negociação")
+      within(semaforo).getByLabelText("Quentes: 1 clientes — Negociação ou ganho/pedido no mês")
     ).toBeInTheDocument()
     expect(
-      within(semaforo).getByLabelText("Mornos: 1 clientes — Oportunidade em proposta")
+      within(semaforo).getByLabelText("Mornos: 1 clientes — Proposta ou ganho/pedido no trimestre")
     ).toBeInTheDocument()
     expect(
       within(semaforo).getByLabelText(
-        "Frios: 1 clientes — Sem oportunidade em negociação ou proposta"
+        "Frios: 1 clientes — Sem negociação, proposta ou ganho/pedido no trimestre"
       )
     ).toBeInTheDocument()
 
@@ -117,6 +119,41 @@ describe("ClientesComercialPage - cards", () => {
     expect(within(card).queryByText("Amostras")).not.toBeInTheDocument()
   })
 
+  it("oferece Ver, Editar, Mapa e métricas clicáveis no card do cliente", async () => {
+    const fetchMock = createFetchMock(({ method, url }) => {
+      if (method === "GET" && url === "/api/clientes") return { json: dados }
+      if (method === "GET" && url === "/api/crm/pedidos-venda?all=true&clienteId=1") {
+        return { json: [{ id: 9, numero: "PV-100", status: "ABERTO", total: 250 }] }
+      }
+      return { status: 404, json: { error: "Rota não mockada" } }
+    })
+    vi.stubGlobal("fetch", fetchMock.fn)
+
+    renderPage(<ClientesPage />)
+    await screen.findByText("Tecidos Silva")
+
+    const card = screen.getByText("Tecidos Silva").closest<HTMLElement>("div.rounded-lg")!
+    expect(within(card).getByTitle("Ver detalhes")).toHaveAttribute(
+      "href",
+      "/comercial/clientes/1"
+    )
+    expect(within(card).getByTitle("Editar")).toHaveAttribute(
+      "href",
+      "/comercial/clientes/1?edit=true"
+    )
+    expect(
+      within(card).getByTitle("Abrir no Google Maps").getAttribute("href")
+    ).toContain("google.com/maps")
+
+    fireEvent.click(within(card).getByLabelText("Ver pedidos de Tecidos Silva"))
+
+    const dialog = await screen.findByRole("dialog", { name: "Pedidos do cliente" })
+    expect(await within(dialog).findByText("PV-100")).toBeInTheDocument()
+    expect(
+      findCall(fetchMock.calls, "/api/crm/pedidos-venda?all=true&clienteId=1", "GET")
+    ).toBeDefined()
+  })
+
   it("abre a lista de clientes da faixa clicada no semáforo", async () => {
     const fetchMock = createFetchMock(({ method, url }) => {
       if (method === "GET" && url === "/api/clientes") return { json: dados }
@@ -127,7 +164,7 @@ describe("ClientesComercialPage - cards", () => {
     renderPage(<ClientesPage />)
     await screen.findByText("Tecidos Silva")
 
-    fireEvent.click(screen.getByLabelText("Quentes: 1 clientes — Oportunidade em negociação"))
+    fireEvent.click(screen.getByLabelText("Quentes: 1 clientes — Negociação ou ganho/pedido no mês"))
 
     const dialog = screen.getByRole("dialog", { name: "Quentes — Clientes" })
     expect(within(dialog).getByText("Tecidos Silva")).toBeInTheDocument()

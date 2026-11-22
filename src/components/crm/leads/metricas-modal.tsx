@@ -11,7 +11,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 
-export type TipoMetricaLead = "oportunidades" | "pedidos" | "visitas" | "acoes"
+export type TipoMetrica = "oportunidades" | "pedidos" | "visitas" | "acoes"
+export type TipoMetricaLead = TipoMetrica
+
+type EntidadeMetrica = "lead" | "cliente"
 
 type ItemMetrica = {
   id: number
@@ -23,37 +26,32 @@ type ItemMetrica = {
   href: string
 }
 
-const RECURSOS: Record<TipoMetricaLead, string> = {
+const RECURSOS: Record<TipoMetrica, string> = {
   oportunidades: "oportunidades",
   pedidos: "pedidos-venda",
   visitas: "visitas",
   acoes: "acoes-prospeccao",
 }
 
-const CONFIGURACOES: Record<
-  TipoMetricaLead,
-  { titulo: string; descricao: string; temValor: boolean }
-> = {
-  oportunidades: {
-    titulo: "Oportunidades da lead",
-    descricao: "Oportunidades vinculadas a esta lead.",
-    temValor: true,
-  },
-  pedidos: {
-    titulo: "Pedidos da lead",
-    descricao: "Pedidos de venda vinculados às oportunidades desta lead.",
-    temValor: true,
-  },
-  visitas: {
-    titulo: "Visitas da lead",
-    descricao: "Visitas registradas para esta lead.",
-    temValor: false,
-  },
-  acoes: {
-    titulo: "Ações da lead",
-    descricao: "Ações de prospecção registradas para esta lead.",
-    temValor: false,
-  },
+const TITULOS: Record<TipoMetrica, string> = {
+  oportunidades: "Oportunidades",
+  pedidos: "Pedidos",
+  visitas: "Visitas",
+  acoes: "Ações",
+}
+
+const DESCRICOES: Record<TipoMetrica, string> = {
+  oportunidades: "Oportunidades vinculadas",
+  pedidos: "Pedidos de venda vinculados às oportunidades",
+  visitas: "Visitas registradas",
+  acoes: "Ações de prospecção registradas",
+}
+
+const TEM_VALOR: Record<TipoMetrica, boolean> = {
+  oportunidades: true,
+  pedidos: true,
+  visitas: false,
+  acoes: false,
 }
 
 function comoRegistro(valor: unknown): Record<string, unknown> {
@@ -82,7 +80,7 @@ function formatarMoeda(valor: number) {
   return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
 }
 
-function normalizarItem(tipo: TipoMetricaLead, leadId: number, valor: unknown): ItemMetrica {
+function normalizarItem(tipo: TipoMetrica, entidadeId: number, valor: unknown): ItemMetrica {
   const registro = comoRegistro(valor)
   const id = comoNumero(registro.id)
 
@@ -141,28 +139,36 @@ function normalizarItem(tipo: TipoMetricaLead, leadId: number, valor: unknown): 
   }
 }
 
-export function LeadMetricasModal({
+export function MetricasModal({
   tipo,
-  leadId,
-  leadNome,
+  entidade,
+  entidadeId,
+  entidadeNome,
   onClose,
 }: {
-  tipo: TipoMetricaLead
-  leadId: number
-  leadNome: string
+  tipo: TipoMetrica
+  entidade: EntidadeMetrica
+  entidadeId: number
+  entidadeNome: string
   onClose: () => void
 }) {
-  const configuracao = CONFIGURACOES[tipo]
-  const url = `/api/crm/${RECURSOS[tipo]}?all=true&empresaId=${leadId}`
+  const ehLead = entidade === "lead"
+  const parametro = ehLead ? "empresaId" : "clienteId"
+  const url = `/api/crm/${RECURSOS[tipo]}?all=true&${parametro}=${entidadeId}`
+  const titulo = `${TITULOS[tipo]} ${ehLead ? "da lead" : "do cliente"}`
+  const descricao = `${DESCRICOES[tipo]} ${ehLead ? "desta lead" : "deste cliente"}.`
+  const hrefDetalhe = ehLead
+    ? `/comercial/crm/leads/${entidadeId}`
+    : `/comercial/clientes/${entidadeId}`
 
   const { data, isLoading, isError } = useQuery<ItemMetrica[]>({
-    queryKey: ["crm-lead-metricas", tipo, leadId],
+    queryKey: ["crm-metricas", entidade, tipo, entidadeId],
     queryFn: async () => {
       const res = await fetch(url)
       if (!res.ok) throw new Error("Falha ao carregar os registros")
       const dados: unknown = await res.json()
       if (!Array.isArray(dados)) return []
-      return dados.map((item) => normalizarItem(tipo, leadId, item))
+      return dados.map((item) => normalizarItem(tipo, entidadeId, item))
     },
     retry: 0,
   })
@@ -174,11 +180,9 @@ export function LeadMetricasModal({
     <Dialog open onOpenChange={(aberto) => !aberto && onClose()}>
       <DialogContent className="sm:max-w-3xl p-0">
         <DialogHeader className="border-b border-slate-100 p-5 pr-12 dark:border-slate-800">
-          <DialogTitle className="text-base text-slate-900 dark:text-slate-50">
-            {configuracao.titulo}
-          </DialogTitle>
+          <DialogTitle className="text-base text-slate-900 dark:text-slate-50">{titulo}</DialogTitle>
           <DialogDescription className="text-xs text-slate-500 dark:text-slate-400">
-            {configuracao.descricao} Lead: {leadNome}.
+            {descricao} {ehLead ? "Lead" : "Cliente"}: {entidadeNome}.
           </DialogDescription>
         </DialogHeader>
         <div className="max-h-[60vh] overflow-y-auto p-4 sm:p-5">
@@ -238,7 +242,7 @@ export function LeadMetricasModal({
           )}
         </div>
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 p-4 dark:border-slate-800">
-          {configuracao.temValor && itens.length > 0 ? (
+          {TEM_VALOR[tipo] && itens.length > 0 ? (
             <div>
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 Total de {itens.length} registro(s)
@@ -251,14 +255,36 @@ export function LeadMetricasModal({
             <span />
           )}
           <Link
-            href={`/comercial/crm/leads/${leadId}`}
+            href={hrefDetalhe}
             onClick={onClose}
             className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:underline dark:text-blue-400"
           >
-            Abrir detalhe da lead <ArrowRight size={12} />
+            Abrir detalhe {ehLead ? "da lead" : "do cliente"} <ArrowRight size={12} />
           </Link>
         </div>
       </DialogContent>
     </Dialog>
+  )
+}
+
+export function LeadMetricasModal({
+  tipo,
+  leadId,
+  leadNome,
+  onClose,
+}: {
+  tipo: TipoMetrica
+  leadId: number
+  leadNome: string
+  onClose: () => void
+}) {
+  return (
+    <MetricasModal
+      tipo={tipo}
+      entidade="lead"
+      entidadeId={leadId}
+      entidadeNome={leadNome}
+      onClose={onClose}
+    />
   )
 }

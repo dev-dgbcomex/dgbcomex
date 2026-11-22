@@ -24,6 +24,7 @@ import type { HistoricoPromocao } from "@/lib/crm/historico-promocao"
 import type { Cliente, VinculoRepresentante, RepresentanteResumo } from "../types"
 import type { Contato } from "../../crm/contatos/types"
 import { formatarDocumento } from "@/lib/documento"
+import { statusAtivos, useStatuses } from "@/hooks/use-statuses"
 
 async function fetchRepresentantes(query: string): Promise<RepresentanteResumo[]> {
   const res = await fetch(`/api/representantes?q=${encodeURIComponent(query)}`)
@@ -47,6 +48,7 @@ export default function EditarClientePage({ params }: { params: Promise<{ id: st
   const [id, setId] = useState<string>("")
 
   const queryClient = useQueryClient()
+  const { statuses: statusCliente } = useStatuses("CLIENTE")
 
   const { data: vinculos = [], isLoading: loadingVinculos } = useQuery<VinculoRepresentante[]>({
     queryKey: ["cliente-representantes", id],
@@ -349,6 +351,13 @@ export default function EditarClientePage({ params }: { params: Promise<{ id: st
     }
   }
 
+  const statusClienteOpcoes = statusCliente.length
+    ? statusAtivos(statusCliente)
+    : [
+        { nome: "ATIVO", rotulo: "Ativo" },
+        { nome: "INATIVO", rotulo: "Inativo" },
+      ]
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -447,6 +456,27 @@ export default function EditarClientePage({ params }: { params: Promise<{ id: st
                 value={cliente.segmento || ""}
                 onChange={(v) => handleChange("segmento", v)}
               />
+            </div>
+
+            <div className="space-y-2">
+              <label
+                htmlFor="status-cliente"
+                className="text-sm font-medium text-slate-700 dark:text-slate-300"
+              >
+                Status
+              </label>
+              <select
+                id="status-cliente"
+                value={cliente.status || "ATIVO"}
+                onChange={(e) => handleChange("status", e.target.value)}
+                className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
+              >
+                {statusClienteOpcoes.map((item) => (
+                  <option key={item.nome} value={item.nome}>
+                    {item.rotulo || item.nome}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div className="space-y-2">

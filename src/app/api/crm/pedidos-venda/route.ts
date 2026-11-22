@@ -4,9 +4,10 @@ import { db } from "@/lib/db"
 import { crmPedidosVenda } from "@/lib/db/schema/crm-pedidos-venda"
 import { crmPedidoVendaItens } from "@/lib/db/schema/crm-pedido-venda-itens"
 import { crmOportunidades } from "@/lib/db/schema/crm-oportunidades"
-import { eq, desc, sql, ilike, or, and, count } from "drizzle-orm"
+import { eq, desc, sql, ilike, or, and, count, inArray } from "drizzle-orm"
 import { registrarLog } from "@/lib/notificar"
 import { normalizarItensVenda } from "@/lib/crm/documento-venda"
+import { idsPessoasDoCliente } from "@/lib/crm/cliente-relacionamentos"
 
 export async function GET(req: NextRequest) {
   try {
@@ -18,6 +19,7 @@ export async function GET(req: NextRequest) {
     const status = searchParams.get("status")
     const oportunidadeId = searchParams.get("oportunidadeId")
     const empresaId = searchParams.get("empresaId")
+    const clienteId = searchParams.get("clienteId")
     const page = Math.max(1, parseInt(searchParams.get("page") || "1"))
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "50")))
     const all = searchParams.get("all") === "true"
@@ -27,6 +29,13 @@ export async function GET(req: NextRequest) {
     if (oportunidadeId)
       conditions.push(eq(crmPedidosVenda.oportunidadeId, parseInt(oportunidadeId)))
     if (empresaId) conditions.push(eq(crmOportunidades.empresaId, parseInt(empresaId)))
+    if (clienteId) {
+      const cliente = parseInt(clienteId)
+      const pessoas = await idsPessoasDoCliente(cliente)
+      const partes = [eq(crmOportunidades.clienteId, cliente)]
+      if (pessoas.length > 0) partes.push(inArray(crmOportunidades.empresaId, pessoas))
+      conditions.push(or(...partes))
+    }
     if (q.length >= 2) {
       conditions.push(
         or(

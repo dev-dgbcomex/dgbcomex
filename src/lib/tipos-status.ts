@@ -5,4 +5,6 @@ export const TIPOS_STATUS = [
   { value: "PRODUTO_CRU", label: "Produto" },
   { value: "AMOSTRA", label: "Amostra" },
   { value: "REQUISICAO_CORTE", label: "Requisição de Corte" },
+  { value: "LEAD", label: "Lead" },
+  { value: "CLIENTE", label: "Cliente" },
 ] as const

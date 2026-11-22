@@ -2,7 +2,7 @@
 import { describe, expect, it, vi } from "vitest"
 import { screen } from "@testing-library/react"
 import { createFetchMock, findCall, navMock, renderPage } from "@/test/harness"
-import { LeadMetricasModal } from "./metricas-modal"
+import { LeadMetricasModal, MetricasModal } from "./metricas-modal"
 
 describe("LeadMetricasModal", () => {
   it("normaliza pedidos e abre o detalhe do pedido", async () => {
@@ -50,6 +50,38 @@ describe("LeadMetricasModal", () => {
     expect(await screen.findByRole("dialog", { name: "Visitas da lead" })).toBeInTheDocument()
     expect(await screen.findByText("Nenhum registro encontrado.")).toBeInTheDocument()
     expect(findCall(fetchMock.calls, "/api/crm/visitas?all=true&empresaId=8", "GET")).toBeDefined()
+  })
+
+  it("usa o filtro por cliente no modal de métricas", async () => {
+    navMock.setPathname("/comercial/clientes")
+    const fetchMock = createFetchMock(() => ({
+      json: [
+        {
+          id: 12,
+          numero: "PV-021",
+          status: "ABERTO",
+          total: 90,
+          dataEmissao: "2026-11-21T12:00:00Z",
+        },
+      ],
+    }))
+    vi.stubGlobal("fetch", fetchMock.fn)
+
+    renderPage(
+      <MetricasModal
+        tipo="pedidos"
+        entidade="cliente"
+        entidadeId={4}
+        entidadeNome="Tecidos Silva"
+        onClose={vi.fn()}
+      />
+    )
+
+    expect(await screen.findByRole("dialog", { name: "Pedidos do cliente" })).toBeInTheDocument()
+    expect(
+      findCall(fetchMock.calls, "/api/crm/pedidos-venda?all=true&clienteId=4", "GET")
+    ).toBeDefined()
+    expect(screen.getByRole("link", { name: /Abrir detalhe do cliente/i })).toBeInTheDocument()
   })
 
   it("exibe erro quando a API falha", async () => {

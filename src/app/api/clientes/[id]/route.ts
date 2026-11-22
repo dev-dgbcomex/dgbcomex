@@ -52,6 +52,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       endereco,
       cidade,
       uf,
+      status,
       idIntegracao,
     } = body
 
@@ -106,6 +107,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         endereco: endereco?.trim() || null,
         cidade: cidade?.trim() || null,
         uf: uf?.trim() || null,
+        status: status?.trim() || "ATIVO",
         idIntegracao: idIntegracao || null,
         updatedAt: new Date(),
       })

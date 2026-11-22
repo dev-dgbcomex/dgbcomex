@@ -70,6 +70,7 @@ export async function POST(req: NextRequest) {
       endereco,
       cidade,
       uf,
+      status,
       idIntegracao,
     } = body
 
@@ -109,6 +110,7 @@ export async function POST(req: NextRequest) {
         endereco: endereco?.trim() || null,
         cidade: cidade?.trim() || null,
         uf: uf?.trim() || null,
+        status: status?.trim() || "ATIVO",
         idIntegracao: idIntegracao || null,
       })
       .returning()

@@ -2,6 +2,7 @@ import { SelectUf } from "@/components/crm/select-uf"
 import { SelectCidade } from "@/components/crm/select-cidade"
 import { SelectSegmento } from "@/components/crm/select-segmento"
 import { STATUS_OPTIONS } from "./constants"
+import { statusAtivos, useStatuses } from "@/hooks/use-statuses"
 import type { Lead, LeadForm, TipoLead } from "../../types"
 
 interface DadosLeadCardProps {
@@ -23,6 +24,11 @@ export function DadosLeadCard({
   setTipoLead,
   estadoId,
 }: DadosLeadCardProps) {
+  const { statuses: statusLead } = useStatuses("LEAD")
+  const statusLeadOpcoes = statusLead.length
+    ? statusAtivos(statusLead).map((item) => ({ value: item.nome, label: item.rotulo || item.nome }))
+    : STATUS_OPTIONS.map((nome) => ({ value: nome, label: nome }))
+
   return (
     <div className="min-w-0 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
       <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-50 mb-4">
@@ -253,15 +259,18 @@ export function DadosLeadCard({
               />
             </div>
             <div className="col-span-2">
-              <label className="block text-xs font-medium text-slate-500 mb-1">Status</label>
+              <label htmlFor="status-lead" className="block text-xs font-medium text-slate-500 mb-1">
+                Status
+              </label>
               <select
+                id="status-lead"
                 value={form.status || "NOVO"}
                 onChange={(e) => setForm((p: LeadForm) => ({ ...p, status: e.target.value }))}
                 className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
               >
-                {STATUS_OPTIONS.map((s: string) => (
-                  <option key={s} value={s}>
-                    {s}
+                {statusLeadOpcoes.map((item) => (
+                  <option key={item.value} value={item.value}>
+                    {item.label}
                   </option>
                 ))}
               </select>

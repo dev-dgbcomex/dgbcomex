@@ -9,6 +9,7 @@ import {
   Mail,
   MapPin,
   Pencil,
+  Eye,
   Users,
   Database,
   FileText,
@@ -34,7 +35,8 @@ import BuscarCnpjModal from "@/components/crm/buscar-cnpj-modal"
 import { ExportarDados } from "@/components/exportar/ExportarDados"
 import { SemaforoConversao, type SemaforoConversaoItem } from "@/components/crm/semaforo-conversao"
 import { contarFaixasConversao } from "@/lib/crm/faixa-conversao"
-import { useStatuses, hexToRgba } from "@/hooks/use-statuses"
+import { MetricasModal, type TipoMetrica } from "@/components/crm/leads/metricas-modal"
+import { useStatuses, hexToRgba, statusAtivos } from "@/hooks/use-statuses"
 import type { Cliente, SolicitacaoResumo, AmostraResumo } from "./types"
 
 const AMOSTRA_STATUS_BADGE: Record<string, string> = {
@@ -49,6 +51,11 @@ export default function ClientesPage() {
   const { getLabel: getStatusLabel, getColor: getStatusColor } = useStatuses(
     "SOLICITACAO_DESENVOLVIMENTO"
   )
+  const { statuses: statusClienteCadastro } = useStatuses("CLIENTE")
+  const statusClienteOpcoes = statusAtivos(statusClienteCadastro).map((item) => ({
+    value: item.nome,
+    label: item.rotulo || item.nome,
+  }))
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [loading, setLoading] = useState(true)
   const [showCnpjSearch, setShowCnpjSearch] = useState(false)
@@ -61,7 +68,10 @@ export default function ClientesPage() {
   })
 
   const filterState = useListFilters(
-    { searchFields: ["nome", "razaoSocial", "cnpj", "contato", "email", "telefone", "cidade"] },
+    {
+      searchFields: ["nome", "razaoSocial", "cnpj", "contato", "email", "telefone", "cidade"],
+      statusOptions: statusClienteOpcoes,
+    },
     clientes
   )
   const filteredData = filterState.filtered
@@ -71,7 +81,7 @@ export default function ClientesPage() {
     nome: cliente.nome,
     subtitulo: cliente.razaoSocial,
     documento: cliente.cnpj,
-    status: cliente.ativo === false ? "Inativo" : cliente.ativo ? "Ativo" : null,
+    status: cliente.status || (cliente.ativo === false ? "Inativo" : cliente.ativo ? "Ativo" : null),
     href: `/comercial/clientes/${cliente.id}`,
   }))
   const [showApiImport, setShowApiImport] = useState(false)
@@ -85,6 +95,10 @@ export default function ClientesPage() {
     cliente: Cliente
     data: AmostraResumo[]
     loading: boolean
+  } | null>(null)
+  const [metricaAberta, setMetricaAberta] = useState<{
+    cliente: Cliente
+    tipo: TipoMetrica
   } | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Cliente | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
@@ -147,6 +161,12 @@ export default function ClientesPage() {
       setAmostraModal(null)
       toast.error("Erro ao carregar amostras")
     }
+  }
+
+  function mapsUrl(cliente: Cliente) {
+    const parts = [cliente.endereco, cliente.cidade, cliente.uf].filter(Boolean)
+    if (parts.length === 0) return null
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(parts.join(", "))}`
   }
 
   async function handleExcluirCliente() {
@@ -244,6 +264,7 @@ export default function ClientesPage() {
       <ListFilters
         config={{
           searchFields: ["nome", "razaoSocial", "cnpj", "contato", "email", "telefone", "cidade"],
+          statusOptions: statusClienteOpcoes,
         }}
         data={clientes}
         filterState={filterState}
@@ -323,30 +344,62 @@ export default function ClientesPage() {
 
                 <div className="mt-4 grid grid-cols-4 gap-1 rounded-lg border border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/30 p-2 text-center">
                   {[
-                    { label: "Oportunidades", valor: cliente.totalOportunidades ?? 0 },
-                    { label: "Pedidos", valor: cliente.totalPedidos ?? 0 },
-                    { label: "Visitas", valor: cliente.totalVisitas ?? 0 },
-                    { label: "Ações", valor: cliente.totalAcoes ?? 0 },
+                    {
+                      label: "Oportunidades",
+                      valor: cliente.totalOportunidades ?? 0,
+                      tipo: "oportunidades" as const,
+                    },
+                    { label: "Pedidos", valor: cliente.totalPedidos ?? 0, tipo: "pedidos" as const },
+                    { label: "Visitas", valor: cliente.totalVisitas ?? 0, tipo: "visitas" as const },
+                    { label: "Ações", valor: cliente.totalAcoes ?? 0, tipo: "acoes" as const },
                   ].map((metrica) => (
-                    <div key={metrica.label} className="min-w-0">
+                    <button
+                      key={metrica.tipo}
+                      type="button"
+                      onClick={() => setMetricaAberta({ cliente, tipo: metrica.tipo })}
+                      aria-label={`Ver ${metrica.label.toLowerCase()} de ${cliente.nome}`}
+                      title={`Ver ${metrica.label.toLowerCase()} de ${cliente.nome}`}
+                      className="min-w-0 rounded-md px-1 py-1 transition-colors hover:bg-white dark:hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                    >
                       <div className="text-sm font-semibold text-slate-800 dark:text-slate-100">
                         {metrica.valor}
                       </div>
                       <div className="truncate text-[10px] text-slate-500 dark:text-slate-400">
                         {metrica.label}
                       </div>
-                    </div>
+                    </button>
                   ))}
                 </div>
 
-                <div className="flex gap-2 mt-4 pt-3 border-t border-slate-100 dark:border-slate-700">
+                <div className="mt-4 flex flex-wrap gap-2 pt-3 border-t border-slate-100 dark:border-slate-700">
                   <Link
                     href={`/comercial/clientes/${cliente.id}`}
                     className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline"
+                    title="Ver detalhes"
+                  >
+                    <Eye size={12} />
+                    Ver
+                  </Link>
+                  <Link
+                    href={`/comercial/clientes/${cliente.id}?edit=true`}
+                    className="inline-flex items-center gap-1 text-xs text-amber-600 hover:underline"
+                    title="Editar"
                   >
                     <Pencil size={12} />
                     Editar
                   </Link>
+                  {mapsUrl(cliente) && (
+                    <a
+                      href={mapsUrl(cliente)!}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs text-emerald-600 hover:underline"
+                      title="Abrir no Google Maps"
+                    >
+                      <ExternalLink size={12} />
+                      Mapa
+                    </a>
+                  )}
                   {isAdmin && (
                     <button
                       onClick={() => {
@@ -624,6 +677,16 @@ export default function ClientesPage() {
           existingKey="idIntegracao"
           onImportado={() => window.location.reload()}
           onClose={() => setShowApiImport(false)}
+        />
+      )}
+
+      {metricaAberta && (
+        <MetricasModal
+          tipo={metricaAberta.tipo}
+          entidade="cliente"
+          entidadeId={metricaAberta.cliente.id}
+          entidadeNome={metricaAberta.cliente.nome}
+          onClose={() => setMetricaAberta(null)}
         />
       )}
 

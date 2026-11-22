@@ -120,4 +120,27 @@ describe("POST /api/clientes", () => {
     expect(res.status).toBe(409)
     expect(await res.json()).toEqual({ error: "CNPJ já cadastrado" })
   })
+
+  it("salva o status informado no cadastro", async () => {
+    vi.mocked(db.select).mockReturnValue(createQueryBuilder([]) as never)
+    const insertBuilder = createQueryBuilder(undefined)
+    insertBuilder.returning = vi.fn(() => Promise.resolve([{ id: 20, nome: "Status Prime" }]))
+    vi.mocked(db.insert).mockReturnValue(insertBuilder as never)
+
+    const res = await post({ nome: "Status Prime", cnpj: "47646133000101", status: "INATIVO" })
+
+    expect(res.status).toBe(201)
+    expect(insertBuilder.values).toHaveBeenCalledWith(expect.objectContaining({ status: "INATIVO" }))
+  })
+
+  it("usa ATIVO quando nenhum status é informado", async () => {
+    vi.mocked(db.select).mockReturnValue(createQueryBuilder([]) as never)
+    const insertBuilder = createQueryBuilder(undefined)
+    insertBuilder.returning = vi.fn(() => Promise.resolve([{ id: 21, nome: "Sem Status" }]))
+    vi.mocked(db.insert).mockReturnValue(insertBuilder as never)
+
+    await post({ nome: "Sem Status", cnpj: "47646133000101" })
+
+    expect(insertBuilder.values).toHaveBeenCalledWith(expect.objectContaining({ status: "ATIVO" }))
+  })
 })

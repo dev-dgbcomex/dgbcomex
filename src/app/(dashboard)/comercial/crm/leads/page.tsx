@@ -34,6 +34,7 @@ import { PromoverClienteBotao } from "@/components/crm/promover-cliente-botao"
 import { LeadMetricasModal, type TipoMetricaLead } from "@/components/crm/leads/metricas-modal"
 import { SemaforoConversao, type SemaforoConversaoItem } from "@/components/crm/semaforo-conversao"
 import { contarFaixasConversao } from "@/lib/crm/faixa-conversao"
+import { statusAtivos, useStatuses } from "@/hooks/use-statuses"
 import type { Lead } from "./types"
 
 async function fetchEmpresas(): Promise<Lead[]> {
@@ -75,6 +76,16 @@ function CrmLeadsPageContent() {
   const [metricaAberta, setMetricaAberta] = useState<{ lead: Lead; tipo: TipoMetricaLead } | null>(
     null
   )
+  const { statuses: statusLead } = useStatuses("LEAD")
+  const statusLeadOpcoes = statusLead.length
+    ? statusAtivos(statusLead).map((item) => ({ value: item.nome, label: item.rotulo || item.nome }))
+    : [
+        { value: "NOVO", label: "Novo" },
+        { value: "QUALIFICADO", label: "Qualificado" },
+        { value: "CONVERTIDO_CLIENTE", label: "Convertido" },
+        { value: "PERDIDO", label: "Perdido" },
+        { value: "INATIVO", label: "Inativo" },
+      ]
 
   const {
     data: empresas,
@@ -89,13 +100,7 @@ function CrmLeadsPageContent() {
   const filterState = useListFilters(
     {
       searchFields: ["nome", "razaoSocial", "cpf", "cnpj", "segmento", "responsavelNome"],
-      statusOptions: [
-        { value: "NOVO", label: "Novo" },
-        { value: "QUALIFICADO", label: "Qualificado" },
-        { value: "CONVERTIDO_CLIENTE", label: "Convertido" },
-        { value: "PERDIDO", label: "Perdido" },
-        { value: "INATIVO", label: "Inativo" },
-      ],
+        statusOptions: statusLeadOpcoes,
       dateField: "createdAt",
     },
     empresas || []
@@ -295,13 +300,7 @@ function CrmLeadsPageContent() {
       <ListFilters
         config={{
           searchFields: ["nome", "razaoSocial", "cpf", "cnpj", "segmento", "responsavelNome"],
-          statusOptions: [
-            { value: "NOVO", label: "Novo" },
-            { value: "QUALIFICADO", label: "Qualificado" },
-            { value: "CONVERTIDO_CLIENTE", label: "Convertido" },
-            { value: "PERDIDO", label: "Perdido" },
-            { value: "INATIVO", label: "Inativo" },
-          ],
+          statusOptions: statusLeadOpcoes,
           dateField: "createdAt",
         }}
         data={empresas || []}

@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
-import { describe, it, expect } from "vitest"
-import { screen } from "@testing-library/react"
-import { renderPage } from "@/test/harness"
+import { describe, it, expect, vi } from "vitest"
+import { screen, within } from "@testing-library/react"
+import { createFetchMock, renderPage } from "@/test/harness"
+import { invalidarCacheStatuses } from "@/hooks/use-statuses"
 import { DadosLeadCard } from "./dados-lead-card"
 import type { Lead } from "../../types"
 
@@ -57,5 +58,44 @@ describe("DadosLeadCard", () => {
     expect(
       screen.getByText(/exemplo-comercializacao-de-tecidos-e-confeccoes-vale-do-paraiba/)
     ).toBeInTheDocument()
+  })
+
+  it("usa os status cadastrados para leads no seletor", async () => {
+    invalidarCacheStatuses("LEAD")
+    const fetchMock = createFetchMock(({ url }) => {
+      if (url === "/api/admin/status?tipo=LEAD") {
+        return {
+          json: [
+            {
+              id: 1,
+              nome: "EM_ANALISE",
+              rotulo: "Em análise",
+              tipo: "LEAD",
+              cor: "#3b82f6",
+              ordem: 1,
+              ativo: true,
+              exibirKanban: false,
+            },
+          ],
+        }
+      }
+      return { json: [] }
+    })
+    vi.stubGlobal("fetch", fetchMock.fn)
+
+    renderPage(
+      <DadosLeadCard
+        lead={leadLonga}
+        form={{}}
+        setForm={() => {}}
+        editing={true}
+        tipoPessoa="PJ"
+        setTipoLead={() => {}}
+        estadoId={null}
+      />
+    )
+
+    const select = await screen.findByLabelText("Status")
+    expect(await within(select).findByRole("option", { name: "Em análise" })).toBeInTheDocument()
   })
 })

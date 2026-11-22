@@ -15,6 +15,7 @@ export type Cliente = {
   endereco: string | null
   cidade: string | null
   uf: string | null
+  status: string
   ativo: boolean | null
   idIntegracao: string | null
   createdAt: string | Date

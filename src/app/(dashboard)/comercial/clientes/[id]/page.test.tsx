@@ -2,6 +2,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest"
 import { screen, fireEvent, waitFor } from "@testing-library/react"
 import { createFetchMock, renderPage, findCall, navMock, toastMock } from "@/test/harness"
+import { invalidarCacheStatuses } from "@/hooks/use-statuses"
 import EditarClientePage from "./page"
 
 describe("EditarClientePage", () => {
@@ -9,6 +10,7 @@ describe("EditarClientePage", () => {
   const id = "5"
 
   beforeEach(() => {
+    invalidarCacheStatuses("CLIENTE")
     const handler = ({
       method,
       url,
@@ -29,6 +31,7 @@ describe("EditarClientePage", () => {
             cidade: "São Paulo",
             uf: "SP",
             endereco: "Rua A, 100",
+            status: "ATIVO",
           },
         }
       }
@@ -155,6 +158,32 @@ describe("EditarClientePage", () => {
         }
       }
       if (method === "GET" && url === `/api/crm/whatsapp?clienteId=${id}`) return { json: [] }
+      if (method === "GET" && url === "/api/admin/status?tipo=CLIENTE") {
+        return {
+          json: [
+            {
+              id: 1,
+              nome: "ATIVO",
+              rotulo: "Ativo",
+              tipo: "CLIENTE",
+              cor: "#22c55e",
+              ordem: 1,
+              ativo: true,
+              exibirKanban: false,
+            },
+            {
+              id: 2,
+              nome: "INATIVO",
+              rotulo: "Inativo",
+              tipo: "CLIENTE",
+              cor: "#94a3b8",
+              ordem: 2,
+              ativo: true,
+              exibirKanban: false,
+            },
+          ],
+        }
+      }
       return { status: 404, json: { error: "Rota não mockada" } }
     }
     fetchMock = createFetchMock(handler)
@@ -170,6 +199,7 @@ describe("EditarClientePage", () => {
     await screen.findByDisplayValue("Tecidos Silva")
     expect(screen.getByDisplayValue("11.222.333/0001-44")).toBeInTheDocument()
 
+    fireEvent.change(screen.getByLabelText("Status"), { target: { value: "INATIVO" } })
     fireEvent.click(screen.getByRole("button", { name: "Salvar" }))
 
     await waitFor(() => {
@@ -177,6 +207,7 @@ describe("EditarClientePage", () => {
       expect(call).toBeDefined()
       expect(call!.body.id).toBe(5)
       expect(call!.body.nome).toBe("Tecidos Silva")
+      expect(call!.body.status).toBe("INATIVO")
     })
     await waitFor(() =>
       expect(toastMock.success).toHaveBeenCalledWith("Cliente atualizado com sucesso!")

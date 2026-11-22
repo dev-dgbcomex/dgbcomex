@@ -14,6 +14,7 @@ export const clientes = pgTable("clientes", {
   endereco: varchar("endereco", { length: 300 }),
   cidade: varchar("cidade", { length: 100 }),
   uf: varchar("uf", { length: 2 }),
+  status: varchar("status", { length: 30 }).notNull().default("ATIVO"),
   ativo: boolean("ativo").default(true),
   idIntegracao: varchar("id_integracao", { length: 100 }),
   createdAt: timestamp("created_at").defaultNow(),

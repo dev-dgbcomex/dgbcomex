@@ -32,6 +32,27 @@ INSERT INTO status (nome, rotulo, tipo, cor, ordem, ativo, exibir_kanban) VALUES
   ('REVISAO', 'Em Revisão', 'PROPOSTA', '#f59e0b', 4, true, true)
 ON CONFLICT DO NOTHING;
 
+-- clientes: status cadastral usado pelo cadastro de Lead/Cliente
+DO $$ BEGIN
+  ALTER TABLE public.clientes ADD COLUMN IF NOT EXISTS status varchar(30) DEFAULT 'ATIVO';
+EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
+END $$;
+UPDATE public.clientes SET status = 'ATIVO' WHERE status IS NULL;
+DO $$ BEGIN
+  ALTER TABLE public.clientes ALTER COLUMN status SET NOT NULL;
+EXCEPTION WHEN undefined_table THEN NULL;
+END $$;
+
+INSERT INTO status (nome, rotulo, tipo, cor, ordem, ativo, exibir_kanban) VALUES
+  ('NOVO', 'Novo', 'LEAD', '#3b82f6', 1, true, false),
+  ('QUALIFICADO', 'Qualificado', 'LEAD', '#10b981', 2, true, false),
+  ('CONVERTIDO_CLIENTE', 'Cliente', 'LEAD', '#22c55e', 3, true, false),
+  ('PERDIDO', 'Perdido', 'LEAD', '#ef4444', 4, true, false),
+  ('INATIVO', 'Inativo', 'LEAD', '#94a3b8', 5, true, false),
+  ('ATIVO', 'Ativo', 'CLIENTE', '#22c55e', 1, true, false),
+  ('INATIVO', 'Inativo', 'CLIENTE', '#94a3b8', 2, true, false)
+ON CONFLICT (nome, tipo) DO NOTHING;
+
 -- notificacao_regras: atividade comercial entre contas (in-app + e-mail)
 INSERT INTO notificacao_regras (tipo, roles) VALUES ('ATIVIDADE_COMERCIAL', '["COMERCIAL","CRM"]'::jsonb)
 ON CONFLICT (tipo) DO NOTHING;

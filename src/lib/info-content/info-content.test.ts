@@ -202,6 +202,8 @@ describe("getInfoContent", () => {
     // Os gatilhos disparados ao entrar no status.
     expect(textoCadastro).toMatch(/Gatilho/i)
     expect(textoCadastro).toMatch(/gatilho/i)
+    expect(textoCadastro).toMatch(/Lead, Cliente/)
+    expect(textoCadastro).toMatch(/Kanban de Leads/)
 
     const textoKanban = [lista, kanban]
       .flatMap((item) => [...(item?.rules ?? []), ...(item?.fields ?? []).map((f) => f.desc)])
@@ -621,7 +623,7 @@ describe("getInfoContent", () => {
     expect(listagemTexto).toMatch(/Quentes/)
     expect(listagemTexto).toMatch(/Mornos/)
     expect(listagemTexto).toMatch(/Frios/)
-    expect(listagemTexto).toMatch(/status das oportunidades vinculadas/i)
+    expect(listagemTexto).toMatch(/data dos pedidos/i)
     expect(listagemTexto).not.toMatch(/Frios \(Novo, Qualificação/)
 
     const detalheTexto = [
@@ -788,8 +790,8 @@ describe("semaforoConversaoInfo", () => {
     }
 
     expect(semaforoConversaoInfo.QUENTE.rules?.join(" ")).toMatch(/prioridade/i)
-    expect(semaforoConversaoInfo.MORNO.description).toMatch(/sem oportunidade em Negociação/i)
-    expect(semaforoConversaoInfo.FRIO.description).toMatch(/sem oportunidade em Negociação/i)
+    expect(semaforoConversaoInfo.MORNO.description).toMatch(/sem QUENTE/i)
+    expect(semaforoConversaoInfo.FRIO.description).toMatch(/sem Negociação ou Proposta/i)
   })
 })
 
@@ -1008,6 +1010,9 @@ describe("crmDashboardInfo", () => {
     expect(textoClientes).toMatch(/Clique em um card do semáforo/i)
     expect(textoClientes).toMatch(/no card explica a regra/i)
     expect(textoClientes).toMatch(/nunca o status cadastral/i)
+    expect(textoClientes).toMatch(/rodapé do card, 'Ver'/i)
+    expect(textoClientes).toMatch(/ganho ou pedido no mês/i)
+    expect(textoClientes).toMatch(/ganho ou pedido no trimestre/i)
 
     const textoLeads = [leads?.description ?? "", ...(leads?.rules ?? [])].join("\n")
     expect(textoLeads).toMatch(/Cards é a visualização padrão/)
@@ -1020,6 +1025,8 @@ describe("crmDashboardInfo", () => {
     expect(textoLeads).toMatch(/Clique em um card do semáforo/i)
     expect(textoLeads).toMatch(/no card explica a regra/i)
     expect(textoLeads).toMatch(/nunca o status cadastral/i)
+    expect(textoLeads).toMatch(/ganho ou pedido no mês/i)
+    expect(textoLeads).toMatch(/ganho ou pedido no trimestre/i)
     expect(textoLeads).not.toMatch(/O Kanban é a visualização padrão/)
 
     const textoOportunidades = [

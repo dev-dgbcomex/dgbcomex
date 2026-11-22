@@ -56,15 +56,15 @@ describe("SemaforoConversao", () => {
 
     const semaforo = screen.getByRole("region", { name: "Semáforo de conversão" })
     expect(within(semaforo).getByText("Quentes")).toBeInTheDocument()
-    expect(within(semaforo).getByText("Oportunidade em negociação")).toBeInTheDocument()
+    expect(within(semaforo).getByText("Negociação ou ganho/pedido no mês")).toBeInTheDocument()
     expect(within(semaforo).getByText("Mornos")).toBeInTheDocument()
-    expect(within(semaforo).getByText("Oportunidade em proposta")).toBeInTheDocument()
+    expect(within(semaforo).getByText("Proposta ou ganho/pedido no trimestre")).toBeInTheDocument()
     expect(within(semaforo).getByText("Frios")).toBeInTheDocument()
-    expect(within(semaforo).getByText("Sem oportunidade em negociação ou proposta")).toBeInTheDocument()
-    expect(within(semaforo).getByLabelText("Quentes: 1 leads — Oportunidade em negociação")).toBeInTheDocument()
-    expect(within(semaforo).getByLabelText("Mornos: 1 leads — Oportunidade em proposta")).toBeInTheDocument()
+    expect(within(semaforo).getByText("Sem negociação, proposta ou ganho/pedido no trimestre")).toBeInTheDocument()
+    expect(within(semaforo).getByLabelText("Quentes: 1 leads — Negociação ou ganho/pedido no mês")).toBeInTheDocument()
+    expect(within(semaforo).getByLabelText("Mornos: 1 leads — Proposta ou ganho/pedido no trimestre")).toBeInTheDocument()
     expect(
-      within(semaforo).getByLabelText("Frios: 2 leads — Sem oportunidade em negociação ou proposta")
+      within(semaforo).getByLabelText("Frios: 2 leads — Sem negociação, proposta ou ganho/pedido no trimestre")
     ).toBeInTheDocument()
 
     const cards = screen.getAllByLabelText(/—/)
@@ -73,7 +73,7 @@ describe("SemaforoConversao", () => {
     expect(cards[0]).toHaveClass("card-hover", "rounded-xl", "min-h-[9rem]")
     expect(cards[0].querySelector("svg")).not.toBeNull()
 
-    const descricoes = screen.getAllByTitle("Sem oportunidade em negociação ou proposta")
+    const descricoes = screen.getAllByTitle("Sem negociação, proposta ou ganho/pedido no trimestre")
     expect(descricoes[0]).toHaveClass("line-clamp-2", "min-h-[2.25rem]")
     expect(descricoes[0]).not.toHaveClass("truncate")
   })
@@ -81,7 +81,7 @@ describe("SemaforoConversao", () => {
   it("abre o modal com apenas os registros da faixa clicada", () => {
     renderSemaforo()
 
-    fireEvent.click(screen.getByLabelText("Quentes: 1 leads — Oportunidade em negociação"))
+    fireEvent.click(screen.getByLabelText("Quentes: 1 leads — Negociação ou ganho/pedido no mês"))
 
     const dialog = screen.getByRole("dialog", { name: "Quentes — Leads" })
     expect(within(dialog).getByText("Tecelagem Alpha")).toBeInTheDocument()
@@ -98,7 +98,7 @@ describe("SemaforoConversao", () => {
     renderSemaforo()
 
     fireEvent.keyDown(
-      screen.getByLabelText("Frios: 2 leads — Sem oportunidade em negociação ou proposta"),
+      screen.getByLabelText("Frios: 2 leads — Sem negociação, proposta ou ganho/pedido no trimestre"),
       { key: "Enter" }
     )
 
@@ -112,9 +112,9 @@ describe("SemaforoConversao", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Informações da faixa Quentes" }))
 
-    expect(screen.getByText("Quentes — oportunidade em negociação")).toBeInTheDocument()
+    expect(screen.getByText("Quentes — negociação ou movimento do mês")).toBeInTheDocument()
     expect(screen.getByText("Exemplos Práticos")).toBeInTheDocument()
-    expect(screen.getByText(/Lead com status cadastral NOVO/)).toBeInTheDocument()
+    expect(screen.getByText(/Lead com oportunidade em NEGOCIACAO/)).toBeInTheDocument()
     expect(screen.queryByRole("dialog", { name: "Quentes — Leads" })).not.toBeInTheDocument()
   })
 })

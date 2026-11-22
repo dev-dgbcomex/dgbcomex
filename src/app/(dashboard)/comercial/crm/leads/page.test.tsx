@@ -158,14 +158,14 @@ describe("LeadsPage cards", () => {
     await screen.findByText("Tecelagem Alpha")
     const semaforo = screen.getByRole("region", { name: "Semáforo de conversão" })
     expect(
-      within(semaforo).getByLabelText("Quentes: 1 leads — Oportunidade em negociação")
+      within(semaforo).getByLabelText("Quentes: 1 leads — Negociação ou ganho/pedido no mês")
     ).toBeInTheDocument()
     expect(
-      within(semaforo).getByLabelText("Mornos: 1 leads — Oportunidade em proposta")
+      within(semaforo).getByLabelText("Mornos: 1 leads — Proposta ou ganho/pedido no trimestre")
     ).toBeInTheDocument()
     expect(
       within(semaforo).getByLabelText(
-        "Frios: 1 leads — Sem oportunidade em negociação ou proposta"
+        "Frios: 1 leads — Sem negociação, proposta ou ganho/pedido no trimestre"
       )
     ).toBeInTheDocument()
     expect(screen.queryByRole("table")).not.toBeInTheDocument()
@@ -196,7 +196,7 @@ describe("LeadsPage cards", () => {
     renderPage(<CrmLeadsPage />)
 
     await screen.findByText("Tecelagem Alpha")
-    fireEvent.click(screen.getByLabelText("Quentes: 1 leads — Oportunidade em negociação"))
+    fireEvent.click(screen.getByLabelText("Quentes: 1 leads — Negociação ou ganho/pedido no mês"))
 
     const dialog = screen.getByRole("dialog", { name: "Quentes — Leads" })
     expect(within(dialog).getByText("Tecelagem Alpha")).toBeInTheDocument()

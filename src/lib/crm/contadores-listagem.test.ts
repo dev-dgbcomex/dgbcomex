@@ -29,10 +29,24 @@ describe("contadores-listagem", () => {
     )
     expect(texto).not.toMatch(/where "cliente_id" = "id"/)
     expect(texto).toContain("'NEGOCIACAO'")
+    expect(texto).toContain("'FECHADO_GANHO'")
     expect(texto).toContain("'PROPOSTA'")
     expect(texto).toContain("'QUENTE'")
     expect(texto).toContain("'MORNO'")
     expect(texto).toContain('"crm_leads"."cliente_id"')
+    expect(texto).toContain('"crm_pedidos_venda"."data_emissao"')
+    expect(texto).toContain('"crm_oportunidades"."updated_at"')
+    expect(texto).toContain("date_trunc('month', current_date)")
+    expect(texto).toContain("date_trunc('quarter', current_date)")
+    expect(texto.indexOf("'NEGOCIACAO'")).toBeLessThan(
+      texto.indexOf("date_trunc('month', current_date)")
+    )
+    expect(texto.indexOf("date_trunc('month', current_date)")).toBeLessThan(
+      texto.indexOf("'PROPOSTA'")
+    )
+    expect(texto.indexOf("'PROPOSTA'")).toBeLessThan(
+      texto.indexOf("date_trunc('quarter', current_date)")
+    )
     expect(texto).not.toContain('"clientes"."status"')
     expect(texto).not.toContain('"crm_leads"."status"')
   })
@@ -59,9 +73,23 @@ describe("contadores-listagem", () => {
     )
     expect(texto).not.toMatch(/where "lead_id" = "id"/)
     expect(texto).toContain("'NEGOCIACAO'")
+    expect(texto).toContain("'FECHADO_GANHO'")
     expect(texto).toContain("'PROPOSTA'")
     expect(texto).toContain("'QUENTE'")
     expect(texto).toContain("'MORNO'")
+    expect(texto).toContain('"crm_pedidos_venda"."data_emissao"')
+    expect(texto).toContain('"crm_oportunidades"."updated_at"')
+    expect(texto).toContain("date_trunc('month', current_date)")
+    expect(texto).toContain("date_trunc('quarter', current_date)")
+    expect(texto.indexOf("'NEGOCIACAO'")).toBeLessThan(
+      texto.indexOf("date_trunc('month', current_date)")
+    )
+    expect(texto.indexOf("date_trunc('month', current_date)")).toBeLessThan(
+      texto.indexOf("'PROPOSTA'")
+    )
+    expect(texto.indexOf("'PROPOSTA'")).toBeLessThan(
+      texto.indexOf("date_trunc('quarter', current_date)")
+    )
     expect(texto).not.toContain('"crm_leads"."status"')
   })
 

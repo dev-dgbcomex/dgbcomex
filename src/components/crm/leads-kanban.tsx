@@ -96,7 +96,7 @@ function DraggableCard({ lead }: { lead: LeadCard }) {
 }
 
 export default function LeadsKanban({ leads }: { leads: LeadCard[] }) {
-  const { statuses, loading: statusLoading } = useStatuses("PESSOA")
+  const { statuses, loading: statusLoading } = useStatuses("LEAD")
   const [activeCard, setActiveCard] = useState<LeadCard | null>(null)
   const [cards, setCards] = useState<LeadCard[]>(leads || [])
 

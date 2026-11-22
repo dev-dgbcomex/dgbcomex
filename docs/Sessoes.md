@@ -26,6 +26,22 @@
 
 > Detalhe técnico completo em [`docs/crm-cliente-e-relatorios.md`](./crm-cliente-e-relatorios.md).
 
+### Sessão 32 — Semáforo por mês/trimestre, status Lead/Cliente e cards de clientes completos
+
+- **Data:** 2026-11-22
+- **Commit:** `feat(crm): amplia semaforo e status de leads e clientes`
+- **Tarefa:** refinar o semáforo com ganhos/pedidos do mês e do trimestre, permitir cadastrar status dos tipos `LEAD` e `CLIENTE` em `/perfil/menus`, e deixar os cards de clientes no mesmo padrão dos leads, com filtro por status, botões de ação e métricas clicáveis.
+- **Decisões aprovadas:** “mês quente, trimestre morno”; ganho considera `crm_oportunidades.status` (`FECHADO_GANHO`/`GANHO`) com `updated_at`, e pedido considera `coalesce(data_emissao::timestamp, created_at)`; status cadastral continua apenas informativo e nunca define a faixa; cliente sem status usa `ATIVO`.
+- **Resultado:**
+  - `contadoresCliente()`/`contadoresLead()` passaram a derivar `QUENTE` de negociação, ganho no mês ou pedido no mês; `MORNO` de proposta, ganho no trimestre ou pedido no trimestre; `FRIO` dos demais casos, com prioridade `QUENTE > MORNO > FRIO`.
+  - O total de pedidos dos cards passou a contar apenas pedidos vinculados às oportunidades do próprio registro (ou das pessoas promovidas, em clientes).
+  - `LEAD` e `CLIENTE` foram adicionados ao cadastro de status, com `aria-label`s nos seletores; o Kanban de Leads e a tela de Leads usam status do tipo Lead, e o cadastro/edição de cliente usa status do tipo Cliente.
+  - `MetricasModal` foi generalizado para lead/cliente (`empresaId`/`clienteId`), e `GET /api/crm/pedidos-venda` passou a aceitar `clienteId`, incluindo as pessoas vinculadas ao cliente.
+  - Os cards de clientes agora têm filtro de status, semáforo atualizado, botões `Ver`, `Editar` e `Mapa`, e abrir métricas em modal; os textos dos “i” de CRM/Clientes e `/perfil/menus` foram atualizados.
+  - Migração `0075_status_leads_clientes.sql` criada e SQL equivalente inserido em `sync-all-dbs.js`, com aplicação no Neon via `sync-principal.js` e no warehouse local via `sync-all-dbs.js`.
+- **Arquivos Envolvidos:** `src/lib/crm/contadores-listagem.ts`, `src/lib/crm/faixa-conversao.ts`, `src/lib/tipos-status.ts`, `src/lib/db/schema/clientes.ts`, `src/lib/db/migrations/0075_status_leads_clientes.sql`, `scripts/sync-all-dbs.js`, `src/components/admin/cadastro-status.tsx`, `src/components/crm/leads-kanban.tsx`, `src/components/crm/leads/metricas-modal.tsx`, `src/components/crm/semaforo-conversao.tsx`, `src/app/(dashboard)/comercial/clientes/page.tsx`, `src/app/(dashboard)/comercial/clientes/[id]/page.tsx`, `src/app/(dashboard)/comercial/crm/leads/page.tsx`, `src/app/api/clientes/route.ts`, `src/app/api/clientes/[id]/route.ts`, `src/app/api/crm/pedidos-venda/route.ts`, `src/lib/info-content/{crm,comercial,outros}.ts`, testes correspondentes e `docs/Sessoes.md`.
+- **Verificação:** `npm run lint` sem erros (apenas warnings pré-existentes); `tsc --noEmit --pretty false` limpo com `NODE_OPTIONS=--max-old-space-size=8192`; testes focados `12 arquivos / 132 testes passados`; suíte completa `npm run test` → **473 arquivos / 2758 testes passados**; `npm run build` OK com `NODE_OPTIONS=--max-old-space-size=8192`; `npm run db:verificar-local` → **0 divergências (local ⊇ Neon)**; `npm run db:comparar` → estruturas idênticas.
+
 ### Sessão 31 — Semáforo clicável, lista por faixa e “i” explicativo
 
 - **Data:** 2026-11-21

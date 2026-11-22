@@ -5,9 +5,21 @@ export const FAIXAS_CONVERSAO: Array<{
   rotulo: string
   descricao: string
 }> = [
-  { faixa: "QUENTE", rotulo: "Quentes", descricao: "Oportunidade em negociação" },
-  { faixa: "MORNO", rotulo: "Mornos", descricao: "Oportunidade em proposta" },
-  { faixa: "FRIO", rotulo: "Frios", descricao: "Sem oportunidade em negociação ou proposta" },
+  {
+    faixa: "QUENTE",
+    rotulo: "Quentes",
+    descricao: "Negociação ou ganho/pedido no mês",
+  },
+  {
+    faixa: "MORNO",
+    rotulo: "Mornos",
+    descricao: "Proposta ou ganho/pedido no trimestre",
+  },
+  {
+    faixa: "FRIO",
+    rotulo: "Frios",
+    descricao: "Sem negociação, proposta ou ganho/pedido no trimestre",
+  },
 ]
 
 export type ItemComFaixa = {
