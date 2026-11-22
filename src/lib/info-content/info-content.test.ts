@@ -597,6 +597,29 @@ describe("getInfoContent", () => {
     expect(texto).toMatch(/Promovido por|Virou cliente em/)
   })
 
+  it("as telas de leads, oportunidades e pedidos explicam o ciclo de conversão", () => {
+    const conteudos = [
+      getInfoContent("/comercial/crm/leads"),
+      getInfoContent("/comercial/crm/oportunidades"),
+      getInfoContent("/comercial/crm/oportunidades/[id]"),
+      getInfoContent("/comercial/crm/pedidos-venda"),
+    ]
+    const texto = conteudos
+      .flatMap((item) => [
+        item?.description ?? "",
+        ...(item?.rules ?? []),
+        ...(item?.fields ?? []).map((f) => `${f.name}: ${f.desc}`),
+      ])
+      .join("\n")
+
+    expect(texto).toMatch(/Possível Cliente/)
+    expect(texto).toMatch(/pedido do ERP vinculado/i)
+    expect(texto).toMatch(/Verificar faturados/)
+    expect(texto).toMatch(/arquivad/i)
+    expect(texto).toMatch(/motor de automações/i)
+    expect(texto).toMatch(/última oportunidade/i)
+  })
+
   it("as telas de leads explicam a tarja de cliente e a promoção", () => {
     const listagem = getInfoContent("/comercial/crm/leads")
     const detalhe = getInfoContent("/comercial/crm/leads/[id]")

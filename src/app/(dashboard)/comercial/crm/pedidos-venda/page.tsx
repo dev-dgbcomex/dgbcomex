@@ -21,6 +21,7 @@ import {
 import { toast } from "sonner"
 import { PageSkeleton } from "@/components/ui/page-skeleton"
 import { STATUS_PEDIDO_VENDA_LABELS, STATUS_PEDIDO_VENDA_CORES } from "@/lib/crm/documento-venda"
+import { VerificarPedidosFaturados } from "@/components/crm/verificar-pedidos-faturados"
 import type { PedidoVendaResumo } from "./types"
 
 const PAGE_SIZE = 50
@@ -129,13 +130,20 @@ function PedidosVendaPageContent() {
                 : "0 pedidos"}
           </p>
         </div>
-        <Link
-          href="/comercial/crm/pedidos-venda/novo"
-          className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 transition-colors shadow-sm"
-        >
-          <PlusCircle size={14} />
-          Novo Pedido de Venda
-        </Link>
+        <div className="flex items-center gap-2">
+          <VerificarPedidosFaturados
+            label="Verificar faturados"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+            onConvertido={() => queryClient.invalidateQueries({ queryKey: ["pedidos-venda"] })}
+          />
+          <Link
+            href="/comercial/crm/pedidos-venda/novo"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 transition-colors shadow-sm"
+          >
+            <PlusCircle size={14} />
+            Novo Pedido de Venda
+          </Link>
+        </div>
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -263,6 +271,17 @@ function PedidosVendaPageContent() {
                           >
                             <Pencil size={16} className="text-blue-500" />
                           </Link>
+                          <div onClick={(e) => e.stopPropagation()}>
+                            <VerificarPedidosFaturados
+                              pedidoId={p.id}
+                              title="Verificar faturado"
+                              iconeApenas
+                              className="p-2 rounded-lg hover:bg-emerald-100 dark:hover:bg-emerald-950/50 transition-colors text-emerald-600"
+                              onConvertido={() =>
+                                queryClient.invalidateQueries({ queryKey: ["pedidos-venda"] })
+                              }
+                            />
+                          </div>
                           <button
                             onClick={() => setExcluirPedido(p)}
                             className="p-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-950/50 transition-colors"

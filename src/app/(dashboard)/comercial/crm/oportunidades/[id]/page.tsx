@@ -29,6 +29,9 @@ import {
   STATUS_PEDIDO_VENDA_CORES,
 } from "@/lib/crm/documento-venda"
 import EdicaoOportunidade, { type OportunidadeUpdate } from "./components/edicao-card"
+import { DecisaoAutomacaoModal } from "@/components/crm/decisao-automacao-modal"
+import { VerificarPedidosFaturados } from "@/components/crm/verificar-pedidos-faturados"
+import type { DecisaoPendente } from "@/lib/crm/automacoes-crm"
 import type { OportunidadeDetalhe, DocumentoVendaResumo, UsuarioResumo } from "../types"
 
 const PROPOSTA_STATUS: Record<string, { label: string; cor: string }> = {
@@ -87,6 +90,8 @@ function DetalheOportunidadePageContent() {
   const [editing, setEditing] = useState(searchParams.get("edit") === "true")
   const [saving, setSaving] = useState(false)
   const [usuarios, setUsuarios] = useState<UsuarioResumo[]>([])
+  const [decisaoPendente, setDecisaoPendente] = useState<DecisaoPendente | null>(null)
+  const [decisaoLoading, setDecisaoLoading] = useState(false)
 
   async function recarregar() {
     try {
@@ -155,25 +160,36 @@ function DetalheOportunidadePageContent() {
     }
   }
 
-  async function handleStatusSave() {
+  async function handleStatusSave(decisao?: string) {
+    setDecisaoLoading(true)
     try {
       const res = await fetch(`/api/crm/oportunidades/${params.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: statusValue }),
+        body: JSON.stringify({ status: statusValue, decisao }),
       })
-      if (!res.ok) throw new Error("Erro ao atualizar")
       const data = await res.json()
+      if (res.status === 409 && data.decisaoPendente) {
+        setDecisaoPendente(data.decisaoPendente)
+        toast.info(data.error)
+        return
+      }
+      if (!res.ok) throw new Error(data.error || "Erro ao atualizar")
       setOportunidade((prev) => (prev ? { ...prev, status: statusValue } : prev))
       setEditingStatus(false)
+      setDecisaoPendente(null)
       const executadas: string[] = data?.gatilhos?.executadas || []
+      const avisos: string[] = data?.automacao?.avisos || []
       toast.success(
         executadas.length > 0
           ? `Status atualizado. Ações disparadas: ${executadas.join(", ")}`
           : "Status atualizado"
       )
-    } catch {
-      toast.error("Erro ao atualizar status")
+      for (const aviso of avisos) toast.info(aviso)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao atualizar status")
+    } finally {
+      setDecisaoLoading(false)
     }
   }
 
@@ -238,7 +254,7 @@ function DetalheOportunidadePageContent() {
                   ))}
                 </select>
                 <button
-                  onClick={handleStatusSave}
+                  onClick={() => handleStatusSave()}
                   className="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-emerald-600"
                 >
                   <Check size={14} />
@@ -548,6 +564,12 @@ function DetalheOportunidadePageContent() {
                 <Link2 size={14} />
                 Vincular do ERP
               </button>
+              <VerificarPedidosFaturados
+                oportunidadeId={oportunidade.id}
+                label="Verificar faturados"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+                onConvertido={recarregar}
+              />
               <Link
                 href={`/comercial/crm/pedidos-venda/novo?oportunidadeId=${oportunidade.id}`}
                 className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 transition-colors"
@@ -624,6 +646,20 @@ function DetalheOportunidadePageContent() {
           onVinculado={recarregar}
         />
       )}
+
+      <DecisaoAutomacaoModal
+        open={!!decisaoPendente}
+        titulo="Decisão necessária"
+        mensagem={decisaoPendente?.mensagem || ""}
+        opcoes={(decisaoPendente?.opcoes || []).map((opcao) => ({
+          valor: opcao.valor,
+          rotulo: opcao.rotulo,
+          descricao: opcao.descricao,
+        }))}
+        loading={decisaoLoading}
+        onEscolher={(valor) => handleStatusSave(valor)}
+        onCancel={() => setDecisaoPendente(null)}
+      />
     </div>
   )
 }

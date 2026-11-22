@@ -122,9 +122,7 @@ describe("PedidosVendaPage", () => {
     await screen.findByText("PV-001")
 
     const row = screen.getByText("PV-001").closest("tr")!
-    const trash = within(row)
-      .getAllByRole("button")
-      .find((b) => !b.closest("a"))!
+    const trash = within(row).getByTitle("Excluir pedido de venda")
     fireEvent.click(trash)
 
     const dialog = screen.getByRole("dialog", { name: "Excluir pedido de venda" })

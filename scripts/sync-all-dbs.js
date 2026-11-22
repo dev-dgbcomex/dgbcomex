@@ -97,6 +97,32 @@ SET promovida_cliente = true,
 FROM clientes c
 WHERE p.cliente_id = c.id AND p.promovida_cliente = false;
 
+-- crm_leads: arquivamento e status Possível Cliente
+DO $$ BEGIN
+  ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS arquivado boolean NOT NULL DEFAULT false;
+EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
+END $$;
+DO $$ BEGIN
+  ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS arquivado_em timestamp;
+EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
+END $$;
+DO $$ BEGIN
+  ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS arquivado_por integer REFERENCES usuarios(id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
+END $$;
+DO $$ BEGIN
+  ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS arquivado_por_nome varchar(255);
+EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
+END $$;
+CREATE INDEX IF NOT EXISTS idx_crm_leads_arquivado ON crm_leads (arquivado);
+INSERT INTO status (nome, rotulo, tipo, cor, ordem, ativo, exibir_kanban)
+VALUES ('POSSIVEL_CLIENTE', 'Possível Cliente', 'LEAD', '#8b5cf6', 3, true, true)
+ON CONFLICT (nome, tipo) DO NOTHING;
+UPDATE status SET exibir_kanban = true, ativo = true
+WHERE tipo = 'LEAD' AND nome IN ('NOVO', 'QUALIFICADO', 'POSSIVEL_CLIENTE', 'PERDIDO', 'INATIVO');
+UPDATE status SET exibir_kanban = false, rotulo = 'Cliente', ordem = 6
+WHERE tipo = 'LEAD' AND nome = 'CONVERTIDO_CLIENTE';
+
 -- crm_contatos: adicionar cliente_id
 DO $$ BEGIN
   ALTER TABLE crm_contatos ADD COLUMN IF NOT EXISTS cliente_id integer REFERENCES clientes(id);

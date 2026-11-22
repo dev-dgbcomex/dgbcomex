@@ -23,6 +23,7 @@ export type ContextoGatilho = {
 
 export type ResultadoGatilhos = {
   executadas: string[]
+  puladas: string[]
   erros: string[]
 }
 
@@ -147,8 +148,11 @@ async function executarAcao(
  * Executa os gatilhos (ações) cadastrados para o status informado.
  * Falhas de uma ação não interrompem as demais nem a mudança de status.
  */
-export async function executarGatilhos(contexto: ContextoGatilho): Promise<ResultadoGatilhos> {
-  const resultado: ResultadoGatilhos = { executadas: [], erros: [] }
+export async function executarGatilhos(
+  contexto: ContextoGatilho,
+  opcoes?: { pularAcoes?: string[] }
+): Promise<ResultadoGatilhos> {
+  const resultado: ResultadoGatilhos = { executadas: [], puladas: [], erros: [] }
 
   const [statusRow] = await db
     .select({ id: status.id })
@@ -163,6 +167,10 @@ export async function executarGatilhos(contexto: ContextoGatilho): Promise<Resul
   for (const acao of acoes) {
     if (acao.ativo === false) continue
     if (!acaoPorValor(acao.acao)) continue
+    if (opcoes?.pularAcoes?.includes(acao.acao)) {
+      resultado.puladas.push(acao.acao)
+      continue
+    }
 
     try {
       const executou = await executarAcao(

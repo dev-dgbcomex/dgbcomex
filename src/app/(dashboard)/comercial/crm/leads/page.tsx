@@ -46,6 +46,7 @@ async function fetchEmpresas(): Promise<Lead[]> {
 const STATUS_CORES: Record<string, string> = {
   NOVO: "text-blue-600 bg-blue-50 dark:bg-blue-950/50 dark:text-blue-400",
   QUALIFICADO: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/50 dark:text-emerald-400",
+  POSSIVEL_CLIENTE: "text-violet-600 bg-violet-50 dark:bg-violet-950/50 dark:text-violet-400",
   CONVERTIDO_CLIENTE: "text-green-600 bg-green-50 dark:bg-green-950/50 dark:text-green-400",
   PERDIDO: "text-red-600 bg-red-50 dark:bg-red-950/50 dark:text-red-400",
   INATIVO: "text-slate-400 bg-slate-100 dark:bg-slate-800 dark:text-slate-500",
@@ -82,6 +83,7 @@ function CrmLeadsPageContent() {
     : [
         { value: "NOVO", label: "Novo" },
         { value: "QUALIFICADO", label: "Qualificado" },
+        { value: "POSSIVEL_CLIENTE", label: "Possível Cliente" },
         { value: "CONVERTIDO_CLIENTE", label: "Convertido" },
         { value: "PERDIDO", label: "Perdido" },
         { value: "INATIVO", label: "Inativo" },
@@ -367,6 +369,12 @@ function CrmLeadsPageContent() {
                         Cliente
                       </span>
                     )}
+                    {emp.arquivado && (
+                      <span className="inline-flex items-center gap-1 rounded-full border border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-[10px] font-medium text-slate-700 dark:text-slate-300">
+                        <Archive size={11} />
+                        Arquivado
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -573,6 +581,11 @@ function CrmLeadsPageContent() {
                           >
                             {emp.status}
                           </span>
+                          {emp.arquivado && (
+                            <span className="ml-1 inline-flex rounded-full bg-slate-200 px-1.5 py-0.5 text-[10px] font-medium text-slate-700 dark:bg-slate-700 dark:text-slate-200">
+                              Arquivado
+                            </span>
+                          )}
                         </td>
                         <td className="px-2 py-2 md:px-4 md:py-3 text-xs md:text-sm text-slate-500 whitespace-nowrap hidden sm:table-cell">
                           {emp.createdAt

@@ -12,6 +12,7 @@ import { registrarLog, notificar } from "@/lib/notificar"
 import { notificarAtividadeComercial } from "@/lib/crm/notificar-atividade"
 import { inserirTimelineEvento } from "@/lib/crm-timeline"
 import { idsPessoasDoCliente, clienteIdDaPessoa } from "@/lib/crm/cliente-relacionamentos"
+import { processarAutomacaoCRM } from "@/lib/crm/automacoes-crm"
 
 export async function GET(req: NextRequest) {
   try {
@@ -104,6 +105,13 @@ export async function POST(req: NextRequest) {
 
     // Negocio lancado em uma pessoa ja promovida fica vinculado ao cliente.
     const clienteId = body.clienteId || (await clienteIdDaPessoa(body.empresaId))
+    const statusInicial = String(body.status || "NOVO").toUpperCase()
+    if (statusInicial === "FECHADO_GANHO" || statusInicial === "GANHO") {
+      return NextResponse.json(
+        { error: "Crie a oportunidade como NOVO e marque como ganha após vincular um pedido do ERP" },
+        { status: 400 }
+      )
+    }
 
     const [nova] = await db
       .insert(crmOportunidades)
@@ -118,9 +126,19 @@ export async function POST(req: NextRequest) {
         responsavelId: body.responsavelId || userId,
         dataFechamentoPrevista: body.dataFechamentoPrevista || null,
         probabilidade: body.probabilidade || 0,
-        status: body.status || "Novo",
+        status: statusInicial,
       })
       .returning()
+
+    const automacao = await processarAutomacaoCRM({
+      entidade: "OPORTUNIDADE",
+      entidadeId: nova.id,
+      acao: "CRIAR",
+      statusNovo: statusInicial,
+      autor: { id: userId, nome: session.user.name },
+      origem: "API",
+      contexto: { empresaId: nova.empresaId, clienteId: nova.clienteId },
+    })
 
     await registrarLog({
       tipo: "CADASTRO",
@@ -157,7 +175,7 @@ export async function POST(req: NextRequest) {
       usuarioId: userId,
     })
 
-    return NextResponse.json(nova, { status: 201 })
+    return NextResponse.json({ ...nova, automacao }, { status: 201 })
   } catch (error) {
     console.error("[POST /api/crm/oportunidades]", error)
     return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 })

@@ -42,6 +42,25 @@
 
 ---
 
+### Sessão 35 — Automações do ciclo de vida do CRM e conversão por faturamento
+
+- **Data:** 2026-11-22
+- **Commit:** `feat(crm): automacoes de ciclo de vida e conversao por faturamento`
+- **Tarefa:** centralizar as mudanças de status de Leads e Oportunidades em um único motor de automações, eliminar conversão automática implícita, exigir decisão explícita nos casos ambíguos e permitir verificar/converter leads a partir de pedidos efetivamente faturados no ERP.
+- **Decisões aprovadas:** `QUALIFICADO` exige oportunidade vinculada; criar oportunidade em lead `NOVO`/`PERDIDO`/`INATIVO` qualifica automaticamente; `POSSIVEL_CLIENTE` aparece no Kanban e `CONVERTIDO_CLIENTE` fica oculto; `FECHADO_GANHO` exige pedido ERP vinculado; conversão em cliente só acontece pelo fluxo manual de faturamento; perda da última oportunidade abre modal `PERDER_LEAD` (lead `PERDIDO`, sem arquivar) ou `NOVA_OPORTUNIDADE` (rascunho automático e lead `QUALIFICADO`); `PERDIDO`/`INATIVO` recebem tarja `Arquivado`, e voltar para status ativo desarquiva.
+- **Resultado:**
+  - Criado `src/lib/crm/automacoes-crm.ts` com `processarAutomacaoCRM`, normalização `GANHO → FECHADO_GANHO`, bloqueios, decisões pendentes, efeitos (log, timeline, notificação, atividade comercial) e integração com `executarGatilhos` sem duplicar ações de virar cliente/criar pedido.
+  - Rotas de Lead e Oportunidade (`POST/PUT/PATCH`) passaram a chamar o motor; a antiga conversão automática da rota de lead foi removida e as respostas passaram a devolver `automacao`, `avisos`, `bloqueio`, `decisaoPendente` e/ou `gatilhos`.
+  - Novas APIs `POST /api/crm/pedidos-venda/verificar-faturados` e `POST /api/crm/pedidos-venda/converter-faturados`: a primeira atualiza o espelho `crm_faturamentos` e cruza `empresa/pedido` com as oportunidades; a segunda converte manualmente as leads candidatas via motor com `decisao: "CONVERTER"`.
+  - Novos componentes `DecisaoAutomacaoModal` e `VerificarPedidosFaturados`, integrados ao detalhe/kanban de oportunidades, listagens de oportunidades e pedidos de venda; erro `409` com `decisaoPendente` reabre o modal e reverte o otimismo da UI.
+  - Leads ganharam `arquivado`, `arquivadoEm`, `arquivadoPor` e `arquivadoPorNome` (migration `0076_leads_possivel_cliente_arquivado.sql`), filtro na API, tarja na listagem e ocultação no Kanban.
+  - Modal “i” de Leads, Oportunidades e Pedidos atualizado com o novo ciclo, inclusive fonte dos faturamentos, arquivamento e motor de automações.
+- **Arquivos Envolvidos:** `src/lib/crm/{automacoes-crm.ts,automacoes-crm.test.ts,status-gatilhos.ts,status-gatilhos.test.ts}`, `src/lib/db/migrations/0076_leads_possivel_cliente_arquivado.sql`, `src/lib/db/schema/crm-leads.ts`, `scripts/sync-all-dbs.js`, `src/app/api/crm/leads/**`, `src/app/api/crm/oportunidades/**`, `src/app/api/crm/pedidos-venda/verificar-faturados/**`, `src/app/api/crm/pedidos-venda/converter-faturados/**`, `src/components/crm/{decisao-automacao-modal.tsx,verificar-pedidos-faturados.tsx,automacoes-crm.test.tsx,oportunidades-kanban.tsx,leads-kanban.tsx}`, `src/app/(dashboard)/comercial/crm/{leads,oportunidades,pedidos-venda}/**`, `src/lib/info-content/{crm.ts,info-content.test.ts}`, `docs/Sessoes.md`.
+- **Testes:** novos em `automacoes-crm.test.ts`, rotas `verificar-faturados`, `converter-faturados` e `oportunidades/[id]/status`, e componentes de automação; ajustes em `status-gatilhos.test.ts`, telas de leads/oportunidades/pedidos e `info-content.test.ts`. Suíte completa `npm run test` → **478 arquivos / 2781 testes passados**.
+- **Verificação:** `npm run lint` sem erros (apenas warnings pré-existentes); `tsc --noEmit --pretty false` limpo com `NODE_OPTIONS=--max-old-space-size=8192`; `npm run build` OK com `NODE_OPTIONS=--max-old-space-size=8192` (257/257 páginas estáticas); `npm run db:migrate:all` aplicou as migrations no Neon e no warehouse local; `npm run db:replicar-neon` e `npm run db:verificar-local` terminaram com **0 divergências (local ⊇ Neon)**.
+
+---
+
 ### Sessão 33 — Modal do semáforo com métricas e cards de leads alinhados
 
 - **Data:** 2026-11-22

@@ -10,7 +10,7 @@ import { crmVisitas } from "@/lib/db/schema/crm-visitas"
 import { crmAcoesProspeccao } from "@/lib/db/schema/crm-acoes-prospeccao"
 import { eq, and, ne, sql } from "drizzle-orm"
 import { registrarLog, notificar } from "@/lib/notificar"
-import { promoverLeadParaCliente } from "@/lib/crm/promover-cliente"
+import { processarAutomacaoCRM, type DecisaoAutomacao } from "@/lib/crm/automacoes-crm"
 import { handleApiError } from "@/lib/api-error"
 import { digitosDocumento, formatarDocumento, validarDocumento } from "@/lib/documento"
 
@@ -150,6 +150,34 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       }
     }
 
+    const statusAlterado = body.status !== undefined && body.status !== existente.status
+    const arquivadoAlterado = body.arquivado !== undefined && body.arquivado !== existente.arquivado
+    let automacao: Awaited<ReturnType<typeof processarAutomacaoCRM>> | undefined
+
+    if (statusAlterado || arquivadoAlterado) {
+      const decisaoArquivamento = body.arquivado ? "ARQUIVAR" : "DESARQUIVAR"
+      automacao = await processarAutomacaoCRM({
+        entidade: "LEAD",
+        entidadeId: existente.id,
+        acao: "ALTERAR_STATUS",
+        statusAnterior: existente.status,
+        statusNovo: body.status ?? existente.status,
+        decisao: (body.decisao as DecisaoAutomacao | undefined) ?? decisaoArquivamento,
+        autor: { id: auth.userId, nome: session.user.name },
+        origem: "API",
+      })
+      if (!automacao.ok) {
+        return NextResponse.json(
+          {
+            error: automacao.bloqueio || automacao.decisaoPendente?.mensagem || "Operação bloqueada",
+            decisaoPendente: automacao.decisaoPendente,
+            automacao,
+          },
+          { status: automacao.decisaoPendente ? 409 : 400 }
+        )
+      }
+    }
+
     const values: Partial<typeof crmLeads.$inferInsert> = { updatedAt: new Date() }
     if (body.tipoPessoa !== undefined) values.tipoPessoa = body.tipoPessoa
     if (body.nome !== undefined) values.nome = body.nome || null
@@ -172,7 +200,6 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     if (body.uf !== undefined) values.uf = body.uf || null
     if (body.cep !== undefined) values.cep = body.cep || null
     if (body.observacoes !== undefined) values.observacoes = body.observacoes || null
-    if (body.status !== undefined) values.status = body.status
     if (body.responsavelId !== undefined) values.responsavelId = body.responsavelId
     if (body.ativo !== undefined) values.ativo = body.ativo
 
@@ -184,40 +211,25 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
     const nomeLead = atualizada.nome || atualizada.razaoSocial || "Lead"
 
-    if (
-      body.status === "CONVERTIDO_CLIENTE" &&
-      existente.status !== "CONVERTIDO_CLIENTE" &&
-      !atualizada.promovidaCliente
-    ) {
-      try {
-        await promoverLeadParaCliente({
-          pessoaId: atualizada.id,
-          usuarioId: auth.userId,
-          usuarioNome: session.user.name,
-          notificarEquipe: false,
-        })
-      } catch (err) {
-        console.error("[sync-cliente]", err)
-      }
+    if (!statusAlterado && !arquivadoAlterado) {
+      await registrarLog({
+        tipo: "ATUALIZACAO",
+        acao: "atualizar",
+        descricao: `Lead atualizada: ${nomeLead}`,
+        entidade: "CrmLead",
+        entidadeId: atualizada.id,
+        usuarioNome: session.user.name,
+      })
+
+      await notificar(
+        "LEAD_ATUALIZADO",
+        `Lead atualizada: ${nomeLead}`,
+        `/comercial/crm/leads/${atualizada.id}`,
+        session.user.name
+      )
     }
 
-    await registrarLog({
-      tipo: "ATUALIZACAO",
-      acao: "atualizar",
-      descricao: `Lead atualizada: ${nomeLead}`,
-      entidade: "CrmLead",
-      entidadeId: atualizada.id,
-      usuarioNome: session.user.name,
-    })
-
-    await notificar(
-      "LEAD_ATUALIZADO",
-      `Lead atualizada: ${nomeLead}`,
-      `/comercial/crm/leads/${atualizada.id}`,
-      session.user.name
-    )
-
-    return NextResponse.json(atualizada)
+    return NextResponse.json({ ...atualizada, automacao })
   } catch (error) {
     return handleApiError(error, "PUT /api/crm/leads/[id]")
   }

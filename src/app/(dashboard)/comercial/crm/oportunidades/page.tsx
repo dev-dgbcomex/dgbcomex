@@ -26,6 +26,7 @@ import ListFilters, { useListFilters } from "@/components/ui/list-filters"
 import { ConfirmModal } from "@/components/ui/confirm-modal"
 import { useStatuses, hexToRgba } from "@/hooks/use-statuses"
 import { STATUS_OPORTUNIDADE_PADRAO } from "@/lib/crm/status-oportunidade"
+import { VerificarPedidosFaturados } from "@/components/crm/verificar-pedidos-faturados"
 import type { Oportunidade } from "./types"
 
 async function fetchOportunidades(mine: boolean): Promise<Oportunidade[]> {
@@ -193,6 +194,11 @@ export default function OportunidadesPage() {
             <Settings2 size={14} />
             Status
           </Link>
+          <VerificarPedidosFaturados
+            label="Verificar faturados"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+            onConvertido={() => refetch()}
+          />
           <Link
             href="/comercial/crm/oportunidades/novo"
             className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 transition-colors shadow-sm"

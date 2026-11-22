@@ -11,7 +11,7 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core"
-import { useStatuses } from "@/hooks/use-statuses"
+import { useStatuses, statusExibidosNoKanban } from "@/hooks/use-statuses"
 import { DroppableColumn, KanbanSkeleton } from "./kanban-column"
 
 interface LeadCard {
@@ -24,12 +24,13 @@ interface LeadCard {
   segmento: string | null
   responsavelNome: string | null
   status: string
+  arquivado?: boolean
 }
 
 const DEFAULT_STATUSES = [
   { nome: "NOVO", rotulo: "Novo", cor: "#3b82f6", ativo: true },
   { nome: "QUALIFICADO", rotulo: "Qualificado", cor: "#10b981", ativo: true },
-  { nome: "CONVERTIDO_CLIENTE", rotulo: "Cliente", cor: "#22c55e", ativo: true },
+  { nome: "POSSIVEL_CLIENTE", rotulo: "Possível Cliente", cor: "#8b5cf6", ativo: true },
   { nome: "PERDIDO", rotulo: "Perdido", cor: "#ef4444", ativo: true },
   { nome: "INATIVO", rotulo: "Inativo", cor: "#94a3b8", ativo: true },
 ]
@@ -118,12 +119,10 @@ export default function LeadsKanban({ leads }: { leads: LeadCard[] }) {
     return DEFAULT_STATUSES.find((s: any) => s.nome === nome)?.rotulo || nome
   }
 
-  const colunas = effectiveStatuses
-    .filter((s: any) => s.ativo !== false)
-    .map((col: any) => ({
-      ...col,
-      cards: cards.filter((p: any) => p.status === col.nome),
-    }))
+  const colunas = statusExibidosNoKanban(effectiveStatuses as any).map((col: any) => ({
+    ...col,
+    cards: cards.filter((p: any) => p.status === col.nome && !p.arquivado),
+  }))
 
   const handleDragStart = (event: any) => {
     const card = event.active.data.current?.lead
@@ -154,11 +153,10 @@ export default function LeadsKanban({ leads }: { leads: LeadCard[] }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: novoStatus }),
       })
-      if (!res.ok) {
-        const err = await res.json()
-        throw new Error(err.error || "Erro ao alterar status")
-      }
+      const payload = await res.json().catch(() => null)
+      if (!res.ok) throw new Error(payload?.error || "Erro ao alterar status")
       toast.success(`Lead movida para ${getLabel(novoStatus)}`)
+      for (const aviso of payload?.automacao?.avisos || []) toast.info(aviso)
     } catch (err: any) {
       setCards((prev) =>
         prev.map((p: any) => (p.id === lead.id ? { ...p, status: statusAntigo } : p))

@@ -15,6 +15,8 @@ import { X } from "lucide-react"
 import { useStatuses, statusExibidosNoKanban, type StatusConfig } from "@/hooks/use-statuses"
 import { STATUS_OPORTUNIDADE_PADRAO } from "@/lib/crm/status-oportunidade"
 import { DroppableColumn, KanbanSkeleton } from "./kanban-column"
+import { DecisaoAutomacaoModal } from "./decisao-automacao-modal"
+import type { DecisaoPendente } from "@/lib/crm/automacoes-crm"
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
 
 interface OportunidadeCard {
@@ -104,6 +106,13 @@ export default function OportunidadesKanban({
     status: string
     statusAntigo: string
   } | null>(null)
+  const [decisaoPendente, setDecisaoPendente] = useState<DecisaoPendente | null>(null)
+  const [pendingDecision, setPendingDecision] = useState<{
+    id: number
+    status: string
+    statusAntigo: string
+    motivoPerda?: string
+  } | null>(null)
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
@@ -169,11 +178,18 @@ export default function OportunidadesKanban({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: novoStatus }),
       })
+      const payload = await res.json().catch(() => null)
+      if (res.status === 409 && payload?.decisaoPendente) {
+        setDecisaoPendente(payload.decisaoPendente)
+        setPendingDecision({ id: oportunidade.id, status: novoStatus, statusAntigo })
+        toast.info(payload.error)
+        return
+      }
       if (!res.ok) {
-        const err = await res.json()
-        throw new Error(err.error || "Erro ao alterar status")
+        throw new Error(payload?.error || "Erro ao alterar status")
       }
       toast.success(`Oportunidade movida para ${getLabelSafe(novoStatus)}`)
+      for (const aviso of payload?.automacao?.avisos || []) toast.info(aviso)
     } catch (err: unknown) {
       setData((prev) =>
         prev.map((o: OportunidadeCard) =>
@@ -193,8 +209,24 @@ export default function OportunidadesKanban({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "FECHADO_PERDIDO", motivoPerda: motivoPerda.trim() }),
       })
-      if (!res.ok) throw new Error((await res.json()).error || "Erro ao confirmar perda")
+      const payload = await res.json().catch(() => null)
+      if (res.status === 409 && payload?.decisaoPendente) {
+        setDecisaoPendente(payload.decisaoPendente)
+        setPendingDecision({
+          id: pendingMove.id,
+          status: pendingMove.status,
+          statusAntigo: pendingMove.statusAntigo,
+          motivoPerda: motivoPerda.trim(),
+        })
+        toast.info(payload.error)
+        setShowMotivoPerda(false)
+        setMotivoPerda("")
+        setPendingMove(null)
+        return
+      }
+      if (!res.ok) throw new Error(payload?.error || "Erro ao confirmar perda")
       toast.success("Oportunidade marcada como Perdida")
+      for (const aviso of payload?.automacao?.avisos || []) toast.info(aviso)
     } catch (err: unknown) {
       setData((prev) =>
         prev.map((o: OportunidadeCard) =>
@@ -219,6 +251,48 @@ export default function OportunidadesKanban({
     setShowMotivoPerda(false)
     setMotivoPerda("")
     setPendingMove(null)
+  }
+
+  async function confirmarDecisao(valor: string) {
+    if (!pendingDecision) return
+    try {
+      const res = await fetch(`/api/crm/oportunidades/${pendingDecision.id}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: pendingDecision.status,
+          motivoPerda: pendingDecision.motivoPerda,
+          decisao: valor,
+        }),
+      })
+      const payload = await res.json().catch(() => null)
+      if (!res.ok) throw new Error(payload?.error || "Erro ao aplicar decisão")
+      toast.success("Automação aplicada com sucesso")
+      for (const aviso of payload?.automacao?.avisos || []) toast.info(aviso)
+      setDecisaoPendente(null)
+      setPendingDecision(null)
+    } catch (err: unknown) {
+      setData((prev) =>
+        prev.map((o: OportunidadeCard) =>
+          o.id === pendingDecision.id ? { ...o, status: pendingDecision.statusAntigo } : o
+        )
+      )
+      toast.error(err instanceof Error ? err.message : "Erro ao aplicar decisão")
+      setDecisaoPendente(null)
+      setPendingDecision(null)
+    }
+  }
+
+  function cancelarDecisao() {
+    if (pendingDecision) {
+      setData((prev) =>
+        prev.map((o: OportunidadeCard) =>
+          o.id === pendingDecision.id ? { ...o, status: pendingDecision.statusAntigo } : o
+        )
+      )
+    }
+    setDecisaoPendente(null)
+    setPendingDecision(null)
   }
 
   if (effectiveLoading) {
@@ -312,6 +386,19 @@ export default function OportunidadesKanban({
           </DialogPrimitive.Popup>
         </DialogPrimitive.Portal>
       </DialogPrimitive.Root>
+
+      <DecisaoAutomacaoModal
+        open={!!decisaoPendente}
+        titulo="Decisão necessária"
+        mensagem={decisaoPendente?.mensagem || ""}
+        opcoes={(decisaoPendente?.opcoes || []).map((opcao) => ({
+          valor: opcao.valor,
+          rotulo: opcao.rotulo,
+          descricao: opcao.descricao,
+        }))}
+        onEscolher={confirmarDecisao}
+        onCancel={cancelarDecisao}
+      />
     </div>
   )
 }

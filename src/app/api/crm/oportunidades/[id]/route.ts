@@ -15,7 +15,7 @@ import { eq, desc, sql } from "drizzle-orm"
 import { registrarLog, notificar, notificarDelecao } from "@/lib/notificar"
 import { handleApiError } from "@/lib/api-error"
 import { excluirOportunidadeCascade } from "@/lib/crm-cascade"
-import { executarGatilhos, vincularEmpresaComoCliente } from "@/lib/crm/status-gatilhos"
+import { processarAutomacaoCRM, type DecisaoAutomacao } from "@/lib/crm/automacoes-crm"
 import { podeGerenciarTudo } from "@/lib/permissoes"
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -145,11 +145,37 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       return NextResponse.json({ error: "Oportunidade não encontrada" }, { status: 404 })
     }
 
+    const statusAlterado = body.status !== undefined && body.status !== existente.status
+    let automacao: Awaited<ReturnType<typeof processarAutomacaoCRM>> | undefined
+
+    if (statusAlterado) {
+      automacao = await processarAutomacaoCRM({
+        entidade: "OPORTUNIDADE",
+        entidadeId: existente.id,
+        acao: "ALTERAR_STATUS",
+        statusAnterior: existente.status,
+        statusNovo: body.status,
+        motivoPerda: body.motivoPerda,
+        decisao: body.decisao as DecisaoAutomacao | undefined,
+        autor: { id: auth.userId, nome: session.user.name },
+        origem: "API",
+      })
+      if (!automacao.ok) {
+        return NextResponse.json(
+          {
+            error: automacao.bloqueio || automacao.decisaoPendente?.mensagem || "Operação bloqueada",
+            decisaoPendente: automacao.decisaoPendente,
+            automacao,
+          },
+          { status: automacao.decisaoPendente ? 409 : 400 }
+        )
+      }
+    }
+
     const values: Record<string, any> = { updatedAt: new Date() }
     if (body.titulo !== undefined) values.titulo = body.titulo
     if (body.descricao !== undefined) values.descricao = body.descricao || null
     if (body.valorEstimado !== undefined) values.valorEstimado = body.valorEstimado || null
-    if (body.status !== undefined) values.status = body.status
     if (body.leadId !== undefined) values.leadId = body.leadId
     if (body.empresaId !== undefined) values.empresaId = body.empresaId
     if (body.clienteId !== undefined) values.clienteId = body.clienteId
@@ -158,7 +184,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     if (body.dataFechamentoPrevista !== undefined)
       values.dataFechamentoPrevista = body.dataFechamentoPrevista || null
     if (body.probabilidade !== undefined) values.probabilidade = body.probabilidade
-    if (body.motivoPerda !== undefined) values.motivoPerda = body.motivoPerda || null
+    if (!statusAlterado && body.motivoPerda !== undefined) values.motivoPerda = body.motivoPerda || null
 
     const [atualizada] = await db
       .update(crmOportunidades)
@@ -166,43 +192,29 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       .where(eq(crmOportunidades.id, parseInt(id)))
       .returning()
 
-    await registrarLog({
-      tipo: "ATUALIZACAO",
-      acao: "atualizar",
-      descricao: `Oportunidade atualizada: ${atualizada.titulo}`,
-      entidade: "CrmOportunidade",
-      entidadeId: atualizada.id,
-      usuarioNome: session.user.name,
-    })
-
-    await notificar(
-      "OPORTUNIDADE_ATUALIZADA",
-      `Oportunidade atualizada: ${atualizada.titulo}`,
-      `/comercial/crm/oportunidades/${atualizada.id}`,
-      session.user.name
-    )
-
-    let gatilhos = { executadas: [] as string[], erros: [] as string[] }
-    const statusAlterado = body.status !== undefined && body.status !== existente.status
-
-    if (statusAlterado) {
-      if (body.status === "FECHADO_GANHO" && existente.empresaId) {
-        await vincularEmpresaComoCliente(existente.empresaId)
-      }
-
-      gatilhos = await executarGatilhos({
-        tipo: "OPORTUNIDADE",
-        statusNome: body.status,
-        statusAnterior: existente.status,
-        oportunidadeId: atualizada.id,
-        empresaId: existente.empresaId,
-        responsavelId: existente.responsavelId,
-        titulo: existente.titulo,
+    if (!statusAlterado) {
+      await registrarLog({
+        tipo: "ATUALIZACAO",
+        acao: "atualizar",
+        descricao: `Oportunidade atualizada: ${atualizada.titulo}`,
+        entidade: "CrmOportunidade",
+        entidadeId: atualizada.id,
         usuarioNome: session.user.name,
       })
+
+      await notificar(
+        "OPORTUNIDADE_ATUALIZADA",
+        `Oportunidade atualizada: ${atualizada.titulo}`,
+        `/comercial/crm/oportunidades/${atualizada.id}`,
+        session.user.name
+      )
     }
 
-    return NextResponse.json({ ...atualizada, gatilhos })
+    return NextResponse.json({
+      ...atualizada,
+      automacao,
+      gatilhos: automacao?.gatilhos || { executadas: [], puladas: [], erros: [] },
+    })
   } catch (error) {
     return handleApiError(error, "PUT /api/crm/oportunidades/[id]")
   }

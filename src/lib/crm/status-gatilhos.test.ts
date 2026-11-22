@@ -37,7 +37,7 @@ describe("executarGatilhos", () => {
 
     const resultado = await executarGatilhos(contexto)
 
-    expect(resultado).toEqual({ executadas: [], erros: [] })
+    expect(resultado).toEqual({ executadas: [], puladas: [], erros: [] })
   })
 
   it("cria pedido de venda quando o status tem o gatilho configurado", async () => {

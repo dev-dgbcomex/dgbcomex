@@ -25,6 +25,9 @@ export type LeadForm = {
   uf?: string
   observacoes?: string
   status?: string
+  arquivado?: boolean
+  arquivadoEm?: string | null
+  arquivadoPorNome?: string | null
 }
 
 export type Contato = {

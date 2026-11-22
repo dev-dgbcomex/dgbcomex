@@ -17,12 +17,15 @@ export async function GET(req: NextRequest) {
     const search = searchParams.get("search")
     const status = searchParams.get("status")
     const tarja = searchParams.get("tarja")
+    const arquivado = searchParams.get("arquivado")
 
     let conditions = []
 
     if (status) conditions.push(eq(crmLeads.status, status))
     if (tarja === "com") conditions.push(eq(crmLeads.promovidaCliente, true))
     if (tarja === "sem") conditions.push(eq(crmLeads.promovidaCliente, false))
+    if (arquivado === "true") conditions.push(eq(crmLeads.arquivado, true))
+    else if (arquivado !== "todos") conditions.push(eq(crmLeads.arquivado, false))
     if (search) {
       conditions.push(
         or(
@@ -59,6 +62,9 @@ export async function GET(req: NextRequest) {
         promovidoEm: crmLeads.promovidoEm,
         promovidoPor: crmLeads.promovidoPor,
         promovidoPorNome: crmLeads.promovidoPorNome,
+        arquivado: crmLeads.arquivado,
+        arquivadoEm: crmLeads.arquivadoEm,
+        arquivadoPorNome: crmLeads.arquivadoPorNome,
         endereco: crmLeads.endereco,
         numero: crmLeads.numero,
         bairro: crmLeads.bairro,
