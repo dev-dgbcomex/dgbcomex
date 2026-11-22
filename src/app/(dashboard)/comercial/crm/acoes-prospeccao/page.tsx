@@ -26,7 +26,7 @@ import {
   Link as LinkIcon,
 } from "lucide-react"
 import { toast } from "sonner"
-import { useStatuses } from "@/hooks/use-statuses"
+import { statusAtivos, useStatuses } from "@/hooks/use-statuses"
 import dynamic from "next/dynamic"
 import { PageSkeleton } from "@/components/ui/page-skeleton"
 import type { AcaoProspeccaoResumo } from "./types"
@@ -56,6 +56,7 @@ async function fetchAcoesPaginated(params: {
   dataInicio: string
   dataFim: string
   avulsas: boolean
+  status: string
 }): Promise<{ data: AcaoProspeccaoResumo[]; total: number; totalPages: number }> {
   const sp = new URLSearchParams()
   sp.set("page", String(params.page))
@@ -65,15 +66,21 @@ async function fetchAcoesPaginated(params: {
   if (params.dataInicio) sp.set("dataInicio", params.dataInicio)
   if (params.dataFim) sp.set("dataFim", params.dataFim)
   if (params.avulsas) sp.set("avulsas", "true")
+  if (params.status) sp.set("status", params.status)
   const res = await fetch(`/api/crm/acoes-prospeccao?${sp}`)
   if (!res.ok) throw new Error("Falha ao carregar")
   return res.json()
 }
 
-async function fetchAcoesAll(mine: boolean, avulsas: boolean): Promise<AcaoProspeccaoResumo[]> {
+async function fetchAcoesAll(
+  mine: boolean,
+  avulsas: boolean,
+  status: string
+): Promise<AcaoProspeccaoResumo[]> {
   const sp = new URLSearchParams({ all: "true" })
   if (mine) sp.set("mine", "true")
   if (avulsas) sp.set("avulsas", "true")
+  if (status) sp.set("status", status)
   const res = await fetch(`/api/crm/acoes-prospeccao?${sp}`)
   if (!res.ok) throw new Error("Falha ao carregar")
   return res.json()
@@ -91,13 +98,20 @@ const TIPO_CORES: Record<string, string> = {
   TELEFONE: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/50 dark:text-emerald-400",
 }
 
+const STATUS_PADRAO = [
+  { nome: "AGENDADA", rotulo: "Agendada" },
+  { nome: "EM_ANDAMENTO", rotulo: "Em andamento" },
+  { nome: "REALIZADA", rotulo: "Realizada" },
+  { nome: "CANCELADA", rotulo: "Cancelada" },
+]
+
 type ModoVisao = "tabela" | "calendario" | "kanban"
 
 function AcoesProspeccaoPageContent() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const info = getInfoContent(pathname)
-  const { getLabel, getColor } = useStatuses("ACAO_PROSPECCAO")
+  const { statuses, getLabel, getColor } = useStatuses("ACAO_PROSPECCAO")
   const [search, setSearch] = useState("")
   const [debouncedSearch, setDebouncedSearch] = useState("")
   const [page, setPage] = useState(1)
@@ -114,6 +128,7 @@ function AcoesProspeccaoPageContent() {
 
   const [acoesFilter, setAcoesFilter] = useState<"todas" | "minhas">("todas")
   const [filterAvulsas, setFilterAvulsas] = useState(false)
+  const [statusFiltro, setStatusFiltro] = useState("")
 
   const handleSearchChange = useCallback((value: string) => {
     setSearch(value)
@@ -130,7 +145,18 @@ function AcoesProspeccaoPageContent() {
     }
   }, [])
 
+  const handleStatusFiltro = useCallback((valor: string) => {
+    setStatusFiltro((atual) => (atual === valor ? "" : valor))
+    setPage(1)
+    setSelectedIds([])
+  }, [])
+
   const isTableMode = modo === "tabela"
+  const statusFiltroAtivo = modo === "kanban" ? "" : statusFiltro
+  const ativos = statusAtivos(statuses)
+  const opcoesStatus = ativos.length
+    ? ativos.map((status) => ({ nome: status.nome, rotulo: status.rotulo || status.nome }))
+    : STATUS_PADRAO
 
   const { data: avulsasCount } = useQuery({
     queryKey: ["crm-acoes-prospeccao-avulsas-count", acoesFilter],
@@ -158,6 +184,7 @@ function AcoesProspeccaoPageContent() {
       dataInicio,
       dataFim,
       filterAvulsas,
+      statusFiltroAtivo,
     ],
     queryFn: () =>
       fetchAcoesPaginated({
@@ -167,14 +194,15 @@ function AcoesProspeccaoPageContent() {
         dataInicio,
         dataFim,
         avulsas: filterAvulsas,
+        status: statusFiltroAtivo,
       }),
     retry: 1,
     enabled: isTableMode,
   })
 
   const { data: allAcoes, isLoading: allLoading } = useQuery<AcaoProspeccaoResumo[]>({
-    queryKey: ["crm-acoes-prospeccao-all", acoesFilter, filterAvulsas],
-    queryFn: () => fetchAcoesAll(acoesFilter === "minhas", filterAvulsas),
+    queryKey: ["crm-acoes-prospeccao-all", acoesFilter, filterAvulsas, statusFiltroAtivo],
+    queryFn: () => fetchAcoesAll(acoesFilter === "minhas", filterAvulsas, statusFiltroAtivo),
     retry: 1,
     enabled: !isTableMode,
   })
@@ -315,6 +343,48 @@ function AcoesProspeccaoPageContent() {
           </Link>
         </div>
       </div>
+
+      {modo !== "kanban" && (
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 shadow-sm">
+          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+            Status
+          </span>
+          <div role="group" aria-label="Filtrar por status" className="flex flex-wrap gap-1.5">
+            <button
+              type="button"
+              aria-pressed={statusFiltro === ""}
+              onClick={() => handleStatusFiltro("")}
+              className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                statusFiltro === ""
+                  ? "bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900"
+                  : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+              }`}
+            >
+              Todos
+            </button>
+            {opcoesStatus.map((opcao) => (
+              <button
+                key={opcao.nome}
+                type="button"
+                aria-pressed={statusFiltro === opcao.nome}
+                title={opcao.nome}
+                onClick={() => handleStatusFiltro(opcao.nome)}
+                className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                  statusFiltro === opcao.nome
+                    ? "bg-blue-600 text-white shadow-sm"
+                    : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                }`}
+              >
+                <span
+                  className="h-2 w-2 rounded-full shrink-0"
+                  style={{ backgroundColor: getColor(opcao.nome) }}
+                />
+                {statuses.length ? getLabel(opcao.nome) : opcao.rotulo}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {modo === "tabela" && (
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">

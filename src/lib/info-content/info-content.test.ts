@@ -332,6 +332,9 @@ describe("getInfoContent", () => {
 
     expect(texto).toMatch(/abre na visão Calendário/i)
     expect(texto).toMatch(/Tabela ou Kanban/i)
+    expect(texto).toMatch(/botões superiores de status/i)
+    expect(texto).toMatch(/'Todos' limpa o filtro/i)
+    expect(texto).toMatch(/Kanban não há filtro superior/i)
   })
 
   it("o dashboard de visitas mostra indicadores e aponta para o dashboard de leads", () => {
@@ -367,6 +370,9 @@ describe("getInfoContent", () => {
     expect(conteudo?.title).toMatch(/Ações de Prospecção/)
     expect(texto).toMatch(/abre na visão Calendário/i)
     expect(texto).toMatch(/Tabela ou Kanban/i)
+    expect(texto).toMatch(/botões superiores de status/i)
+    expect(texto).toMatch(/'Todos' limpa o filtro/i)
+    expect(texto).toMatch(/Kanban não há filtro superior/i)
   })
 
   it("o dashboard de ações mostra indicadores e aponta para o dashboard de leads", () => {

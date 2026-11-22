@@ -70,15 +70,18 @@ function buildHandler() {
     if (method === "PATCH" && url === "/api/crm/acoes-prospeccao/bulk") return { json: { ok: true } }
     if (method === "DELETE" && url === "/api/crm/acoes-prospeccao/bulk") return { json: { ok: true } }
     if (method !== "GET") return { json: null }
+    if (url === "/api/admin/status?tipo=ACAO_PROSPECCAO") return { json: statuses }
 
     const u = new URL(url, "http://localhost")
     if (u.pathname === "/api/crm/acoes-prospeccao") {
+      const status = u.searchParams.get("status")
+      const porStatus = status ? acoes.filter((v) => v.status === status) : acoes
       if (u.searchParams.get("all") === "true") {
         if (u.searchParams.get("avulsas") === "true") return { json: [] }
-        return { json: acoes }
+        return { json: porStatus }
       }
       const q = (u.searchParams.get("q") || "").toLowerCase()
-      const filtered = acoes.filter(
+      const filtered = porStatus.filter(
         (v) =>
           !q ||
           v.empresaNome?.toLowerCase().includes(q) ||
@@ -155,6 +158,69 @@ describe("AcoesProspeccaoPage", () => {
       ).toBeDefined()
     )
     expect(screen.getByRole("button", { name: /Minhas Ações/ })).toHaveClass("bg-blue-600")
+  })
+
+  it("filtra a tabela por status ao clicar no botão superior", async () => {
+    renderPage(<AcoesProspeccaoPage />)
+    fireEvent.click(screen.getByRole("button", { name: "Tabela" }))
+    await screen.findByText("Tecelagem Alpha")
+
+    fireEvent.click(screen.getByRole("button", { name: "Realizada" }))
+
+    await waitFor(() =>
+      expect(
+        findCall(
+          fetchMock.calls,
+          "/api/crm/acoes-prospeccao?page=1&limit=50&status=REALIZADA",
+          "GET"
+        )
+      ).toBeDefined()
+    )
+    expect(await screen.findByText("Confecções Lima")).toBeInTheDocument()
+    expect(screen.queryByText("Tecelagem Alpha")).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Realizada" })).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    )
+  })
+
+  it("filtra o calendário por status ao clicar no botão superior", async () => {
+    renderPage(<AcoesProspeccaoPage />)
+    await screen.findByRole("button", { name: "Próximo mês" })
+
+    fireEvent.click(screen.getByRole("button", { name: "Realizada" }))
+
+    await waitFor(() =>
+      expect(
+        findCall(
+          fetchMock.calls,
+          "/api/crm/acoes-prospeccao?all=true&status=REALIZADA",
+          "GET"
+        )
+      ).toBeDefined()
+    )
+    expect(await screen.findByText("1 ação(ões) de prospecção")).toBeInTheDocument()
+  })
+
+  it("limpa o filtro de status ao clicar em Todos", async () => {
+    renderPage(<AcoesProspeccaoPage />)
+    fireEvent.click(screen.getByRole("button", { name: "Tabela" }))
+    await screen.findByText("Tecelagem Alpha")
+
+    fireEvent.click(screen.getByRole("button", { name: "Realizada" }))
+    await screen.findByText("Confecções Lima")
+    fireEvent.click(screen.getByRole("button", { name: "Todos" }))
+
+    expect(await screen.findByText("Tecelagem Alpha")).toBeInTheDocument()
+    expect(screen.getByText("Confecções Lima")).toBeInTheDocument()
+  })
+
+  it("não mostra filtro de status no kanban", async () => {
+    renderPage(<AcoesProspeccaoPage />)
+    fireEvent.click(screen.getByRole("button", { name: "Kanban" }))
+
+    expect(await screen.findByRole("button", { name: "Flutuar" })).toBeInTheDocument()
+    expect(screen.queryByRole("group", { name: "Filtrar por status" })).not.toBeInTheDocument()
   })
 
   it("alterna para o kanban com o tipo ACAO_PROSPECCAO", async () => {

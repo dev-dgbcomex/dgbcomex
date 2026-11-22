@@ -70,15 +70,18 @@ function buildHandler() {
     if (method === "PATCH" && url === "/api/crm/visitas/bulk") return { json: { ok: true } }
     if (method === "DELETE" && url === "/api/crm/visitas/bulk") return { json: { ok: true } }
     if (method !== "GET") return { json: null }
+    if (url === "/api/admin/status?tipo=VISITA") return { json: statusesVisita }
 
     const u = new URL(url, "http://localhost")
     if (u.pathname === "/api/crm/visitas") {
+      const status = u.searchParams.get("status")
+      const porStatus = status ? visitas.filter((v) => v.status === status) : visitas
       if (u.searchParams.get("all") === "true") {
         if (u.searchParams.get("avulsas") === "true") return { json: [] }
-        return { json: visitas }
+        return { json: porStatus }
       }
       const q = (u.searchParams.get("q") || "").toLowerCase()
-      const filtered = visitas.filter(
+      const filtered = porStatus.filter(
         (v) =>
           !q ||
           v.empresaNome?.toLowerCase().includes(q) ||
@@ -117,7 +120,7 @@ describe("VisitasPage", () => {
     expect(screen.getByText("Confecções Lima")).toBeInTheDocument()
     expect(screen.getByText("Presencial")).toBeInTheDocument()
     expect(screen.getByText("01/07/2026 10:00")).toBeInTheDocument()
-    expect(screen.getAllByText("AGENDADA").length).toBeGreaterThan(0)
+    expect(screen.getAllByText("Agendada").length).toBeGreaterThan(0)
     expect(screen.getByText("1-2 de 2 visita(s)")).toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Nova Visita" })).toHaveAttribute(
       "href",
@@ -148,6 +151,65 @@ describe("VisitasPage", () => {
       ).toBeDefined()
     )
     expect(screen.getByRole("button", { name: /Minhas Visitas/ })).toHaveClass("bg-blue-600")
+  })
+
+  it("filtra a tabela por status ao clicar no botão superior", async () => {
+    renderPage(<VisitasPage />)
+    fireEvent.click(screen.getByRole("button", { name: "Tabela" }))
+    await screen.findByText("Tecelagem Alpha")
+
+    fireEvent.click(screen.getByRole("button", { name: "Realizada" }))
+
+    await waitFor(() =>
+      expect(
+        findCall(
+          fetchMock.calls,
+          "/api/crm/visitas?page=1&limit=50&status=REALIZADA",
+          "GET"
+        )
+      ).toBeDefined()
+    )
+    expect(await screen.findByText("Confecções Lima")).toBeInTheDocument()
+    expect(screen.queryByText("Tecelagem Alpha")).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Realizada" })).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    )
+  })
+
+  it("filtra o calendário por status ao clicar no botão superior", async () => {
+    renderPage(<VisitasPage />)
+    await screen.findByRole("button", { name: "Próximo mês" })
+
+    fireEvent.click(screen.getByRole("button", { name: "Realizada" }))
+
+    await waitFor(() =>
+      expect(
+        findCall(fetchMock.calls, "/api/crm/visitas?all=true&status=REALIZADA", "GET")
+      ).toBeDefined()
+    )
+    expect(await screen.findByText("1 visita(s)")).toBeInTheDocument()
+  })
+
+  it("limpa o filtro de status ao clicar em Todos", async () => {
+    renderPage(<VisitasPage />)
+    fireEvent.click(screen.getByRole("button", { name: "Tabela" }))
+    await screen.findByText("Tecelagem Alpha")
+
+    fireEvent.click(screen.getByRole("button", { name: "Realizada" }))
+    await screen.findByText("Confecções Lima")
+    fireEvent.click(screen.getByRole("button", { name: "Todos" }))
+
+    expect(await screen.findByText("Tecelagem Alpha")).toBeInTheDocument()
+    expect(screen.getByText("Confecções Lima")).toBeInTheDocument()
+  })
+
+  it("não mostra filtro de status no kanban", async () => {
+    renderPage(<VisitasPage />)
+    fireEvent.click(screen.getByRole("button", { name: "Kanban" }))
+
+    expect(await screen.findByRole("button", { name: "Flutuar" })).toBeInTheDocument()
+    expect(screen.queryByRole("group", { name: "Filtrar por status" })).not.toBeInTheDocument()
   })
 
   it("alterna para o kanban", async () => {

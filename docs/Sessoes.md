@@ -26,6 +26,22 @@
 
 > Detalhe técnico completo em [`docs/crm-cliente-e-relatorios.md`](./crm-cliente-e-relatorios.md).
 
+### Sessão 34 — Filtro superior de status em visitas e ações de prospecção
+
+- **Data:** 2026-11-22
+- **Commit:** `feat(crm): filtra visitas e acoes por status no topo`
+- **Tarefa:** permitir filtrar as listagens de visitas e ações de prospecção apenas clicando em botões de status no topo, nos modos Tabela e Calendário das URLs `/comercial/crm/visitas` e `/comercial/crm/acoes-prospeccao`.
+- **Decisões aprovadas:** o filtro usa os status ativos configurados em `/api/admin/status`, com fallback para `AGENDADA`, `EM_ANDAMENTO`, `REALIZADA` e `CANCELADA` caso a configuração não carregue. `Todos` limpa o filtro e clicar duas vezes no mesmo status também alterna de volta. O Kanban continua sem filtro superior, apenas agrupando por status.
+- **Resultado:**
+  - As duas páginas ganharam uma faixa superior com botões `Todos` + statuses, visível apenas fora do Kanban, com `aria-pressed` e cor configurada por status.
+  - Tabela e Calendário passam o status ao backend (`?status=`); a paginação volta à página 1 e a seleção em massa é limpa ao trocar o filtro.
+  - As APIs já aceitavam `status`, então não houve migration, novo endpoint ou mudança de contrato.
+  - Testes de página cobrem filtro na Tabela, filtro no Calendário, limpeza por `Todos` e ausência da faixa no Kanban; os modais “i” explicam a nova dinâmica.
+- **Arquivos Envolvidos:** `src/app/(dashboard)/comercial/crm/visitas/page.tsx`, `src/app/(dashboard)/comercial/crm/visitas/page.test.tsx`, `src/app/(dashboard)/comercial/crm/acoes-prospeccao/page.tsx`, `src/app/(dashboard)/comercial/crm/acoes-prospeccao/page.test.tsx`, `src/lib/info-content/crm.ts`, `src/lib/info-content/info-content.test.ts`, `docs/Sessoes.md`.
+- **Verificação:** `npm run lint` sem erros (apenas warnings pré-existentes); `tsc --noEmit --pretty false` limpo com `NODE_OPTIONS=--max-old-space-size=8192`; testes focados `3 arquivos / 79 testes passados`; suíte completa `npm run test` → **473 arquivos / 2766 testes passados**; `npm run build` OK com `NODE_OPTIONS=--max-old-space-size=8192` (255/255 páginas estáticas).
+
+---
+
 ### Sessão 33 — Modal do semáforo com métricas e cards de leads alinhados
 
 - **Data:** 2026-11-22
