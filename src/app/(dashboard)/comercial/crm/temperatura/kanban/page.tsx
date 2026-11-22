@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useState, type CSSProperties } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
@@ -35,13 +35,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { DecisaoAutomacaoModal } from "@/components/crm/decisao-automacao-modal"
+import { FloatableKanban } from "@/components/crm/floatable-kanban"
 import { DroppableColumn, KanbanSkeleton } from "@/components/crm/kanban-column"
 import {
   MetricasModal,
   type TipoMetrica,
 } from "@/components/crm/leads/metricas-modal"
 import type { DecisaoPendente } from "@/lib/crm/automacoes-crm"
-import { corPorTitulo } from "@/lib/dracula"
+import { corPorTitulo, type EstiloCardDracula } from "@/lib/dracula"
 import { FAIXAS_CONVERSAO, contarFaixasConversao, type FaixaConversao } from "@/lib/crm/faixa-conversao"
 import { STATUS_OPORTUNIDADE_PADRAO } from "@/lib/crm/status-oportunidade"
 import {
@@ -49,12 +50,14 @@ import {
   filtrarItensTemperatura,
   oportunidadesCandidatas,
   planoDaTransicao,
+  segmentosDisponiveisTemperatura,
   temFiltrosTemperaturaAtivos,
   type EscolhasTemperatura,
   type TemperaturaFiltros,
   type TemperaturaItem,
 } from "@/lib/crm/temperatura"
 import { getInfoContent } from "@/lib/info-content"
+import { semaforoConversaoInfo } from "@/lib/info-content/crm"
 
 type RespostaTemperatura = {
   itens: TemperaturaItem[]
@@ -63,7 +66,25 @@ type RespostaTemperatura = {
 
 type MovimentoPendente = { item: TemperaturaItem; destino: FaixaConversao }
 
+type FlagFiltroTemperatura =
+  | "comOportunidade"
+  | "semOportunidade"
+  | "comPedido"
+  | "semPedido"
+  | "comVisita"
+  | "semVisita"
+  | "comAcao"
+  | "semAcao"
+
 const valorFormatter = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" })
+
+const ESTILOS_FAIXA: Record<FaixaConversao, EstiloCardDracula> = {
+  QUENTE: corPorTitulo("Quentes"),
+  MORNO: corPorTitulo("Mornos"),
+  FRIO: corPorTitulo("Frios"),
+}
+
+const ESTILOS_FAIXA_LISTA = FAIXAS_CONVERSAO.map(({ faixa }) => ESTILOS_FAIXA[faixa])
 
 async function carregarTemperatura(): Promise<RespostaTemperatura> {
   const resposta = await fetch("/api/crm/temperatura")
@@ -161,12 +182,43 @@ function MetricaCard({
   )
 }
 
+function BotaoFiltro({
+  ativo,
+  onClick,
+  children,
+  icone,
+  ativoClass = "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300",
+}: {
+  ativo: boolean
+  onClick: () => void
+  children: React.ReactNode
+  icone: React.ReactNode
+  ativoClass?: string
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={ativo}
+      onClick={onClick}
+      className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors ${
+        ativo
+          ? ativoClass
+          : "border-slate-200 text-slate-500 hover:text-slate-700 dark:border-slate-700 dark:text-slate-400"
+      }`}
+    >
+      {icone} {children}
+    </button>
+  )
+}
+
 function CardTemperatura({
   item,
+  estilo,
   onMover,
   onMetrica,
 }: {
   item: TemperaturaItem
+  estilo: EstiloCardDracula
   onMover: (item: TemperaturaItem, destino: FaixaConversao) => void
   onMetrica: (item: TemperaturaItem, tipo: TipoMetrica) => void
 }) {
@@ -175,15 +227,24 @@ function CardTemperatura({
     id: item.id,
     data: { item },
   })
+  const variaveisCard = {
+    "--card-borda": estilo.bordaIntensa,
+    "--card-fundo-claro": estilo.fundoIntensoClaro,
+    "--card-fundo-escuro": estilo.fundoIntensoEscuro,
+    "--card-realce": estilo.cor,
+  } as CSSProperties
 
   return (
     <article
       ref={setNodeRef}
-      style={{ transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined }}
+      style={{
+        ...variaveisCard,
+        transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+      }}
       {...attributes}
       {...listeners}
       onClick={() => router.push(item.href)}
-      className={`cursor-grab rounded-xl border border-slate-200 bg-white p-2.5 shadow-sm outline-none transition-shadow active:cursor-grabbing focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-slate-700 dark:bg-slate-900 ${
+      className={`cursor-grab rounded-xl border border-[color:var(--card-borda)] bg-white bg-[image:var(--card-fundo-claro)] p-2.5 shadow-sm outline-none transition-shadow active:cursor-grabbing focus-visible:ring-2 focus-visible:ring-blue-500 dark:bg-slate-950 dark:bg-[image:var(--card-fundo-escuro)] ${
         isDragging ? "opacity-50 shadow-lg" : "card-hover"
       }`}
       aria-label={`${item.nome} — faixa ${rotuloFaixa(item.faixaConversao)}`}
@@ -224,22 +285,41 @@ function CardTemperatura({
           Abrir cadastro <ExternalLink size={10} />
         </Link>
         <div className="flex items-center gap-1">
-          {FAIXAS_CONVERSAO.map(({ faixa, rotulo }) => (
-            <button
-              key={faixa}
-              type="button"
-              disabled={faixa === item.faixaConversao}
-              onClick={(evento) => {
-                parar(evento)
-                onMover(item, faixa)
-              }}
-              aria-label={`Mover ${item.nome} para ${rotulo}`}
-              title={`Mover para ${rotulo}`}
-              className="rounded border border-slate-200 px-1.5 py-0.5 text-[9px] font-medium text-slate-600 transition-colors hover:border-blue-400 hover:text-blue-600 disabled:cursor-default disabled:opacity-30 dark:border-slate-700 dark:text-slate-300"
-            >
-              {rotulo}
-            </button>
-          ))}
+          {FAIXAS_CONVERSAO.map(({ faixa, rotulo }) => {
+            const atual = faixa === item.faixaConversao
+            return (
+              <button
+                key={faixa}
+                type="button"
+                disabled={atual}
+                onClick={(evento) => {
+                  parar(evento)
+                  onMover(item, faixa)
+                }}
+                aria-label={`Mover ${item.nome} para ${rotulo}`}
+                aria-current={atual ? "true" : undefined}
+                title={atual ? `Faixa atual: ${rotulo}` : `Mover para ${rotulo}`}
+                data-faixa-atual={atual ? "true" : undefined}
+                style={
+                  atual
+                    ? {
+                        outlineColor: estilo.cor,
+                        outlineStyle: "solid",
+                        outlineWidth: 2,
+                        outlineOffset: 1,
+                      }
+                    : undefined
+                }
+                className={`rounded border px-1.5 py-0.5 text-[9px] transition-colors ${
+                  atual
+                    ? "cursor-default border-[color:var(--card-realce)] bg-white/80 font-semibold text-slate-900 dark:bg-slate-950/70 dark:text-slate-50"
+                    : "border-slate-200 font-medium text-slate-600 hover:border-blue-400 hover:text-blue-600 dark:border-slate-700 dark:text-slate-300"
+                }`}
+              >
+                {rotulo}
+              </button>
+            )
+          })}
         </div>
       </div>
     </article>
@@ -252,7 +332,8 @@ function rotuloFaixa(faixa: FaixaConversao) {
 
 export default function KanbanTemperaturaPage() {
   const pathname = usePathname()
-  const info = getInfoContent(pathname) ?? {
+  const flutuante = pathname === "/kanban-crm"
+  const info = getInfoContent("/comercial/crm/temperatura/kanban") ?? {
     title: "Kanban de Temperatura",
     description: "Quadro de leads e clientes por faixa de conversão.",
   }
@@ -267,6 +348,10 @@ export default function KanbanTemperaturaPage() {
     tipo: TipoMetrica
   } | null>(null)
 
+  function alternarFlag(campo: FlagFiltroTemperatura, oposto: FlagFiltroTemperatura) {
+    setFiltros((anterior) => ({ ...anterior, [campo]: !anterior[campo], [oposto]: false }))
+  }
+
   const { data, isLoading, isError } = useQuery({
     queryKey: ["crm-temperatura"],
     queryFn: carregarTemperatura,
@@ -279,6 +364,7 @@ export default function KanbanTemperaturaPage() {
   )
 
   const itens = useMemo(() => data?.itens ?? [], [data?.itens])
+  const segmentos = useMemo(() => segmentosDisponiveisTemperatura(itens), [itens])
   const filtrados = useMemo(() => filtrarItensTemperatura(itens, filtros), [itens, filtros])
   const contagemFiltrada = useMemo(() => contarFaixasConversao(filtrados), [filtrados])
   const filtrosAtivos = temFiltrosTemperaturaAtivos(filtros)
@@ -393,6 +479,89 @@ export default function KanbanTemperaturaPage() {
     })
   }
 
+  const quadro = isLoading ? (
+    <KanbanSkeleton larguraCompleta estilos={ESTILOS_FAIXA_LISTA} />
+  ) : isError ? (
+    <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-center text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">
+      Não foi possível carregar o kanban de temperatura.
+    </div>
+  ) : (
+    <DndContext
+      sensors={sensores}
+      onDragStart={(evento) => {
+        setItemArrastado((evento.active.data.current?.item as TemperaturaItem | undefined) ?? null)
+      }}
+      onDragCancel={() => setItemArrastado(null)}
+      onDragEnd={(evento) => {
+        const item = evento.active.data.current?.item as TemperaturaItem | undefined
+        const destino = String(evento.over?.id ?? "") as FaixaConversao
+        setItemArrastado(null)
+        if (!item || !FAIXAS_CONVERSAO.some((faixa) => faixa.faixa === destino)) return
+        if (item.faixaConversao === destino) return
+        abrirMovimento(item, destino)
+      }}
+    >
+      <div
+        role="group"
+        aria-label="Colunas do kanban de temperatura"
+        className="grid w-full grid-cols-1 gap-4 lg:grid-cols-3"
+      >
+        {FAIXAS_CONVERSAO.map(({ faixa, rotulo, descricao }) => {
+          const estilo = ESTILOS_FAIXA[faixa]
+          return (
+            <DroppableColumn
+              key={faixa}
+              id={faixa}
+              rotulo={rotulo}
+              cor={estilo.cor}
+              estilo={estilo}
+              count={contagemFiltrada[faixa]}
+              larguraCompleta
+              info={
+                <InfoButton
+                  content={semaforoConversaoInfo[faixa]}
+                  label={`Informações da faixa ${rotulo}`}
+                />
+              }
+            >
+              <p className="mb-2 text-[10px] leading-snug text-slate-500 dark:text-slate-400">
+                {descricao}
+              </p>
+              <div className="space-y-2">
+                {filtrados
+                  .filter((item) => item.faixaConversao === faixa)
+                  .map((item) => (
+                    <CardTemperatura
+                      key={item.id}
+                      item={item}
+                      estilo={estilo}
+                      onMover={abrirMovimento}
+                      onMetrica={(selecionado, tipo) => setMetricaAberta({ item: selecionado, tipo })}
+                    />
+                  ))}
+                {contagemFiltrada[faixa] === 0 && (
+                  <p className="rounded-lg border border-dashed border-slate-200 p-4 text-center text-xs text-slate-400 dark:border-slate-700">
+                    Nenhum card nesta faixa com os filtros atuais.
+                  </p>
+                )}
+              </div>
+            </DroppableColumn>
+          )
+        })}
+      </div>
+      <DragOverlay>
+        {itemArrastado && (
+          <div className="w-64 rounded-xl border border-blue-400 bg-white p-3 shadow-xl dark:bg-slate-900">
+            <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
+              {itemArrastado.nome}
+            </p>
+            <p className="text-[10px] text-slate-500">{itemArrastado.documento || "—"}</p>
+          </div>
+        )}
+      </DragOverlay>
+    </DndContext>
+  )
+
   return (
     <div className="space-y-5 animate-fade-in">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -405,12 +574,14 @@ export default function KanbanTemperaturaPage() {
             {info.description}
           </p>
         </div>
-        <Link
-          href="/comercial/crm"
-          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-        >
-          <ArrowLeft size={14} /> Voltar ao CRM
-        </Link>
+        {!flutuante && (
+          <Link
+            href="/comercial/crm"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+          >
+            <ArrowLeft size={14} /> Voltar ao CRM
+          </Link>
+        )}
       </div>
 
       <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
@@ -461,32 +632,79 @@ export default function KanbanTemperaturaPage() {
               </button>
             ))}
           </div>
-          <button
-            type="button"
-            aria-pressed={filtros.comOportunidade}
-            onClick={() =>
-              setFiltros((anterior) => ({ ...anterior, comOportunidade: !anterior.comOportunidade }))
+          <select
+            value={filtros.segmento}
+            onChange={(evento) =>
+              setFiltros((anterior) => ({ ...anterior, segmento: evento.target.value }))
             }
-            className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors ${
-              filtros.comOportunidade
-                ? "border-purple-500 bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300"
-                : "border-slate-200 text-slate-500 hover:text-slate-700 dark:border-slate-700 dark:text-slate-400"
-            }`}
+            aria-label="Filtrar por segmento"
+            className="rounded-lg border border-slate-200 bg-white px-3 py-1 text-xs text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
           >
-            <Target size={13} /> Com oportunidade ({itens.filter((item) => item.totalOportunidades > 0).length})
-          </button>
-          <button
-            type="button"
-            aria-pressed={filtros.comPedido}
-            onClick={() => setFiltros((anterior) => ({ ...anterior, comPedido: !anterior.comPedido }))}
-            className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors ${
-              filtros.comPedido
-                ? "border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
-                : "border-slate-200 text-slate-500 hover:text-slate-700 dark:border-slate-700 dark:text-slate-400"
-            }`}
+            <option value="">Todos os segmentos</option>
+            {segmentos.map((segmento) => (
+              <option key={segmento} value={segmento}>
+                {segmento}
+              </option>
+            ))}
+          </select>
+          <BotaoFiltro
+            ativo={filtros.comOportunidade}
+            onClick={() => alternarFlag("comOportunidade", "semOportunidade")}
+            icone={<Target size={13} />}
+            ativoClass="border-purple-500 bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300"
           >
-            <ShoppingCart size={13} /> Com pedido ({itens.filter((item) => item.totalPedidos > 0).length})
-          </button>
+            Com oportunidade ({itens.filter((item) => item.totalOportunidades > 0).length})
+          </BotaoFiltro>
+          <BotaoFiltro
+            ativo={filtros.semOportunidade}
+            onClick={() => alternarFlag("semOportunidade", "comOportunidade")}
+            icone={<Target size={13} />}
+          >
+            Sem oportunidade ({itens.filter((item) => item.totalOportunidades === 0).length})
+          </BotaoFiltro>
+          <BotaoFiltro
+            ativo={filtros.comPedido}
+            onClick={() => alternarFlag("comPedido", "semPedido")}
+            icone={<ShoppingCart size={13} />}
+            ativoClass="border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
+          >
+            Com pedido ({itens.filter((item) => item.totalPedidos > 0).length})
+          </BotaoFiltro>
+          <BotaoFiltro
+            ativo={filtros.semPedido}
+            onClick={() => alternarFlag("semPedido", "comPedido")}
+            icone={<ShoppingCart size={13} />}
+          >
+            Sem pedido ({itens.filter((item) => item.totalPedidos === 0).length})
+          </BotaoFiltro>
+          <BotaoFiltro
+            ativo={filtros.comVisita}
+            onClick={() => alternarFlag("comVisita", "semVisita")}
+            icone={<Calendar size={13} />}
+          >
+            Com visitas ({itens.filter((item) => item.totalVisitas > 0).length})
+          </BotaoFiltro>
+          <BotaoFiltro
+            ativo={filtros.semVisita}
+            onClick={() => alternarFlag("semVisita", "comVisita")}
+            icone={<Calendar size={13} />}
+          >
+            Sem visitas ({itens.filter((item) => item.totalVisitas === 0).length})
+          </BotaoFiltro>
+          <BotaoFiltro
+            ativo={filtros.comAcao}
+            onClick={() => alternarFlag("comAcao", "semAcao")}
+            icone={<Megaphone size={13} />}
+          >
+            Com ações ({itens.filter((item) => item.totalAcoes > 0).length})
+          </BotaoFiltro>
+          <BotaoFiltro
+            ativo={filtros.semAcao}
+            onClick={() => alternarFlag("semAcao", "comAcao")}
+            icone={<Megaphone size={13} />}
+          >
+            Sem ações ({itens.filter((item) => item.totalAcoes === 0).length})
+          </BotaoFiltro>
           {filtrosAtivos && (
             <button
               type="button"
@@ -502,74 +720,10 @@ export default function KanbanTemperaturaPage() {
         </div>
       </div>
 
-      {isLoading ? (
-        <KanbanSkeleton />
-      ) : isError ? (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-center text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">
-          Não foi possível carregar o kanban de temperatura.
-        </div>
+      {flutuante ? (
+        quadro
       ) : (
-        <DndContext
-          sensors={sensores}
-          onDragStart={(evento) => {
-            setItemArrastado((evento.active.data.current?.item as TemperaturaItem | undefined) ?? null)
-          }}
-          onDragCancel={() => setItemArrastado(null)}
-          onDragEnd={(evento) => {
-            const item = evento.active.data.current?.item as TemperaturaItem | undefined
-            const destino = String(evento.over?.id ?? "") as FaixaConversao
-            setItemArrastado(null)
-            if (!item || !FAIXAS_CONVERSAO.some((faixa) => faixa.faixa === destino)) return
-            if (item.faixaConversao === destino) return
-            abrirMovimento(item, destino)
-          }}
-        >
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-            {FAIXAS_CONVERSAO.map(({ faixa, rotulo, descricao }) => {
-              const estilo = corPorTitulo(rotulo)
-              return (
-                <DroppableColumn
-                  key={faixa}
-                  id={faixa}
-                  rotulo={rotulo}
-                  cor={estilo.cor}
-                  count={contagemFiltrada[faixa]}
-                >
-                  <p className="mb-2 text-[10px] leading-snug text-slate-500 dark:text-slate-400">
-                    {descricao}
-                  </p>
-                  <div className="space-y-2">
-                    {filtrados
-                      .filter((item) => item.faixaConversao === faixa)
-                      .map((item) => (
-                        <CardTemperatura
-                          key={item.id}
-                          item={item}
-                          onMover={abrirMovimento}
-                          onMetrica={(selecionado, tipo) => setMetricaAberta({ item: selecionado, tipo })}
-                        />
-                      ))}
-                    {contagemFiltrada[faixa] === 0 && (
-                      <p className="rounded-lg border border-dashed border-slate-200 p-4 text-center text-xs text-slate-400 dark:border-slate-700">
-                        Nenhum card nesta faixa com os filtros atuais.
-                      </p>
-                    )}
-                  </div>
-                </DroppableColumn>
-              )
-            })}
-          </div>
-          <DragOverlay>
-            {itemArrastado && (
-              <div className="w-64 rounded-xl border border-blue-400 bg-white p-3 shadow-xl dark:bg-slate-900">
-                <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
-                  {itemArrastado.nome}
-                </p>
-                <p className="text-[10px] text-slate-500">{itemArrastado.documento || "—"}</p>
-              </div>
-            )}
-          </DragOverlay>
-        </DndContext>
+        <FloatableKanban tipo="TEMPERATURA">{quadro}</FloatableKanban>
       )}
 
       <Dialog open={pendente !== null} onOpenChange={(aberto) => !aberto && setPendente(null)}>

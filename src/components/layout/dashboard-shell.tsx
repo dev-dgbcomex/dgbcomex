@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { usePathname } from "next/navigation"
 import { Header } from "@/components/layout/header"
 import { Sidebar } from "@/components/layout/sidebar"
 import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav"
@@ -8,6 +9,8 @@ import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav"
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
+  const pathname = usePathname()
+  const larguraTotal = pathname === "/comercial/crm/temperatura/kanban"
 
   useEffect(() => {
     const saved = localStorage.getItem("sidebar-collapsed")
@@ -32,7 +35,9 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           sidebarCollapsed={collapsed}
         />
         <main className="p-4 md:p-6 pb-20 lg:pb-6">
-          <div className={`mx-auto animate-fade-in ${collapsed ? "max-w-none" : "max-w-7xl"}`}>
+          <div
+            className={`mx-auto animate-fade-in ${collapsed || larguraTotal ? "max-w-none" : "max-w-7xl"}`}
+          >
             {children}
           </div>
         </main>

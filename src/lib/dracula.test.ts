@@ -103,6 +103,9 @@ describe("corPorTitulo", () => {
     expect(estilo.fundoEscuro).toContain("rgba(40, 42, 54")
     expect(estilo.borda.startsWith("rgba(")).toBe(true)
     expect(estilo.fundoIcone.startsWith("rgba(")).toBe(true)
+    expect(estilo.fundoIntensoClaro).toContain("linear-gradient")
+    expect(estilo.fundoIntensoEscuro).toContain("linear-gradient")
+    expect(estilo.bordaIntensa.startsWith("rgba(")).toBe(true)
   })
 
   it("cores diferentes para títulos diferentes", () => {

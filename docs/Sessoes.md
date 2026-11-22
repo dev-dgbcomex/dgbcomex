@@ -26,6 +26,24 @@
 
 > Detalhe técnico completo em [`docs/crm-cliente-e-relatorios.md`](./crm-cliente-e-relatorios.md).
 
+### Sessão 39 — Refino visual e filtros do kanban de temperatura
+
+- **Data:** 2026-11-22
+- **Commit:** `feat(crm): refina kanban de temperatura`
+- **Tarefa:** refinar o kanban de temperatura após o feedback de produção: usar toda a largura, renomear o atalho, aplicar as cores Dracula das faixas com cards em tom intenso, destacar o botão da faixa atual, permitir flutuar, explicar cada coluna com o “i” e ampliar os filtros com segmento, presença/ausência de visitas e ações e ausência de oportunidades/pedidos.
+- **Decisões aprovadas:** as cores vêm de `corPorTitulo` (Quentes `#50fa7b`, Mornos `#ffb86c`, Frios `#bd93f9`); a coluna recebe a cor da faixa e o card usa fundo/borda intensos da mesma paleta; o botão da faixa atual permanece visível e ganha `outline` na cor da faixa; cada coluna ganha um “i” com `semaforoConversaoInfo[faixa]`; o botão Flutuar reusa `FloatableKanban` e abre `/kanban-crm?tipo=TEMPERATURA`; a janela standalone detecta a rota e esconde “Voltar ao CRM”; `Com` e `Sem` do mesmo recurso são exclusivos.
+- **Resultado:**
+  - `DroppableColumn` e `KanbanSkeleton` aceitam `estilo`/`estilos` e `info`, aplicando variáveis CSS Dracula sem alterar os outros kanbans; a rota do kanban usa `max-w-none` no `DashboardShell` e grid `lg:grid-cols-3` com colunas `w-full`.
+  - `CardTemperatura` usa `fundoIntensoClaro`, `fundoIntensoEscuro` e `bordaIntensa`; `src/lib/dracula.ts` passou a expor esses campos, mantendo a paleta como fonte única.
+  - O atalho e a busca global passam a se chamar “Kanban de Temperatura”; modais “i” do dashboard e do kanban foram atualizados.
+  - `TemperaturaFiltros` ganhou `segmento`, `semOportunidade`, `semPedido`, `comVisita`, `semVisita`, `comAcao` e `semAcao`, com `segmentosDisponiveisTemperatura()` derivado dos itens carregados; o select e os botões de filtro usam `aria-pressed`.
+  - A janela `/kanban-crm?tipo=TEMPERATURA` renderiza o mesmo kanban em modo flutuante e mantém o botão “Recolocar na aplicação”.
+- **Arquivos Envolvidos:** `src/components/crm/{kanban-column.tsx,floatable-kanban.tsx}`, `src/components/layout/{dashboard-shell.tsx,dashboard-shell.test.tsx}`, `src/app/(dashboard)/comercial/crm/{page.tsx,page.test.tsx,temperatura/kanban/page.tsx,temperatura/kanban/page.test.tsx}`, `src/app/kanban-crm/{page.tsx,page.temperatura.test.tsx}`, `src/lib/crm/{temperatura.ts,temperatura.test.ts}`, `src/lib/dracula.ts`, `src/lib/dracula.test.ts`, `src/lib/info-content/{crm.ts,crm-dashboard.ts,info-content.test.ts}`, `src/lib/search-registry.ts`, `docs/Sessoes.md`.
+- **Testes:** focados `7 arquivos / 96 testes passados`; suíte completa `npm run test` → **483 arquivos / 2817 testes passados**.
+- **Verificação:** `npm run lint` sem erros (apenas warnings pré-existentes); `tsc --noEmit --pretty false` limpo com `NODE_OPTIONS=--max-old-space-size=8192`; `npm run build` OK com `NODE_OPTIONS=--max-old-space-size=8192` (258/258 páginas estáticas).
+
+---
+
 ### Sessão 38 — Temperatura combinada no CRM e kanban de conversão
 
 - **Data:** 2026-11-22

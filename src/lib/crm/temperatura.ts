@@ -47,15 +47,29 @@ export type TemperaturaItem = {
 export type TemperaturaFiltros = {
   busca: string
   tipo: "todos" | "lead" | "cliente"
+  segmento: string
   comOportunidade: boolean
+  semOportunidade: boolean
   comPedido: boolean
+  semPedido: boolean
+  comVisita: boolean
+  semVisita: boolean
+  comAcao: boolean
+  semAcao: boolean
 }
 
 export const TEMPERATURA_FILTROS_VAZIOS: TemperaturaFiltros = {
   busca: "",
   tipo: "todos",
+  segmento: "",
   comOportunidade: false,
+  semOportunidade: false,
   comPedido: false,
+  semPedido: false,
+  comVisita: false,
+  semVisita: false,
+  comAcao: false,
+  semAcao: false,
 }
 
 export type AcaoTemperatura =
@@ -120,8 +134,15 @@ export function filtrarItensTemperatura(
 
   return itens.filter((item) => {
     if (filtros.tipo !== "todos" && item.tipo !== filtros.tipo) return false
+    if (filtros.segmento && item.segmento !== filtros.segmento) return false
     if (filtros.comOportunidade && item.totalOportunidades <= 0) return false
+    if (filtros.semOportunidade && item.totalOportunidades > 0) return false
     if (filtros.comPedido && item.totalPedidos <= 0) return false
+    if (filtros.semPedido && item.totalPedidos > 0) return false
+    if (filtros.comVisita && item.totalVisitas <= 0) return false
+    if (filtros.semVisita && item.totalVisitas > 0) return false
+    if (filtros.comAcao && item.totalAcoes <= 0) return false
+    if (filtros.semAcao && item.totalAcoes > 0) return false
     if (!termo) return true
 
     const documentos = [item.cpf, item.cnpj, item.documento].map(digitosDocumento).join(" ")
@@ -142,12 +163,27 @@ export function oportunidadesCandidatas(
   )
 }
 
+export function segmentosDisponiveisTemperatura(itens: TemperaturaItem[]): string[] {
+  const segmentos = itens
+    .map((item) => item.segmento?.trim())
+    .filter((segmento): segmento is string => Boolean(segmento))
+
+  return Array.from(new Set(segmentos)).sort((a, b) => a.localeCompare(b, "pt-BR"))
+}
+
 export function temFiltrosTemperaturaAtivos(filtros: TemperaturaFiltros): boolean {
   return Boolean(
     filtros.busca.trim() ||
       filtros.tipo !== "todos" ||
+      filtros.segmento ||
       filtros.comOportunidade ||
-      filtros.comPedido
+      filtros.semOportunidade ||
+      filtros.comPedido ||
+      filtros.semPedido ||
+      filtros.comVisita ||
+      filtros.semVisita ||
+      filtros.comAcao ||
+      filtros.semAcao
   )
 }
 

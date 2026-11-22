@@ -525,7 +525,7 @@ function QuickActionsBar() {
         <QuickAction
           href="/comercial/crm/temperatura/kanban"
           icon={<BarChart3 size={14} />}
-          label="Kanban"
+          label="Kanban de Temperatura"
           color="text-indigo-600 dark:text-indigo-400"
         />
         <QuickAction

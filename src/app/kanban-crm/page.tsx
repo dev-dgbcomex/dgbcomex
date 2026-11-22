@@ -12,6 +12,7 @@ import TarefasKanban from "@/components/crm/tarefas-kanban"
 import AcoesProspeccaoKanban from "@/components/crm/acoes-prospeccao-kanban"
 import VisitasKanban from "@/components/crm/visitas-kanban"
 import CampanhasKanban from "@/components/crm/campanhas-kanban"
+import KanbanTemperaturaPage from "@/app/(dashboard)/comercial/crm/temperatura/kanban/page"
 import { Minimize2, Loader2 } from "lucide-react"
 
 const CHANNEL = "kanban-crm-sync"
@@ -26,6 +27,7 @@ const TIPO_ROTULO: Record<string, string> = {
   ACAO_PROSPECCAO: "Ações de Prospecção",
   VISITA: "Visitas",
   CAMPANHA: "Campanhas",
+  TEMPERATURA: "Temperatura",
 }
 
 const API_ENDPOINTS: Record<string, string> = {
@@ -119,6 +121,8 @@ function CRMKanbanStandaloneContent() {
         return <VisitasKanban visitas={data} />
       case "CAMPANHA":
         return <CampanhasKanban campanhas={data} />
+      case "TEMPERATURA":
+        return <KanbanTemperaturaPage />
       default:
         return <p className="text-slate-400 text-center py-10">Tipo inválido</p>
     }

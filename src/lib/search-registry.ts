@@ -647,7 +647,7 @@ export const searchRegistry: SearchItem[] = [
   },
   {
     id: "crm-temperatura-kanban",
-    label: "Kanban — Temperatura CRM",
+    label: "Kanban de Temperatura",
     keywords: [
       "crm",
       "temperatura",

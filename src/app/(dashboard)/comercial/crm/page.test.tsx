@@ -272,7 +272,7 @@ describe("CrmDashboardPage", () => {
       "Novo Lead (Negócio)",
       "Nova Oportunidade",
       "Nova Ação de Prospecção",
-      "Kanban",
+      "Kanban de Temperatura",
       "Nova Visita",
       "Minhas Tarefas",
     ]) {
@@ -285,7 +285,7 @@ describe("CrmDashboardPage", () => {
       expect(link).toHaveAttribute("href", "/comercial/crm/acoes-prospeccao/novo")
     }
 
-    const kanbans = screen.getAllByRole("link", { name: "Kanban" })
+    const kanbans = screen.getAllByRole("link", { name: "Kanban de Temperatura" })
     expect(kanbans).toHaveLength(2)
     for (const link of kanbans) {
       expect(link).toHaveAttribute("href", "/comercial/crm/temperatura/kanban")

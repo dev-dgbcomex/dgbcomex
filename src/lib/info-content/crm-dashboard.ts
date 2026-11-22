@@ -216,14 +216,14 @@ export const crmDashboardInfo = {
     description:
       "Seis atalhos em faixas compactas no topo e ao final do dashboard para criar registros ou abrir listagens do CRM.",
     rules: [
-      "Os atalhos disponíveis são: Novo Lead (Negócio), Nova Oportunidade, Nova Ação de Prospecção, Kanban (temperatura de leads e clientes), Nova Visita e Minhas Tarefas.",
+      "Os atalhos disponíveis são: Novo Lead (Negócio), Nova Oportunidade, Nova Ação de Prospecção, Kanban de Temperatura, Nova Visita e Minhas Tarefas.",
       "As faixas ficam acima dos cards de resumo e ao final da página, com os mesmos seis atalhos, para facilitar o acesso por teclado sem voltar ao topo.",
       "Os links apenas navegam: nenhum dado é criado ou alterado ao clicar em um atalho.",
     ],
     examples: [
       {
         title: "Exemplo de atalho",
-        desc: "Clicar em 'Nova Ação de Prospecção' abre /comercial/crm/acoes-prospeccao/novo, clicar em 'Kanban' abre /comercial/crm/temperatura/kanban e clicar em 'Minhas Tarefas' abre /comercial/crm/tarefas, sem modificar os números do dashboard.",
+        desc: "Clicar em 'Nova Ação de Prospecção' abre /comercial/crm/acoes-prospeccao/novo, clicar em 'Kanban de Temperatura' abre /comercial/crm/temperatura/kanban e clicar em 'Minhas Tarefas' abre /comercial/crm/tarefas, sem modificar os números do dashboard.",
       },
     ],
   } satisfies InfoContent,

@@ -1078,16 +1078,26 @@ describe("crmDashboardInfo", () => {
     const textoKanban = [
       kanban?.description ?? "",
       ...(kanban?.rules ?? []),
+      ...(kanban?.fields ?? []).map((f) => `${f.name}: ${f.desc}`),
       ...(kanban?.examples ?? []).map((e) => `${e.title}: ${e.desc}`),
     ].join("\n")
     expect(textoKanban).toMatch(/arraste/i)
+    expect(textoKanban).toMatch(/largura disponível/i)
+    expect(textoKanban).toMatch(/colunas/i)
     expect(textoKanban).toMatch(/Negociação/i)
     expect(textoKanban).toMatch(/Proposta/i)
     expect(textoKanban).toMatch(/FECHADO_PERDIDO com motivo/i)
     expect(textoKanban).toMatch(/CPF\/CNPJ/i)
-    expect(textoKanban).toMatch(/Com oportunidade/i)
-    expect(textoKanban).toMatch(/Com pedido/i)
+    expect(textoKanban).toMatch(/Com\/Sem oportunidade/i)
+    expect(textoKanban).toMatch(/Com\/Sem pedido/i)
     expect(textoKanban).toMatch(/apenas como Cliente/i)
+    expect(textoKanban).toMatch(/cor Dracula/i)
+    expect(textoKanban).toMatch(/contorno destacado/i)
+    expect(textoKanban).toMatch(/i. no cabeçalho de cada coluna/i)
+    expect(textoKanban).toMatch(/Flutuar/i)
+    expect(textoKanban).toMatch(/Segmento/i)
+    expect(textoKanban).toMatch(/Sem visitas/i)
+    expect(textoKanban).toMatch(/Sem ações/i)
   })
 
   it("as listagens explicam o padrão em cards e as contagens exibidas", () => {

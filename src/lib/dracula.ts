@@ -94,6 +94,12 @@ export interface EstiloCardDracula {
   borda: string
   /** Cor do fundo do badge do ícone. */
   fundoIcone: string
+  /** Fundo mais intenso para cards dentro de uma superfície da mesma cor. */
+  fundoIntensoClaro: string
+  /** Fundo mais intenso no tema escuro para cards dentro de uma superfície da mesma cor. */
+  fundoIntensoEscuro: string
+  /** Borda reforçada do card dentro de uma superfície da mesma cor. */
+  bordaIntensa: string
 }
 
 function hexParaRgba(hex: string, alfa: number): string {
@@ -123,6 +129,9 @@ export function corPorTitulo(titulo: string): EstiloCardDracula {
     fundoEscuro: `linear-gradient(135deg, ${hexParaRgba(PALETA_DRACULA.background, 0.96)}, ${hexParaRgba(cor, 0.24)})`,
     borda: hexParaRgba(cor, 0.45),
     fundoIcone: hexParaRgba(cor, 0.16),
+    fundoIntensoClaro: `linear-gradient(135deg, ${hexParaRgba(cor, 0.46)}, ${hexParaRgba(cor, 0.2)} 70%)`,
+    fundoIntensoEscuro: `linear-gradient(135deg, ${hexParaRgba(cor, 0.55)}, ${hexParaRgba(PALETA_DRACULA.background, 0.94)})`,
+    bordaIntensa: hexParaRgba(cor, 0.75),
   }
 }
 

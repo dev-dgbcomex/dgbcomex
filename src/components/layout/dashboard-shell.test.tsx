@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from "vitest"
 import { render, screen, fireEvent } from "@testing-library/react"
+import { navMock } from "@/test/harness"
 import { DashboardShell } from "./dashboard-shell"
 
 vi.mock("@/components/layout/sidebar", () => ({
@@ -20,6 +21,7 @@ vi.mock("@/components/layout/mobile-bottom-nav", () => ({
 
 describe("DashboardShell", () => {
   it("recolhe a sidebar e expande a largura do conteúdo", () => {
+    navMock.setPathname("/dashboard")
     render(
       <DashboardShell>
         <p>conteudo</p>
@@ -34,5 +36,18 @@ describe("DashboardShell", () => {
 
     expect(wrapper.className).not.toContain("max-w-7xl")
     expect(wrapper.className).toContain("max-w-none")
+  })
+
+  it("usa toda a largura disponível no kanban de temperatura", () => {
+    navMock.setPathname("/comercial/crm/temperatura/kanban")
+    render(
+      <DashboardShell>
+        <p>kanban</p>
+      </DashboardShell>
+    )
+
+    const wrapper = screen.getByText("kanban").parentElement as HTMLElement
+    expect(wrapper.className).toContain("max-w-none")
+    expect(wrapper.className).not.toContain("max-w-7xl")
   })
 })

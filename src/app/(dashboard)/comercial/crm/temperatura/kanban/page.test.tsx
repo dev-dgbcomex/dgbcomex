@@ -7,6 +7,13 @@ import KanbanTemperaturaPage from "./page"
 
 vi.setConfig({ testTimeout: 30000 })
 
+class BroadcastChannelMock {
+  onmessage: ((event: MessageEvent) => void) | null = null
+  onmessageerror: ((event: MessageEvent) => void) | null = null
+  postMessage() {}
+  close() {}
+}
+
 function item(overrides: Partial<TemperaturaItem>): TemperaturaItem {
   return {
     id: "lead-1",
@@ -14,6 +21,7 @@ function item(overrides: Partial<TemperaturaItem>): TemperaturaItem {
     entidadeId: 1,
     nome: "Ação Indústria",
     documento: "12.345.678/0001-90",
+    segmento: "Têxtil",
     faixaConversao: "FRIO",
     totalOportunidades: 0,
     totalOportunidadesProposta: 0,
@@ -35,6 +43,7 @@ const itens: TemperaturaItem[] = [
     entidadeId: 2,
     nome: "Cliente Lima",
     documento: "98.765.432/0001-10",
+    segmento: "Agro",
     faixaConversao: "MORNO",
     totalOportunidades: 1,
     totalOportunidadesProposta: 1,
@@ -84,6 +93,7 @@ function setup(lista: TemperaturaItem[] = itens) {
 describe("KanbanTemperaturaPage", () => {
   beforeEach(() => {
     navMock.setPathname("/comercial/crm/temperatura/kanban")
+    vi.stubGlobal("BroadcastChannel", BroadcastChannelMock)
   })
 
   it("carrega as três faixas e os cards com tipo e métricas", async () => {
@@ -98,6 +108,42 @@ describe("KanbanTemperaturaPage", () => {
     expect(screen.getByText("Cliente")).toBeInTheDocument()
     expect(screen.getAllByText("Lead").length).toBeGreaterThan(0)
     expect(screen.getByRole("button", { name: "Informações do kanban de temperatura" })).toBeInTheDocument()
+    expect(screen.getAllByRole("button", { name: /Informações da faixa/ })).toHaveLength(3)
+
+    const colunas = screen.getByRole("group", { name: "Colunas do kanban de temperatura" })
+    expect(colunas.className).toContain("grid-cols-3")
+    expect(colunas.children).toHaveLength(3)
+    for (const coluna of Array.from(colunas.children)) {
+      expect(coluna.className).toContain("w-full")
+      expect(coluna.className).not.toContain("w-72")
+    }
+    expect(colunas.children[0].getAttribute("style")).toContain("#50fa7b")
+    expect(colunas.children[1].getAttribute("style")).toContain("#ffb86c")
+    expect(colunas.children[2].getAttribute("style")).toContain("#bd93f9")
+    expect(screen.getByLabelText("Ação Indústria — faixa Frios").getAttribute("style")).toContain(
+      "#bd93f9"
+    )
+
+    const botaoAtual = screen.getByRole("button", { name: "Mover Ação Indústria para Frios" })
+    expect(botaoAtual).toBeDisabled()
+    expect(botaoAtual.getAttribute("aria-current")).toBe("true")
+    expect(botaoAtual.getAttribute("data-faixa-atual")).toBe("true")
+    expect(botaoAtual.style.outlineWidth).toBe("2px")
+  })
+
+  it("abre o kanban em janela separada pelo botão Flutuar", async () => {
+    const open = vi.spyOn(window, "open").mockImplementation(() => null)
+    setup()
+
+    expect(await screen.findByText("3 de 3 card(s)")).toBeInTheDocument()
+    fireEvent.click(screen.getByRole("button", { name: /Flutuar/i }))
+    expect(open).toHaveBeenCalledWith(
+      "/kanban-crm?tipo=TEMPERATURA",
+      "kanban-crm",
+      "width=1400,height=900"
+    )
+    expect(await screen.findByText("Kanban aberto em janela separada")).toBeInTheDocument()
+    open.mockRestore()
   })
 
   it("filtra por busca, tipo e presença de oportunidade", async () => {
@@ -116,6 +162,45 @@ describe("KanbanTemperaturaPage", () => {
     expect(screen.getByText("1 de 3 card(s)")).toBeInTheDocument()
     expect(screen.getByText("Cliente Lima")).toBeInTheDocument()
     expect(screen.queryByText("Lead Quente")).not.toBeInTheDocument()
+  })
+
+  it("filtra por segmento e por presença ou ausência de visitas e ações", async () => {
+    setup([
+      item({ id: "lead-1", segmento: "Têxtil" }),
+      item({
+        id: "cliente-2",
+        nome: "Cliente Lima",
+        segmento: "Agro",
+        totalVisitas: 2,
+        totalAcoes: 1,
+        faixaConversao: "MORNO",
+      }),
+      item({
+        id: "lead-3",
+        segmento: "Agro",
+        totalVisitas: 1,
+        faixaConversao: "QUENTE",
+      }),
+    ])
+
+    await screen.findByText("3 de 3 card(s)")
+    expect(screen.getByRole("option", { name: "Agro" })).toBeInTheDocument()
+    expect(screen.getByRole("option", { name: "Têxtil" })).toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText("Filtrar por segmento"), {
+      target: { value: "Agro" },
+    })
+    expect(screen.getByText("2 de 3 card(s)")).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole("button", { name: /Com ações/ }))
+    expect(screen.getByText("1 de 3 card(s)")).toBeInTheDocument()
+    expect(screen.getByText("Cliente Lima")).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole("button", { name: /Sem ações/ }))
+    expect(screen.getByText("1 de 3 card(s)")).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole("button", { name: /Sem visitas/ }))
+    expect(screen.getByText("0 de 3 card(s)")).toBeInTheDocument()
   })
 
   it("confirma a criação de oportunidade ao mover um card para Quentes", async () => {

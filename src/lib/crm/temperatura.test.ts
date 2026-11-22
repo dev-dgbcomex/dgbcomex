@@ -4,6 +4,7 @@ import {
   TEMPERATURA_FILTROS_VAZIOS,
   filtrarItensTemperatura,
   planoDaTransicao,
+  segmentosDisponiveisTemperatura,
   temFiltrosTemperaturaAtivos,
   type TemperaturaItem,
 } from "./temperatura"
@@ -94,6 +95,50 @@ describe("filtrarItensTemperatura", () => {
     }
     expect(filtrarItensTemperatura(itens, filtros)).toEqual([itens[1]])
     expect(temFiltrosTemperaturaAtivos(filtros)).toBe(true)
+  })
+
+  it("filtra por segmento", () => {
+    const filtros = { ...TEMPERATURA_FILTROS_VAZIOS, segmento: "Têxtil" }
+    expect(filtrarItensTemperatura(itens, filtros)).toEqual([itens[0]])
+    expect(temFiltrosTemperaturaAtivos(filtros)).toBe(true)
+  })
+
+  it("filtra por presença e ausência de oportunidades, pedidos, visitas e ações", () => {
+    const comMovimentacao = item({
+      id: "lead-5",
+      entidadeId: 5,
+      totalOportunidades: 1,
+      totalPedidos: 1,
+      totalVisitas: 2,
+      totalAcoes: 3,
+    })
+
+    expect(
+      filtrarItensTemperatura([itens[0], comMovimentacao], {
+        ...TEMPERATURA_FILTROS_VAZIOS,
+        comVisita: true,
+        comAcao: true,
+      })
+    ).toEqual([comMovimentacao])
+    expect(
+      filtrarItensTemperatura([itens[0], comMovimentacao], {
+        ...TEMPERATURA_FILTROS_VAZIOS,
+        semOportunidade: true,
+        semPedido: true,
+        semVisita: true,
+        semAcao: true,
+      })
+    ).toEqual([itens[0]])
+  })
+
+  it("lista segmentos distintos, sem vazios e em ordem alfabética", () => {
+    const itensComSegmentos = [
+      item(),
+      item({ id: "lead-2", entidadeId: 2, segmento: "Agro" }),
+      item({ id: "lead-3", entidadeId: 3, segmento: "  Têxtil  " }),
+      item({ id: "lead-4", entidadeId: 4, segmento: null }),
+    ]
+    expect(segmentosDisponiveisTemperatura(itensComSegmentos)).toEqual(["Agro", "Têxtil"])
   })
 })
 
