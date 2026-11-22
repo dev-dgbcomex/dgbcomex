@@ -26,6 +26,7 @@ import {
 import VisitLocationModal from "@/components/crm/visit-location-modal"
 import ViagemCronogramaModal from "@/components/crm/viagem-cronograma"
 import { exportCSV, exportMarkdown, exportPDFRelatorio } from "@/lib/export-utils"
+import { formatarDocumento } from "@/lib/documento"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { InfoButton } from "@/components/ui/info-button"
 import { getInfoContent } from "@/lib/info-content"
@@ -71,6 +72,12 @@ type VisitasDashboardData = {
     id: number
     empresaId: number
     clienteId: number | null
+    nome: string | null
+    documento: string | null
+    tipoEntidade: "cliente" | "lead" | "avulso"
+    oportunidadeId: number | null
+    totalOportunidades: number
+    temOportunidade: boolean
     dataVisita: string
     hora: string | null
     tipo: string
@@ -85,6 +92,7 @@ type VisitasDashboardData = {
   pesquisas: { enviadas: number; abertas: number; respondidas: number }
 }
 
+
 const STATUS_LABELS: Record<string, string> = {
   AGENDADA: "Agendada",
   EM_ANDAMENTO: "Em Andamento",
@@ -98,12 +106,22 @@ const TIPO_LABELS: Record<string, string> = {
   TELEFONE: "Telefone",
 }
 
+const TIPO_ENTIDADE_LABELS: Record<"cliente" | "lead" | "avulso", string> = {
+  cliente: "Cliente",
+  lead: "Lead",
+  avulso: "Avulso",
+}
+
 const ULTIMAS_VISITAS_CABECALHOS = [
   "ID da visita",
+  "Nome",
+  "Tipo de entidade",
+  "Documento",
   "Data",
   "Hora",
   "Tipo",
   "Status",
+  "Oportunidades",
   "Empresa ID",
   "Cliente ID",
   "Endereço",
@@ -172,10 +190,16 @@ export default function VisitasDashboardPage() {
 
   const ultimasVisitasExportacao = ultimasVisitas.map((visita) => [
     visita.id,
+    visita.nome || `Visita #${visita.id}`,
+    TIPO_ENTIDADE_LABELS[visita.tipoEntidade] || "—",
+    formatarDocumento(visita.documento) || "—",
     fmtDataCompleta(visita.dataVisita),
     visita.hora || "—",
     TIPO_LABELS[visita.tipo] || visita.tipo || "—",
     STATUS_LABELS[visita.status] || visita.status || "—",
+    visita.temOportunidade
+      ? `Com oportunidade (${visita.totalOportunidades})`
+      : "Sem oportunidade",
     visita.empresaId || "—",
     visita.clienteId ?? "—",
     [visita.endereco, visita.numero, visita.complemento, visita.bairro, visita.cidade, visita.uf]
@@ -553,22 +577,46 @@ export default function VisitasDashboardPage() {
             {data?.ultimasVisitas && data.ultimasVisitas.length > 0 ? (
               <div className="divide-y divide-slate-100 dark:divide-slate-800">
                 {data.ultimasVisitas.map((visita) => (
-                  <div key={visita.id} className="flex items-center justify-between gap-2 p-3">
-                    <div className="flex min-w-0 shrink-0 items-center gap-2">
-                      <Link
-                        href={`/comercial/crm/visitas/${visita.id}`}
-                        className="truncate whitespace-nowrap text-xs font-medium text-slate-900 hover:underline dark:text-slate-100 md:text-sm"
-                      >
-                        Visita #{visita.id}
-                      </Link>
-                      <span className="whitespace-nowrap text-[10px] text-slate-500 md:text-xs">
-                        {visita.dataVisita
-                          ? new Date(`${visita.dataVisita}T12:00:00`).toLocaleDateString("pt-BR")
-                          : "—"}
-                        {visita.hora ? ` ${visita.hora}` : ""}
-                      </span>
+                  <div key={visita.id} className="flex items-start justify-between gap-2 p-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <Link
+                          href={`/comercial/crm/visitas/${visita.id}`}
+                          className="truncate whitespace-nowrap text-xs font-medium text-slate-900 hover:underline dark:text-slate-100 md:text-sm"
+                        >
+                          {visita.nome || `Visita #${visita.id}`}
+                        </Link>
+                        <span className="whitespace-nowrap rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                          {TIPO_ENTIDADE_LABELS[visita.tipoEntidade]}
+                        </span>
+                      </div>
+                      <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-slate-500 md:text-xs">
+                        <span className="font-mono">
+                          {formatarDocumento(visita.documento) ?? "Sem documento"}
+                        </span>
+                        <span aria-hidden="true">•</span>
+                        <span>
+                          {visita.dataVisita
+                            ? new Date(`${visita.dataVisita}T12:00:00`).toLocaleDateString("pt-BR")
+                            : "—"}
+                          {visita.hora ? ` ${visita.hora}` : ""}
+                        </span>
+                        <span aria-hidden="true">•</span>
+                        <span>{TIPO_LABELS[visita.tipo] || visita.tipo}</span>
+                      </div>
                     </div>
-                    <div className="flex shrink-0 items-center gap-1 md:gap-2">
+                    <div className="flex shrink-0 flex-wrap items-center justify-end gap-1 md:gap-2">
+                      <span
+                        className={`whitespace-nowrap rounded-full px-1.5 py-0.5 text-[10px] font-medium md:px-2 ${
+                          visita.temOportunidade
+                            ? "bg-violet-100 text-violet-700 dark:bg-violet-950/50 dark:text-violet-400"
+                            : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+                        }`}
+                      >
+                        {visita.temOportunidade
+                          ? `Com oportunidade (${visita.totalOportunidades})`
+                          : "Sem oportunidade"}
+                      </span>
                       <span
                         className={`whitespace-nowrap rounded-full px-1.5 py-0.5 text-[10px] font-medium md:px-2 ${
                           visita.status === "REALIZADA"
@@ -594,7 +642,10 @@ export default function VisitasDashboardPage() {
                       <button
                         type="button"
                         onClick={() =>
-                          setSelectedVisita({ id: visita.id, nome: `Visita #${visita.id}` })
+                          setSelectedVisita({
+                            id: visita.id,
+                            nome: visita.nome || `Visita #${visita.id}`,
+                          })
                         }
                         className="rounded-lg p-1.5 hover:bg-blue-100 dark:hover:bg-blue-950/50 md:p-1.5"
                         aria-label="Gerenciar localizações"

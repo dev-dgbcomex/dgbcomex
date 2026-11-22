@@ -77,7 +77,33 @@ describe("GET /api/crm/visitas/dashboard", () => {
         { viagemId: 1, valorTotal: "5000" },
       ], // faturamentosPorViagem
       [{ viagemId: 1, valorTotal: "20000" }], // vendasPorViagem
-      [], // ultimasVisitas
+      [
+        {
+          id: 77,
+          empresaId: 7,
+          clienteId: null,
+          dataVisita: "2026-08-10",
+          hora: "09:00",
+          tipo: "PRESENCIAL",
+          status: "REALIZADA",
+          endereco: "Rua A",
+          numero: "100",
+          complemento: null,
+          bairro: "Centro",
+          cidade: "Goiânia",
+          uf: "GO",
+          nomeAvulso: null,
+          oportunidadeId: 10,
+          empresaRazaoSocial: null,
+          empresaNome: "Beta Ltda",
+          empresaNomeFantasia: null,
+          empresaCnpj: "12345678000195",
+          empresaCpf: null,
+          clienteNome: null,
+          clienteCnpj: null,
+          totalOportunidades: 2,
+        },
+      ], // ultimasVisitas
       [{ total: 0 }], // pesquisasEnviadas
       [{ total: 0 }], // pesquisasAbertas
       [{ total: 0 }], // pesquisasRespondidas
@@ -111,6 +137,15 @@ describe("GET /api/crm/visitas/dashboard", () => {
       possivelRetorno: 125000,
       retornoReal: 35000,
       vendas: 20000,
+    })
+    expect(body.ultimasVisitas[0]).toMatchObject({
+      id: 77,
+      nome: "Beta Ltda",
+      documento: "12345678000195",
+      tipoEntidade: "lead",
+      oportunidadeId: 10,
+      totalOportunidades: 2,
+      temOportunidade: true,
     })
   })
 

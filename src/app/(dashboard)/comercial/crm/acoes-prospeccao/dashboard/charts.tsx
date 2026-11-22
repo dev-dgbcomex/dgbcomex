@@ -50,6 +50,12 @@ export type AcoesProspeccaoDashboardData = {
     id: number
     empresaId: number
     clienteId: number | null
+    nome: string | null
+    documento: string | null
+    tipoEntidade: "cliente" | "lead" | "avulso"
+    oportunidadeId: number | null
+    totalOportunidades: number
+    temOportunidade: boolean
     dataAcao: string
     hora: string | null
     tipo: string

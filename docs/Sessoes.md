@@ -79,6 +79,23 @@
 
 ---
 
+### Sessão 37 — Últimas visitas e ações com contato e oportunidades
+
+- **Data:** 2026-11-22
+- **Commit:** `feat(crm): detalha ultimas visitas e acoes nos dashboards`
+- **Tarefa:** nos dashboards de visitas e ações, parar de mostrar só `Visita #id` / `Ação #id` nos cards “Últimas visitas/ações” e exibir nome e documento do lead/cliente/atendimento avulso, além de informar se existe oportunidade e quantas.
+- **Decisões aprovadas:** a origem do contato segue a prioridade cliente vinculado → lead → avulso, com selo `Cliente`/`Lead`/`Avulso`; o documento usa CNPJ ou CPF formatado (o atendimento avulso pode ficar sem documento). O contador usa `count(distinct crm_oportunidades.id)` sobre `cliente_id` e `lead_id` (`empresaId`) e garante no mínimo 1 quando a visita/ação tem `oportunidade_id` próprio, evitando duplicidade.
+- **Resultado:**
+  - `GET /api/crm/visitas/dashboard` e `GET /api/crm/acoes-prospeccao/dashboard` passaram a fazer join com `crm_leads` e `clientes` e a devolver `nome`, `documento`, `tipoEntidade`, `oportunidadeId`, `totalOportunidades` e `temOportunidade` nos 5 registros mais recentes.
+  - Os cards agora mostram o nome do contato, selo de origem, documento formatado, data/hora, tipo, selo de oportunidades (`Com oportunidade (N)` / `Sem oportunidade`), status e ações de mapa; o link de edição e o modal de localização usam o mesmo nome.
+  - CSV, PDF e Markdown das duas seções ganharam colunas `Nome`, `Tipo de entidade`, `Documento` e `Oportunidades`, mantendo o filtro Todas/Minhas.
+  - Tipos compartilhados dos charts, testes das APIs, das duas páginas e dos modais “i” atualizados; nenhuma migration ou alteração de banco.
+- **Arquivos Envolvidos:** `src/app/api/crm/{visitas,acoes-prospeccao}/dashboard/{route,route.test}.ts`, `src/app/(dashboard)/comercial/crm/{visitas,acoes-prospeccao}/dashboard/{charts.tsx,page.tsx,page.test.tsx}`, `src/lib/info-content/crm.ts`, `src/lib/info-content/info-content.test.ts`, `docs/Sessoes.md`.
+- **Testes:** focados `5 arquivos / 77 testes passados` (reexecutados `2 arquivos / 20 testes` após ajuste de tipo); suíte completa `npm run test` → **478 arquivos / 2787 testes passados**.
+- **Verificação:** `npm run lint` sem erros (apenas warnings pré-existentes); `tsc --noEmit --pretty false` limpo com `NODE_OPTIONS=--max-old-space-size=8192`; `npm run build` OK com `NODE_OPTIONS=--max-old-space-size=8192` (257/257 páginas estáticas). Nenhuma migration ou mudança de banco nesta sessão.
+
+---
+
 ### Sessão 33 — Modal do semáforo com métricas e cards de leads alinhados
 
 - **Data:** 2026-11-22

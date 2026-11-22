@@ -356,6 +356,8 @@ describe("getInfoContent", () => {
     expect(texto).toMatch(/gráficos/i)
     expect(texto).toMatch(/Viagens/i)
     expect(texto).toMatch(/Últimas visitas/i)
+    expect(texto).toMatch(/documento do cliente, lead ou atendimento avulso/i)
+    expect(texto).toMatch(/quantidade de oportunidades/i)
     expect(texto).toMatch(/CSV, PDF e MD/i)
     expect(texto).toMatch(/Todas \/ Minhas Visitas/i)
     expect(texto).toMatch(/Dashboard de Leads/i)
@@ -394,6 +396,8 @@ describe("getInfoContent", () => {
     expect(texto).toMatch(/gráficos/i)
     expect(texto).toMatch(/Viagens/i)
     expect(texto).toMatch(/Últimas ações/i)
+    expect(texto).toMatch(/documento do cliente, lead ou atendimento avulso/i)
+    expect(texto).toMatch(/quantidade de oportunidades/i)
     expect(texto).toMatch(/CSV, PDF e MD/i)
     expect(texto).toMatch(/Todas \/ Minhas Ações/i)
     expect(texto).toMatch(/Dashboard de Leads/i)
@@ -796,6 +800,17 @@ describe("saudeProspeccaoInfo", () => {
     )
     expect(saudeProspeccaoInfo.registros.examples?.length).toBeGreaterThan(0)
     expect(saudeProspeccaoInfo.ultimasVisitas.rules?.join(" ")).toMatch(/CSV, PDF e MD/i)
+    expect(saudeProspeccaoInfo.ultimasVisitas.rules?.join(" ")).toMatch(/selo Cliente, Lead ou Avulso/i)
+    expect(saudeProspeccaoInfo.ultimasVisitas.rules?.join(" ")).toMatch(/quantidade de oportunidades/i)
+    expect(saudeProspeccaoInfo.ultimasVisitas.columns?.map((c) => c.name).join(" ")).toMatch(
+      /Nome\/Tipo de entidade/i
+    )
+    expect(saudeProspeccaoInfo.ultimasVisitas.columns?.map((c) => c.name).join(" ")).toMatch(
+      /Documento/i
+    )
+    expect(saudeProspeccaoInfo.ultimasVisitas.columns?.map((c) => c.name).join(" ")).toMatch(
+      /Oportunidades/i
+    )
     expect(saudeProspeccaoInfo.ultimasVisitas.columns?.map((c) => c.name).join(" ")).toMatch(
       /Endereço/i
     )
@@ -887,6 +902,17 @@ describe("saudeProspeccaoAcoesInfo", () => {
     )
     expect(saudeProspeccaoAcoesInfo.registros.examples?.length).toBeGreaterThan(0)
     expect(saudeProspeccaoAcoesInfo.ultimasVisitas.rules?.join(" ")).toMatch(/CSV, PDF e MD/i)
+    expect(saudeProspeccaoAcoesInfo.ultimasVisitas.rules?.join(" ")).toMatch(/selo Cliente, Lead ou Avulso/i)
+    expect(saudeProspeccaoAcoesInfo.ultimasVisitas.rules?.join(" ")).toMatch(/quantidade de oportunidades/i)
+    expect(saudeProspeccaoAcoesInfo.ultimasVisitas.columns?.map((c) => c.name).join(" ")).toMatch(
+      /Nome\/Tipo de entidade/i
+    )
+    expect(saudeProspeccaoAcoesInfo.ultimasVisitas.columns?.map((c) => c.name).join(" ")).toMatch(
+      /Documento/i
+    )
+    expect(saudeProspeccaoAcoesInfo.ultimasVisitas.columns?.map((c) => c.name).join(" ")).toMatch(
+      /Oportunidades/i
+    )
     expect(saudeProspeccaoAcoesInfo.ultimasVisitas.columns?.map((c) => c.name).join(" ")).toMatch(
       /ID da ação/i
     )

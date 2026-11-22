@@ -341,6 +341,12 @@ describe("VisitasDashboardPage", () => {
           id: 77,
           empresaId: 7,
           clienteId: null,
+          nome: "Acme Ltda",
+          documento: "12345678000195",
+          tipoEntidade: "cliente",
+          oportunidadeId: 10,
+          totalOportunidades: 2,
+          temOportunidade: true,
           dataVisita: "2026-08-10",
           hora: "09:00",
           tipo: "PRESENCIAL",
@@ -360,7 +366,10 @@ describe("VisitasDashboardPage", () => {
     vi.stubGlobal("fetch", fetchMock.fn)
     renderPage(<VisitasDashboardPage />)
 
-    expect(await screen.findByText("Visita #77")).toBeInTheDocument()
+    expect(await screen.findByText("Acme Ltda")).toBeInTheDocument()
+    expect(screen.getByText("Cliente")).toBeInTheDocument()
+    expect(screen.getByText("12.345.678/0001-95")).toBeInTheDocument()
+    expect(screen.getByText("Com oportunidade (2)")).toBeInTheDocument()
     fireEvent.click(screen.getByRole("button", { name: "Exportar últimas visitas em CSV" }))
     fireEvent.click(screen.getByRole("button", { name: "Exportar últimas visitas em PDF" }))
     fireEvent.click(screen.getByRole("button", { name: "Exportar últimas visitas em Markdown" }))
@@ -369,10 +378,14 @@ describe("VisitasDashboardPage", () => {
       "ultimas-visitas-dashboard",
       [
         "ID da visita",
+        "Nome",
+        "Tipo de entidade",
+        "Documento",
         "Data",
         "Hora",
         "Tipo",
         "Status",
+        "Oportunidades",
         "Empresa ID",
         "Cliente ID",
         "Endereço",
@@ -380,10 +393,14 @@ describe("VisitasDashboardPage", () => {
       [
         [
           77,
+          "Acme Ltda",
+          "Cliente",
+          "12.345.678/0001-95",
           "10/08/2026",
           "09:00",
           "Presencial",
           "Realizada",
+          "Com oportunidade (2)",
           7,
           "—",
           "Rua A, 100, Centro, Goiânia, GO",

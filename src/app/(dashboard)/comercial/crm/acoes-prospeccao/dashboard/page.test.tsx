@@ -311,6 +311,12 @@ describe("AcoesProspeccaoDashboardPage", () => {
           id: 77,
           empresaId: 7,
           clienteId: null,
+          nome: "Acme Ltda",
+          documento: "12345678000195",
+          tipoEntidade: "lead",
+          oportunidadeId: null,
+          totalOportunidades: 0,
+          temOportunidade: false,
           dataAcao: "2026-08-10",
           dataVisita: "2026-08-10",
           hora: "09:00",
@@ -331,7 +337,10 @@ describe("AcoesProspeccaoDashboardPage", () => {
     vi.stubGlobal("fetch", fetchMock.fn)
     renderPage(<AcoesProspeccaoDashboardPage />)
 
-    expect(await screen.findByText("Ação #77")).toBeInTheDocument()
+    expect(await screen.findByText("Acme Ltda")).toBeInTheDocument()
+    expect(screen.getByText("Lead")).toBeInTheDocument()
+    expect(screen.getByText("12.345.678/0001-95")).toBeInTheDocument()
+    expect(screen.getByText("Sem oportunidade")).toBeInTheDocument()
     fireEvent.click(screen.getByRole("button", { name: "Exportar últimas ações em CSV" }))
     fireEvent.click(screen.getByRole("button", { name: "Exportar últimas ações em PDF" }))
     fireEvent.click(screen.getByRole("button", { name: "Exportar últimas ações em Markdown" }))
@@ -340,10 +349,14 @@ describe("AcoesProspeccaoDashboardPage", () => {
       "ultimas-acoes-prospeccao-dashboard",
       [
         "ID da ação",
+        "Nome",
+        "Tipo de entidade",
+        "Documento",
         "Data",
         "Hora",
         "Tipo",
         "Status",
+        "Oportunidades",
         "Empresa ID",
         "Cliente ID",
         "Endereço",
@@ -351,10 +364,14 @@ describe("AcoesProspeccaoDashboardPage", () => {
       [
         [
           77,
+          "Acme Ltda",
+          "Lead",
+          "12.345.678/0001-95",
           "10/08/2026",
           "09:00",
           "Presencial",
           "Realizada",
+          "Sem oportunidade",
           7,
           "—",
           "Rua A, 100, Centro, Goiânia, GO",

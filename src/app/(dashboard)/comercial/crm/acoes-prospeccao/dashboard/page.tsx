@@ -24,6 +24,7 @@ import {
 import AcaoProspeccaoLocationModal from "@/components/crm/acao-prospeccao-location-modal"
 import AcaoProspeccaoCronogramaModal from "@/components/crm/acao-prospeccao-cronograma"
 import { exportCSV, exportMarkdown, exportPDFRelatorio } from "@/lib/export-utils"
+import { formatarDocumento } from "@/lib/documento"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { InfoButton } from "@/components/ui/info-button"
 import { corPorTitulo, iconePorTitulo } from "@/lib/dracula"
@@ -60,12 +61,22 @@ const TIPO_LABELS: Record<string, string> = {
   TELEFONE: "Telefone",
 }
 
+const TIPO_ENTIDADE_LABELS: Record<"cliente" | "lead" | "avulso", string> = {
+  cliente: "Cliente",
+  lead: "Lead",
+  avulso: "Avulso",
+}
+
 const ULTIMAS_ACOES_CABECALHOS = [
   "ID da ação",
+  "Nome",
+  "Tipo de entidade",
+  "Documento",
   "Data",
   "Hora",
   "Tipo",
   "Status",
+  "Oportunidades",
   "Empresa ID",
   "Cliente ID",
   "Endereço",
@@ -134,10 +145,16 @@ export default function AcoesProspeccaoDashboardPage() {
 
   const ultimasAcoesExportacao = ultimasAcoes.map((acao) => [
     acao.id,
+    acao.nome || `Ação #${acao.id}`,
+    TIPO_ENTIDADE_LABELS[acao.tipoEntidade] || "—",
+    formatarDocumento(acao.documento) || "—",
     fmtDataCompleta(acao.dataAcao),
     acao.hora || "—",
     TIPO_LABELS[acao.tipo] || acao.tipo || "—",
     STATUS_LABELS[acao.status] || acao.status || "—",
+    acao.temOportunidade
+      ? `Com oportunidade (${acao.totalOportunidades})`
+      : "Sem oportunidade",
     acao.empresaId || "—",
     acao.clienteId ?? "—",
     [acao.endereco, acao.numero, acao.complemento, acao.bairro, acao.cidade, acao.uf]
@@ -494,22 +511,46 @@ export default function AcoesProspeccaoDashboardPage() {
             {data?.ultimasAcoes && data.ultimasAcoes.length > 0 ? (
               <div className="divide-y divide-slate-100 dark:divide-slate-800">
                 {data.ultimasAcoes.map((acao) => (
-                  <div key={acao.id} className="flex items-center justify-between gap-2 p-3">
-                    <div className="flex min-w-0 shrink-0 items-center gap-2">
-                      <Link
-                        href={`/comercial/crm/acoes-prospeccao/${acao.id}`}
-                        className="truncate whitespace-nowrap text-xs font-medium text-slate-900 hover:underline dark:text-slate-100 md:text-sm"
-                      >
-                        Ação #{acao.id}
-                      </Link>
-                      <span className="whitespace-nowrap text-[10px] text-slate-500 md:text-xs">
-                        {acao.dataAcao
-                          ? new Date(`${acao.dataAcao}T12:00:00`).toLocaleDateString("pt-BR")
-                          : "—"}
-                        {acao.hora ? ` ${acao.hora}` : ""}
-                      </span>
+                  <div key={acao.id} className="flex items-start justify-between gap-2 p-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <Link
+                          href={`/comercial/crm/acoes-prospeccao/${acao.id}`}
+                          className="truncate whitespace-nowrap text-xs font-medium text-slate-900 hover:underline dark:text-slate-100 md:text-sm"
+                        >
+                          {acao.nome || `Ação #${acao.id}`}
+                        </Link>
+                        <span className="whitespace-nowrap rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                          {TIPO_ENTIDADE_LABELS[acao.tipoEntidade]}
+                        </span>
+                      </div>
+                      <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-slate-500 md:text-xs">
+                        <span className="font-mono">
+                          {formatarDocumento(acao.documento) ?? "Sem documento"}
+                        </span>
+                        <span aria-hidden="true">•</span>
+                        <span>
+                          {acao.dataAcao
+                            ? new Date(`${acao.dataAcao}T12:00:00`).toLocaleDateString("pt-BR")
+                            : "—"}
+                          {acao.hora ? ` ${acao.hora}` : ""}
+                        </span>
+                        <span aria-hidden="true">•</span>
+                        <span>{TIPO_LABELS[acao.tipo] || acao.tipo}</span>
+                      </div>
                     </div>
-                    <div className="flex shrink-0 items-center gap-1 md:gap-2">
+                    <div className="flex shrink-0 flex-wrap items-center justify-end gap-1 md:gap-2">
+                      <span
+                        className={`whitespace-nowrap rounded-full px-1.5 py-0.5 text-[10px] font-medium md:px-2 ${
+                          acao.temOportunidade
+                            ? "bg-violet-100 text-violet-700 dark:bg-violet-950/50 dark:text-violet-400"
+                            : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+                        }`}
+                      >
+                        {acao.temOportunidade
+                          ? `Com oportunidade (${acao.totalOportunidades})`
+                          : "Sem oportunidade"}
+                      </span>
                       <span
                         className={`whitespace-nowrap rounded-full px-1.5 py-0.5 text-[10px] font-medium md:px-2 ${
                           acao.status === "REALIZADA"
@@ -535,7 +576,10 @@ export default function AcoesProspeccaoDashboardPage() {
                       <button
                         type="button"
                         onClick={() =>
-                          setSelectedAcao({ id: acao.id, nome: `Ação #${acao.id}` })
+                          setSelectedAcao({
+                            id: acao.id,
+                            nome: acao.nome || `Ação #${acao.id}`,
+                          })
                         }
                         className="rounded-lg p-1.5 hover:bg-blue-100 dark:hover:bg-blue-950/50 md:p-1.5"
                         aria-label="Gerenciar localizações"

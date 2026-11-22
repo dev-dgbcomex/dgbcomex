@@ -49,7 +49,33 @@ describe("GET /api/crm/acoes-prospeccao/dashboard", () => {
       [{ oportunidadeId: 10, valorEstimado: "120000", viagemId: 1 }],
       [{ viagemId: 1, valorTotal: "30000" }],
       [{ viagemId: 1, valorTotal: "20000" }],
-      [],
+      [
+        {
+          id: 77,
+          empresaId: 7,
+          clienteId: 9,
+          dataAcao: "2026-08-10",
+          hora: "09:00",
+          tipo: "PRESENCIAL",
+          status: "REALIZADA",
+          endereco: "Rua A",
+          numero: "100",
+          complemento: null,
+          bairro: "Centro",
+          cidade: "Goiânia",
+          uf: "GO",
+          nomeAvulso: null,
+          oportunidadeId: null,
+          empresaRazaoSocial: null,
+          empresaNome: null,
+          empresaNomeFantasia: null,
+          empresaCnpj: null,
+          empresaCpf: null,
+          clienteNome: "Gama S.A.",
+          clienteCnpj: "11222333000144",
+          totalOportunidades: 3,
+        },
+      ],
       [{ total: 0 }],
       [{ total: 0 }],
       [{ total: 0 }],
@@ -60,5 +86,14 @@ describe("GET /api/crm/acoes-prospeccao/dashboard", () => {
     expect(body.total).toBe(37)
     expect(body.porDia).toEqual([{ dia: "2026-08-10", total: 5 }])
     expect(body.porGerente[0]).toMatchObject({ gerenteNome: "Ernandes", acoes: 7 })
+    expect(body.ultimasAcoes[0]).toMatchObject({
+      id: 77,
+      nome: "Gama S.A.",
+      documento: "11222333000144",
+      tipoEntidade: "cliente",
+      oportunidadeId: null,
+      totalOportunidades: 3,
+      temOportunidade: true,
+    })
   })
 })

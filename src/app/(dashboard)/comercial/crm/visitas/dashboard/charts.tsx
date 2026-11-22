@@ -39,6 +39,12 @@ type VisitasDashboardData = {
     id: number
     empresaId: number
     clienteId: number | null
+    nome: string | null
+    documento: string | null
+    tipoEntidade: "cliente" | "lead" | "avulso"
+    oportunidadeId: number | null
+    totalOportunidades: number
+    temOportunidade: boolean
     dataVisita: string
     hora: string | null
     tipo: string

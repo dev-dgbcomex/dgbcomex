@@ -567,7 +567,7 @@ export const crmContent: Record<string, InfoContent> = {
   "/comercial/crm/visitas/dashboard": {
     title: "Dashboard de Visitas",
     description:
-      "Painel de visitas comerciais do ano corrente com indicadores, gráficos de desempenho, viagens e tabela de últimas visitas. A saúde da prospecção por cliente ou lead fica no Dashboard de Leads.",
+      "Painel de visitas comerciais do ano corrente com indicadores, gráficos de desempenho, viagens e últimas visitas com cliente/lead, documento e oportunidades. A saúde da prospecção por cliente ou lead fica no Dashboard de Leads.",
     rules: [
       "O recorte padrão é o ano corrente; a listagem de visitas continua em /comercial/crm/visitas.",
       "Os cards de resumo cobrem total de visitas, realizadas, canceladas, agendadas, de hoje, do mês, com pesquisa respondida e por tipo/status.",
@@ -581,7 +581,7 @@ export const crmContent: Record<string, InfoContent> = {
     columns: [
       {
         name: "Últimas visitas",
-        desc: "ID, data, hora, tipo, status e endereço das visitas mais recentes do recorte.",
+        desc: "Visitas mais recentes do recorte com nome e documento do cliente, lead ou atendimento avulso, tipo, data, hora, status, endereço e quantidade de oportunidades.",
       },
       {
         name: "Viagens",
@@ -668,7 +668,7 @@ export const crmContent: Record<string, InfoContent> = {
   "/comercial/crm/acoes-prospeccao/dashboard": {
     title: "Dashboard de Ações de Prospecção",
     description:
-      "Painel de ações de prospecção do ano corrente com indicadores, gráficos de desempenho, viagens e tabela de últimas ações. A saúde da prospecção por cliente ou lead fica no Dashboard de Leads.",
+      "Painel de ações de prospecção do ano corrente com indicadores, gráficos de desempenho, viagens e últimas ações com cliente/lead, documento e oportunidades. A saúde da prospecção por cliente ou lead fica no Dashboard de Leads.",
     rules: [
       "O recorte padrão é o ano corrente; a listagem de ações continua em /comercial/crm/acoes-prospeccao.",
       "Os cards de resumo cobrem total de ações, realizadas, canceladas, agendadas, de hoje, do mês, com pesquisa respondida e por tipo/status.",
@@ -682,7 +682,7 @@ export const crmContent: Record<string, InfoContent> = {
     columns: [
       {
         name: "Últimas ações",
-        desc: "ID, data, hora, tipo, status e endereço das ações mais recentes do recorte.",
+        desc: "Ações mais recentes do recorte com nome e documento do cliente, lead ou atendimento avulso, tipo, data, hora, status, endereço e quantidade de oportunidades.",
       },
       {
         name: "Viagens",
@@ -1725,18 +1725,27 @@ export const saudeProspeccaoInfo = {
     ],
   },
   ultimasVisitas: {
-    title: "Últimas visitas — exportação",
+    title: "Últimas visitas",
     description:
-      "Visitas mais recentes do recorte atual do dashboard, com data, hora, tipo, status e endereço.",
+      "Visitas mais recentes do recorte, com nome e documento do cliente, lead ou atendimento avulso, data, hora, tipo, status, endereço e oportunidades.",
     rules: [
+      "O nome e o documento vêm do cliente vinculado, do lead ou do atendimento avulso, nessa ordem.",
+      "O selo Cliente, Lead ou Avulso identifica a origem do contato exibido.",
+      "O selo mostra a quantidade de oportunidades do cliente/lead, incluindo a oportunidade vinculada à visita.",
       "Os botões CSV, PDF e MD exportam exatamente as linhas exibidas nesta seção.",
       "O arquivo respeita o filtro Todas/Minhas Visitas aplicado ao dashboard.",
       "Quando não há visitas no recorte, os botões de exportação ficam desabilitados.",
     ],
     columns: [
       { name: "ID da visita", desc: "Identificador único da visita." },
+      {
+        name: "Nome/Tipo de entidade",
+        desc: "Nome do cliente, lead ou atendimento avulso, com selo da origem.",
+      },
+      { name: "Documento", desc: "CNPJ ou CPF formatado do cliente/lead; ausente no atendimento avulso." },
       { name: "Data/Hora", desc: "Data e horário da visita." },
       { name: "Tipo/Status", desc: "Presencial, vídeo ou telefone; e situação da visita." },
+      { name: "Oportunidades", desc: "Sem oportunidade ou quantidade de oportunidades do cliente/lead." },
       { name: "Endereço", desc: "Logradouro, número, bairro, cidade e UF quando preenchidos." },
     ],
     examples: [
@@ -2042,23 +2051,32 @@ export const saudeProspeccaoAcoesInfo = {
     ],
   },
   ultimasVisitas: {
-    title: "Últimas ações — exportação",
+    title: "Últimas ações",
     description:
-      "Ações de prospecção mais recentes do recorte atual do dashboard, com data, hora, tipo, status e endereço.",
+      "Ações de prospecção mais recentes do recorte, com nome e documento do cliente, lead ou atendimento avulso, data, hora, tipo, status, endereço e oportunidades.",
     rules: [
+      "O nome e o documento vêm do cliente vinculado, do lead ou do atendimento avulso, nessa ordem.",
+      "O selo Cliente, Lead ou Avulso identifica a origem do contato exibido.",
+      "O selo mostra a quantidade de oportunidades do cliente/lead, incluindo a oportunidade vinculada à ação.",
       "Os botões CSV, PDF e MD exportam exatamente as linhas exibidas nesta seção.",
       "O arquivo respeita o filtro Todas/Minhas Ações aplicado ao dashboard.",
       "Quando não há ações no recorte, os botões de exportação ficam desabilitados.",
     ],
     columns: [
       { name: "ID da ação", desc: "Identificador único da ação." },
+      {
+        name: "Nome/Tipo de entidade",
+        desc: "Nome do cliente, lead ou atendimento avulso, com selo da origem.",
+      },
+      { name: "Documento", desc: "CNPJ ou CPF formatado do cliente/lead; ausente no atendimento avulso." },
       { name: "Data/Hora", desc: "Data e horário da ação." },
       {
         name: "Tipo/Status",
         desc: "Presencial, vídeo ou telefone; e situação da ação.",
       },
+      { name: "Oportunidades", desc: "Sem oportunidade ou quantidade de oportunidades do cliente/lead." },
       {
-        name: "Conversão",
+        name: "Endereço",
         desc: "Logradouro, número, bairro, cidade e UF quando preenchidos.",
       },
     ],

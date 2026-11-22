@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { requireAuth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { crmAcoesProspeccao } from "@/lib/db/schema/crm-acoes-prospeccao"
+import { crmPessoas } from "@/lib/db/schema/crm-pessoas"
+import { clientes } from "@/lib/db/schema/clientes"
 import { crmViagens } from "@/lib/db/schema/crm-viagens"
 import { crmViagensInvestimentos } from "@/lib/db/schema/crm-viagens-investimentos"
 import { crmOportunidades } from "@/lib/db/schema/crm-oportunidades"
@@ -183,8 +185,28 @@ export async function GET(req: NextRequest) {
           bairro: crmAcoesProspeccao.bairro,
           cidade: crmAcoesProspeccao.cidade,
           uf: crmAcoesProspeccao.uf,
+          nomeAvulso: crmAcoesProspeccao.nomeAvulso,
+          oportunidadeId: crmAcoesProspeccao.oportunidadeId,
+          empresaRazaoSocial: crmPessoas.razaoSocial,
+          empresaNome: crmPessoas.nome,
+          empresaNomeFantasia: crmPessoas.nomeFantasia,
+          empresaCnpj: crmPessoas.cnpj,
+          empresaCpf: crmPessoas.cpf,
+          clienteNome: clientes.nome,
+          clienteCnpj: clientes.cnpj,
+          totalOportunidades: sql<number>`(
+            select count(distinct ${crmOportunidades.id})::int
+            from ${crmOportunidades}
+            where ${crmOportunidades.clienteId} = ${clientes.id}
+              or ${crmOportunidades.empresaId} = ${crmPessoas.id}
+          )`,
         })
         .from(crmAcoesProspeccao)
+        .leftJoin(crmPessoas, eq(crmAcoesProspeccao.empresaId, crmPessoas.id))
+        .leftJoin(
+          clientes,
+          eq(sql`coalesce(${crmAcoesProspeccao.clienteId}, ${crmPessoas.clienteId})`, clientes.id)
+        )
         .where(mineCondition)
         .orderBy(desc(crmAcoesProspeccao.createdAt))
         .limit(5),
@@ -319,21 +341,47 @@ export async function GET(req: NextRequest) {
         retornoReal: retornoRealPorViagem.get(r.viagemId) ?? 0,
         vendas: vendasPorViagemTotal.get(r.viagemId) ?? 0,
       })),
-      ultimasAcoes: ultimasAcoes.map((r: any) => ({
-        id: r.id,
-        empresaId: r.empresaId,
-        clienteId: r.clienteId,
-        dataAcao: r.dataAcao,
-        hora: r.hora,
-        tipo: r.tipo,
-        status: r.status,
-        endereco: r.endereco,
-        numero: r.numero,
-        complemento: r.complemento,
-        bairro: r.bairro,
-        cidade: r.cidade,
-        uf: r.uf,
-      })),
+      ultimasAcoes: ultimasAcoes.map((r: any) => {
+        const totalOportunidades = Math.max(
+          Number(r.totalOportunidades ?? 0),
+          r.oportunidadeId ? 1 : 0
+        )
+        const nome =
+          r.clienteNome ||
+          r.empresaRazaoSocial ||
+          r.empresaNome ||
+          r.empresaNomeFantasia ||
+          r.nomeAvulso ||
+          null
+        const documento = r.clienteCnpj || r.empresaCnpj || r.empresaCpf || null
+        const tipoEntidade = r.clienteNome
+          ? "cliente"
+          : r.empresaRazaoSocial || r.empresaNome || r.empresaNomeFantasia
+            ? "lead"
+            : "avulso"
+
+        return {
+          id: r.id,
+          empresaId: r.empresaId,
+          clienteId: r.clienteId,
+          nome,
+          documento,
+          tipoEntidade,
+          oportunidadeId: r.oportunidadeId ?? null,
+          totalOportunidades,
+          temOportunidade: totalOportunidades > 0,
+          dataAcao: r.dataAcao,
+          hora: r.hora,
+          tipo: r.tipo,
+          status: r.status,
+          endereco: r.endereco,
+          numero: r.numero,
+          complemento: r.complemento,
+          bairro: r.bairro,
+          cidade: r.cidade,
+          uf: r.uf,
+        }
+      }),
       pesquisas: {
         enviadas: getCount(pesquisasEnviadas),
         abertas: getCount(pesquisasAbertas),
