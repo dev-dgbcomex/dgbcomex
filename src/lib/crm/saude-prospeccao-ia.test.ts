@@ -35,16 +35,41 @@ describe("chamarAnaliseComConsultas", () => {
       ],
     })
 
-    expect(chamarIA).toHaveBeenNthCalledWith(1, expect.any(Array), {
-      temperatura: 0,
-      maxTokens: 80,
-    })
-    expect(chamarIA).toHaveBeenNthCalledWith(2, expect.any(Array), {
-      temperatura: 0,
-      maxTokens: 700,
-    })
+    expect(chamarIA).toHaveBeenNthCalledWith(1, expect.any(Array), expect.objectContaining({ temperatura: 0, maxTokens: 80 }), undefined)
+    expect(chamarIA).toHaveBeenNthCalledWith(2, expect.any(Array), expect.objectContaining({ temperatura: 0, maxTokens: 700 }), undefined)
     expect(resultado.conteudo).toContain("Diagnóstico")
     expect(resultado.resultado.provedor).toBe("groq")
+  })
+
+  it("usa a chave forçada quando informada", async () => {
+    vi.mocked(chamarIA)
+      .mockResolvedValueOnce({
+        conteudo: "PRONTO",
+        provedor: "openai_compatible",
+        modelo: "nemotron-3.5-super-vl-120b-a12b",
+        nomeChave: "NVIDIA Nemotron",
+        tentativas: 1,
+      })
+      .mockResolvedValueOnce({
+        conteudo: "## Diagnóstico\n\nEngajados.",
+        provedor: "openai_compatible",
+        modelo: "nemotron-3.5-super-vl-120b-a12b",
+        nomeChave: "NVIDIA Nemotron",
+        tentativas: 1,
+      })
+
+    const resultado = await chamarAnaliseComConsultas({
+      mensagens: [
+        { role: "system", content: "Regras do sistema" },
+        { role: "user", content: "Dados filtrados" },
+      ],
+      chaveId: 42,
+    })
+
+    expect(chamarIA).toHaveBeenNthCalledWith(1, expect.any(Array), expect.objectContaining({ maxTokens: 80 }), 42)
+    expect(chamarIA).toHaveBeenNthCalledWith(2, expect.any(Array), expect.objectContaining({ maxTokens: 700 }), 42)
+    expect(resultado.conteudo).toContain("Diagnóstico")
+    expect(resultado.resultado.provedor).toBe("openai_compatible")
   })
 
   it("não gera análise quando a decisão falha", async () => {

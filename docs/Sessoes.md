@@ -31,14 +31,16 @@
 - **Data:** 2026-11-23
 - **Tarefa:** corrigir o 503 persistente em `POST /api/crm/saude-prospeccao/ia/analises` após reduzir o `max_tokens` de 1100 para 700.
 - **Causa raiz:** o Groq free tier limita a saída a 1000 tokens por minuto por modelo; a análise fazia até 3 chamadas de 700 tokens (decisão + até 2 consultas + resposta final), estourando o OTPM e fazendo o `chamarIA` devolver `provedor: "nenhum"`.
-- **Decisão aprovada:** separar a decisão sobre consultas curadas da resposta final. A decisão usa `maxTokens: 80` por rodada (no máximo 2) e a resposta final continua com `maxTokens: 700`; pior caso: `80 + 80 + 700 = 860`, abaixo do limite de 1000.
+- **Decisão aprovada:** separar a decisão sobre consultas curadas da resposta final e forçar a chave da NVIDIA cadastrada em `ai_chaves` para essa análise. A decisão usa `maxTokens: 80` por rodada (no máximo 2) e a resposta final continua com `maxTokens: 700`; pior caso: `80 + 80 + 700 = 860`, abaixo do limite de 1000 do Groq. A NVIDIA Nemerton é usada com `provedor: openai_compatible`, `ordem=1`, sem fallback automático para outro provedor nesta rota.
 - **Resultado:**
-  - `chamarAnaliseComConsultas` agora faz uma chamada curta com instrução explícita (`PRONTO` ou `CONSULTAR: ...`), executa consultas curadas somente quando autorizado e faz uma última chamada em Markdown sem novas consultas.
-  - Quando a chamada de decisão falha, a análise não é gerada e a rota continua devolvendo 503 com a mensagem existente.
-  - Modal “i” explica o orçamento de tokens e o teste cobre as duas opções (`80` na decisão, `700` na resposta).
-- **Arquivos Envolvidos:** `src/lib/crm/saude-prospeccao-ia.ts`, `src/lib/crm/saude-prospeccao-ia.test.ts`, `src/lib/info-content/crm.ts`, `src/lib/info-content/info-content.test.ts`, `docs/Sessoes.md`.
-- **Testes:** focados `3 arquivos / 57 testes passados`; suíte completa `npm run test` → **488 arquivos / 2842 testes passados**.
-- **Verificação:** `npm run lint` sem erros (apenas warnings pré-existentes); `tsc --noEmit --pretty false` limpo com `NODE_OPTIONS=--max-old-space-size=8192`.
+  - `chamarIA` aceita `chaveId` e, quando informado, usa apenas essa chave (sem fallback).
+  - `chamarAnaliseComConsultas` busca a chave `openai_compatible` com `nome`/`modelo` contendo NVIDIA/Nemotron e passa `chaveId` para decisão e resposta final.
+  - `POST /api/crm/saude-prospeccao/ia/analises` seleciona essa chave antes de chamar a análise e devolve `detalhe` no 503 para diagnóstico.
+  - `chamarAnaliseComConsultas` faz uma chamada curta com instrução explícita (`PRONTO` ou `CONSULTAR: ...`), executa consultas curadas somente quando autorizado e faz uma última chamada em Markdown sem novas consultas.
+  - Modal “i” explica o orçamento de tokens e o provedor configurado.
+- **Arquivos Envolvidos:** `src/lib/ai/index.ts`, `src/lib/crm/saude-prospeccao-ia.ts`, `src/lib/crm/saude-prospeccao-ia.test.ts`, `src/lib/info-content/crm.ts`, `src/lib/info-content/info-content.test.ts`, `src/app/api/crm/saude-prospeccao/ia/analises/route.ts`, `docs/Sessoes.md`.
+- **Testes:** `src/lib/crm/saude-prospeccao-ia.test.ts` (3 testes) e rotas/painel da IA (5 arquivos / 71 testes); suíte completa `npm run test` → **488 arquivos / 2843 testes passados**.
+- **Verificação:** `npm run lint` sem erros (apenas warnings pré-existentes); `tsc --noEmit --pretty false` limpo com `NODE_OPTIONS=--max-old-space-size=8192`; `npm run build` OK com `NODE_OPTIONS=--max-old-space-size=8192` (259/259 páginas estáticas).
 
 ---
 

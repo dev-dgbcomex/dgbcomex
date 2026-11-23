@@ -1,9 +1,10 @@
-import { desc, eq, inArray } from "drizzle-orm"
+import { and, desc, eq, inArray, lt, ilike, or } from "drizzle-orm"
 import { chamarIA, type MensagemIA, type ResultadoIA } from "@/lib/ai"
 import { classificarSaudeProspeccao, type ClassificacaoSaude } from "@/lib/crm/classificacao-saude"
 import { faixaConversaoSql } from "@/lib/crm/contadores-listagem"
 import type { FaixaConversao } from "@/lib/crm/faixa-conversao"
 import { db } from "@/lib/db"
+import { aiChaves } from "@/lib/db/schema/ai-chaves"
 import { clientes } from "@/lib/db/schema/clientes"
 import { crmAcoesProspeccao } from "@/lib/db/schema/crm-acoes-prospeccao"
 import { crmLeads } from "@/lib/db/schema/crm-leads"
@@ -232,6 +233,27 @@ export function limparResposta(conteudo: string): string {
     .trim()
 }
 
+async function buscarChaveNVIDIA(): Promise<number | null> {
+  try {
+    const [chave] = await db
+      .select({ id: aiChaves.id })
+      .from(aiChaves)
+      .where(
+        and(
+          eq(aiChaves.ativo, true),
+          lt(aiChaves.failCount, 5),
+          eq(aiChaves.provedor, "openai_compatible"),
+          or(ilike(aiChaves.nome, "%nvidia%"), ilike(aiChaves.modelo, "%nemotron%"))
+        )
+      )
+      .orderBy(aiChaves.ordem)
+      .limit(1)
+    return chave?.id ?? null
+  } catch {
+    return null
+  }
+}
+
 export async function executarConsultaCurada(consulta: ConsultaCurada): Promise<ResultadoConsultaCurada> {
   const { chave, limite } = consulta
   let dados: unknown[] = []
@@ -298,9 +320,11 @@ export async function executarConsultaCurada(consulta: ConsultaCurada): Promise<
 export async function chamarAnaliseComConsultas({
   mensagens,
   maxConsultas = 2,
+  chaveId,
 }: {
   mensagens: MensagemIA[]
   maxConsultas?: number
+  chaveId?: number
 }): Promise<{ conteudo: string; resultado: ResultadoIA; consultas: ResultadoConsultaCurada[] }> {
   const conversa = [...mensagens]
   const consultas: ResultadoConsultaCurada[] = []
@@ -311,13 +335,21 @@ export async function chamarAnaliseComConsultas({
     nomeChave: "",
     tentativas: 0,
   }
+  let chaveForcada: number | null = null
+  if (maxConsultas > 0) {
+    chaveForcada = chaveId ?? (await buscarChaveNVIDIA())
+  }
   let mensagensDecisao: MensagemIA[] = [
     ...conversa,
     { role: "user", content: INSTRUCAO_DECISAO },
   ]
 
   for (let rodada = 0; rodada < maxConsultas; rodada++) {
-    decisao = await chamarIA(mensagensDecisao, { temperatura: 0, maxTokens: TOKENS_DECISAO })
+    decisao = await chamarIA(
+      mensagensDecisao,
+      { temperatura: 0, maxTokens: TOKENS_DECISAO },
+      chaveForcada ?? undefined
+    )
     if (decisao.provedor === "nenhum") break
 
     const consulta = parseConsultaCurada(decisao.conteudo)
@@ -345,7 +377,8 @@ export async function chamarAnaliseComConsultas({
       ...conversa,
       { role: "user", content: "Agora responda à solicitação original em Markdown, sem novas consultas." },
     ],
-    { temperatura: 0, maxTokens: TOKENS_ANALISE }
+    { temperatura: 0, maxTokens: TOKENS_ANALISE },
+    chaveForcada ?? undefined
   )
 
   return { conteudo: limparResposta(resultado.conteudo), resultado, consultas }

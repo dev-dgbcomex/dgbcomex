@@ -16,6 +16,7 @@ export interface ResultadoIA {
   modelo: string
   nomeChave: string
   tentativas: number
+  erro?: string
 }
 
 export interface ChaveIA {
@@ -237,6 +238,18 @@ async function chamarProvedor(
   return texto || MSG_ERRO_TECNICO
 }
 
+function mapearChaveReserva(r: AiChave): ChaveReserva {
+  return {
+    id: r.id,
+    prov: (r.provedor || "groq") as ProvedorIA,
+    nome: r.nome || r.provedor,
+    chave: r.chaveApi,
+    url: r.urlBase || BASE_URLS[r.provedor as ProvedorIA] || BASE_URLS.groq,
+    modelo: r.modelo || MODELOS_PADRAO[r.provedor as ProvedorIA] || "",
+    ordem: r.ordem,
+  }
+}
+
 async function carregarChavesEnvFallback(): Promise<ChaveReserva[]> {
   const envKey = process.env.GROQ_API_KEY
   if (envKey && envKey !== "cole-sua-chave-groq-aqui") {
@@ -257,11 +270,30 @@ async function carregarChavesEnvFallback(): Promise<ChaveReserva[]> {
 
 export async function chamarIA(
   messages: MensagemIA[],
-  opcoes: { temperatura?: number; maxTokens?: number } = {}
+  opcoes: { temperatura?: number; maxTokens?: number } = {},
+  chaveId?: number
 ): Promise<ResultadoIA> {
-  const chavesEnv = await carregarChavesEnvFallback()
-  const chavesBanco = await buscarChavesAtivas().catch(() => [])
-  const chaves = [...chavesBanco, ...chavesEnv]
+  let chaves: ChaveReserva[] = []
+
+  if (chaveId !== undefined) {
+    const registros = await db.select().from(aiChaves).where(eq(aiChaves.id, chaveId))
+    const r = registros[0]
+    if (!r) {
+      return {
+        conteudo: MSG_ERRO_TECNICO,
+        provedor: "nenhum",
+        modelo: "",
+        nomeChave: "",
+        tentativas: 0,
+        erro: "chave de IA nao encontrada",
+      }
+    }
+    chaves = [mapearChaveReserva(r)]
+  } else {
+    const chavesEnv = await carregarChavesEnvFallback()
+    const chavesBanco = await buscarChavesAtivas().catch(() => [])
+    chaves = [...chavesBanco, ...chavesEnv]
+  }
 
   if (chaves.length === 0) {
     console.error("[IA] Nenhuma chave de IA configurada")
@@ -271,6 +303,7 @@ export async function chamarIA(
       modelo: "",
       nomeChave: "",
       tentativas: 0,
+      erro: "nenhuma chave de IA configurada",
     }
   }
 
@@ -305,7 +338,14 @@ export async function chamarIA(
   }
 
   console.error("[IA] Todos os provedores falharam:", ultimoErro)
-  return { conteudo: MSG_ERRO_TECNICO, provedor: "nenhum", modelo: "", nomeChave: "", tentativas }
+  return {
+    conteudo: MSG_ERRO_TECNICO,
+    provedor: "nenhum",
+    modelo: "",
+    nomeChave: "",
+    tentativas,
+    erro: ultimoErro ? String(ultimoErro) : "todos os provedores falharam",
+  }
 }
 
 export async function testarChave(

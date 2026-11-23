@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
-import { desc } from "drizzle-orm"
+import { and, desc, eq, ilike, lt, or } from "drizzle-orm"
 import { requireAuth } from "@/lib/auth"
 import { handleApiError } from "@/lib/api-error"
 import { db } from "@/lib/db"
+import { aiChaves } from "@/lib/db/schema/ai-chaves"
 import {
   crmSaudeProspeccaoAnalises,
   crmSaudeProspeccaoMensagens,
@@ -47,11 +48,31 @@ export async function POST(req: NextRequest) {
     if ("error" in parsed) return parsed.error
 
     const { titulo, linhas, filtros } = parsed.data
+
+    let chaveId: number | undefined
+    const [chaveIA] = await db
+      .select({ id: aiChaves.id })
+      .from(aiChaves)
+      .where(
+        and(
+          eq(aiChaves.ativo, true),
+          lt(aiChaves.failCount, 5),
+          eq(aiChaves.provedor, "openai_compatible"),
+          or(ilike(aiChaves.nome, "%nvidia%"), ilike(aiChaves.modelo, "%nemotron%"))
+        )
+      )
+      .orderBy(aiChaves.ordem)
+      .limit(1)
+    if (chaveIA) chaveId = chaveIA.id
+
     const { linhas: preparadas, mensagens } = await contextoInicial(linhas, filtros)
-    const { conteudo, resultado, consultas } = await chamarAnaliseComConsultas({ mensagens })
+    const { conteudo, resultado, consultas } = await chamarAnaliseComConsultas({ mensagens, chaveId })
 
     if (resultado.provedor === "nenhum") {
-      return NextResponse.json({ error: "Nenhum provedor de IA disponível no momento" }, { status: 503 })
+      return NextResponse.json(
+        { error: "Nenhum provedor de IA disponível no momento", detalhe: resultado.erro },
+        { status: 503 }
+      )
     }
 
     const resumo = conteudo.replace(/[#*`>]/g, " ").replace(/\s+/g, " ").trim().slice(0, 240)
