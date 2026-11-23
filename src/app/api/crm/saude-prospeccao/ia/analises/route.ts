@@ -66,12 +66,19 @@ export async function POST(req: NextRequest) {
     if (chaveIA) chaveId = chaveIA.id
 
     const { linhas: preparadas, mensagens } = await contextoInicial(linhas, filtros)
+    const enviadoChars = JSON.stringify(mensagens).length
+    const estTokensAprox = Math.max(1, Math.ceil(enviadoChars / 4))
     const { conteudo, resultado, consultas } = await chamarAnaliseComConsultas({ mensagens, chaveId })
 
     if (resultado.provedor === "nenhum") {
       return NextResponse.json(
-        { error: "Nenhum provedor de IA disponível no momento", detalhe: resultado.erro },
-        { status: 503 }
+        {
+          error: "Nenhum provedor de IA disponível no momento",
+          detalhe: resultado.erro ?? "provedor nao encontrado",
+          enviadoChars,
+          estTokensAprox,
+        },
+        { status: 503, headers: { "X-Enviado-Chars": String(enviadoChars), "X-Est-Tokens-Aprox": String(estTokensAprox) } }
       )
     }
 
@@ -105,7 +112,10 @@ export async function POST(req: NextRequest) {
       return analise
     })
 
-    return NextResponse.json({ analise: criado }, { status: 201 })
+    return NextResponse.json(
+      { analise: criado },
+      { status: 201, headers: { "X-Enviado-Chars": String(enviadoChars), "X-Est-Tokens-Aprox": String(estTokensAprox) } }
+    )
   } catch (error) {
     return handleApiError(error, "POST /api/crm/saude-prospeccao/ia/analises", usuarioNome)
   }

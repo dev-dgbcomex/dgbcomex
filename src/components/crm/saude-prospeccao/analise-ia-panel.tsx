@@ -125,7 +125,10 @@ export function AnaliseIaPanel({
         body: JSON.stringify(payload),
       })
       const dados = await resposta.json()
-      if (!resposta.ok) throw new Error(dados.error ?? "Falha ao gerar análise")
+      if (!resposta.ok) {
+        const detalhe = dados.detalhe ? ` — ${String(dados.detalhe).slice(0, 160)}` : ""
+        throw new Error(`${dados.error ?? "Falha ao gerar análise"}${detalhe}`)
+      }
       setAnalise(dados.analise as Analise)
       setMensagens([])
       setPergunta("")
