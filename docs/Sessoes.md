@@ -31,7 +31,7 @@
 - **Data:** 2026-11-23
 - **Tarefa:** corrigir o 503 persistente em `POST /api/crm/saude-prospeccao/ia/analises` após reduzir o `max_tokens` de 1100 para 700.
 - **Causa raiz:** o Groq free tier limita a saída a 1000 tokens por minuto por modelo; a análise fazia até 3 chamadas de 700 tokens (decisão + até 2 consultas + resposta final), estourando o OTPM e fazendo o `chamarIA` devolver `provedor: "nenhum"`.
-- **Decisão aprovada:** separar a decisão sobre consultas curadas da resposta final e forçar a chave da NVIDIA cadastrada em `ai_chaves` para essa análise. A decisão usa `maxTokens: 80` por rodada (no máximo 2) e a resposta final continua com `maxTokens: 700`; pior caso: `80 + 80 + 700 = 860`, abaixo do limite de 1000 do Groq. A NVIDIA Nemerton é usada com `provedor: openai_compatible`, `ordem=1`, sem fallback automático para outro provedor nesta rota.
+- **Decisão aprovada:** separar a decisão sobre consultas curadas da resposta final e forçar a chave da NVIDIA cadastrada em `ai_chaves` para essa análise. A decisão usa `maxTokens: 80` por rodada (no máximo 2) e a resposta final continua com `maxTokens: 700`; pior caso: `80 + 80 + 700 = 860`, abaixo do limite de 1000 do Groq. A NVIDIA Nemotron é usada com `provedor: openai_compatible`, `ordem=1`, sem fallback automático para outro provedor nesta rota.
 - **Resultado:**
   - `chamarIA` aceita `chaveId` e, quando informado, usa apenas essa chave (sem fallback).
   - `chamarAnaliseComConsultas` busca a chave `openai_compatible` com `nome`/`modelo` contendo NVIDIA/Nemotron e passa `chaveId` para decisão e resposta final.
@@ -41,6 +41,21 @@
 - **Arquivos Envolvidos:** `src/lib/ai/index.ts`, `src/lib/crm/saude-prospeccao-ia.ts`, `src/lib/crm/saude-prospeccao-ia.test.ts`, `src/lib/info-content/crm.ts`, `src/lib/info-content/info-content.test.ts`, `src/app/api/crm/saude-prospeccao/ia/analises/route.ts`, `docs/Sessoes.md`.
 - **Testes:** `src/lib/crm/saude-prospeccao-ia.test.ts` (3 testes) e rotas/painel da IA (5 arquivos / 71 testes); suíte completa `npm run test` → **488 arquivos / 2843 testes passados**.
 - **Verificação:** `npm run lint` sem erros (apenas warnings pré-existentes); `tsc --noEmit --pretty false` limpo com `NODE_OPTIONS=--max-old-space-size=8192`; `npm run build` OK com `NODE_OPTIONS=--max-old-space-size=8192` (259/259 páginas estáticas).
+
+---
+
+### Sessão 43 — Campos obrigatórios ao mover/alterar status de oportunidades
+
+- **Data:** 2026-11-23
+- **Tarefa:** exigir Valor Estimado e Probabilidade maiores que 1 ao mover ou alterar o status de oportunidades para qualquer estágio diferente de NOVO e QUALIFICACAO, e corrigir o Kanban para exibir colunas de status presentes nos dados mesmo que ausentes da configuração.
+- **Decisões aprovadas:** apenas NOVO e QUALIFICACAO ficam isentos; PROPOSTA, NEGOCIACAO, FECHADO_GANHO (alias GANHO), FECHADO_PERDIDO e status customizados exigem os dois campos. O backend valida PATCH/PUT/POST e retorna 409 com `validacaoObrigatoria`; o front abre um modal solicitando o preenchimento antes de mover/alterar, com rollback do card ao cancelar.
+- **Resultado:**
+  - Novo `src/lib/crm/validacao-oportunidade.ts` com `validarCamposObrigatoriosOportunidade`, `statusExigeCamposObrigatorios` e `normalizarStatusOportunidade`.
+  - `PATCH /api/crm/oportunidades/[id]/status`, `PUT /api/crm/oportunidades/[id]` e `POST /api/crm/oportunidades` validam e bloqueiam com 409 quando ausentes/inválidos.
+  - Modal `src/components/crm/campos-obrigatorios-oportunidade-modal.tsx` usado no Kanban (`oportunidades-kanban.tsx` e `kanban/page.tsx`) e no detalhe (`[id]/page.tsx`).
+  - Kanban exibe colunas faltantes para status presentes nos dados e aplica migration `0078_status_oportunidade_kanban.sql`.
+- **Arquivos Envolvidos:** `src/lib/crm/validacao-oportunidade.ts`, `src/lib/crm/validacao-oportunidade.test.ts`, `src/app/api/crm/oportunidades/route.ts`, `src/app/api/crm/oportunidades/[id]/route.ts`, `src/app/api/crm/oportunidades/[id]/status/route.ts`, `src/app/api/crm/oportunidades/route.test.ts`, `src/app/api/crm/oportunidades/[id]/route.test.ts`, `src/app/api/crm/oportunidades/[id]/status/route.test.ts`, `src/components/crm/campos-obrigatorios-oportunidade-modal.tsx`, `src/components/crm/oportunidades-kanban.tsx`, `src/components/crm/oportunidades-kanban.test.tsx`, `src/app/(dashboard)/comercial/crm/oportunidades/[id]/page.tsx`, `src/app/(dashboard)/comercial/crm/oportunidades/novo/page.tsx`, `src/app/(dashboard)/comercial/crm/oportunidades/kanban/page.tsx`, `src/lib/db/migrations/0078_status_oportunidade_kanban.sql`, `src/lib/info-content/crm.ts`, `docs/Sessoes.md`.
+- **Testes:** suíte completa `npm run test` → **490 arquivos / 2867 testes passados**; `tsc --noEmit` limpo com `NODE_OPTIONS=--max-old-space-size=4096`; `npm run build` OK com `NODE_OPTIONS=--max-old-space-size=4096`; `next lint` apenas warnings pré-existentes.
 
 ---
 

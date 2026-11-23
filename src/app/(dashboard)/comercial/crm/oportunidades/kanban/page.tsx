@@ -20,12 +20,16 @@ import {
 } from "@dnd-kit/core"
 import { Loader2, Plus, X } from "lucide-react"
 import { useStatuses, statusExibidosNoKanban } from "@/hooks/use-statuses"
+import { STATUS_OPORTUNIDADE_PADRAO } from "@/lib/crm/status-oportunidade"
+import { validarCamposObrigatoriosOportunidade } from "@/lib/crm/validacao-oportunidade"
+import { CamposObrigatoriosOportunidadeModal } from "@/components/crm/campos-obrigatorios-oportunidade-modal"
 import type { Oportunidade } from "../types"
 
 interface OportunidadeCard {
   id: number
   titulo: string
   valorEstimado: string | null
+  probabilidade: number | null
   empresaNome: string | null
   responsavelNome: string | null
   status: string
@@ -139,6 +143,15 @@ export default function KanbanOportunidadesPage() {
     status: string
     statusAntigo: string
   } | null>(null)
+  const [showCamposModal, setShowCamposModal] = useState(false)
+  const [pendingCampos, setPendingCampos] = useState<{
+    id: number
+    status: string
+    statusAntigo: string
+    valorEstimado: string | null
+    probabilidade: number | null
+    titulo: string
+  } | null>(null)
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
@@ -152,6 +165,7 @@ export default function KanbanOportunidadesPage() {
         id: o.id,
         titulo: o.titulo,
         valorEstimado: o.valorEstimado,
+        probabilidade: o.probabilidade,
         empresaNome: o.empresaNome,
         responsavelNome: o.responsavelNome,
         status: o.status,
@@ -163,10 +177,29 @@ export default function KanbanOportunidadesPage() {
     if (dadosCarregados) setOportunidades(dadosCarregados)
   }, [dadosCarregados])
 
-  const colunas = statusExibidosNoKanban(statuses).map((col) => ({
+  const statusLookup = statuses.length > 0 ? statuses : STATUS_OPORTUNIDADE_PADRAO
+
+  const colunasBase = statusExibidosNoKanban(statusLookup).map((col) => ({
     ...col,
     cards: oportunidades.filter((o) => o.status === col.nome),
   }))
+
+  const nomesColunas = new Set(colunasBase.map((c) => c.nome))
+  const colunasFaltantes = [...new Set(oportunidades.map((o) => o.status))]
+    .filter((nome) => !nomesColunas.has(nome))
+    .map((nome) => ({
+      id: nome,
+      nome,
+      rotulo: nome,
+      tipo: "OPORTUNIDADE",
+      cor: null,
+      ordem: null,
+      ativo: true,
+      exibirKanban: true,
+      cards: oportunidades.filter((o) => o.status === nome),
+    }))
+
+  const colunas = [...colunasBase, ...colunasFaltantes]
 
   const handleDragStart = (event: DragStartEvent) => {
     const card = event.active.data.current?.oportunidade
@@ -186,6 +219,25 @@ export default function KanbanOportunidadesPage() {
     if (oportunidade.status === novoStatus) return
 
     const statusAntigo = oportunidade.status
+
+    const camposValidos = validarCamposObrigatoriosOportunidade({
+      status: novoStatus,
+      valorEstimado: oportunidade.valorEstimado,
+      probabilidade: oportunidade.probabilidade,
+    })
+
+    if (!camposValidos.valido) {
+      setPendingCampos({
+        id: oportunidade.id,
+        status: novoStatus,
+        statusAntigo,
+        valorEstimado: oportunidade.valorEstimado,
+        probabilidade: oportunidade.probabilidade,
+        titulo: oportunidade.titulo,
+      })
+      setShowCamposModal(true)
+      return
+    }
 
     if (novoStatus === "FECHADO_PERDIDO") {
       setPendingMove({ id: oportunidade.id, status: novoStatus, statusAntigo })
@@ -215,6 +267,46 @@ export default function KanbanOportunidadesPage() {
     } catch (err: unknown) {
       setOportunidades((prev) =>
         prev.map((o) => (o.id === oportunidade.id ? { ...o, status: statusAntigo } : o))
+      )
+      toast.error(err instanceof Error ? err.message : "Erro ao alterar status")
+    }
+  }
+
+  async function confirmarCampos() {
+    if (!pendingCampos) return
+    setShowCamposModal(false)
+    setPendingCampos(null)
+
+    const { id, status: novoStatus, statusAntigo, valorEstimado, probabilidade, titulo } = pendingCampos
+
+    if (novoStatus === "FECHADO_PERDIDO") {
+      setPendingMove({ id, status: novoStatus, statusAntigo })
+      setMotivoPerda("")
+      setShowMotivoPerda(true)
+      setOportunidades((prev) =>
+        prev.map((o) => (o.id === id ? { ...o, status: novoStatus } : o))
+      )
+      return
+    }
+
+    setOportunidades((prev) =>
+      prev.map((o) => (o.id === id ? { ...o, status: novoStatus } : o))
+    )
+
+    try {
+      const res = await fetch(`/api/crm/oportunidades/${id}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: novoStatus, valorEstimado, probabilidade }),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || "Erro ao alterar status")
+      }
+      toast.success(`Oportunidade movida para ${getLabel(novoStatus)}`)
+    } catch (err: unknown) {
+      setOportunidades((prev) =>
+        prev.map((o) => (o.id === id ? { ...o, status: statusAntigo } : o))
       )
       toast.error(err instanceof Error ? err.message : "Erro ao alterar status")
     }
@@ -373,6 +465,22 @@ export default function KanbanOportunidadesPage() {
           </div>
         </div>
       )}
+
+      <CamposObrigatoriosOportunidadeModal
+        open={showCamposModal}
+        titulo="Preencha antes de mover"
+        mensagem="Este estágio exige Valor Estimado e Probabilidade maiores que 1"
+        statusDestino={pendingCampos?.status || null}
+        oportunidadeId={pendingCampos?.id || null}
+        oportunidadeTitulo={pendingCampos?.titulo || null}
+        valorAtual={pendingCampos?.valorEstimado}
+        probabilidadeAtual={pendingCampos?.probabilidade}
+        onConfirm={confirmarCampos}
+        onCancel={() => {
+          setShowCamposModal(false)
+          setPendingCampos(null)
+        }}
+      />
     </div>
   )
 }

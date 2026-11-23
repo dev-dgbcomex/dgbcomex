@@ -14,8 +14,10 @@ import {
 import { X } from "lucide-react"
 import { useStatuses, statusExibidosNoKanban, type StatusConfig } from "@/hooks/use-statuses"
 import { STATUS_OPORTUNIDADE_PADRAO } from "@/lib/crm/status-oportunidade"
+import { validarCamposObrigatoriosOportunidade } from "@/lib/crm/validacao-oportunidade"
 import { DroppableColumn, KanbanSkeleton } from "./kanban-column"
 import { DecisaoAutomacaoModal } from "./decisao-automacao-modal"
+import { CamposObrigatoriosOportunidadeModal } from "./campos-obrigatorios-oportunidade-modal"
 import type { DecisaoPendente } from "@/lib/crm/automacoes-crm"
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
 
@@ -23,6 +25,7 @@ interface OportunidadeCard {
   id: number
   titulo: string
   valorEstimado: string | null
+  probabilidade: number | null
   empresaNome: string | null
   clienteNome: string | null
   responsavelNome: string | null
@@ -113,6 +116,15 @@ export default function OportunidadesKanban({
     statusAntigo: string
     motivoPerda?: string
   } | null>(null)
+  const [showCamposModal, setShowCamposModal] = useState(false)
+  const [pendingCampos, setPendingCampos] = useState<{
+    id: number
+    status: string
+    statusAntigo: string
+    valorEstimado: string | null
+    probabilidade: number | null
+    titulo: string
+  } | null>(null)
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
@@ -128,12 +140,31 @@ export default function OportunidadesKanban({
     return STATUS_OPORTUNIDADE_PADRAO.find((s) => s.nome === nome)?.rotulo || nome
   }
 
+  const exibir = data.length > 0 ? data : oportunidades
+
   const colunas = statusExibidosNoKanban(effectiveStatuses).map((col: KanbanStatus) => ({
     ...col,
     cards: (data.length > 0 ? data : oportunidades).filter(
       (o: OportunidadeCard) => o.status === col.nome
     ),
   }))
+
+  const nomesColunas = new Set(colunas.map((c) => c.nome))
+  const colunasFaltantes = [...new Set(exibir.map((o) => o.status))]
+    .filter((nome) => !nomesColunas.has(nome))
+    .map((nome) => ({
+      id: nome,
+      nome,
+      rotulo: nome,
+      tipo: "OPORTUNIDADE",
+      cor: null,
+      ordem: null,
+      ativo: true,
+      exibirKanban: true,
+      cards: exibir.filter((o: OportunidadeCard) => o.status === nome),
+    }))
+
+  const todasColunas = [...colunas, ...colunasFaltantes]
 
   const handleDragStart = (event: any) => {
     const card = event.active.data.current?.oportunidade
@@ -153,6 +184,25 @@ export default function OportunidadesKanban({
     if (oportunidade.status === novoStatus) return
 
     const statusAntigo = oportunidade.status
+
+    const camposValidos = validarCamposObrigatoriosOportunidade({
+      status: novoStatus,
+      valorEstimado: oportunidade.valorEstimado,
+      probabilidade: oportunidade.probabilidade,
+    })
+
+    if (!camposValidos.valido) {
+      setPendingCampos({
+        id: oportunidade.id,
+        status: novoStatus,
+        statusAntigo,
+        valorEstimado: oportunidade.valorEstimado,
+        probabilidade: oportunidade.probabilidade,
+        titulo: oportunidade.titulo,
+      })
+      setShowCamposModal(true)
+      return
+    }
 
     if (novoStatus === "FECHADO_PERDIDO") {
       setPendingMove({ id: oportunidade.id, status: novoStatus, statusAntigo })
@@ -194,6 +244,59 @@ export default function OportunidadesKanban({
       setData((prev) =>
         prev.map((o: OportunidadeCard) =>
           o.id === oportunidade.id ? { ...o, status: statusAntigo } : o
+        )
+      )
+      toast.error(err instanceof Error ? err.message : "Erro ao mover oportunidade")
+    }
+  }
+
+  async function confirmarCampos() {
+    if (!pendingCampos) return
+    setShowCamposModal(false)
+    setPendingCampos(null)
+
+    const { id, status: novoStatus, statusAntigo, valorEstimado, probabilidade, titulo } = pendingCampos
+
+    if (novoStatus === "FECHADO_PERDIDO") {
+      setPendingMove({ id, status: novoStatus, statusAntigo })
+      setMotivoPerda("")
+      setShowMotivoPerda(true)
+      setData((prev) =>
+        prev.map((o: OportunidadeCard) =>
+          o.id === id ? { ...o, status: novoStatus } : o
+        )
+      )
+      return
+    }
+
+    setData((prev) =>
+      prev.map((o: OportunidadeCard) =>
+        o.id === id ? { ...o, status: novoStatus } : o
+      )
+    )
+
+    try {
+      const res = await fetch(`/api/crm/oportunidades/${id}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: novoStatus, valorEstimado, probabilidade }),
+      })
+      const payload = await res.json().catch(() => null)
+      if (res.status === 409 && payload?.decisaoPendente) {
+        setDecisaoPendente(payload.decisaoPendente)
+        setPendingDecision({ id, status: novoStatus, statusAntigo })
+        toast.info(payload.error)
+        return
+      }
+      if (!res.ok) {
+        throw new Error(payload?.error || "Erro ao alterar status")
+      }
+      toast.success(`Oportunidade movida para ${getLabelSafe(novoStatus)}`)
+      for (const aviso of payload?.automacao?.avisos || []) toast.info(aviso)
+    } catch (err: unknown) {
+      setData((prev) =>
+        prev.map((o: OportunidadeCard) =>
+          o.id === id ? { ...o, status: statusAntigo } : o
         )
       )
       toast.error(err instanceof Error ? err.message : "Erro ao mover oportunidade")
@@ -303,7 +406,7 @@ export default function OportunidadesKanban({
     <div className="flex flex-col h-[calc(100vh-280px)]">
       <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <div className="flex-1 min-h-0 flex gap-4 overflow-x-auto pb-2">
-          {colunas.map((col) => (
+          {todasColunas.map((col) => (
             <DroppableColumn
               key={col.nome}
               id={col.nome}
@@ -398,6 +501,22 @@ export default function OportunidadesKanban({
         }))}
         onEscolher={confirmarDecisao}
         onCancel={cancelarDecisao}
+      />
+
+      <CamposObrigatoriosOportunidadeModal
+        open={showCamposModal}
+        titulo="Preencha antes de mover"
+        mensagem="Este estágio exige Valor Estimado e Probabilidade maiores que 1"
+        statusDestino={pendingCampos?.status || null}
+        oportunidadeId={pendingCampos?.id || null}
+        oportunidadeTitulo={pendingCampos?.titulo || null}
+        valorAtual={pendingCampos?.valorEstimado}
+        probabilidadeAtual={pendingCampos?.probabilidade}
+        onConfirm={confirmarCampos}
+        onCancel={() => {
+          setShowCamposModal(false)
+          setPendingCampos(null)
+        }}
       />
     </div>
   )

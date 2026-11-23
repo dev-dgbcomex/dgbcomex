@@ -6,6 +6,7 @@ import { db } from "@/lib/db"
 import { registrarLog } from "@/lib/notificar"
 import { inserirTimelineEvento } from "@/lib/crm-timeline"
 import { clienteIdDaPessoa, idsPessoasDoCliente } from "@/lib/crm/cliente-relacionamentos"
+import { processarAutomacaoCRM } from "@/lib/crm/automacoes-crm"
 import { createQueryBuilder, resetDb } from "@/test/route-db-mock"
 import { GET, POST } from "./route"
 
@@ -18,6 +19,7 @@ vi.mock("@/lib/crm/cliente-relacionamentos", () => ({
   idsPessoasDoCliente: vi.fn(),
   clienteIdDaPessoa: vi.fn(),
 }))
+vi.mock("@/lib/crm/automacoes-crm", () => ({ processarAutomacaoCRM: vi.fn() }))
 
 function get(url: string) {
   return GET(new NextRequest(url))
@@ -49,6 +51,13 @@ describe("/api/crm/oportunidades", () => {
     vi.mocked(clienteIdDaPessoa).mockResolvedValue(null)
     vi.mocked(registrarLog).mockResolvedValue(undefined as any)
     vi.mocked(inserirTimelineEvento).mockResolvedValue(undefined as any)
+    vi.mocked(processarAutomacaoCRM).mockReset()
+    vi.mocked(processarAutomacaoCRM).mockResolvedValue({
+      ok: true,
+      registro: { id: 10, status: "NOVO" },
+      avisos: [],
+    } as any)
+    resetDb(db)
     db.select = vi.fn(() => createQueryBuilder([]))
   })
 
@@ -85,5 +94,32 @@ describe("/api/crm/oportunidades", () => {
     expect(inserirTimelineEvento).toHaveBeenCalledWith(
       expect.objectContaining({ empresaId: 7, clienteId: 5 })
     )
+  })
+
+  it("bloqueia criação em PROPOSTA sem valor estimado e probabilidade", async () => {
+    const res = await post({ titulo: "X", status: "PROPOSTA" })
+    expect(res.status).toBe(409)
+    const body = await res.json()
+    expect(body.validacaoObrigatoria.campos).toEqual(["valorEstimado", "probabilidade"])
+    expect(db.insert).not.toHaveBeenCalled()
+    expect(processarAutomacaoCRM).not.toHaveBeenCalled()
+  })
+
+  it("cria como NOVO sem campos obrigatórios", async () => {
+    db.insert = vi.fn(() => createQueryBuilder([{ id: 10, status: "NOVO" }]))
+    const res = await post({ titulo: "X", status: "NOVO" })
+    expect(res.status).toBe(201)
+    expect(processarAutomacaoCRM).toHaveBeenCalled()
+  })
+
+  it("cria em PROPOSTA com valores válidos", async () => {
+    db.insert = vi.fn(() => createQueryBuilder([{ id: 10, status: "PROPOSTA" }]))
+    const res = await post({ titulo: "X", status: "PROPOSTA", valorEstimado: 150, probabilidade: 40 })
+    expect(res.status).toBe(201)
+    const insertBuilder = (db.insert as ReturnType<typeof vi.fn>).mock.results[0].value
+    const valores = insertBuilder.values.mock.calls[0][0]
+    expect(valores.status).toBe("PROPOSTA")
+    expect(valores.valorEstimado).toBe(150)
+    expect(valores.probabilidade).toBe(40)
   })
 })

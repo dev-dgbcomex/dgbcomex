@@ -30,8 +30,10 @@ import {
 } from "@/lib/crm/documento-venda"
 import EdicaoOportunidade, { type OportunidadeUpdate } from "./components/edicao-card"
 import { DecisaoAutomacaoModal } from "@/components/crm/decisao-automacao-modal"
+import { CamposObrigatoriosOportunidadeModal } from "@/components/crm/campos-obrigatorios-oportunidade-modal"
 import { VerificarPedidosFaturados } from "@/components/crm/verificar-pedidos-faturados"
 import type { DecisaoPendente } from "@/lib/crm/automacoes-crm"
+import { validarCamposObrigatoriosOportunidade } from "@/lib/crm/validacao-oportunidade"
 import type { OportunidadeDetalhe, DocumentoVendaResumo, UsuarioResumo } from "../types"
 
 const PROPOSTA_STATUS: Record<string, { label: string; cor: string }> = {
@@ -92,6 +94,8 @@ function DetalheOportunidadePageContent() {
   const [usuarios, setUsuarios] = useState<UsuarioResumo[]>([])
   const [decisaoPendente, setDecisaoPendente] = useState<DecisaoPendente | null>(null)
   const [decisaoLoading, setDecisaoLoading] = useState(false)
+  const [showCamposModal, setShowCamposModal] = useState(false)
+  const [pendingStatusSave, setPendingStatusSave] = useState<{ status: string; decisao?: string } | null>(null)
 
   async function recarregar() {
     try {
@@ -161,6 +165,18 @@ function DetalheOportunidadePageContent() {
   }
 
   async function handleStatusSave(decisao?: string) {
+    const camposValidos = validarCamposObrigatoriosOportunidade({
+      status: statusValue,
+      valorEstimado: oportunidade?.valorEstimado,
+      probabilidade: oportunidade?.probabilidade,
+    })
+
+    if (!camposValidos.valido) {
+      setPendingStatusSave({ status: statusValue, decisao })
+      setShowCamposModal(true)
+      return
+    }
+
     setDecisaoLoading(true)
     try {
       const res = await fetch(`/api/crm/oportunidades/${params.id}`, {
@@ -191,6 +207,13 @@ function DetalheOportunidadePageContent() {
     } finally {
       setDecisaoLoading(false)
     }
+  }
+
+  async function confirmarStatusSave() {
+    if (!pendingStatusSave) return
+    setShowCamposModal(false)
+    setPendingStatusSave(null)
+    await handleStatusSave(pendingStatusSave.decisao)
   }
 
   function formatarMoeda(valor: string | null | undefined) {
@@ -659,6 +682,22 @@ function DetalheOportunidadePageContent() {
         loading={decisaoLoading}
         onEscolher={(valor) => handleStatusSave(valor)}
         onCancel={() => setDecisaoPendente(null)}
+      />
+
+      <CamposObrigatoriosOportunidadeModal
+        open={showCamposModal}
+        titulo="Preencha antes de alterar o status"
+        mensagem="Este estágio exige Valor Estimado e Probabilidade maiores que 1"
+        statusDestino={pendingStatusSave?.status || null}
+        oportunidadeId={Number(params.id) || undefined}
+        oportunidadeTitulo={oportunidade?.titulo || null}
+        valorAtual={oportunidade?.valorEstimado}
+        probabilidadeAtual={oportunidade?.probabilidade}
+        onConfirm={confirmarStatusSave}
+        onCancel={() => {
+          setShowCamposModal(false)
+          setPendingStatusSave(null)
+        }}
       />
     </div>
   )

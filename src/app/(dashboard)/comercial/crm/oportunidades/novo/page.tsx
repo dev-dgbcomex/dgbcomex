@@ -14,6 +14,7 @@ import { QuickCreateVisitante } from "@/components/crm/quick-create-visitante"
 import { SelectCliente } from "@/components/crm/select-cliente"
 import { useStatuses, statusAtivos } from "@/hooks/use-statuses"
 import { TipoEntidadeSelector } from "@/app/(dashboard)/comercial/crm/visitas/novo/components/tipo-entidade-selector"
+import { validarCamposObrigatoriosOportunidade } from "@/lib/crm/validacao-oportunidade"
 import type { EmpresaResumo, LeadResumo, UsuarioResumo, OportunidadeForm } from "../types"
 
 type TipoEntidade = "CLIENTE" | "PESSOA" | "AVULSO"
@@ -120,6 +121,18 @@ export default function NovaOportunidadePage() {
       toast.error("Selecione um cliente")
       return
     }
+
+    const validacaoCriacao = validarCamposObrigatoriosOportunidade({
+      status: form.status,
+      valorEstimado: form.valorEstimado,
+      probabilidade: form.probabilidade,
+    })
+
+    if (!validacaoCriacao.valido) {
+      toast.error(validacaoCriacao.mensagem)
+      return
+    }
+
     setSaving(true)
     try {
       const res = await fetch("/api/crm/oportunidades", {

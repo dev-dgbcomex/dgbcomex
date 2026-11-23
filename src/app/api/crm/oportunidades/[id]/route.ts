@@ -17,6 +17,7 @@ import { handleApiError } from "@/lib/api-error"
 import { excluirOportunidadeCascade } from "@/lib/crm-cascade"
 import { processarAutomacaoCRM, type DecisaoAutomacao } from "@/lib/crm/automacoes-crm"
 import { podeGerenciarTudo } from "@/lib/permissoes"
+import { validarCamposObrigatoriosOportunidade } from "@/lib/crm/validacao-oportunidade"
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -143,6 +144,24 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
     if (!existente) {
       return NextResponse.json({ error: "Oportunidade não encontrada" }, { status: 404 })
+    }
+
+    const statusDestino = body.status !== undefined ? body.status : existente.status
+    const validacao = validarCamposObrigatoriosOportunidade({
+      status: statusDestino,
+      valorEstimado: body.valorEstimado !== undefined ? body.valorEstimado : existente.valorEstimado,
+      probabilidade:
+        body.probabilidade !== undefined ? body.probabilidade : existente.probabilidade,
+    })
+
+    if (!validacao.valido) {
+      return NextResponse.json(
+        {
+          error: validacao.mensagem,
+          validacaoObrigatoria: validacao,
+        },
+        { status: 409 }
+      )
     }
 
     const statusAlterado = body.status !== undefined && body.status !== existente.status

@@ -13,6 +13,7 @@ import { notificarAtividadeComercial } from "@/lib/crm/notificar-atividade"
 import { inserirTimelineEvento } from "@/lib/crm-timeline"
 import { idsPessoasDoCliente, clienteIdDaPessoa } from "@/lib/crm/cliente-relacionamentos"
 import { processarAutomacaoCRM } from "@/lib/crm/automacoes-crm"
+import { validarCamposObrigatoriosOportunidade } from "@/lib/crm/validacao-oportunidade"
 
 export async function GET(req: NextRequest) {
   try {
@@ -110,6 +111,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: "Crie a oportunidade como NOVO e marque como ganha após vincular um pedido do ERP" },
         { status: 400 }
+      )
+    }
+
+    const validacaoCriacao = validarCamposObrigatoriosOportunidade({
+      status: statusInicial,
+      valorEstimado: body.valorEstimado,
+      probabilidade: body.probabilidade,
+    })
+
+    if (!validacaoCriacao.valido) {
+      return NextResponse.json(
+        {
+          error: validacaoCriacao.mensagem,
+          validacaoObrigatoria: validacaoCriacao,
+        },
+        { status: 409 }
       )
     }
 

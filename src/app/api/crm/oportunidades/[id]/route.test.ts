@@ -4,8 +4,9 @@ import { NextRequest, NextResponse } from "next/server"
 import { requireAuth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { notificarDelecao } from "@/lib/notificar"
+import { processarAutomacaoCRM } from "@/lib/crm/automacoes-crm"
 import { createQueryBuilder, resetDb } from "@/test/route-db-mock"
-import { GET, DELETE } from "./route"
+import { GET, DELETE, PUT } from "./route"
 
 vi.mock("@/lib/auth", () => ({ requireAuth: vi.fn() }))
 vi.mock("@/lib/notificar", () => ({
@@ -15,8 +16,9 @@ vi.mock("@/lib/notificar", () => ({
   notificarDelecao: vi.fn(),
 }))
 vi.mock("@/lib/db", () => ({
-  db: { select: vi.fn(), transaction: vi.fn() },
+  db: { select: vi.fn(), transaction: vi.fn(), update: vi.fn() },
 }))
+vi.mock("@/lib/crm/automacoes-crm", () => ({ processarAutomacaoCRM: vi.fn() }))
 
 const sessionAdmin = { session: { user: { id: "1", role: "ADMIN", name: "Tiago" } }, userId: 1 }
 
@@ -154,5 +156,88 @@ describe("DELETE /api/crm/oportunidades/[id]", () => {
     })
     const res = await del("5")
     expect(res.status).toBe(500)
+  })
+})
+
+describe("PUT /api/crm/oportunidades/[id]", () => {
+  const sessionAdmin = { session: { user: { id: "1", role: "ADMIN", name: "Tiago" } }, userId: 1 }
+
+  function put(id: string, body: Record<string, unknown>) {
+    return PUT(
+      new NextRequest(`http://localhost/api/crm/oportunidades/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      }),
+      { params: Promise.resolve({ id }) }
+    )
+  }
+
+  beforeEach(() => {
+    vi.mocked(requireAuth).mockReset().mockResolvedValue(sessionAdmin as any)
+    vi.mocked(processarAutomacaoCRM).mockReset().mockResolvedValue({
+      ok: true,
+      registro: { id: 1, status: "PROPOSTA" },
+      avisos: [],
+      gatilhos: { executadas: [], puladas: [], erros: [] },
+    } as any)
+    resetDb(db)
+    vi.mocked(db.update).mockReturnValue(createQueryBuilder([{ id: 1, status: "PROPOSTA" }]))
+    vi.mocked(db.select).mockReturnValue(createQueryBuilder([]))
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it("bloqueia alterar para PROPOSTA sem valor estimado e probabilidade", async () => {
+    vi.mocked(db.select).mockReturnValue(
+      createQueryBuilder([{ id: 1, status: "NOVO", valorEstimado: null, probabilidade: null }])
+    )
+    const res = await put("1", { status: "PROPOSTA" })
+    expect(res.status).toBe(409)
+    const body = await res.json()
+    expect(body.validacaoObrigatoria.campos).toEqual(["valorEstimado", "probabilidade"])
+    expect(processarAutomacaoCRM).not.toHaveBeenCalled()
+  })
+
+  it("bloqueia limpar valor estimado quando já está em PROPOSTA", async () => {
+    vi.mocked(db.select).mockReturnValue(
+      createQueryBuilder([{ id: 1, status: "PROPOSTA", valorEstimado: 100, probabilidade: 50 }])
+    )
+    const res = await put("1", { status: "PROPOSTA", valorEstimado: null })
+    expect(res.status).toBe(409)
+    expect(processarAutomacaoCRM).not.toHaveBeenCalled()
+  })
+
+  it("permite alterar para PROPOSTA com valores válidos", async () => {
+    vi.mocked(db.select).mockReturnValue(
+      createQueryBuilder([{ id: 1, status: "NOVO", valorEstimado: null, probabilidade: null }])
+    )
+    const res = await put("1", { status: "PROPOSTA", valorEstimado: 250, probabilidade: 30 })
+    expect(res.status).toBe(200)
+    expect(processarAutomacaoCRM).toHaveBeenCalledWith(
+      expect.objectContaining({ statusNovo: "PROPOSTA", entidadeId: 1 })
+    )
+    expect(db.update).toHaveBeenCalled()
+  })
+
+  it("permite editar título sem alterar status quando valores existentes são válidos", async () => {
+    vi.mocked(db.select).mockReturnValue(
+      createQueryBuilder([{ id: 1, status: "PROPOSTA", valorEstimado: 100, probabilidade: 50 }])
+    )
+    const res = await put("1", { titulo: "Novo título" })
+    expect(res.status).toBe(200)
+    expect(processarAutomacaoCRM).not.toHaveBeenCalled()
+  })
+
+  it("permite NOVO e QUALIFICACAO sem campos obrigatórios", async () => {
+    for (const status of ["NOVO", "QUALIFICACAO"]) {
+      vi.mocked(db.select).mockReturnValue(
+        createQueryBuilder([{ id: 1, status, valorEstimado: null, probabilidade: null }])
+      )
+      const res = await put("1", { status })
+      expect(res.status).toBe(200)
+    }
   })
 })

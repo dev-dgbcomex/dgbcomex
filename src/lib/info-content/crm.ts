@@ -442,6 +442,7 @@ export const crmContent: Record<string, InfoContent> = {
       "Lista de oportunidades comerciais em andamento. Cada oportunidade representa uma negociação em potencial com uma lead, com valor estimado e estágio no pipeline.",
     rules: [
       "O pipeline segue o fluxo: Novo → Qualificação → Proposta → Negociação → Fechado Ganho/Perdido.",
+      "Somente NOVO e QUALIFICACAO podem ficar sem Valor Estimado e Probabilidade; Proposta, Negociação, Ganho e Perdido exigem ambos preenchidos e maiores que 1. O sistema solicita o preenchimento ao mover ou alterar o status para esses estágios.",
       "Os estágios e rótulos vêm do cadastro de Status (Admin → Configurações → Status, tipo Oportunidade): um novo status ativo já aparece aqui e vira coluna no Kanban.",
       "A visualização padrão é em Cards; Tabela e Kanban continuam disponíveis. Cards e Tabela usam os mesmos filtros e o Kanban organiza as oportunidades por status.",
       "O filtro Todas/Minhas começa em Todas, mostrando as oportunidades de todos os responsáveis; Minhas continua disponível para restringir ao usuário logado.",
@@ -482,7 +483,7 @@ export const crmContent: Record<string, InfoContent> = {
       "Registre uma nova oportunidade de negócio. Toda oportunidade deve estar vinculada a uma lead existente no CRM.",
     rules: [
       "A lead deve estar cadastrada no CRM antes de criar a oportunidade.",
-      "O valor estimado é opcional, mas recomendado para cálculo de forecast.",
+      "O valor estimado e a probabilidade são obrigatórios apenas quando o status inicial for diferente de NOVO e QUALIFICACAO; nesses estágios ambos devem ser maiores que 1.",
       "A oportunidade inicia como NOVO e segue o pipeline até o fechamento.",
       "É possível vincular a oportunidade a um lead de origem.",
     ],
@@ -503,6 +504,7 @@ export const crmContent: Record<string, InfoContent> = {
       "Ao fechar como PERDIDO, informe o motivo para análise futura. Se for a última oportunidade da lead, escolha entre perder a lead ou criar uma nova oportunidade.",
       "O botão 'Verificar faturados' consulta no ERP as notas dos pedidos vinculados a esta oportunidade; a conversão da lead em cliente só ocorre após sua confirmação.",
       "O botão 'Editar' abre o formulário da oportunidade (título, descrição, valor estimado, probabilidade, previsão de fechamento e responsável); ao salvar, as alterações são gravadas na mesma oportunidade e ficam registradas na timeline.",
+      "Ao alterar o status para Proposta, Negociação, Ganho ou Perdido, o sistema exige Valor Estimado e Probabilidade maiores que 1 e solicita o preenchimento antes de salvar.",
       "O lápis da lista abre a oportunidade já em modo de edição (é o mesmo formulário do botão 'Editar').",
       "Se a oportunidade estiver como FECHADO_PERDIDO, o formulário de edição também permite corrigir o motivo da perda.",
       "Os cards 'Faturamentos' e 'Pedidos de Venda' listam os documentos já vinculados à oportunidade; o botão 'Novo Faturamento'/'Novo Pedido' cria um documento manualmente no CRM.",
@@ -535,6 +537,7 @@ export const crmContent: Record<string, InfoContent> = {
       "Quadro visual com drag-and-drop para gerenciar o pipeline comercial. Arraste oportunidades entre colunas para atualizar o status automaticamente.",
     rules: [
       "Arraste um card para outra coluna para mudar o estágio da oportunidade.",
+      "Ao arrastar para Proposta, Negociação, Ganho ou Perdido, o sistema solicita Valor Estimado e Probabilidade maiores que 1 antes de mover o card.",
       "As colunas vêm do cadastro de Status (Admin → Configurações → Status, tipo Oportunidade): cada status ativo com 'Exibir no Kanban' marcado vira uma coluna, na ordem configurada.",
       "Ao arrastar para FECHADO_PERDIDO, um modal solicitará o motivo da perda.",
       "Apenas usuários com permissão podem mover cards entre estágios.",
