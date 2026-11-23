@@ -73,15 +73,6 @@ function mapearNotaFaturada(nota: FaturamentoErp): NotaFaturada {
   }
 }
 
-async function fetchFaturamentos(query: URLSearchParams): Promise<ListaErp<FaturamentoErp>> {
-  const res = await fetch(`/api/crm/erp/faturamentos?${query.toString()}`, { cache: "no-store" })
-  if (!res.ok) {
-    const corpo = await res.json().catch(() => null)
-    throw new Error(corpo?.error || "Erro ao buscar faturados do ERP")
-  }
-  return (await res.json()) as ListaErp<FaturamentoErp>
-}
-
 export async function buscarNotasFaturadasPorPedido(codigoPedido: string): Promise<ListaErp<FaturamentoErp>> {
   if (!codigoPedido) {
     throw new Error("Informe o código do pedido")
@@ -91,10 +82,9 @@ export async function buscarNotasFaturadasPorPedido(codigoPedido: string): Promi
 
   // Estratégia 1: filtro pedido_origem no ERP
   try {
-    const query = new URLSearchParams()
-    query.set("pedido_origem", codigoLimpo)
-    query.set("por_pagina", "50")
-    const dados = await fetchFaturamentos(query)
+    const dados = await requisitarErp<ListaErp<FaturamentoErp>>(
+      `/crm/faturamentos?pedido_origem=${encodeURIComponent(codigoLimpo)}&por_pagina=50`
+    )
     const filtrados = dados.itens.filter(
       (n) => (n.pedido_origem || "").trim() === codigoLimpo
     )
@@ -107,9 +97,9 @@ export async function buscarNotasFaturadasPorPedido(codigoPedido: string): Promi
 
   // Estratégia 2: busca sem filtro (paginada) e filtra client-side
   try {
-    const query = new URLSearchParams()
-    query.set("por_pagina", "200")
-    const dados = await fetchFaturamentos(query)
+    const dados = await requisitarErp<ListaErp<FaturamentoErp>>(
+      `/crm/faturamentos?por_pagina=200`
+    )
     const filtrados = dados.itens.filter(
       (n) => (n.pedido_origem || "").trim() === codigoLimpo
     )
