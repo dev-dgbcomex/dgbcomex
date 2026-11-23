@@ -31,11 +31,21 @@ const resposta = {
   resumo: "Cliente com contato recente e proposta em aberto.",
   insights: "Evolução positiva no relacionamento.",
   sugestoes: "Agendar visita e atualizar proposta.",
-  classificacao: "MORNO" as const,
+  classificacao: "FRIO" as const,
   motivoClassificacao: "Último contato há 35 dias.",
 }
 
-const resumoSalvo = { id: 55, ...resposta, entidadeTipo: "lead", entidadeId: 9 }
+const resumoSalvo = {
+  id: 55,
+  classificacao: "QUENTE",
+  motivoClassificacao:
+    "Pedido de venda 00007095 emitido em 18/11/2026 (status ABERTO); status do pedido não altera a faixa.",
+  resumo: "Cliente com contato recente e proposta em aberto.",
+  insights: "Evolução positiva no relacionamento.",
+  sugestoes: "Agendar visita e atualizar proposta.",
+  entidadeTipo: "lead",
+  entidadeId: 9,
+}
 
 function post(body: unknown) {
   return POST(
@@ -72,7 +82,21 @@ describe("/api/crm/ia/resumos", () => {
       nomeChave: "teste",
       tentativas: 1,
     })
-    vi.mocked(buscarContextoResumoIA).mockResolvedValue({} as any)
+    vi.mocked(buscarContextoResumoIA).mockResolvedValue(
+      {
+        temperatura: {
+          faixa: "QUENTE",
+          motivo:
+            "Pedido de venda 00007095 emitido em 18/11/2026 (status ABERTO); status do pedido não altera a faixa.",
+          temNegociacao: false,
+          temProposta: false,
+          temGanhoMes: false,
+          temGanhoTrimestre: false,
+          temPedidoMes: true,
+          temPedidoTrimestre: true,
+        },
+      } as any
+    )
     vi.mocked(montarMensagensResumo).mockReturnValue({ system: "system", user: "user" })
     vi.mocked(parseRespostaResumoIa).mockReturnValue(resposta as any)
     vi.mocked(db.select).mockImplementation(() => createQueryBuilder([{ id: 9 }]) as any)
@@ -133,7 +157,7 @@ describe("/api/crm/ia/resumos", () => {
 
     const evento = tx.insert.mock.results[1]!.value.values.mock.calls[0]![0]
     expect(evento).toMatchObject({ tipo: "RESUMO_IA", empresaId: 9, clienteId: null })
-    expect(evento.metadados).toEqual({ resumoId: 55, classificacao: "MORNO" })
+    expect(evento.metadados).toEqual({ resumoId: 55, classificacao: "QUENTE" })
   })
 
   it("não espelha campos legados para cliente", async () => {

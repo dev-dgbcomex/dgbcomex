@@ -78,6 +78,7 @@ export const comercialContent: Record<string, InfoContent> = {
       "Nomes de contatos e representantes abrem o cadastro do respectivo registro; cada evento da timeline com detalhe abre o registro de origem.",
       "O botão '+' no card de Oportunidades cria o registro já vinculado ao cliente.",
       "O Resumo IA é gerado manualmente pelo botão 'Gerar resumo' e usa o histórico do cliente, das pessoas promovidas, dos negócios, visitas, ações, propostas, tarefas, WhatsApp e dos resumos anteriores.",
+      "A classificação QUENTE/MORNO/FRIO do Resumo IA é calculada pelo sistema com base em oportunidades e pedidos do mês/trimestre (incluindo leads promovidas); o status cadastral, a recência de contato e a qualidade dos registros não definem a faixa.",
       "Cada resumo gerado vira um evento clicável na Timeline e abre o texto completo no card 'Resumo IA'.",
       "No card 'Resumo IA' é possível selecionar resumos e exportar em MD, PDF ou TXT, em arquivo único ou arquivos separados.",
       "O bloco de análise de IA responde perguntas sobre o histórico do cliente a partir da timeline.",
@@ -108,7 +109,7 @@ export const comercialContent: Record<string, InfoContent> = {
     examples: [
       {
         title: "Resumo MORNO",
-        desc: "Ao gerar, a IA pode classificar o cliente como MORNO quando há proposta enviada-sem-resposta e o último contato foi há mais de 30 dias.",
+        desc: "Exemplo: cliente com oportunidade em PROPOSTA, ou ganho/pedido no trimestre corrente, aparece como MORNO. A classificação é do sistema, não da IA.",
       },
       {
         title: "Exportação do histórico",

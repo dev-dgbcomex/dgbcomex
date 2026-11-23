@@ -389,6 +389,7 @@ export const crmContent: Record<string, InfoContent> = {
       "A Timeline mostra todo o histórico de interações e cada evento com cadastro próprio abre o registro de origem.",
       "O WhatsApp permite enviar e receber mensagens diretamente pelo sistema (integrado com Evolution API + n8n).",
       "O Resumo IA é gerado manualmente pelo botão 'Gerar resumo' e usa cadastro, oportunidades, pedidos, visitas, ações, propostas, tarefas, WhatsApp, timeline e os resumos anteriores da lead.",
+      "A classificação QUENTE/MORNO/FRIO do Resumo IA é calculada pelo sistema com base em oportunidades e pedidos do mês/trimestre; o status cadastral, a recência de contato e a qualidade dos registros não definem a faixa.",
       "Cada resumo gerado vira um evento clicável na Timeline e abre o texto completo no card 'Resumo IA'.",
       "No card 'Resumo IA' é possível selecionar resumos e exportar em MD, PDF ou TXT, em arquivo único ou arquivos separados.",
       "Não há card de Propostas nesta tela; as propostas continuam disponíveis na listagem geral e nos relatórios.",
@@ -427,7 +428,7 @@ export const crmContent: Record<string, InfoContent> = {
     examples: [
       {
         title: "Resumo QUENTE",
-        desc: "Ao gerar, a IA pode classificar a lead como QUENTE quando há visita recente com ata detalhada, oportunidade ativa e contato nos últimos 7 dias.",
+        desc: "Exemplo: lead com oportunidade em NEGOCIAÇÃO ou pedido de venda emitido neste mês (mesmo com status ABERTO) aparece como QUENTE. A classificação é do sistema, não da IA.",
       },
       {
         title: "Exportação do histórico",

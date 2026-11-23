@@ -683,6 +683,20 @@
   - Modal `vincular-documento-erp-modal.tsx` com busca, filtro "Só desta pessoa" (por CNPJ) e cards de Faturamentos/Pedidos na tela da oportunidade; `empresaCnpj` no GET da oportunidade.
 - **Arquivos Envolvidos:** `src/lib/erp/cliente.ts`, `src/lib/erp/tipos.ts`, `src/app/api/crm/erp/{pedidos,faturamentos}/route.ts`, `src/app/api/crm/oportunidades/[id]/vinculos/route.ts`, `src/components/crm/vincular-documento-erp-modal.tsx`, `src/app/(dashboard)/comercial/crm/oportunidades/[id]/page.tsx`, `src/lib/info-content/crm.ts`.
 
+### Sessão 45 — Classificação do Resumo IA passa a ser canônica (QUENTE/MORNO/FRIO)
+
+- **Data:** 2026-11-23
+- **Commit:** `11df1f80` (anterior) + novo commit desta sessão
+- **Tarefa:** corrigir divergência em que o Resumo IA classificava como FRIO enquanto o sistema classificava como QUENTE (exemplo: cliente 17, pedido `00007095` emitido em 18/11/2026, status `ABERTO`).
+- **Resultado:**
+  - `src/lib/crm/resumo-ia-contexto.ts`: `ContextoResumoIA` ganha `temperatura` calculada com `faixaConversaoSql("lead"|"cliente")` (mesma regra do semáforo/kanban), `motivo` detalhado e flags canônicas (`temNegociacao`, `temProposta`, `temGanhoMes`, `temPedidoMes`, etc.); `montarMensagensResumo` manda a IA copiar a classificação/motivo e não reclassificar; status do pedido (`ABERTO`/`FATURADO`) não altera a faixa.
+  - `src/app/api/crm/ia/resumos/route.ts`: sobrescreve `classificacao`/`motivoClassificacao` da IA com os valores calculados antes de salvar resumo, evento de timeline e espelhamento da lead.
+  - `src/lib/crm/resumo-ia-contexto.test.ts`, `src/app/api/crm/ia/resumos/route.test.ts`, `src/lib/info-content/info-content.test.ts` atualizados.
+  - `src/lib/info-content/crm.ts` e `src/lib/info-content/comercial.ts`: modais “i” de lead e cliente atualizados (exemplos baseados em oportunidade/pedido do mês, não em recência de contato).
+  - `scripts/corrigir-classificacao-resumos-ia.js`: backfill idempotente com `--dry-run` padrão e `--apply` para gravar; corrige `crm_resumos_ia` e eventos `RESUMO_IA` da timeline nos dois bancos; id 6 corrigido para **QUENTE**.
+- **Arquivos Envolvidos:** `src/lib/crm/resumo-ia-contexto.ts`, `src/lib/crm/resumo-ia-contexto.test.ts`, `src/app/api/crm/ia/resumos/route.ts`, `src/app/api/crm/ia/resumos/route.test.ts`, `src/lib/info-content/{crm,comercial}.ts`, `src/lib/info-content/info-content.test.ts`, `scripts/corrigir-classificacao-resumos-ia.js`, `docs/Sessoes.md`.
+- **Testes:** `npm run test` → 491 arquivos / 2884 testes passados; `tsc --noEmit` limpo; `next build` OK; `next lint` apenas warnings pré-existentes.
+
 ---
 
 ## Estrutura de Comandos

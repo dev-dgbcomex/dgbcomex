@@ -88,6 +88,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Não foi possível interpretar a resposta da IA" }, { status: 502 })
     }
 
+    const temperatura = contexto.temperatura ?? {
+      faixa: "FRIO",
+      motivo: "Não há dados suficientes para classificar a temperatura.",
+    }
+    resposta.classificacao = temperatura.faixa
+    resposta.motivoClassificacao = temperatura.motivo || `Classificação ${temperatura.faixa}.`
+
     const descricao = `${resposta.classificacao}: ${resposta.resumo.replace(/\s+/g, " ").slice(0, 140)}`
 
     const registro = await db.transaction(async (tx: any) => {

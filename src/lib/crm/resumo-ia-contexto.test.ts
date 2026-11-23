@@ -122,6 +122,27 @@ describe("resumo-ia-contexto", () => {
     expect(contexto.preenchimento.faltantes).not.toContain("site")
   })
 
+  it("classifica como QUENTE por pedido no mês mesmo com status ABERTO", async () => {
+    vi.mocked(db.execute)
+      .mockResolvedValue([{ faixa: "QUENTE" }])
+      .mockResolvedValueOnce([
+        {
+          contexto: {
+            entidade: { tipo: "cliente", id: 12, nome: "Cliente" },
+            oportunidades: [],
+            pedidos: [{ numero: "00007095", dataEmissao: "2026-11-18T00:00:00.000Z", status: "ABERTO", total: 702 }],
+          },
+        },
+      ])
+
+    const contexto = await buscarContextoResumoIA({ tipo: "cliente", id: 12 })
+
+    expect(db.execute).toHaveBeenCalledTimes(2)
+    expect(contexto.temperatura?.faixa).toBe("QUENTE")
+    expect(contexto.temperatura?.motivo).toContain("00007095")
+    expect(contexto.temperatura?.motivo).toContain("status do pedido não altera a faixa")
+  })
+
   it("busca o contexto consolidado via uma única consulta no formato do postgres-js", async () => {
     vi.mocked(db.execute).mockResolvedValue([
       {
@@ -135,7 +156,7 @@ describe("resumo-ia-contexto", () => {
 
     const contexto = await buscarContextoResumoIA({ tipo: "cliente", id: 12 })
 
-    expect(db.execute).toHaveBeenCalledTimes(1)
+    expect(db.execute).toHaveBeenCalledTimes(2)
     expect(contexto.entidade.nome).toBe("Cliente")
     expect(contexto.entidade.email).toBe("cliente@exemplo.com")
     expect(contexto.indicadores).toMatchObject({ oportunidades: 1, acoes: 1 })

@@ -1,7 +1,22 @@
 import { sql } from "drizzle-orm"
 import { db } from "@/lib/db"
+import { clientes as clientesTable } from "@/lib/db/schema/clientes"
+import { crmLeads } from "@/lib/db/schema/crm-leads"
+import type { FaixaConversao } from "@/lib/crm/faixa-conversao"
+import { faixaConversaoSql } from "@/lib/crm/contadores-listagem"
 
 export type EntidadeResumoIA = "lead" | "cliente"
+
+export type TemperaturaResumoIA = {
+  faixa: FaixaConversao
+  motivo: string
+  temNegociacao: boolean
+  temProposta: boolean
+  temGanhoMes: boolean
+  temGanhoTrimestre: boolean
+  temPedidoMes: boolean
+  temPedidoTrimestre: boolean
+}
 
 type Registro = Record<string, unknown>
 
@@ -21,6 +36,7 @@ export interface ContextoResumoIA {
   preenchimento: Registro
   qualidadeRegistros: Registro
   contatosRecentes: Registro
+  temperatura?: TemperaturaResumoIA
 }
 
 function texto(valor: unknown, limite = 300): string | null {
@@ -217,6 +233,7 @@ export function compilarContexto(cru: unknown): ContextoResumoIA {
       probabilidade: numero(oportunidade.probabilidade),
       previsao: data(oportunidade.dataFechamentoPrevista),
       motivoPerda: texto(oportunidade.motivoPerda, 200),
+      atualizadoEm: data(oportunidade.atualizadoEm),
     })),
     pedidos: comoArray(bruto.pedidos).map((pedido) => ({
       numero: texto(pedido.numero, 100),
@@ -224,6 +241,7 @@ export function compilarContexto(cru: unknown): ContextoResumoIA {
       status: texto(pedido.status, 40),
       total: numero(pedido.total),
       observacao: texto(pedido.observacao, 200),
+      criadoEm: data(pedido.criadoEm),
     })),
     visitas: visitasCompactas,
     acoes: acoesCompactas,
@@ -294,8 +312,10 @@ export function montarMensagensResumo(contexto: ContextoResumoIA): {
     "Use apenas fatos dos dados fornecidos. Se algo não estiver presente, diga que não há informação.",
     "Seja sintético e objetivo: no máximo 160 palavras no resumo e 60 em cada campo de análise.",
     `Data atual: ${hoje}.`,
-    "Classifique a temperatura como QUENTE, MORNO ou FRIO usando exclusivamente as regras canônicas: QUENTE se houver oportunidade em NEGOCIACAO, ganho (FECHADO_GANHO/GANHO) ou pedido de venda no mês corrente; MORNO se houver oportunidade em PROPOSTA, ganho ou pedido de venda no trimestre corrente; FRIO nos demais casos.",
+    "A classificação e o motivo já vêm calculados em contexto.temperatura: copie exatamente em classificacao e motivoClassificacao. Não reclassifique a temperatura.",
+    "Regras canônicas: QUENTE se houver oportunidade em NEGOCIACAO, ganho (FECHADO_GANHO/GANHO) ou pedido de venda no mês corrente; MORNO se houver oportunidade em PROPOSTA, ganho ou pedido de venda no trimestre corrente; FRIO nos demais casos.",
     "Não use recência de contato, qualidade dos registros, visitas, ações ou resumos anteriores para definir a temperatura; use esses dados apenas no resumo e nas sugestões.",
+    "Status do pedido (ABERTO/FATURADO) não altera a faixa; apenas a data do pedido no mês/trimestre conta.",
     "Sugira de 2 a 3 ações concretas dentro do sistema: criar tarefa, agendar visita ou ação de prospecção, atualizar oportunidade, enviar proposta, registrar ata detalhada ou reativar pelo WhatsApp.",
     "Responda somente JSON válido, sem markdown, com as chaves: resumo, insights, sugestoes, classificacao, motivoClassificacao.",
   ].join(" ")
@@ -308,6 +328,100 @@ export function montarMensagensResumo(contexto: ContextoResumoIA): {
   ].join("\n")
 
   return { system, user }
+}
+
+function dentroDoPeriodo(valor: string | null, inicio: Date): boolean {
+  if (!valor) return false
+  const data = new Date(String(valor))
+  return !Number.isNaN(data.getTime()) && data.getTime() >= inicio.getTime()
+}
+
+function dataPtBr(valor: string | null): string {
+  if (!valor) return "—"
+  const textoValor = String(valor)
+  const somenteData = textoValor.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (somenteData) return `${somenteData[3]}/${somenteData[2]}/${somenteData[1]}`
+  const data = new Date(textoValor)
+  return Number.isNaN(data.getTime()) ? "—" : data.toLocaleDateString("pt-BR")
+}
+
+function motivoTemperatura(faixa: FaixaConversao, contexto: ContextoResumoIA): string {
+  const hoje = new Date()
+  const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1)
+  const inicioTrimestre = new Date(hoje.getFullYear(), Math.floor(hoje.getMonth() / 3) * 3, 1)
+
+  const negociacao = contexto.oportunidades.find((o) => (o.status as string) === "NEGOCIACAO")
+  const proposta = contexto.oportunidades.find((o) => (o.status as string) === "PROPOSTA")
+  const ganhoMes = contexto.oportunidades.find(
+    (o) =>
+      ((o.status as string) === "FECHADO_GANHO" || (o.status as string) === "GANHO") &&
+      dentroDoPeriodo(o.atualizadoEm as string | null, inicioMes)
+  )
+  const ganhoTrimestre = contexto.oportunidades.find(
+    (o) =>
+      ((o.status as string) === "FECHADO_GANHO" || (o.status as string) === "GANHO") &&
+      dentroDoPeriodo(o.atualizadoEm as string | null, inicioTrimestre)
+  )
+  const pedidoMes = contexto.pedidos.find((p) =>
+    dentroDoPeriodo((p.data ?? p.criadoEm) as string | null, inicioMes)
+  )
+  const pedidoTrimestre = contexto.pedidos.find((p) =>
+    dentroDoPeriodo((p.data ?? p.criadoEm) as string | null, inicioTrimestre)
+  )
+
+  switch (faixa) {
+    case "QUENTE":
+      if (negociacao) return `Oportunidade "${negociacao.titulo as string}" em NEGOCIAÇÃO`
+      if (ganhoMes) return `Oportunidade "${ganhoMes.titulo as string}" ganha em ${dataPtBr(ganhoMes.atualizadoEm as string | null)}`
+      if (pedidoMes)
+        return `Pedido de venda ${pedidoMes.numero as string} emitido em ${dataPtBr((pedidoMes.data ?? pedidoMes.criadoEm) as string | null)} (status ${pedidoMes.status as string}); status do pedido não altera a faixa.`
+      return "Negociação, ganho ou pedido de venda no mês corrente"
+    case "MORNO":
+      if (proposta) return `Oportunidade "${proposta.titulo}" em PROPOSTA`
+      if (ganhoTrimestre) return `Oportunidade "${ganhoTrimestre.titulo}" ganha no trimestre corrente`
+      if (pedidoTrimestre) return `Pedido de venda ${pedidoTrimestre.numero} no trimestre corrente`
+      return "Proposta ou ganho/pedido no trimestre corrente"
+    default:
+      return "Sem oportunidade em NEGOCIAÇÃO ou PROPOSTA, ganho ou pedido de venda no mês/trimestre corrente"
+  }
+}
+
+async function calcularTemperaturaResumoIA(
+  contexto: ContextoResumoIA,
+  tipo: EntidadeResumoIA,
+  id: number
+): Promise<TemperaturaResumoIA> {
+  const hoje = new Date()
+  const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1)
+  const inicioTrimestre = new Date(hoje.getFullYear(), Math.floor(hoje.getMonth() / 3) * 3, 1)
+
+  const [row] = await db.execute(sql`
+    select ${faixaConversaoSql(tipo)} as faixa
+    ${tipo === "lead" ? sql`from crm_leads where id = ${id}` : sql`from clientes where id = ${id}`}
+  `)
+  const faixa = ((row as { faixa?: FaixaConversao | null })?.faixa ?? "FRIO") as FaixaConversao
+  return {
+    faixa,
+    motivo: motivoTemperatura(faixa, contexto),
+    temNegociacao: contexto.oportunidades.some((o) => (o.status as string) === "NEGOCIACAO"),
+    temProposta: contexto.oportunidades.some((o) => (o.status as string) === "PROPOSTA"),
+    temGanhoMes: contexto.oportunidades.some(
+      (o) =>
+        ((o.status as string) === "FECHADO_GANHO" || (o.status as string) === "GANHO") &&
+        dentroDoPeriodo(o.atualizadoEm as string | null, inicioMes)
+    ),
+    temGanhoTrimestre: contexto.oportunidades.some(
+      (o) =>
+        ((o.status as string) === "FECHADO_GANHO" || (o.status as string) === "GANHO") &&
+        dentroDoPeriodo(o.atualizadoEm as string | null, inicioTrimestre)
+    ),
+    temPedidoMes: contexto.pedidos.some((p) =>
+      dentroDoPeriodo((p.data ?? p.criadoEm) as string | null, inicioMes)
+    ),
+    temPedidoTrimestre: contexto.pedidos.some((p) =>
+      dentroDoPeriodo((p.data ?? p.criadoEm) as string | null, inicioTrimestre)
+    ),
+  }
 }
 
 export async function buscarContextoResumoIA(
@@ -405,7 +519,8 @@ export async function buscarContextoResumoIA(
             'valorEstimado', t.valor_estimado,
             'probabilidade', t.probabilidade,
             'dataFechamentoPrevista', t.data_fechamento_prevista,
-            'motivoPerda', t.motivo_perda
+            'motivoPerda', t.motivo_perda,
+            'atualizadoEm', o.updated_at
           ) ORDER BY t.created_at DESC)
           FROM (
             SELECT o.* FROM crm_oportunidades o CROSS JOIN escopo e
@@ -420,7 +535,8 @@ export async function buscarContextoResumoIA(
             'dataEmissao', t.data_emissao,
             'status', t.status,
             'total', t.total,
-            'observacao', left(t.observacao, 200)
+            'observacao', left(t.observacao, 200),
+            'criadoEm', pv.created_at
           ) ORDER BY t.data_emissao DESC NULLS LAST)
           FROM (
             SELECT pv.numero, pv.data_emissao, pv.status, pv.observacao, o.valor_estimado AS total
@@ -566,5 +682,7 @@ export async function buscarContextoResumoIA(
       ? (linhas[0] as Registro)
       : {}
 
-  return compilarContexto(primeiraLinha.contexto)
+  const contexto = compilarContexto(primeiraLinha.contexto)
+  contexto.temperatura = await calcularTemperaturaResumoIA(contexto, params.tipo, params.id)
+  return contexto
 }
