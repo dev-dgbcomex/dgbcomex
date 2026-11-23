@@ -17,10 +17,13 @@ import type { FaturamentoErp, ListaErp } from "@/lib/erp/tipos"
 
 type Autor = { id?: number | null; nome?: string | null }
 
-type NotaPrevista = {
+export type NotaPrevista = {
   numero: string | null
   dataNota: string | null
   valorTotal: number
+  empresa: string | null
+  pedido: string | null
+  pedidoOrigem: string | null
 }
 
 type PedidoPrevio = {
@@ -99,7 +102,7 @@ async function obterPedidosVinculados(
     .where(and(...condicoes))
 }
 
-async function somaItensPedido(pedidoVendaId: number): Promise<number> {
+export async function somaItensPedido(pedidoVendaId: number): Promise<number> {
   const itens = await db
     .select()
     .from(crmPedidoVendaItens)
@@ -107,7 +110,7 @@ async function somaItensPedido(pedidoVendaId: number): Promise<number> {
   return somarValoresTotais(itens)
 }
 
-async function somaOportunidade(oportunidadeId: number): Promise<number> {
+export async function somaOportunidade(oportunidadeId: number): Promise<number> {
   const itens = await db
     .select()
     .from(crmPedidoVendaItens)
@@ -130,6 +133,9 @@ async function obterNotaERP(pedidoNumero: string | null): Promise<NotaPrevista |
     numero: nota.nr_nota ?? null,
     dataNota: nota.data_nota ?? nota.data_emissao ?? null,
     valorTotal: Number(nota.valor_total ?? 0),
+    empresa: nota.empresa ?? null,
+    pedido: nota.pedido ?? null,
+    pedidoOrigem: nota.pedido_origem ?? null,
   }
 }
 
@@ -181,7 +187,14 @@ export async function verificarPedidoFaturado(
       valorAntes,
       valorDepois,
       nota: nota
-        ? { numero: nota.numero, dataNota: nota.dataNota, valorTotal: nota.valorTotal }
+        ? {
+            numero: nota.numero,
+            dataNota: nota.dataNota,
+            valorTotal: nota.valorTotal,
+            empresa: nota.empresa,
+            pedido: nota.pedido,
+            pedidoOrigem: nota.pedidoOrigem,
+          }
         : null,
       statusSugerido,
       semNota,
@@ -191,20 +204,33 @@ export async function verificarPedidoFaturado(
   return { pedidos: previsoes, mensagem: null, sincronizacao }
 }
 
-async function criarOuAtualizarFaturamento(
+export async function criarOuAtualizarFaturamento(
   params: {
     oportunidadeId: number
     pedidoVendaId: number | null
     empresa: string | null
     pedido: string | null
+    pedidoReferencia?: string | null
+    pedidoErp?: string | null
     nota: NotaPrevista
     itens: ReturnType<typeof itensParaCrm>
     usuarioNome: string | null
   }
 ): Promise<number> {
-  const { oportunidadeId, pedidoVendaId, empresa, pedido, nota, itens, usuarioNome } = params
-  const referencia = empresa && pedido && nota.numero
-    ? `${empresa}/${pedido}/${nota.numero}`
+  const {
+    oportunidadeId,
+    pedidoVendaId,
+    empresa,
+    pedido,
+    pedidoReferencia,
+    pedidoErp,
+    nota,
+    itens,
+    usuarioNome,
+  } = params
+  const pedidoReferenciaFinal = pedidoReferencia ?? pedido ?? null
+  const referencia = empresa && pedidoReferenciaFinal && nota.numero
+    ? `${empresa}/${pedidoReferenciaFinal}/${nota.numero}`
     : null
 
   const existente = referencia
@@ -345,14 +371,17 @@ export async function aplicarVerificacaoPedidoFaturado(
       let faturamentoId: number | null = null
       if (nota && chave) {
         const [empresaErp, pedidoErp] = chave.split("/")
+        const pedidoDetalhe = nota?.pedido ?? pedidoErp
         const documentoErp = await requisitarErp<FaturamentoErp>(
-          `/crm/faturamentos/${encodeURIComponent(empresaErp)}/${encodeURIComponent(pedidoErp)}/${encodeURIComponent(nota.numero ?? "")}`
+          `/crm/faturamentos/${encodeURIComponent(empresaErp)}/${encodeURIComponent(pedidoDetalhe)}/${encodeURIComponent(nota.numero ?? "")}`
         )
         faturamentoId = await criarOuAtualizarFaturamento({
           oportunidadeId: oportunidadeIdAtual,
           pedidoVendaId: pedido.id,
           empresa: empresaErp,
           pedido: pedidoErp,
+          pedidoReferencia: pedidoErp,
+          pedidoErp: pedidoDetalhe,
           nota,
           itens: itensParaCrmFaturamento(documentoErp.itens ?? []),
           usuarioNome,
@@ -405,7 +434,16 @@ export async function aplicarVerificacaoPedidoFaturado(
         valorPedido,
         status: statusPedidoFinal ?? "ABERTO",
         faturamentoId,
-        nota: nota ? { numero: nota.numero, dataNota: nota.dataNota, valorTotal: nota.valorTotal } : null,
+        nota: nota
+          ? {
+              numero: nota.numero,
+              dataNota: nota.dataNota,
+              valorTotal: nota.valorTotal,
+              empresa: nota.empresa,
+              pedido: nota.pedido,
+              pedidoOrigem: nota.pedidoOrigem,
+            }
+          : null,
         conversaoLead,
       })
     }

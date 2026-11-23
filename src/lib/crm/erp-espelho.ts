@@ -20,7 +20,7 @@ import {
   type TipoVinculoErp,
 } from "@/lib/erp/tipos"
 import { registrarLog } from "@/lib/log"
-import { UNIDADES_MEDIDA } from "@/lib/crm/documento-venda"
+import { UNIDADES_MEDIDA, somarValoresTotais } from "@/lib/crm/documento-venda"
 
 type ItemEspelho = {
   produto: string
@@ -65,15 +65,18 @@ export function itensParaCrm(itens: DocumentoErpItem[] | undefined): ItemEspelho
 export function itensParaCrmFaturamento(itens: DocumentoErpItem[] | undefined): ItemEspelho[] {
   return (itens || [])
     .filter((item) => item && (item.produto || item.descricao))
-    .map((item) => ({
-      produto: (item.descricao || item.produto || "").trim().slice(0, 300),
-      codigo: (item.produto || "").trim().slice(0, 100) || null,
-      unidade: unidadeCrm(item.unidade),
-      quantidade: item.quantidade != null ? String(item.quantidade) : null,
-      valorUnitario: item.valor_unitario != null ? String(item.valor_unitario) : null,
-      valorTotal: item.valor_total != null ? String(item.valor_total) : null,
-    }))
-}
+    .map((item) => {
+      const totalItem = (item.valor_total ?? 0) + (item.acrescimo_desconto ?? 0)
+      return {
+        produto: (item.descricao || item.produto || "").trim().slice(0, 300),
+        codigo: (item.produto || "").trim().slice(0, 100) || null,
+        unidade: unidadeCrm(item.unidade),
+        quantidade: item.quantidade != null ? String(item.quantidade) : null,
+        valorUnitario: item.valor_unitario != null ? String(item.valor_unitario) : null,
+        valorTotal: String(totalItem),
+      }
+    })
+  }
 
 function texto(valor: unknown): string {
   return valor == null ? "" : String(valor).trim()
@@ -183,6 +186,85 @@ async function atualizarPedido(pedido: CrmPedidoVenda): Promise<boolean> {
   })
 
   return true
+}
+
+export async function criarPedidoEspelho(params: {
+  oportunidadeId: number
+  empresa: string
+  pedidoReferencia: string
+  pedidoDetalhe?: string
+  usuarioNome?: string | null
+}): Promise<{ id: number; numero: string | null; total: number }> {
+  const { oportunidadeId, empresa, pedidoReferencia, pedidoDetalhe, usuarioNome } = params
+  const pedidoParaDetalhe = pedidoDetalhe ?? pedidoReferencia
+
+  const documento = await requisitarErp<PedidoErp>(
+    `/crm/pedidos/${encodeURIComponent(empresa)}/${encodeURIComponent(pedidoParaDetalhe)}`
+  )
+  const pedidoErp = documento
+  const referencia = `${empresa}/${pedidoReferencia}`
+
+  const [existente] = await db
+    .select({ id: crmPedidosVenda.id })
+    .from(crmPedidosVenda)
+    .where(
+      and(
+        eq(crmPedidosVenda.origem, "ERP"),
+        eq(crmPedidosVenda.referenciaExterna, referencia)
+      )
+    )
+    .limit(1)
+
+  if (existente) {
+    throw new Error("Este pedido do ERP já está vinculado a uma oportunidade")
+  }
+
+  const itensPedido = itensParaCrm(pedidoErp.itens)
+  const statusErp = pedidoErp.status || ""
+  const observacao = [
+    `Pedido vinculado do ERP (${empresa}/${pedidoErp.pedido ?? pedidoReferencia})`,
+    pedidoErp.cliente_nome ? `cliente ${pedidoErp.cliente_nome}` : null,
+    statusErp ? `status ERP: ${STATUS_PEDIDO_ERP[statusErp] || statusErp}` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ")
+
+  const [created] = await db.transaction(async (tx: any) => {
+    const [novo] = await tx
+      .insert(crmPedidosVenda)
+      .values({
+        oportunidadeId,
+        numero: pedidoReferencia,
+        dataEmissao: pedidoErp.data_pedido || null,
+        status: statusPedidoParaCrm(statusErp),
+        observacao,
+        origem: "ERP",
+        referenciaExterna: referencia,
+      })
+      .returning()
+
+    if (itensPedido.length > 0) {
+      await tx
+        .insert(crmPedidoVendaItens)
+        .values(itensPedido.map((item: any) => ({ ...item, pedidoVendaId: novo.id })))
+    }
+
+    return [novo]
+  })
+
+  const total = somarValoresTotais(itensPedido)
+
+  await registrarLog({
+    tipo: "CADASTRO",
+    acao: "vincular_erp",
+    descricao: `Pedido do ERP ${referencia} vinculado à oportunidade #${oportunidadeId}`,
+    entidade: "CrmPedidoVenda",
+    entidadeId: created.id,
+    usuarioNome: usuarioNome ?? "sincronização ERP",
+    dados: { referencia, clienteNome: pedidoErp.cliente_nome, itens: itensPedido.length },
+  })
+
+  return { id: created.id, numero: pedidoReferencia, total }
 }
 
 async function atualizarFaturamento(faturamento: CrmFaturamento): Promise<boolean> {

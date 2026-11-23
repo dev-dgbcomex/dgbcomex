@@ -720,6 +720,22 @@
 - **Arquivos Envolvidos:** `src/lib/db/migrations/0080_faturamentos_pedido_venda.sql`, `src/lib/db/schema/crm-faturamentos.ts`, `src/lib/crm/erp-espelho.ts`, `src/lib/crm/verificar-pedido-faturado.ts`, `src/lib/crm/verificar-pedido-faturado.test.ts`, `src/components/crm/verificar-pedidos-faturados.tsx`, `src/components/crm/verificar-pedidos-faturados.test.tsx`, `src/components/crm/automacoes-crm.test.tsx`, `src/app/api/crm/pedidos-venda/verificar-faturados/route.ts`, `src/app/api/crm/pedidos-venda/verificar-faturados/route.test.ts`, `src/app/api/crm/pedidos-venda/aplicar-faturados/route.ts`, `src/app/api/crm/pedidos-venda/aplicar-faturados/route.test.ts`, `src/app/api/crm/oportunidades/[id]/vinculos/route.ts`, `src/app/api/crm/oportunidades/[id]/vinculos/route.test.ts`, `src/app/(dashboard)/comercial/crm/oportunidades/[id]/page.tsx`, `src/app/(dashboard)/comercial/crm/pedidos-venda/[id]/page.tsx`, `src/lib/info-content/crm.ts`, `src/lib/info-content/info-content.test.ts`, `M:\dev\api-microdata\app\src\api\routers\crm.py`, `M:\dev\api-microdata\app\tests\test_crm.py`, `docs/Sessoes.md`.
 - **Testes:** `npm run test` → 494 arquivos / 2892 testes passados; `tsc --noEmit` limpo; `next build` OK; `next lint` apenas warnings pré-existentes; `pytest app/tests/test_crm.py` 17 passou; `apply-drizzle-migrations.js` aplicou 0080 nos dois bancos; `db:comparar` IDENTICAL; `db:verificar-local` mostra divergências pré-existentes de dados (logs/notificações/pedidos CRM) não relacionadas a esta mudança.
 
+### Sessão 47 — Vincular faturado: vincular pedido já faturado e processar nota real
+
+- **Data:** 2026-11-23
+- **Commits:** `acc7c9fa` (correção faturamento traz valor da nota) + novo commit desta sessão (botão Vincular faturado).
+- **Tarefa:** criar botão “Vincular faturado” no detalhe da oportunidade que pede o código do pedido, busca notas faturadas pelo `pedido_origem` (`nosso_pedido`), vincula o pedido ao CRM e executa o fluxo do “Verificar faturados” (espelho do pedido, faturamento com itens/valor da nota, valor estimado, status, automações).
+- **Resultado:**
+  - `src/lib/crm/erp-espelho.ts`: `itensParaCrmFaturamento` agora soma `valor_total + acrescimo_desconto`; adicionado `criarPedidoEspelho` (exportado) para criar/validar duplicidade do espelho do pedido.
+  - `src/lib/crm/verificar-pedido-faturado.ts`: `NotaPrevista` expõe `empresa`/`pedido`/`pedidoOrigem`; `obterNotaERP` retorna esses campos; `criarOuAtualizarFaturamento` aceita `pedidoReferencia`/`pedidoErp`; usa o campo `pedido` da nota para o detalhe do faturamento; exporta `somaItensPedido`/`somaOportunidade`.
+  - `src/lib/crm/vincular-faturado.ts`: novo. `buscarNotasFaturadasPorPedido`, `previewVincularFaturado`, `aplicarVinculacaoFaturado`. Busca notas por `pedido_origem`, cria/valida pedido vinculado, recalcula `valor_estimado`, vincula faturamento com `pedido_venda_id`, status `FATURADO`/`PARCIAL`, conversão da lead e `FECHADO_GANHO`.
+  - `src/app/api/crm/oportunidades/[id]/vincular-faturado/route.ts`: nova rota `POST` com preview (`aplicar` ausente/falso) e aplicação (`aplicar: true`).
+  - `src/components/crm/vincular-faturado.tsx`: novo componente com modal, input do código, lista de notas, escolha de nota/status e aplicação.
+  - `src/app/(dashboard)/comercial/crm/oportunidades/[id]/page.tsx`: botão “Vincular faturado” no cabeçalho e no card Pedidos de Venda; modal controlado por `vincularFaturado`.
+  - `src/lib/info-content/crm.ts` e `src/lib/info-content/info-content.test.ts` atualizados (inclui “Vincular faturado”, corrige lista de pedidos e mensagem do modal).
+- **Arquivos Envolvidos:** `src/lib/crm/erp-espelho.ts`, `src/lib/crm/verificar-pedido-faturado.ts`, `src/lib/crm/vincular-faturado.ts`, `src/lib/crm/vincular-faturado.test.ts`, `src/app/api/crm/oportunidades/[id]/vincular-faturado/route.ts`, `src/app/api/crm/oportunidades/[id]/vincular-faturado/route.test.ts`, `src/components/crm/vincular-faturado.tsx`, `src/components/crm/vincular-faturado.test.tsx`, `src/app/(dashboard)/comercial/crm/oportunidades/[id]/page.tsx`, `src/lib/info-content/crm.ts`, `src/lib/info-content/info-content.test.ts`, `docs/Sessoes.md`.
+- **Testes:** `npm run test` suíte verde; `tsc --noEmit` limpo; `next build` OK.
+
 ---
 
 ## Estrutura de Comandos

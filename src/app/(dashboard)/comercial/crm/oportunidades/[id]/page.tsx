@@ -32,6 +32,7 @@ import EdicaoOportunidade, { type OportunidadeUpdate } from "./components/edicao
 import { DecisaoAutomacaoModal } from "@/components/crm/decisao-automacao-modal"
 import { CamposObrigatoriosOportunidadeModal } from "@/components/crm/campos-obrigatorios-oportunidade-modal"
 import { VerificarPedidosFaturados } from "@/components/crm/verificar-pedidos-faturados"
+import VincularFaturado from "@/components/crm/vincular-faturado"
 import type { DecisaoPendente } from "@/lib/crm/automacoes-crm"
 import { validarCamposObrigatoriosOportunidade } from "@/lib/crm/validacao-oportunidade"
 import type { OportunidadeDetalhe, DocumentoVendaResumo, UsuarioResumo } from "../types"
@@ -89,6 +90,7 @@ function DetalheOportunidadePageContent() {
   const [editingStatus, setEditingStatus] = useState(false)
   const [statusValue, setStatusValue] = useState("")
   const [vinculoErp, setVinculoErp] = useState<TipoVinculoErp | null>(null)
+  const [vincularFaturado, setVincularFaturado] = useState(false)
   const [editing, setEditing] = useState(searchParams.get("edit") === "true")
   const [saving, setSaving] = useState(false)
   const [usuarios, setUsuarios] = useState<UsuarioResumo[]>([])
@@ -337,6 +339,13 @@ function DetalheOportunidadePageContent() {
                 className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
                 onConvertido={() => recarregar()}
               />
+              <VincularFaturado
+                open={vincularFaturado}
+                onOpenChange={setVincularFaturado}
+                oportunidadeId={oportunidade.id}
+                onClose={() => setVincularFaturado(false)}
+                onVinculado={recarregar}
+              />
             </div>
       </div>
 
@@ -584,6 +593,14 @@ function DetalheOportunidadePageContent() {
               >
                 <Link2 size={14} />
                 Vincular do ERP
+              </button>
+              <button
+                type="button"
+                onClick={() => setVincularFaturado(true)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/30 px-3 py-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-950/50 transition-colors"
+              >
+                <Receipt size={14} />
+                Vincular faturado
               </button>
               <VerificarPedidosFaturados
                 oportunidadeId={oportunidade.id}

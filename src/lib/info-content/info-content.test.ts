@@ -270,6 +270,7 @@ describe("getInfoContent", () => {
     ].join("\n")
 
     expect(texto).toMatch(/Vincular do ERP/)
+    expect(texto).toMatch(/Vincular faturado/)
     expect(texto).toMatch(/pedido de venda|faturamento/)
     expect(texto).toMatch(/já está vinculado/)
     expect(texto).toMatch(/varre os pedidos/)

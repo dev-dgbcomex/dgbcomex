@@ -206,7 +206,7 @@ export default function VincularDocumentoErpModal({
           ) : itens.length === 0 ? (
             <p className="py-6 text-center text-sm text-slate-500">
               {tipo === "PEDIDO"
-                ? "Nenhum pedido disponível com esses filtros. Cancelados e já faturados não aparecem; use Faturamento para vincular a nota."
+                ? "Nenhum pedido disponível com esses filtros. Cancelados e já faturados não aparecem; use Vincular faturado para vincular a nota de um pedido já faturado."
                 : "Nenhuma nota disponível com esses filtros."}
             </p>
           ) : (

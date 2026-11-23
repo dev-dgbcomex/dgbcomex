@@ -51,7 +51,7 @@ describe("POST /api/crm/pedidos-venda/verificar-faturados", () => {
           jaConvertida: false,
           valorAntes: 5200,
           valorDepois: 5200,
-          nota: { numero: "NF-9", dataNota: "2026-11-20", valorTotal: 5200 },
+          nota: { numero: "NF-9", dataNota: "2026-11-20", valorTotal: 5200, empresa: "1", pedido: "PV-1", pedidoOrigem: "PV-1" },
           statusSugerido: "FATURADO",
           semNota: false,
         },
