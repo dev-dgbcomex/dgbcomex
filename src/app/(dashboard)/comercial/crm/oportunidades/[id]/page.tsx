@@ -512,7 +512,7 @@ function DetalheOportunidadePageContent() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-12">
-        <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 md:col-span-4">
+        <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 md:col-span-6">
           <div className="flex items-center justify-between mb-4 gap-2 flex-wrap sm:flex-nowrap">
             <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-50 flex items-center gap-2">
               <Receipt size={16} className="text-emerald-600" />
@@ -576,7 +576,7 @@ function DetalheOportunidadePageContent() {
           )}
         </div>
 
-        <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 md:col-span-8">
+        <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 md:col-span-6">
           <div className="flex items-center justify-between mb-4 gap-2 flex-wrap sm:flex-nowrap">
             <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-50 flex items-center gap-2">
               <ShoppingCart size={16} className="text-emerald-600" />

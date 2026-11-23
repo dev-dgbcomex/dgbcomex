@@ -123,7 +123,12 @@ export async function previewVincularFaturado(params: {
 }): Promise<PreviewVinculoFaturado> {
   const { oportunidadeId, codigoPedido } = params
 
-  const notasLista = await buscarNotasFaturadasPorPedido(codigoPedido)
+  let notasLista: ListaErp<FaturamentoErp>
+  try {
+    notasLista = await buscarNotasFaturadasPorPedido(codigoPedido)
+  } catch {
+    notasLista = { paginacao: { total: 0, pagina: 1, por_pagina: 50, total_paginas: 0 }, itens: [] }
+  }
   const notas = notasLista.itens.map(mapearNotaFaturada)
 
   if (notas.length === 0) {
