@@ -26,6 +26,22 @@
 
 > Detalhe técnico completo em [`docs/crm-cliente-e-relatorios.md`](./crm-cliente-e-relatorios.md).
 
+### Sessão 42 — Orçamento de tokens na análise de IA
+
+- **Data:** 2026-11-23
+- **Tarefa:** corrigir o 503 persistente em `POST /api/crm/saude-prospeccao/ia/analises` após reduzir o `max_tokens` de 1100 para 700.
+- **Causa raiz:** o Groq free tier limita a saída a 1000 tokens por minuto por modelo; a análise fazia até 3 chamadas de 700 tokens (decisão + até 2 consultas + resposta final), estourando o OTPM e fazendo o `chamarIA` devolver `provedor: "nenhum"`.
+- **Decisão aprovada:** separar a decisão sobre consultas curadas da resposta final. A decisão usa `maxTokens: 80` por rodada (no máximo 2) e a resposta final continua com `maxTokens: 700`; pior caso: `80 + 80 + 700 = 860`, abaixo do limite de 1000.
+- **Resultado:**
+  - `chamarAnaliseComConsultas` agora faz uma chamada curta com instrução explícita (`PRONTO` ou `CONSULTAR: ...`), executa consultas curadas somente quando autorizado e faz uma última chamada em Markdown sem novas consultas.
+  - Quando a chamada de decisão falha, a análise não é gerada e a rota continua devolvendo 503 com a mensagem existente.
+  - Modal “i” explica o orçamento de tokens e o teste cobre as duas opções (`80` na decisão, `700` na resposta).
+- **Arquivos Envolvidos:** `src/lib/crm/saude-prospeccao-ia.ts`, `src/lib/crm/saude-prospeccao-ia.test.ts`, `src/lib/info-content/crm.ts`, `src/lib/info-content/info-content.test.ts`, `docs/Sessoes.md`.
+- **Testes:** focados `3 arquivos / 57 testes passados`; suíte completa `npm run test` → **488 arquivos / 2842 testes passados**.
+- **Verificação:** `npm run lint` sem erros (apenas warnings pré-existentes); `tsc --noEmit --pretty false` limpo com `NODE_OPTIONS=--max-old-space-size=8192`.
+
+---
+
 ### Sessão 41 — Modal responsivo e provedor da análise de IA
 
 - **Data:** 2026-11-22

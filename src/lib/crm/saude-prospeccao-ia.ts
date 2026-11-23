@@ -53,6 +53,13 @@ export type ConsultaCurada = {
 
 export type ResultadoConsultaCurada = ConsultaCurada & { dados: unknown[] }
 
+const TOKENS_DECISAO = 80
+const TOKENS_ANALISE = 700
+const INSTRUCAO_DECISAO = `Etapa de decisão: responda SOMENTE uma linha.
+Se os dados recebidos forem suficientes, responda exatamente: PRONTO
+Se precisar de mais dados, responda exatamente uma linha no formato CONSULTAR: oportunidades|cliente|123|10 (ou visitas/acoes e cliente/pessoa).
+Não escreva análise, Markdown ou qualquer outro texto nesta etapa.`
+
 const REGRAS_SISTEMA = `Você é um assistente de Saúde da Prospecção do PDM Pro Têxtil.
 Use EXCLUSIVAMENTE as regras e os dados abaixo. Nunca crie outra métrica, outro score ou outra faixa.
 Nunca mencione que está usando regras próprias ou genéricas.
@@ -297,29 +304,49 @@ export async function chamarAnaliseComConsultas({
 }): Promise<{ conteudo: string; resultado: ResultadoIA; consultas: ResultadoConsultaCurada[] }> {
   const conversa = [...mensagens]
   const consultas: ResultadoConsultaCurada[] = []
-  let resultado: ResultadoIA = {
+  let decisao: ResultadoIA = {
     conteudo: "",
     provedor: "nenhum",
     modelo: "",
     nomeChave: "",
     tentativas: 0,
   }
+  let mensagensDecisao: MensagemIA[] = [
+    ...conversa,
+    { role: "user", content: INSTRUCAO_DECISAO },
+  ]
 
-  for (let rodada = 0; rodada <= maxConsultas; rodada++) {
-    resultado = await chamarIA(conversa, { temperatura: 0, maxTokens: 700 })
-    if (resultado.provedor === "nenhum") break
+  for (let rodada = 0; rodada < maxConsultas; rodada++) {
+    decisao = await chamarIA(mensagensDecisao, { temperatura: 0, maxTokens: TOKENS_DECISAO })
+    if (decisao.provedor === "nenhum") break
 
-    const consulta = parseConsultaCurada(resultado.conteudo)
+    const consulta = parseConsultaCurada(decisao.conteudo)
     if (!consulta || consultas.length >= maxConsultas) break
 
     const dados = await executarConsultaCurada(consulta)
     consultas.push(dados)
-    conversa.push({ role: "assistant", content: resultado.conteudo })
+    conversa.push({
+      role: "assistant",
+      content: `CONSULTAR: ${consulta.nome}|${consulta.chave.tipo}|${consulta.chave.id}|${consulta.limite}`,
+    })
     conversa.push({
       role: "user",
       content: `Resultado da consulta curada autorizada:\n${JSON.stringify(dados).slice(0, 12000)}`,
     })
+    mensagensDecisao = [...conversa, { role: "user", content: INSTRUCAO_DECISAO }]
   }
+
+  if (decisao.provedor === "nenhum" && maxConsultas > 0) {
+    return { conteudo: "", resultado: decisao, consultas }
+  }
+
+  const resultado = await chamarIA(
+    [
+      ...conversa,
+      { role: "user", content: "Agora responda à solicitação original em Markdown, sem novas consultas." },
+    ],
+    { temperatura: 0, maxTokens: TOKENS_ANALISE }
+  )
 
   return { conteudo: limparResposta(resultado.conteudo), resultado, consultas }
 }

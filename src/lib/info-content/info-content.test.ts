@@ -876,6 +876,8 @@ describe("saudeProspeccaoLeadsInfo", () => {
     expect(saudeProspeccaoLeadsInfo.engajados.rules?.join(" ")).toMatch(/Engajamento > 30/i)
     expect(saudeProspeccaoLeadsInfo.ia.rules?.join(" ")).toMatch(/consultas curadas/i)
     expect(saudeProspeccaoLeadsInfo.ia.rules?.join(" ")).toMatch(/mesmo provedor/i)
+    expect(saudeProspeccaoLeadsInfo.ia.rules?.join(" ")).toMatch(/chamada curta/i)
+    expect(saudeProspeccaoLeadsInfo.ia.rules?.join(" ")).toMatch(/700 tokens/i)
     expect(saudeProspeccaoLeadsInfo.ia.rules?.join(" ")).toMatch(/quase toda a tela/i)
     expect(saudeProspeccaoLeadsInfo.ia.rules?.join(" ")).toMatch(/Concluir e enviar/i)
     expect(saudeProspeccaoLeadsInfo.itensEngajamento.rules?.join(" ")).toMatch(/9,33% cada/i)
