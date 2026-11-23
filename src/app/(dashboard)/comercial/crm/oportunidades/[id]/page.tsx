@@ -316,22 +316,28 @@ function DetalheOportunidadePageContent() {
             </p>
           ) : null}
         </div>
-        <div className="flex items-center gap-3">
-          {!editing && (
-            <button
-              onClick={() => setEditing(true)}
-              className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:underline"
-            >
-              <Pencil size={14} /> Editar
-            </button>
-          )}
-          <button
-            onClick={() => setShowDelete(true)}
-            className="flex items-center gap-1 text-xs font-medium text-red-600 hover:underline"
-          >
-            <Trash2 size={14} /> Excluir
-          </button>
-        </div>
+            <div className="flex items-center gap-3">
+              {!editing && (
+                <button
+                  onClick={() => setEditing(true)}
+                  className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:underline"
+                >
+                  <Pencil size={14} /> Editar
+                </button>
+              )}
+              <button
+                onClick={() => setShowDelete(true)}
+                className="flex items-center gap-1 text-xs font-medium text-red-600 hover:underline"
+              >
+                <Trash2 size={14} /> Excluir
+              </button>
+              <VerificarPedidosFaturados
+                oportunidadeId={oportunidade.id}
+                label="Verificar faturados"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+                onConvertido={() => recarregar()}
+              />
+            </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
@@ -507,14 +513,6 @@ function DetalheOportunidadePageContent() {
               </span>
             </h2>
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setVinculoErp("FATURAMENTO")}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/30 px-3 py-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-950/50 transition-colors"
-              >
-                <Link2 size={14} />
-                Vincular do ERP
-              </button>
               <Link
                 href={`/comercial/crm/faturamentos/novo?oportunidadeId=${oportunidade.id}`}
                 className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 transition-colors"

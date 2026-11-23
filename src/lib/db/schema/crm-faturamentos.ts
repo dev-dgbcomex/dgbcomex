@@ -1,11 +1,15 @@
 import { pgTable, serial, integer, varchar, date, text, timestamp } from "drizzle-orm/pg-core"
 import { crmOportunidades } from "./crm-oportunidades"
+import { crmPedidosVenda } from "./crm-pedidos-venda"
 
 export const crmFaturamentos = pgTable("crm_faturamentos", {
   id: serial("id").primaryKey(),
   oportunidadeId: integer("oportunidade_id")
     .notNull()
     .references(() => crmOportunidades.id, { onDelete: "cascade" }),
+  pedidoVendaId: integer("pedido_venda_id").references(() => crmPedidosVenda.id, {
+    onDelete: "set null",
+  }),
   numero: varchar("numero", { length: 100 }),
   dataEmissao: date("data_emissao"),
   status: varchar("status", { length: 30 }).notNull().default("EMITIDO"),

@@ -7,7 +7,7 @@ import { crmPedidosVenda } from "@/lib/db/schema/crm-pedidos-venda"
 import { crmPedidoVendaItens } from "@/lib/db/schema/crm-pedido-venda-itens"
 import { crmFaturamentos } from "@/lib/db/schema/crm-faturamentos"
 import { crmFaturamentoItens } from "@/lib/db/schema/crm-faturamento-itens"
-import { eq, and } from "drizzle-orm"
+import { and, eq, sql } from "drizzle-orm"
 import { registrarLog } from "@/lib/notificar"
 import { ErroErp, requisitarErp } from "@/lib/erp/cliente"
 import {
@@ -17,7 +17,7 @@ import {
   type PedidoErp,
   type TipoVinculoErp,
 } from "@/lib/erp/tipos"
-import { itensParaCrm } from "@/lib/crm/erp-espelho"
+import { itensParaCrm, itensParaCrmFaturamento } from "@/lib/crm/erp-espelho"
 
 /**
  * Vincula um documento do ERP (pedido de venda ou faturamento) a uma oportunidade/pessoa.
@@ -94,7 +94,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         ? (documento as PedidoErp).cliente_nome
         : (documento as FaturamentoErp).cliente_nome
 
-    const itens = itensParaCrm(documento.itens)
+    const itensPedido = itensParaCrm(documento.itens)
+    const itensFaturamento = itensParaCrmFaturamento(documento.itens)
 
     if (tipo === "PEDIDO") {
       const [existente] = await db
@@ -134,14 +135,32 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           })
           .returning()
 
-        if (itens.length > 0) {
+        if (itensPedido.length > 0) {
           await tx
             .insert(crmPedidoVendaItens)
-            .values(itens.map((item: any) => ({ ...item, pedidoVendaId: novo.id })))
+            .values(itensPedido.map((item: any) => ({ ...item, pedidoVendaId: novo.id })))
         }
 
         return [novo]
       })
+
+      const [totalOportunidade] = await db
+        .select({
+          total: sql<number>`coalesce(sum(${crmPedidoVendaItens.valorTotal}), 0)`,
+        })
+        .from(crmPedidoVendaItens)
+        .innerJoin(
+          crmPedidosVenda,
+          eq(crmPedidoVendaItens.pedidoVendaId, crmPedidosVenda.id)
+        )
+        .where(eq(crmPedidosVenda.oportunidadeId, oportunidadeId))
+
+      const valorTotalOportunidade = Number((totalOportunidade?.total ?? 0))
+
+      await db
+        .update(crmOportunidades)
+        .set({ valorEstimado: valorTotalOportunidade })
+        .where(eq(crmOportunidades.id, oportunidadeId))
 
       await registrarLog({
         tipo: "CADASTRO",
@@ -150,10 +169,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         entidade: "CrmPedidoVenda",
         entidadeId: created.id,
         usuarioNome: session.user.name,
-        dados: { referencia, clienteNome, itens: itens.length },
+        dados: { referencia, clienteNome, itens: itensPedido.length },
       })
 
-      return NextResponse.json({ ...created, total: pedidoErp.valor_total }, { status: 201 })
+      return NextResponse.json(
+        { ...created, total: valorTotalOportunidade },
+        { status: 201 }
+      )
     }
 
     const [existente] = await db
@@ -172,11 +194,23 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
 
     const faturamentoErp = documento as FaturamentoErp
+    const [pedidoVinculado] = await db
+      .select({ id: crmPedidosVenda.id })
+      .from(crmPedidosVenda)
+      .where(
+        and(
+          eq(crmPedidosVenda.oportunidadeId, oportunidadeId),
+          eq(crmPedidosVenda.referenciaExterna, `${empresa}/${pedido}`)
+        )
+      )
+      .limit(1)
+
     const [created] = await db.transaction(async (tx: any) => {
       const [novo] = await tx
         .insert(crmFaturamentos)
         .values({
           oportunidadeId,
+          pedidoVendaId: pedidoVinculado?.id ?? null,
           numero: faturamentoErp.nr_nota,
           dataEmissao: faturamentoErp.data_nota || null,
           status: "EMITIDO",
@@ -194,10 +228,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         })
         .returning()
 
-      if (itens.length > 0) {
+      if (itensFaturamento.length > 0) {
         await tx
           .insert(crmFaturamentoItens)
-          .values(itens.map((item: any) => ({ ...item, faturamentoId: novo.id })))
+          .values(itensFaturamento.map((item: any) => ({ ...item, faturamentoId: novo.id })))
       }
 
       return [novo]
@@ -210,7 +244,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       entidade: "CrmFaturamento",
       entidadeId: created.id,
       usuarioNome: session.user.name,
-      dados: { referencia, clienteNome, itens: itens.length },
+      dados: { referencia, clienteNome, itens: itensFaturamento.length },
     })
 
     return NextResponse.json({ ...created, total: faturamentoErp.valor_total }, { status: 201 })

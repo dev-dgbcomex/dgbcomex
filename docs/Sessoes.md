@@ -699,6 +699,29 @@
 
 ---
 
+### Sessão 46 — Verificar pedido faturado sincroniza valor do pedido, vincula faturamento, ganha oportunidade e converte lead
+
+- **Data:** 2026-11-23
+- **Commit:** novo commit desta sessão (ainda não efetuado no momento deste registro)
+- **Tarefa:** implementar “Verificar faturados” para sincronizar o valor do pedido do ERP (não da nota), vincular/gerar o faturamento da nota real na oportunação e no pedido de venda, marcar oportunidade como Fechado Ganho e converter a lead, tudo após confirmação.
+- **Resultado:**
+  - Migration `0080_faturamentos_pedido_venda.sql`: adiciona `crm_faturamentos.pedido_venda_id` (FK para `crm_pedidos_venda`, `ON DELETE SET NULL`), índice e backfill de faturamentos existentes; aplicada no Neon e warehouse local via `scripts/apply-drizzle-migrations.js`.
+  - `src/lib/db/schema/crm-faturamentos.ts`: adiciona `pedidoVendaId`.
+  - `src/lib/crm/erp-espelho.ts`: mantém `itensParaCrm` para pedidos e adiciona `itensParaCrmFaturamento` (usa `descricao` como produto nas notas).
+  - `src/lib/crm/verificar-pedido-faturado.ts`: preview e aplicação. Pré-condição: pedido vinculado; sem pedido avisa “Vincule ou lance um pedido com o mesmo número de pedido do ERP.”. Sincroniza espelho de pedidos, recalcula `valor_estimado` da oportunidade como soma de todos os pedidos vinculados, cria/atualiza faturamento com `pedido_venda_id`, status `FATURADO`/`PARCIAL` (pergunta no modal para parcial), automação `FECHADO_GANHO` e conversão da lead.
+  - `src/app/api/crm/pedidos-venda/verificar-faturados/route.ts`: vira preview (`POST` com `pedidoId`/`pedidoIds`/`oportunidadeId`).
+  - `src/app/api/crm/pedidos-venda/aplicar-faturados/route.ts`: nova rota de aplicação após confirmação (`aplicar: true`).
+  - `src/app/api/crm/oportunidades/[id]/vinculos/route.ts`: ao vincular pedido, atualiza `valor_estimado` com soma dos pedidos; ao vincular faturamento, preenche `pedidoVendaId`.
+  - `api-microdata` `app/src/api/routers/crm.py`: filtro `pedido_origem` em `GET /crm/faturamentos` para localizar nota pelo `nosso_pedido`; teste em `app/tests/test_crm.py`.
+  - `src/components/crm/verificar-pedidos-faturados.tsx`: reescrito com preview (valores antes/depois, nota, diferença, status parcial) e aplicação; sem botão de conversão separada.
+  - UI: botão “Verificar faturados” no cabeçalho do detalhe da oportunidade (visível também com `?edit=true`) e no detalhe do pedido; removido botão “Vincular do ERP” do card Faturamentos; mantido no card Pedidos.
+  - `src/lib/info-content/crm.ts` e `src/lib/info-content/info-content.test.ts` atualizados.
+  - Testes novos/atualizados: rotas verificar/aplicar, componente, lib preview, vinculos, info-content.
+- **Arquivos Envolvidos:** `src/lib/db/migrations/0080_faturamentos_pedido_venda.sql`, `src/lib/db/schema/crm-faturamentos.ts`, `src/lib/crm/erp-espelho.ts`, `src/lib/crm/verificar-pedido-faturado.ts`, `src/lib/crm/verificar-pedido-faturado.test.ts`, `src/components/crm/verificar-pedidos-faturados.tsx`, `src/components/crm/verificar-pedidos-faturados.test.tsx`, `src/components/crm/automacoes-crm.test.tsx`, `src/app/api/crm/pedidos-venda/verificar-faturados/route.ts`, `src/app/api/crm/pedidos-venda/verificar-faturados/route.test.ts`, `src/app/api/crm/pedidos-venda/aplicar-faturados/route.ts`, `src/app/api/crm/pedidos-venda/aplicar-faturados/route.test.ts`, `src/app/api/crm/oportunidades/[id]/vinculos/route.ts`, `src/app/api/crm/oportunidades/[id]/vinculos/route.test.ts`, `src/app/(dashboard)/comercial/crm/oportunidades/[id]/page.tsx`, `src/app/(dashboard)/comercial/crm/pedidos-venda/[id]/page.tsx`, `src/lib/info-content/crm.ts`, `src/lib/info-content/info-content.test.ts`, `M:\dev\api-microdata\app\src\api\routers\crm.py`, `M:\dev\api-microdata\app\tests\test_crm.py`, `docs/Sessoes.md`.
+- **Testes:** `npm run test` → 494 arquivos / 2892 testes passados; `tsc --noEmit` limpo; `next build` OK; `next lint` apenas warnings pré-existentes; `pytest app/tests/test_crm.py` 17 passou; `apply-drizzle-migrations.js` aplicou 0080 nos dois bancos; `db:comparar` IDENTICAL; `db:verificar-local` mostra divergências pré-existentes de dados (logs/notificações/pedidos CRM) não relacionadas a esta mudança.
+
+---
+
 ## Estrutura de Comandos
 
 - `/historico` - Lê este arquivo e mostra resumo das sessões

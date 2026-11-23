@@ -62,6 +62,19 @@ export function itensParaCrm(itens: DocumentoErpItem[] | undefined): ItemEspelho
     }))
 }
 
+export function itensParaCrmFaturamento(itens: DocumentoErpItem[] | undefined): ItemEspelho[] {
+  return (itens || [])
+    .filter((item) => item && (item.produto || item.descricao))
+    .map((item) => ({
+      produto: (item.descricao || item.produto || "").trim().slice(0, 300),
+      codigo: (item.produto || "").trim().slice(0, 100) || null,
+      unidade: unidadeCrm(item.unidade),
+      quantidade: item.quantidade != null ? String(item.quantidade) : null,
+      valorUnitario: item.valor_unitario != null ? String(item.valor_unitario) : null,
+      valorTotal: item.valor_total != null ? String(item.valor_total) : null,
+    }))
+}
+
 function texto(valor: unknown): string {
   return valor == null ? "" : String(valor).trim()
 }

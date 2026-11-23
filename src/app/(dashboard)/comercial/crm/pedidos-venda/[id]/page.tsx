@@ -8,6 +8,7 @@ import Link from "next/link"
 import { ArrowLeft, ShoppingCart, Loader2, Building2, Calendar } from "lucide-react"
 import { toast } from "sonner"
 import { DocumentoVendaForm } from "@/components/crm/documento-venda-form"
+import { VerificarPedidosFaturados } from "@/components/crm/verificar-pedidos-faturados"
 import {
   statusOptions,
   STATUS_PEDIDO_VENDA,
@@ -199,6 +200,15 @@ export default function PedidoVendaDetailPage() {
         >
           {editing ? "Cancelar" : "Editar"}
         </button>
+        <VerificarPedidosFaturados
+          pedidoId={pedido.id}
+          oportunidadeId={pedido.oportunidadeId}
+          label="Verificar faturado"
+          className="ml-2 inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+          onConvertido={() => {
+            window.location.reload()
+          }}
+        />
       </div>
 
       <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 mb-4">

@@ -37,31 +37,52 @@ describe("VerificarPedidosFaturados", () => {
     toastMock.info.mockClear()
   })
 
-  it("verifica, exibe notas e converte as leads confirmadas", async () => {
+  it("verifica, exibe notas e aplica a verificação", async () => {
     const fetchMock = createFetchMock(({ url, body }) => {
       if (url === "/api/crm/pedidos-venda/verificar-faturados") {
         return {
           json: {
-            candidatos: [
+            pedidos: [
               {
                 pedidoId: 1,
                 numero: "PV-1",
                 referenciaExterna: "1/PV-1",
+                empresa: "1",
                 oportunidadeId: 10,
                 oportunidadeTitulo: "Malha",
                 leadId: 4,
                 leadNome: "Malhas Brasil",
                 jaConvertida: false,
-                nota: "NF-9",
-                dataNota: "2026-11-20",
+                valorAntes: 5200,
+                valorDepois: 5200,
+                nota: { numero: "NF-9", dataNota: "2026-11-20", valorTotal: 5200 },
+                statusSugerido: "FATURADO",
+                semNota: false,
               },
             ],
+            mensagem: null,
             sincronizacao: { verificados: 1, atualizados: 0, falhas: 0 },
           },
         }
       }
-      if (url === "/api/crm/pedidos-venda/converter-faturados") {
-        return { json: { convertidas: 1, falhas: 0 } }
+      if (url === "/api/crm/pedidos-venda/aplicar-faturados") {
+        return {
+          json: {
+            pedidos: [
+              {
+                pedidoId: 1,
+                numero: "PV-1",
+                valorPedido: 5200,
+                status: "FATURADO",
+                faturamentoId: 7,
+                nota: { numero: "NF-9", dataNota: "2026-11-20", valorTotal: 5200 },
+                conversaoLead: { ok: true },
+              },
+            ],
+            oportunidadeId: 10,
+            valorOportunidade: 5200,
+          },
+        }
       }
       return { status: 404, json: { error: "Rota não mockada" } }
     })
@@ -71,6 +92,7 @@ describe("VerificarPedidosFaturados", () => {
     renderPage(
       <VerificarPedidosFaturados
         pedidoId={1}
+        oportunidadeId={10}
         label="Verificar faturados"
         onConvertido={onConvertido}
       />
@@ -78,19 +100,26 @@ describe("VerificarPedidosFaturados", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Verificar faturados" }))
 
-    expect(await screen.findByText("NF-9 (2026-11-20)")).toBeTruthy()
-    expect(findCall(fetchMock.calls, "/api/crm/pedidos-venda/verificar-faturados", "POST")?.body).toEqual(
-      { pedidoId: 1, oportunidadeId: undefined }
-    )
+    expect(await screen.findByText(/NF-9 \(2026-11-20\)/)).toBeTruthy()
+    expect(
+      findCall(fetchMock.calls, "/api/crm/pedidos-venda/verificar-faturados", "POST")?.body
+    ).toEqual({ pedidoIds: [1], oportunidadeId: 10 })
 
-    fireEvent.click(screen.getByRole("button", { name: /converter leads em clientes/i }))
+    fireEvent.click(screen.getByRole("button", { name: /Aplicar verificação/ }))
 
     await waitFor(() =>
       expect(
-        findCall(fetchMock.calls, "/api/crm/pedidos-venda/converter-faturados", "POST")?.body
-      ).toEqual({ pedidoIds: [1] })
+        findCall(fetchMock.calls, "/api/crm/pedidos-venda/aplicar-faturados", "POST")?.body
+      ).toEqual({
+        pedidoIds: [1],
+        oportunidadeId: 10,
+        aplicar: true,
+        statusPedido: "PARCIAL",
+      })
     )
-    expect(toastMock.success).toHaveBeenCalledWith("1 lead(s) convertida(s) em cliente.")
+    expect(toastMock.success).toHaveBeenCalledWith(
+      "Pedido(s) verificado(s) e valor sincronizado com o ERP."
+    )
     expect(onConvertido).toHaveBeenCalled()
   })
 })

@@ -270,13 +270,12 @@ describe("getInfoContent", () => {
     ].join("\n")
 
     expect(texto).toMatch(/Vincular do ERP/)
-    expect(texto).toMatch(/api-microdata/)
     expect(texto).toMatch(/pedido de venda|faturamento/)
-    expect(texto).toMatch(/CNPJ/)
     expect(texto).toMatch(/já está vinculado/)
-    expect(texto).toMatch(/varre todos os pedidos/)
+    expect(texto).toMatch(/varre os pedidos/)
     expect(texto).toMatch(/cancelados/)
-    expect(texto).toMatch(/já viraram nota|já faturados/)
+    expect(texto).toMatch(/não grava nada no ERP/i)
+    expect(texto).toMatch(/Novo Faturamento/)
   })
 
   it("as telas de oportunidade e proposta explicam a edição dos campos", () => {

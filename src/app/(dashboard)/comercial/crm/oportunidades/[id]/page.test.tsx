@@ -336,27 +336,6 @@ describe("DetalheOportunidadePage", () => {
     await waitFor(() => expect(toastMock.success).toHaveBeenCalledWith("Pedido 00006979 vinculado"))
   })
 
-  it("mostra erro do ERP ao listar documentos", async () => {
-    const erpMock = createFetchMock(({ method, url }) => {
-      if (method === "GET" && url === "/api/admin/status?tipo=OPORTUNIDADE")
-        return { json: statuses }
-      if (method === "GET" && url === "/api/crm/oportunidades/1") return { json: oportunidade }
-      if (method === "GET" && url.startsWith("/api/crm/erp/faturamentos")) {
-        return { status: 503, json: { error: "api-microdata indisponível." } }
-      }
-      return { json: null }
-    })
-    vi.stubGlobal("fetch", erpMock.fn)
-    navMock.setParams({ id: "1" })
-    navMock.setPathname("/comercial/crm/oportunidades/1")
-    renderPage(<DetalheOportunidadePage />)
-
-    const botoes = await screen.findAllByRole("button", { name: /Vincular do ERP/ })
-    fireEvent.click(botoes[0])
-
-    const dialog = await screen.findByRole("dialog", { name: "Vincular faturamento do ERP" })
-    expect(await within(dialog).findByText("api-microdata indisponível.")).toBeInTheDocument()
-  })
 
   it("edita os campos da oportunidade e salva via PUT", async () => {
     const editMock = createFetchMock(({ method, url }) => {

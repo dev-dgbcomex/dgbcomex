@@ -124,6 +124,7 @@ describe("POST /api/crm/oportunidades/[id]/vinculos", () => {
     vi.mocked(requireAuth).mockReset()
     vi.mocked(requisitarErp).mockReset()
     vi.mocked(db.select).mockReset()
+    vi.mocked(db.update).mockReturnValue(createQueryBuilder([]))
     vi.mocked(db.transaction).mockReset()
     vi.mocked(registrarLog).mockReset()
     vi.mocked(requireAuth).mockResolvedValue(sessao as any)
