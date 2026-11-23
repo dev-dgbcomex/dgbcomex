@@ -59,6 +59,25 @@
 
 ---
 
+### Sessão 44 — Kanban de leads: requisitos por status e conversão por faturamento
+
+- **Data:** 2026-11-23
+- **Tarefa:** implementar requisitos de status para leads e oportunidades no Kanban de leads, normalizar status de oportunidades, reutilizar o botão de verificação de pedidos faturados e documentar a regra de conversão em cliente.
+- **Decisões aprovadas:** requisitos centralizados no código por enquanto (`src/lib/crm/requisitos-status.ts`); configuração no banco/`/perfil/menus` é futura feature. Lead não é rebaixada: Proposta qualifica apenas Novo/Perdido/Inativo; Negociação ou Ganho leva a lead para Possível Cliente; conversão exige CNPJ e decisão `CONVERTER` via botão/modal existente. Oportunidade exige Valor Estimado e Probabilidade > 1 fora de NOVO/QUALIFICACAO; FECHADO_GANHO exige pedido ERP; FECHADO_PERDIDO exige motivo.
+- **Resultado:**
+  - Novo `src/lib/crm/requisitos-status.ts` com `validarRequisitosOportunidade`, `validarRequisitosLead` e `contarOportunidadesAceitaPossivelCliente`; testes unitários em `requisitos-status.test.ts`.
+  - `automacoes-crm.ts` valida requisitos de lead e oportunidade antes de gravar; adiciona lead para QUALIFICADO em PROPOSTA e para POSSIVEL_CLIENTE em NEGOCIACAO/FECHADO_GANHO, sem rebaixar POSSIVEL_CLIENTE.
+  - Rotas `PATCH/PUT` de oportunidades passam `valorEstimado`/`probabilidade` para a automação; rotas de lead continuam bloqueadas quando o status de destino não atende aos requisitos.
+  - `LeadsKanban` trata bloqueios com toast/rollback; `OportunidadesKanban` remove colunas de fallback duplicadas e agrupa por status normalizado.
+  - Migration `0079_normalizar_status_oportunidades.sql` normaliza `Novo`/`GANHO` etc. para códigos canônicos no Neon e no warehouse local.
+  - Tela de Leads reusa `VerificarPedidosFaturados` com `onConvertido` para refetch; `converter-faturados` segue a automação de conversão com validação de requisitos.
+  - Modais “i” atualizados (`crm.ts`) para Leads, Oportunidades, Kanban de Oportunidades e Pedidos de Venda; `docs/Sessoes.md` atualizado.
+- **Arquivos Envolvidos:** `src/lib/crm/requisitos-status.ts`, `src/lib/crm/requisitos-status.test.ts`, `src/lib/crm/automacoes-crm.ts`, `src/lib/crm/automacoes-crm.test.ts`, `src/app/api/crm/oportunidades/[id]/status/route.ts`, `src/app/api/crm/oportunidades/[id]/route.ts`, `src/components/crm/oportunidades-kanban.tsx`, `src/components/crm/leads-kanban.tsx`, `src/app/(dashboard)/comercial/crm/leads/page.tsx`, `src/lib/db/migrations/0079_normalizar_status_oportunidades.sql`, `src/lib/info-content/crm.ts`, `docs/Sessoes.md`.
+- **Testes:** `requisitos-status.test.ts` (17 testes), `automacoes-crm.test.ts` (4 testes) e rotas de oportunidades/leads/pedidos (41 testes) passaram; suíte completa, typecheck, lint e build a validar antes do commit.
+- **Verificação pendente:** `npm run test`, `tsc --noEmit`, `npm run build`, `next lint`, commit e push.
+
+---
+
 ### Sessão 41 — Modal responsivo e provedor da análise de IA
 
 - **Data:** 2026-11-22

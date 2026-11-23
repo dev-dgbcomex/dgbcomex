@@ -14,7 +14,10 @@ import {
 import { X } from "lucide-react"
 import { useStatuses, statusExibidosNoKanban, type StatusConfig } from "@/hooks/use-statuses"
 import { STATUS_OPORTUNIDADE_PADRAO } from "@/lib/crm/status-oportunidade"
-import { validarCamposObrigatoriosOportunidade } from "@/lib/crm/validacao-oportunidade"
+import {
+  validarCamposObrigatoriosOportunidade,
+  normalizarStatusOportunidade,
+} from "@/lib/crm/validacao-oportunidade"
 import { DroppableColumn, KanbanSkeleton } from "./kanban-column"
 import { DecisaoAutomacaoModal } from "./decisao-automacao-modal"
 import { CamposObrigatoriosOportunidadeModal } from "./campos-obrigatorios-oportunidade-modal"
@@ -145,26 +148,9 @@ export default function OportunidadesKanban({
   const colunas = statusExibidosNoKanban(effectiveStatuses).map((col: KanbanStatus) => ({
     ...col,
     cards: (data.length > 0 ? data : oportunidades).filter(
-      (o: OportunidadeCard) => o.status === col.nome
+      (o: OportunidadeCard) => normalizarStatusOportunidade(o.status) === col.nome
     ),
   }))
-
-  const nomesColunas = new Set(colunas.map((c) => c.nome))
-  const colunasFaltantes = [...new Set(exibir.map((o) => o.status))]
-    .filter((nome) => !nomesColunas.has(nome))
-    .map((nome) => ({
-      id: nome,
-      nome,
-      rotulo: nome,
-      tipo: "OPORTUNIDADE",
-      cor: null,
-      ordem: null,
-      ativo: true,
-      exibirKanban: true,
-      cards: exibir.filter((o: OportunidadeCard) => o.status === nome),
-    }))
-
-  const todasColunas = [...colunas, ...colunasFaltantes]
 
   const handleDragStart = (event: any) => {
     const card = event.active.data.current?.oportunidade
@@ -406,7 +392,7 @@ export default function OportunidadesKanban({
     <div className="flex flex-col h-[calc(100vh-280px)]">
       <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <div className="flex-1 min-h-0 flex gap-4 overflow-x-auto pb-2">
-          {todasColunas.map((col) => (
+          {colunas.map((col) => (
             <DroppableColumn
               key={col.nome}
               id={col.nome}

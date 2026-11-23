@@ -176,6 +176,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         statusNovo: body.status,
         motivoPerda: body.motivoPerda,
         decisao: body.decisao as DecisaoAutomacao | undefined,
+        valorEstimado: body.valorEstimado,
+        probabilidade: body.probabilidade,
         autor: { id: auth.userId, nome: session.user.name },
         origem: "API",
       })

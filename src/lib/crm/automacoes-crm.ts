@@ -8,6 +8,11 @@ import { inserirTimelineEvento } from "@/lib/crm-timeline"
 import { notificarAtividadeComercial } from "@/lib/crm/notificar-atividade"
 import { executarGatilhos } from "@/lib/crm/status-gatilhos"
 import { promoverLeadParaCliente } from "@/lib/crm/promover-cliente"
+import {
+  validarRequisitosLead,
+  validarRequisitosOportunidade,
+  contarOportunidadesAceitaPossivelCliente,
+} from "@/lib/crm/requisitos-status"
 
 export type EntidadeAutomacao =
   | "LEAD"
@@ -75,6 +80,8 @@ export type EntradaAutomacao = {
   origem?: string
   titulo?: string | null
   contexto?: Record<string, unknown>
+  valorEstimado?: unknown
+  probabilidade?: unknown
 }
 
 function base(entrada: EntradaAutomacao): ResultadoAutomacao {
@@ -171,26 +178,26 @@ async function processarStatusLead(entrada: EntradaAutomacao): Promise<Resultado
   resultado.statusAnterior = lead.status
   resultado.statusNovo = statusNovo
 
-  if (statusNovo === "QUALIFICADO") {
-    const total = await contarOportunidadesLead(lead.id)
-    if (total === 0) {
-      return bloqueado(entrada, "Crie uma oportunidade antes de qualificar esta lead")
-    }
+  const oportunidades = await db
+    .select({ id: crmOportunidades.id, status: crmOportunidades.status })
+    .from(crmOportunidades)
+    .where(eq(crmOportunidades.empresaId, lead.id))
+  const totalOportunidades = oportunidades.length
+  const totalOportunidadesAceitaPossivelCliente = contarOportunidadesAceitaPossivelCliente(oportunidades)
+
+  const validacaoLead = validarRequisitosLead({
+    statusNovo,
+    totalOportunidades,
+    totalOportunidadesAceitaPossivelCliente,
+    temCnpj: !!lead.cnpj,
+    decisao: entrada.decisao,
+  })
+  if (!validacaoLead.ok) {
+    return bloqueado(entrada, validacaoLead.bloqueio ?? "Operação bloqueada")
   }
 
-  if (statusNovo === "POSSIVEL_CLIENTE") {
-    const ganhas = await db
-      .select({ id: crmOportunidades.id })
-      .from(crmOportunidades)
-      .where(
-        and(
-          eq(crmOportunidades.empresaId, lead.id),
-          eq(crmOportunidades.status, "FECHADO_GANHO")
-        )
-      )
-    if (ganhas.length === 0) {
-      return bloqueado(entrada, "A lead só vai para Possível Cliente com uma oportunidade ganha")
-    }
+  if (statusNovo === "CONVERTIDO_CLIENTE" && lead.promovidaCliente) {
+    return bloqueado(entrada, "Esta lead já foi transformada em cliente")
   }
 
   if (statusNovo === "CONVERTIDO_CLIENTE" && !lead.promovidaCliente) {
@@ -321,6 +328,27 @@ async function processarStatusOportunidade(entrada: EntradaAutomacao): Promise<R
   }
 
   const agora = new Date()
+
+  const totalPedidosErp = await db
+    .select({ id: crmPedidosVenda.id })
+    .from(crmPedidosVenda)
+    .where(
+      and(
+        eq(crmPedidosVenda.oportunidadeId, oportunidade.id),
+        eq(crmPedidosVenda.origem, "ERP")
+      )
+    )
+  const validacaoOportunidade = validarRequisitosOportunidade({
+    status: statusNovo,
+    valorEstimado: entrada.valorEstimado ?? oportunidade.valorEstimado,
+    probabilidade: entrada.probabilidade ?? oportunidade.probabilidade,
+    totalPedidosErp: totalPedidosErp.length,
+    motivoPerda: entrada.motivoPerda,
+  })
+  if (!validacaoOportunidade.ok) {
+    return bloqueado(entrada, validacaoOportunidade.bloqueio ?? "Operação bloqueada")
+  }
+
   const [atualizada] = await db
     .update(crmOportunidades)
     .set({
@@ -333,12 +361,40 @@ async function processarStatusOportunidade(entrada: EntradaAutomacao): Promise<R
 
   resultado.registro = atualizada as unknown as Record<string, unknown>
 
-  if (statusNovo === "FECHADO_GANHO" && lead && !lead.promovidaCliente) {
-    await db
-      .update(crmLeads)
-      .set({ status: "POSSIVEL_CLIENTE", arquivado: false, updatedAt: agora })
-      .where(eq(crmLeads.id, lead.id))
-    resultado.avisos.push("Lead movida para Possível Cliente")
+  if (lead && !lead.promovidaCliente) {
+    if (
+      statusNovo === "PROPOSTA" &&
+      !["POSSIVEL_CLIENTE", "CONVERTIDO_CLIENTE"].includes(lead.status)
+    ) {
+      await db
+        .update(crmLeads)
+        .set({ status: "QUALIFICADO", arquivado: false, updatedAt: agora })
+        .where(eq(crmLeads.id, lead.id))
+      resultado.avisos.push("Lead qualificada pela oportunidade em proposta")
+    }
+
+    if (
+      statusNovo === "NEGOCIACAO" &&
+      !["POSSIVEL_CLIENTE", "CONVERTIDO_CLIENTE"].includes(lead.status)
+    ) {
+      await db
+        .update(crmLeads)
+        .set({ status: "POSSIVEL_CLIENTE", arquivado: false, updatedAt: agora })
+        .where(eq(crmLeads.id, lead.id))
+      resultado.avisos.push("Lead movida para Possível Cliente")
+    }
+
+    if (
+      statusNovo === "FECHADO_GANHO" &&
+      lead.status !== "POSSIVEL_CLIENTE" &&
+      lead.status !== "CONVERTIDO_CLIENTE"
+    ) {
+      await db
+        .update(crmLeads)
+        .set({ status: "POSSIVEL_CLIENTE", arquivado: false, updatedAt: agora })
+        .where(eq(crmLeads.id, lead.id))
+      resultado.avisos.push("Lead movida para Possível Cliente")
+    }
   }
 
   if (statusNovo === "FECHADO_PERDIDO" && lead && !lead.promovidaCliente) {

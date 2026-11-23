@@ -232,7 +232,8 @@ export const crmContent: Record<string, InfoContent> = {
       "Leads podem ser criadas manualmente ou convertidas de leads qualificados.",
       "Leads não podem ser excluídas: o cadastro é referenciado por contatos, oportunidades, propostas, visitas e timeline.",
       "Para qualificar uma lead, crie antes uma oportunidade vinculada. Criar a oportunidade em Novo, Perdido ou Inativo qualifica a lead automaticamente.",
-      "Ao marcar uma oportunidade como Ganho, a lead vai para Possível Cliente. Ganho exige um pedido vinculado do ERP.",
+      "Oportunidade em Proposta qualifica a lead para Qualificado (sem rebaixar se já estiver Possível Cliente). Oportunidade em Negociação ou Ganho leva a lead para Possível Cliente; Ganho exige um pedido vinculado do ERP.",
+      "Requisitos por status da lead: Qualificado exige pelo menos uma oportunidade vinculada; Possível Cliente exige oportunidade em Negociação ou Ganho; conversão em cliente exige CNPJ cadastrado e confirmação da decisão 'Converter'.",
       "A conversão em cliente é manual: use 'Verificar faturados' e confirme a promoção quando houver nota de faturamento no ERP. O botão 'Tornar cliente' cria (ou reaproveita) o cliente pelo CNPJ e preserva todo o histórico.",
       "Perdido e Inativo recebem a tarja Arquivado. Voltar para Qualificado desarquiva a lead.",
       "Há três visualizações: Cards, Tabela e Kanban. A preferência fica salva neste navegador e os filtros valem para Cards e Tabela.",
@@ -538,6 +539,7 @@ export const crmContent: Record<string, InfoContent> = {
     rules: [
       "Arraste um card para outra coluna para mudar o estágio da oportunidade.",
       "Ao arrastar para Proposta, Negociação, Ganho ou Perdido, o sistema solicita Valor Estimado e Probabilidade maiores que 1 antes de mover o card.",
+      "O sistema normaliza status gravados anteriormente (ex. 'Novo') para o código do cadastro ('NOVO'), evitando colunas duplicadas no Kanban.",
       "As colunas vêm do cadastro de Status (Admin → Configurações → Status, tipo Oportunidade): cada status ativo com 'Exibir no Kanban' marcado vira uma coluna, na ordem configurada.",
       "Ao arrastar para FECHADO_PERDIDO, um modal solicitará o motivo da perda.",
       "Apenas usuários com permissão podem mover cards entre estágios.",

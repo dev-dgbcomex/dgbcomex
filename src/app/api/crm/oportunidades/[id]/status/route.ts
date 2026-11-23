@@ -54,6 +54,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       statusNovo: status,
       motivoPerda,
       decisao: decisao as DecisaoAutomacao | undefined,
+      valorEstimado,
+      probabilidade,
       autor: { id: auth.userId, nome: auth.session.user.name },
       origem: "API",
     })

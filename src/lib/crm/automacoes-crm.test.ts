@@ -26,6 +26,7 @@ const lead = {
   id: 4,
   nome: "Malhas Brasil",
   razaoSocial: null,
+  cnpj: "11.222.333/0001-44",
   status: "NOVO",
   promovidaCliente: false,
   arquivado: false,
@@ -71,7 +72,9 @@ describe("processarAutomacaoCRM", () => {
   })
 
   it("só converte a lead quando o usuário confirma a decisão", async () => {
-    vi.mocked(db.select).mockReturnValueOnce(createQueryBuilder([lead]))
+    vi.mocked(db.select)
+      .mockReturnValueOnce(createQueryBuilder([lead]))
+      .mockReturnValueOnce(createQueryBuilder([]))
     vi.mocked(promoverLeadParaCliente).mockResolvedValue({
       pessoa: { id: 4 },
       cliente: { id: 9 },
