@@ -13,7 +13,7 @@ import { atualizarEspelhosErp, itensParaCrm, itensParaCrmFaturamento } from "@/l
 import { processarAutomacaoCRM } from "@/lib/crm/automacoes-crm"
 import { registrarLog } from "@/lib/notificar"
 import { requisitarErp } from "@/lib/erp/cliente"
-import type { FaturamentoErp, ListaErp, PedidoErp } from "@/lib/erp/tipos"
+import type { FaturamentoErp, ListaErp } from "@/lib/erp/tipos"
 
 type Autor = { id?: number | null; nome?: string | null }
 
@@ -344,14 +344,15 @@ export async function aplicarVerificacaoPedidoFaturado(
 
       let faturamentoId: number | null = null
       if (nota && chave) {
-        const documentoErp = await requisitarErp<PedidoErp>(
-          `/crm/pedidos/${encodeURIComponent(chave.split("/")[0])}/${encodeURIComponent(chave.split("/")[1])}`
+        const [empresaErp, pedidoErp] = chave.split("/")
+        const documentoErp = await requisitarErp<FaturamentoErp>(
+          `/crm/faturamentos/${encodeURIComponent(empresaErp)}/${encodeURIComponent(pedidoErp)}/${encodeURIComponent(nota.numero ?? "")}`
         )
         faturamentoId = await criarOuAtualizarFaturamento({
           oportunidadeId: oportunidadeIdAtual,
           pedidoVendaId: pedido.id,
-          empresa: chave.split("/")[0],
-          pedido: chave.split("/")[1],
+          empresa: empresaErp,
+          pedido: pedidoErp,
           nota,
           itens: itensParaCrmFaturamento(documentoErp.itens ?? []),
           usuarioNome,
