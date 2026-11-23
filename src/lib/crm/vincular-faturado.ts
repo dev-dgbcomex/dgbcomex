@@ -73,24 +73,48 @@ function mapearNotaFaturada(nota: FaturamentoErp): NotaFaturada {
   }
 }
 
-export async function buscarNotasFaturadasPorPedido(codigoPedido: string): Promise<ListaErp<FaturamentoErp>> {
-  if (!codigoPedido) {
-    throw new Error("Informe o código do pedido")
-  }
-  const res = await fetch(
-    `/api/crm/erp/faturamentos?pedido_origem=${encodeURIComponent(codigoPedido)}&por_pagina=50`,
-    { cache: "no-store" }
-  )
+async function fetchFaturamentos(query: URLSearchParams): Promise<ListaErp<FaturamentoErp>> {
+  const res = await fetch(`/api/crm/erp/faturamentos?${query.toString()}`, { cache: "no-store" })
   if (!res.ok) {
     const corpo = await res.json().catch(() => null)
     throw new Error(corpo?.error || "Erro ao buscar faturados do ERP")
   }
-  const dados = (await res.json()) as ListaErp<FaturamentoErp>
-  // Filtro client-side como garantia: o filtro pedido_origem do ERP pode não estar alinhado
-  const filtrados = dados.itens.filter(
-    (n) => (n.pedido_origem || "").trim() === codigoPedido.trim()
-  )
-  return { ...dados, itens: filtrados.length > 0 ? filtrados : dados.itens }
+  return (await res.json()) as ListaErp<FaturamentoErp>
+}
+
+export async function buscarNotasFaturadasPorPedido(codigoPedido: string): Promise<ListaErp<FaturamentoErp>> {
+  if (!codigoPedido) {
+    throw new Error("Informe o código do pedido")
+  }
+
+  // Tenta primeiro com o filtro pedido_origem no ERP
+  try {
+    const query = new URLSearchParams()
+    query.set("pedido_origem", codigoPedido.trim())
+    query.set("por_pagina", "50")
+    const dados = await fetchFaturamentos(query)
+    const filtrados = dados.itens.filter(
+      (n) => (n.pedido_origem || "").trim() === codigoPedido.trim()
+    )
+    if (filtrados.length > 0) {
+      return { ...dados, itens: filtrados }
+    }
+    // Se o ERP não filtrar, retorna todos e deixa o filtro client-side abaixo
+    return { ...dados, itens: dados.itens.filter((n) => (n.pedido_origem || "").trim() === codigoPedido.trim()) }
+  } catch (erroPrimario) {
+    // Fallback: busca sem filtro e filtra client-side
+    try {
+      const query = new URLSearchParams()
+      query.set("por_pagina", "200")
+      const dados = await fetchFaturamentos(query)
+      const filtrados = dados.itens.filter(
+        (n) => (n.pedido_origem || "").trim() === codigoPedido.trim()
+      )
+      return { ...dados, itens: filtrados }
+    } catch {
+      throw erroPrimario
+    }
+  }
 }
 
 export async function previewVincularFaturado(params: {

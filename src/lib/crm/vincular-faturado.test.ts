@@ -46,7 +46,7 @@ const notasLista = {
       data_emissao: "2026-11-13",
       vr_nota: 9162.37,
       soma_itens: 9162.37,
-      nosso_pedido: "00007046",
+      pedido_origem: "00007046",
       status_gravado: "2",
       cond_pagto_extenso: "A vista",
       valor_total: 9162.37,
