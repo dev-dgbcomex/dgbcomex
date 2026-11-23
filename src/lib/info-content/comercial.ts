@@ -52,6 +52,7 @@ export const comercialContent: Record<string, InfoContent> = {
       "No modal da faixa, o documento aparece abaixo do nome e as colunas trazem Oportunidades (com Proposta e Negociação), Pedidos, Visitas e Ações.",
       "A classificação usa o status das oportunidades e a data dos pedidos vinculados ao cliente, incluindo os das pessoas promovidas, e nunca o status cadastral do cliente.",
       "Cada cliente entra em uma única faixa, com prioridade de Quente sobre Morno e de Morno sobre Frio; as quantidades e a lista do modal respeitam a busca ativa.",
+      "O botão 'Saúde da Prospecção' no cabeçalho abre o painel por cliente ou lead com as classificações AEC, BEC e Engajados.",
       "Clientes ativos podem ser vinculados a solicitações.",
       "A desativação de um cliente não remove solicitações existentes.",
     ],

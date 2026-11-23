@@ -24,6 +24,7 @@ import {
   ShoppingCart,
   Target,
   X,
+  Activity,
 } from "lucide-react"
 import { InfoButton } from "@/components/ui/info-button"
 import { Input } from "@/components/ui/input"
@@ -575,12 +576,21 @@ export default function KanbanTemperaturaPage() {
           </p>
         </div>
         {!flutuante && (
-          <Link
-            href="/comercial/crm"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-          >
-            <ArrowLeft size={14} /> Voltar ao CRM
-          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href="/comercial/crm/saude-prospeccao"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            >
+              <Activity size={14} aria-hidden="true" />
+              Saúde da Prospecção
+            </Link>
+            <Link
+              href="/comercial/crm"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+            >
+              <ArrowLeft size={14} /> Voltar ao CRM
+            </Link>
+          </div>
         )}
       </div>
 

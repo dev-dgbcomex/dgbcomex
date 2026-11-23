@@ -131,7 +131,7 @@ describe("VisitasDashboardPage", () => {
     expect(await screen.findByText("Ações Rápidas")).toBeInTheDocument()
     expect(screen.getByRole("link", { name: /Saúde da Prospecção/ })).toHaveAttribute(
       "href",
-      "/comercial/crm/leads/dashboard"
+      "/comercial/crm/saude-prospeccao"
     )
     expect(screen.getByText("Performance por Gerente Comercial")).toBeInTheDocument()
     expect(screen.getByText("Viagens")).toBeInTheDocument()

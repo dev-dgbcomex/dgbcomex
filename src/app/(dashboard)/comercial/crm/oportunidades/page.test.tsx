@@ -35,7 +35,7 @@ const oportunidades = [
 listSmokeSpec({
   title: "OportunidadesPage",
   component: <OportunidadesPage />,
-  apiUrl: "/api/crm/oportunidades?mine=true",
+  apiUrl: "/api/crm/oportunidades",
   heading: "Oportunidades",
   emptyText: "Nenhuma oportunidade encontrada",
   searchPlaceholder: "Buscar por título ou pessoa...",
@@ -49,12 +49,54 @@ listSmokeSpec({
   matchQuery: "malha",
 })
 
+describe("OportunidadesPage filtro de responsável", () => {
+  let fetchMock: ReturnType<typeof createFetchMock>
+
+  beforeEach(() => {
+    const handler = ({ method, url }: { method: string; url: string }) => {
+      if (
+        method === "GET" &&
+        (url === "/api/crm/oportunidades" || url === "/api/crm/oportunidades?mine=true")
+      ) {
+        return { json: oportunidades }
+      }
+      return { json: null }
+    }
+    fetchMock = createFetchMock(handler)
+    vi.stubGlobal("fetch", fetchMock.fn)
+  })
+
+  it("abre com Todas e oferece atalho para Saúde da Prospecção", async () => {
+    renderPage(<OportunidadesPage />)
+
+    expect(await screen.findByText("Venda de malha 100% algodão")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Todas" })).toHaveClass("bg-blue-600")
+    expect(screen.getByRole("link", { name: "Saúde da Prospecção" })).toHaveAttribute(
+      "href",
+      "/comercial/crm/saude-prospeccao"
+    )
+    expect(findCall(fetchMock.calls, "/api/crm/oportunidades", "GET")).toBeDefined()
+  })
+
+  it("filtra as minhas oportunidades ao clicar em Minhas", async () => {
+    renderPage(<OportunidadesPage />)
+    await screen.findByText("Venda de malha 100% algodão")
+
+    fireEvent.click(screen.getByRole("button", { name: "Minhas" }))
+
+    await waitFor(() =>
+      expect(findCall(fetchMock.calls, "/api/crm/oportunidades?mine=true", "GET")).toBeDefined()
+    )
+    expect(screen.getByRole("button", { name: "Minhas" })).toHaveClass("bg-blue-600")
+  })
+})
+
 describe("OportunidadesPage kanban", () => {
   let fetchMock: ReturnType<typeof createFetchMock>
 
   beforeEach(() => {
     const handler = ({ method, url }: { method: string; url: string }) => {
-      if (method === "GET" && url === "/api/crm/oportunidades?mine=true")
+      if (method === "GET" && url === "/api/crm/oportunidades")
         return { json: oportunidades }
       return { json: null }
     }
@@ -77,7 +119,7 @@ describe("OportunidadesPage kanban", () => {
 describe("OportunidadesPage cards", () => {
   beforeEach(() => {
     const handler = ({ method, url }: { method: string; url: string }) => {
-      if (method === "GET" && url === "/api/crm/oportunidades?mine=true")
+      if (method === "GET" && url === "/api/crm/oportunidades")
         return { json: oportunidades }
       return { json: null }
     }
@@ -126,7 +168,7 @@ describe("OportunidadesPage cards", () => {
 describe("OportunidadesPage status do cadastro", () => {
   it("usa rótulo e cor do cadastro de status", async () => {
     const handler = ({ method, url }: { method: string; url: string }) => {
-      if (method === "GET" && url === "/api/crm/oportunidades?mine=true")
+      if (method === "GET" && url === "/api/crm/oportunidades")
         return { json: [{ ...oportunidades[0], status: "PROSPECCAO" }] }
       if (method === "GET" && url === "/api/admin/status?tipo=OPORTUNIDADE")
         return {
@@ -161,7 +203,7 @@ describe("OportunidadesPage exclusão", () => {
 
   beforeEach(() => {
     const handler = ({ method, url }: { method: string; url: string }) => {
-      if (method === "GET" && url === "/api/crm/oportunidades?mine=true")
+      if (method === "GET" && url === "/api/crm/oportunidades")
         return { json: oportunidades }
       if (method === "DELETE" && url === "/api/crm/oportunidades/1")
         return { json: { success: true } }
@@ -193,7 +235,7 @@ describe("OportunidadesPage exclusão", () => {
 
   it("mostra erro ao excluir sem permissão de administrador", async () => {
     const handler = ({ method, url }: { method: string; url: string }) => {
-      if (method === "GET" && url === "/api/crm/oportunidades?mine=true")
+      if (method === "GET" && url === "/api/crm/oportunidades")
         return { json: oportunidades }
       if (method === "DELETE" && url === "/api/crm/oportunidades/1")
         return { status: 403, json: { error: "Apenas administradores podem excluir" } }

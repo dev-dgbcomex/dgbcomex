@@ -1,0 +1,334 @@
+import { desc, eq, inArray } from "drizzle-orm"
+import { chamarIA, type MensagemIA, type ResultadoIA } from "@/lib/ai"
+import { classificarSaudeProspeccao, type ClassificacaoSaude } from "@/lib/crm/classificacao-saude"
+import { faixaConversaoSql } from "@/lib/crm/contadores-listagem"
+import type { FaixaConversao } from "@/lib/crm/faixa-conversao"
+import { db } from "@/lib/db"
+import { clientes } from "@/lib/db/schema/clientes"
+import { crmAcoesProspeccao } from "@/lib/db/schema/crm-acoes-prospeccao"
+import { crmLeads } from "@/lib/db/schema/crm-leads"
+import { crmOportunidades } from "@/lib/db/schema/crm-oportunidades"
+import { crmVisitas } from "@/lib/db/schema/crm-visitas"
+
+export type ChaveProspeccao = { tipo: "cliente" | "pessoa"; id: number }
+export type NomeConsultaCurada = "oportunidades" | "visitas" | "acoes"
+
+export type LinhaAnaliseIA = {
+  id: number
+  tipo: "cliente" | "pessoa"
+  nome: string
+  documento?: string | null
+  segmento?: string | null
+  porte?: string | null
+  responsaveis?: string[]
+  scoreEsforco: number
+  scoreEngajamento: number
+  percentualConversao?: number
+  visitasRealizadas?: number
+  visitasAgendadas?: number
+  acoesRealizadas?: number
+  acoesAgendadas?: number
+  ultimaVisita?: string | null
+  proximaVisita?: string | null
+  ultimaAcao?: string | null
+  proximaAcao?: string | null
+  statusOportunidadeDominante?: string | null
+  valorEstimadoTotal?: number
+  probabilidadeMedia?: number
+  pedidosVenda?: number
+  faturamentos?: number
+}
+
+export type LinhaAnaliseContexto = LinhaAnaliseIA & {
+  chave: string
+  classificacao: ClassificacaoSaude
+  temperatura: FaixaConversao
+}
+
+export type ConsultaCurada = {
+  nome: NomeConsultaCurada
+  chave: ChaveProspeccao
+  limite: number
+}
+
+export type ResultadoConsultaCurada = ConsultaCurada & { dados: unknown[] }
+
+const REGRAS_SISTEMA = `Você é um assistente de Saúde da Prospecção do PDM Pro Têxtil.
+Use EXCLUSIVAMENTE as regras e os dados abaixo. Nunca crie outra métrica, outro score ou outra faixa.
+Nunca mencione que está usando regras próprias ou genéricas.
+
+CLASSIFICAÇÃO DE SAÚDE:
+- Engajados: Engajamento > 30%. Esta regra prevalece sobre todas as outras, mesmo com esforço alto.
+- AEC: Engajamento <= 30% e Esforço > 45%.
+- BEC: Engajamento <= 30% e Esforço <= 45%. Esforço exatamente 45% é BEC.
+
+TEMPERATURA (critério canônico do sistema):
+- QUENTE: oportunidade em NEGOCIACAO, ou ganho (FECHADO_GANHO/GANHO) no mês corrente, ou pedido de venda no mês corrente.
+- MORNO: oportunidade em PROPOSTA, ou ganho no trimestre corrente, ou pedido de venda no trimestre corrente.
+- FRIO: demais casos.
+
+PONTUAÇÃO DE SAÚDE (use somente estes pesos):
+- Esforço: visita/ação realizada (+12,5) + relato/ata (+12,5) + check-in (+12,5) + contato (+12,5) + proposta (+25) + oportunidade (+25), limitado a 100%.
+- Engajamento: visita/ação realizada (+20) + visita/ação agendada (+10) + proposta negociada (+20) + oportunidade negociada (+20) + pedido de venda (+15) + faturamento (+15), limitado a 100%.
+- Conversão: (pedidos de venda + faturamentos) ÷ (visitas reais + ações reais), arredondado e limitado a 100%.
+
+REGRAS DE RESPOSTA:
+- Responda em português do Brasil, em Markdown, com no máximo 700 palavras.
+- Comece com "## Diagnóstico", depois "## Como elevar a saúde" e "## Prioridades".
+- Para cada registro, cite nome, classificação, temperatura, esforço, engajamento e conversão usando os valores recebidos.
+- Sugira ações que aumentem o engajamento (proposta negociada, oportunidade negociada, pedido de venda, faturamento, visita/ação agendada) ou reduzam esforço sem inventar novos critérios.
+- Para AEC, prefira ações que transformem esforço em engajamento. Para BEC, prefira aumentar cadência e registrar relato/ata e check-in. Para Engajados, mantenha o movimento e avance para pedido/faturamento.
+- Para temperaturas FRIA/MORNA, sugira avançar para PROPOSTA/NEGOCIACAO conforme a regra canônica, sempre dentro do sistema.
+- Se precisar de mais dados, responda EXATAMENTE uma linha no formato: CONSULTAR: oportunidades|cliente|123|10 (ou visitas/acoes e cliente/pessoa). Não escreva mais nada nessa resposta. Você pode pedir no máximo 2 consultas por análise.
+- Consultas permitidas: oportunidades, visitas, acoes. Nunca peça SQL livre.`
+
+function chaveDeLinha(linha: Pick<LinhaAnaliseIA, "tipo" | "id">) {
+  return `${linha.tipo}:${linha.id}`
+}
+
+export async function buscarTemperaturas(
+  linhas: LinhaAnaliseIA[]
+): Promise<Map<string, FaixaConversao>> {
+  const resultado = new Map<string, FaixaConversao>()
+  const idsClientes = [...new Set(linhas.filter((l) => l.tipo === "cliente").map((l) => l.id))]
+  const idsPessoas = [...new Set(linhas.filter((l) => l.tipo === "pessoa").map((l) => l.id))]
+
+  if (idsClientes.length) {
+    const registros = await db
+      .select({ id: clientes.id, faixa: faixaConversaoSql("cliente") })
+      .from(clientes)
+      .where(inArray(clientes.id, idsClientes))
+    for (const registro of registros) resultado.set(`cliente:${registro.id}`, registro.faixa)
+  }
+
+  if (idsPessoas.length) {
+    const registros = await db
+      .select({ id: crmLeads.id, faixa: faixaConversaoSql("lead") })
+      .from(crmLeads)
+      .where(inArray(crmLeads.id, idsPessoas))
+    for (const registro of registros) resultado.set(`pessoa:${registro.id}`, registro.faixa)
+  }
+
+  return resultado
+}
+
+export function prepararLinhas(
+  linhas: LinhaAnaliseIA[],
+  temperaturas: Map<string, FaixaConversao>
+): LinhaAnaliseContexto[] {
+  return linhas.map((linha) => {
+    const classificacao = classificarSaudeProspeccao({
+      scoreEsforco: linha.scoreEsforco,
+      scoreEngajamento: linha.scoreEngajamento,
+    })
+    return {
+      ...linha,
+      chave: chaveDeLinha(linha),
+      classificacao: classificacao.rotulo,
+      temperatura: temperaturas.get(chaveDeLinha(linha)) ?? "FRIO",
+    }
+  })
+}
+
+function resumoLinha(linha: LinhaAnaliseContexto) {
+  return {
+    nome: linha.nome,
+    tipo: linha.tipo,
+    classificacao: linha.classificacao,
+    temperatura: linha.temperatura,
+    esforco: linha.scoreEsforco,
+    engajamento: linha.scoreEngajamento,
+    conversao: linha.percentualConversao ?? 0,
+    visitas: {
+      realizadas: linha.visitasRealizadas ?? 0,
+      agendadas: linha.visitasAgendadas ?? 0,
+      ultima: linha.ultimaVisita ?? null,
+      proxima: linha.proximaVisita ?? null,
+    },
+    acoes: {
+      realizadas: linha.acoesRealizadas ?? 0,
+      agendadas: linha.acoesAgendadas ?? 0,
+      ultima: linha.ultimaAcao ?? null,
+      proxima: linha.proximaAcao ?? null,
+    },
+    oportunidade: {
+      status: linha.statusOportunidadeDominante ?? null,
+      valor: linha.valorEstimadoTotal ?? 0,
+      probabilidade: linha.probabilidadeMedia ?? 0,
+    },
+    pedidos: linha.pedidosVenda ?? 0,
+    faturamentos: linha.faturamentos ?? 0,
+    segmento: linha.segmento ?? null,
+    responsaveis: linha.responsaveis ?? [],
+  }
+}
+
+export function montarMensagensAnalise({
+  linhas,
+  filtros,
+  historico = [],
+  pergunta,
+  dadosConsulta,
+}: {
+  linhas: LinhaAnaliseContexto[]
+  filtros: Record<string, unknown>
+  historico?: { papel: "usuario" | "assistente"; conteudo: string }[]
+  pergunta?: string
+  dadosConsulta?: ResultadoConsultaCurada
+}): MensagemIA[] {
+  const resumo = linhas.map(resumoLinha)
+  const blocoDados = JSON.stringify({ filtros, registros: resumo }).slice(0, 24000)
+  const mensagens: MensagemIA[] = [
+    { role: "system", content: REGRAS_SISTEMA },
+    {
+      role: "user",
+      content: `Dados dos registros filtrados na tela:\n${blocoDados}\n\n${
+        pergunta ??
+        "Faça uma análise da saúde da prospecção destes registros e sugira ações para melhorá-la."
+      }`,
+    },
+    ...historico.slice(-10).map((item) => ({
+      role: item.papel === "usuario" ? ("user" as const) : ("assistant" as const),
+      content: item.conteudo.slice(0, 6000),
+    })),
+  ]
+
+  if (dadosConsulta) {
+    mensagens.push({
+      role: "user",
+      content: `Dados da consulta curada ${dadosConsulta.nome} para ${
+        dadosConsulta.chave.tipo
+      } ${dadosConsulta.chave.id}:\n${JSON.stringify(dadosConsulta.dados).slice(0, 12000)}\n\nAgora responda à pergunta original em Markdown, sem novas consultas.`,
+    })
+  }
+
+  return mensagens
+}
+
+export function parseConsultaCurada(conteudo: string): ConsultaCurada | null {
+  const match = conteudo.match(
+    /^\s*CONSULTAR:\s*(oportunidades|visitas|acoes)\s*\|\s*(cliente|pessoa)\s*\|\s*(\d+)(?:\s*\|\s*(\d+))?\s*$/im
+  )
+  if (!match) return null
+  const limite = match[4] ? Number(match[4]) : 10
+  return {
+    nome: match[1] as NomeConsultaCurada,
+    chave: { tipo: match[2] as "cliente" | "pessoa", id: Number(match[3]) },
+    limite: Math.min(Math.max(limite, 1), 20),
+  }
+}
+
+export function limparResposta(conteudo: string): string {
+  return conteudo
+    .replace(/^\s*CONSULTAR:.*$/gim, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()
+}
+
+export async function executarConsultaCurada(consulta: ConsultaCurada): Promise<ResultadoConsultaCurada> {
+  const { chave, limite } = consulta
+  let dados: unknown[] = []
+
+  if (consulta.nome === "oportunidades") {
+    const condicao =
+      chave.tipo === "cliente"
+        ? eq(crmOportunidades.clienteId, chave.id)
+        : eq(crmOportunidades.empresaId, chave.id)
+    dados = await db
+      .select({
+        id: crmOportunidades.id,
+        titulo: crmOportunidades.titulo,
+        status: crmOportunidades.status,
+        valor: crmOportunidades.valorEstimado,
+        probabilidade: crmOportunidades.probabilidade,
+        atualizadoEm: crmOportunidades.updatedAt,
+      })
+      .from(crmOportunidades)
+      .where(condicao)
+      .orderBy(desc(crmOportunidades.updatedAt))
+      .limit(limite)
+  } else if (consulta.nome === "visitas") {
+    const condicao =
+      chave.tipo === "cliente"
+        ? eq(crmVisitas.clienteId, chave.id)
+        : eq(crmVisitas.empresaId, chave.id)
+    dados = await db
+      .select({
+        id: crmVisitas.id,
+        data: crmVisitas.dataVisita,
+        tipo: crmVisitas.tipo,
+        status: crmVisitas.status,
+        relato: crmVisitas.relato,
+        criadoEm: crmVisitas.createdAt,
+      })
+      .from(crmVisitas)
+      .where(condicao)
+      .orderBy(desc(crmVisitas.dataVisita))
+      .limit(limite)
+  } else {
+    const condicao =
+      chave.tipo === "cliente"
+        ? eq(crmAcoesProspeccao.clienteId, chave.id)
+        : eq(crmAcoesProspeccao.empresaId, chave.id)
+    dados = await db
+      .select({
+        id: crmAcoesProspeccao.id,
+        data: crmAcoesProspeccao.dataAcao,
+        tipo: crmAcoesProspeccao.tipo,
+        status: crmAcoesProspeccao.status,
+        relato: crmAcoesProspeccao.relato,
+        criadoEm: crmAcoesProspeccao.createdAt,
+      })
+      .from(crmAcoesProspeccao)
+      .where(condicao)
+      .orderBy(desc(crmAcoesProspeccao.dataAcao))
+      .limit(limite)
+  }
+
+  return { ...consulta, dados }
+}
+
+export async function chamarAnaliseComConsultas({
+  mensagens,
+  maxConsultas = 2,
+}: {
+  mensagens: MensagemIA[]
+  maxConsultas?: number
+}): Promise<{ conteudo: string; resultado: ResultadoIA; consultas: ResultadoConsultaCurada[] }> {
+  const conversa = [...mensagens]
+  const consultas: ResultadoConsultaCurada[] = []
+  let resultado: ResultadoIA = {
+    conteudo: "",
+    provedor: "nenhum",
+    modelo: "",
+    nomeChave: "",
+    tentativas: 0,
+  }
+
+  for (let rodada = 0; rodada <= maxConsultas; rodada++) {
+    resultado = await chamarIA(conversa, { temperatura: 0, maxTokens: 1100 })
+    if (resultado.provedor === "nenhum") break
+
+    const consulta = parseConsultaCurada(resultado.conteudo)
+    if (!consulta || consultas.length >= maxConsultas) break
+
+    const dados = await executarConsultaCurada(consulta)
+    consultas.push(dados)
+    conversa.push({ role: "assistant", content: resultado.conteudo })
+    conversa.push({
+      role: "user",
+      content: `Resultado da consulta curada autorizada:\n${JSON.stringify(dados).slice(0, 12000)}`,
+    })
+  }
+
+  return { conteudo: limparResposta(resultado.conteudo), resultado, consultas }
+}
+
+export async function contextoInicial(
+  linhas: LinhaAnaliseIA[],
+  filtros: Record<string, unknown>
+) {
+  const temperaturas = await buscarTemperaturas(linhas)
+  const preparadas = prepararLinhas(linhas, temperaturas)
+  return { linhas: preparadas, mensagens: montarMensagensAnalise({ linhas: preparadas, filtros }) }
+}

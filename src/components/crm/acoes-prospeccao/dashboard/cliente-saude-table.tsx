@@ -169,61 +169,37 @@ export function ClienteSaudeTable({
 
   const aec = filtradas.filter((linha) => classificarAlerta(linha).rotulo === "AEC")
   const engajados = filtradas.filter((linha) => classificarAlerta(linha).rotulo === "Engajados")
-  const eql = filtradas.filter((linha) => classificarAlerta(linha).rotulo === "EQL")
   const bec = filtradas.filter((linha) => classificarAlerta(linha).rotulo === "BEC")
 
   const estatisticas = {
-    Registros: filtradas.length,
     AEC: aec.length,
     Engajados: engajados.length,
-    EQL: eql.length,
     BEC: bec.length,
   }
 
   const cartoes = [
     {
-      rotulo: "Registros",
-      valor: filtradas.length,
-      info: saudeProspeccaoAcoesInfo.registros,
-      clicavel: false,
-      titulo: "",
-      descricao: "",
-      linhas: [] as ClienteSaude[],
-    },
-    {
       rotulo: "AEC",
       valor: aec.length,
       info: saudeProspeccaoAcoesInfo.aec,
-      clicavel: true,
       titulo: "Alto Esforço comercial",
-      descricao: "Esforço acima de 35% e pelo menos 20 pontos à frente do engajamento",
+      descricao: "Esforço acima de 45% com engajamento de até 30%",
       linhas: aec,
     },
     {
       rotulo: "Engajados",
       valor: engajados.length,
       info: saudeProspeccaoAcoesInfo.engajados,
-      clicavel: false,
-      titulo: "",
-      descricao: "",
-      linhas: [] as ClienteSaude[],
-    },
-    {
-      rotulo: "EQL",
-      valor: eql.length,
-      info: saudeProspeccaoAcoesInfo.eql,
-      clicavel: true,
-      titulo: "Equilibrado",
-      descricao: "Esforço e engajamento acima de 35%, com diferença menor que 20 pontos",
-      linhas: eql,
+      titulo: "Cliente puxando o resultado",
+      descricao: "Engajamento acima de 30%, independente do esforço",
+      linhas: engajados,
     },
     {
       rotulo: "BEC",
       valor: bec.length,
       info: saudeProspeccaoAcoesInfo.bec,
-      clicavel: true,
       titulo: "Baixo Esforço comercial",
-      descricao: "Esforço comercial até 35%",
+      descricao: "Esforço de até 45% com engajamento de até 30%",
       linhas: bec,
     },
   ]
@@ -299,7 +275,7 @@ export function ClienteSaudeTable({
         </div>
       </div>
 
-      <div className="grid gap-2 border-b border-slate-100 p-4 dark:border-slate-800 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-2 border-b border-slate-100 p-4 dark:border-slate-800 sm:grid-cols-2 lg:grid-cols-3">
         {cartoes.map((cartao) => {
           const estilo = corPorTitulo(cartao.rotulo)
           const Icone = iconePorTitulo(cartao.rotulo)
@@ -309,11 +285,8 @@ export function ClienteSaudeTable({
             "--card-borda": estilo.borda,
             "--card-realce": estilo.cor,
           } as CSSProperties
-          const classes = `rounded-lg border border-[color:var(--card-borda)] bg-[image:var(--card-fundo)] p-3 dark:bg-[image:var(--card-fundo-escuro)] ${
-            cartao.clicavel
-              ? "cursor-pointer outline-none transition hover:brightness-105 focus-visible:ring-2 focus-visible:ring-blue-500 dark:focus-visible:ring-blue-400"
-              : ""
-          }`
+          const classes =
+            "cursor-pointer rounded-lg border border-[color:var(--card-borda)] bg-[image:var(--card-fundo)] p-3 outline-none transition hover:brightness-105 focus-visible:ring-2 focus-visible:ring-blue-500 dark:bg-[image:var(--card-fundo-escuro)] dark:focus-visible:ring-blue-400"
 
           const conteudo = (
             <>
@@ -340,21 +313,12 @@ export function ClienteSaudeTable({
               <p className="mt-2 text-lg font-semibold" style={{ color: estilo.cor }}>
                 {cartao.valor}
               </p>
-              {cartao.clicavel && (
-                <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">
-                  Clique para ver a lista
-                </p>
-              )}
+              <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">
+                {cartao.descricao}
+              </p>
+              <p className="mt-0.5 text-[10px] text-slate-400">Clique para ver a lista</p>
             </>
           )
-
-          if (!cartao.clicavel) {
-            return (
-              <div key={cartao.rotulo} style={estiloCss} className={classes}>
-                {conteudo}
-              </div>
-            )
-          }
 
           const abrir = () =>
             setAlertaSelecionado({
@@ -490,7 +454,7 @@ export function ClienteSaudeTable({
             onChange={(event) => setApenasAlertas(event.target.checked)}
             className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 dark:border-slate-600"
           />
-          Só alertas
+          Só alertas (AEC/Engajados)
         </label>
       </div>
 

@@ -619,7 +619,7 @@ export default function AcoesProspeccaoDashboardPage() {
                 label="Kanban Ações"
               />
               <QuickAction
-                href="/comercial/crm/leads/dashboard"
+                href="/comercial/crm/saude-prospeccao"
                 icon={<CheckCircle2 size={18} />}
                 label="Saúde da Prospecção"
               />

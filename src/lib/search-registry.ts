@@ -612,8 +612,8 @@ export const searchRegistry: SearchItem[] = [
     module: "CRM",
   },
   {
-    id: "crm-leads-dashboard",
-    label: "CRM — Dashboard de Leads",
+    id: "crm-saude-prospeccao",
+    label: "CRM — Saúde da Prospecção",
     keywords: [
       "crm",
       "lead",
@@ -624,9 +624,12 @@ export const searchRegistry: SearchItem[] = [
       "visitas",
       "acoes",
       "painel",
+      "aec",
+      "bec",
+      "engajados",
     ],
-    href: "/comercial/crm/leads/dashboard",
-    description: "Saúde da prospecção por cliente/lead com visitas e ações lado a lado",
+    href: "/comercial/crm/saude-prospeccao",
+    description: "Saúde da prospecção por cliente/lead com visitas, ações e análise de IA",
     module: "CRM",
   },
   {

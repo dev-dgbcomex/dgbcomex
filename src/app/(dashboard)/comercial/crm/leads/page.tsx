@@ -21,6 +21,7 @@ import {
   Mail,
   Phone,
   MapPin,
+  Activity,
 } from "lucide-react"
 import LeadsKanban from "@/components/crm/leads-kanban"
 import { FloatableKanban } from "@/components/crm/floatable-kanban"
@@ -294,6 +295,13 @@ function CrmLeadsPageContent() {
             <Database size={14} />
             Importar via API
           </Button>
+          <Link
+            href="/comercial/crm/saude-prospeccao"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+          >
+            <Activity size={14} aria-hidden="true" />
+            Saúde da Prospecção
+          </Link>
           <Link
             href="/comercial/crm/leads/novo"
             className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 transition-colors shadow-sm"

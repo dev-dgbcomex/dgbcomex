@@ -27,6 +27,7 @@ import {
   AlertCircle,
   BarChart3,
   Megaphone,
+  Activity,
 } from "lucide-react"
 
 const CrmCharts = dynamic(() => import("./charts").then((m) => m.CrmCharts), { ssr: false })
@@ -157,6 +158,13 @@ export default function CrmDashboardPage() {
             Dashboard comercial com métricas de pipeline, atividades e previsão
           </p>
         </div>
+        <Link
+          href="/comercial/crm/saude-prospeccao"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+        >
+          <Activity size={14} aria-hidden="true" />
+          Saúde da Prospecção
+        </Link>
       </div>
 
       <QuickActionsBar />

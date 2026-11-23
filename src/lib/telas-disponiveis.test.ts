@@ -60,6 +60,7 @@ describe("telas disponiveis", () => {
     "/comercial/crm/treinamento/admin/novo",
     "/comercial/crm/treinamento/exportar-pdf",
     "/comercial/crm/leads",
+    "/comercial/crm/leads/dashboard",
     "/comercial/crm/leads/novo",
     "/comercial/crm/leads/[id]",
     "/comercial/crm/pessoas",

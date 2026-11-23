@@ -13,6 +13,7 @@ export const crmDashboardInfo = {
       "Clicar em um card, em 'Ver todas', em uma barra do funil ou em um status abre GET /api/crm/dashboard/detalhes com o bloco correspondente.",
       "O 'i' do título explica a tela como um todo; o 'i' de cada bloco explica a origem e o cálculo do número exibido naquele bloco.",
       "As Ações Rápidas ficam em faixas compactas acima dos cards e ao final da página, são atalhos para cadastros e listagens e não alteram os números exibidos; a repetição no final permite acessar os atalhos sem voltar ao topo, inclusive por teclado.",
+      "O botão 'Saúde da Prospecção' no cabeçalho abre o painel por cliente ou lead com as classificações AEC, BEC e Engajados.",
     ],
     examples: [
       {

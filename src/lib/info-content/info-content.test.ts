@@ -360,7 +360,7 @@ describe("getInfoContent", () => {
     expect(texto).toMatch(/quantidade de oportunidades/i)
     expect(texto).toMatch(/CSV, PDF e MD/i)
     expect(texto).toMatch(/Todas \/ Minhas Visitas/i)
-    expect(texto).toMatch(/Dashboard de Leads/i)
+    expect(texto).toMatch(/Saúde da Prospecção/i)
     expect(texto).not.toMatch(/Visitas R\/A\/C/i)
     expect(texto).not.toMatch(/\bAEC\b/i)
   })
@@ -400,15 +400,15 @@ describe("getInfoContent", () => {
     expect(texto).toMatch(/quantidade de oportunidades/i)
     expect(texto).toMatch(/CSV, PDF e MD/i)
     expect(texto).toMatch(/Todas \/ Minhas Ações/i)
-    expect(texto).toMatch(/Dashboard de Leads/i)
+    expect(texto).toMatch(/Saúde da Prospecção/i)
     expect(texto).not.toMatch(/Ações R\/A\/C/i)
     expect(texto).not.toMatch(/\bAEC\b/i)
   })
 
-  it("o dashboard de leads explica visitas e ações lado a lado", () => {
-    const conteudo = getInfoContent("/comercial/crm/leads/dashboard")
+  it("a saúde da prospecção explica visitas, ações, regras dos cards e IA", () => {
+    const conteudo = getInfoContent("/comercial/crm/saude-prospeccao")
     expect(conteudo).not.toBeNull()
-    expect(conteudo?.title).toMatch(/Dashboard de Leads/i)
+    expect(conteudo?.title).toMatch(/Saúde da Prospecção/i)
 
     const texto = [
       conteudo?.description ?? "",
@@ -422,14 +422,23 @@ describe("getInfoContent", () => {
     expect(texto).toMatch(/ano corrente/i)
     expect(texto).toMatch(/Visitas R\/A\/C/i)
     expect(texto).toMatch(/Ações R\/A\/C/i)
-    expect(texto).toMatch(/mesma métrica/i)
     expect(texto).toMatch(/somente dados reais da sua origem/i)
     expect(texto).toMatch(/visitas reais/i)
     expect(texto).toMatch(/AEC/i)
     expect(texto).toMatch(/Engajados/i)
-    expect(texto).toMatch(/EQL/i)
     expect(texto).toMatch(/BEC/i)
-    expect(texto).toMatch(/10 pontos à frente/i)
+    expect(texto).toMatch(/30%/i)
+    expect(texto).toMatch(/45%/i)
+    expect(texto).not.toMatch(/\bEQL\b/i)
+    expect(texto).toMatch(/STATUS OPORT\./i)
+    expect(texto).toMatch(/VALOR OPORT\./i)
+    expect(texto).toMatch(/PROB\. OPORT\./i)
+    expect(texto).toMatch(/Última ação/i)
+    expect(texto).toMatch(/Próxima ação/i)
+    expect(texto).toMatch(/Analisar com IA/i)
+    expect(texto).toMatch(/consultas curadas/i)
+    expect(texto).toMatch(/Concluir e enviar/i)
+    expect(texto).toMatch(/Markdown/i)
     expect(texto).toMatch(/Conversão/i)
     expect(texto).toMatch(/36%/i)
     expect(texto).toMatch(/9,33%/i)
@@ -781,11 +790,12 @@ describe("saudeProspeccaoInfo", () => {
         ?.map((exemplo) => `${exemplo.title}: ${exemplo.desc}`)
         .join(" ")
     ).toMatch(/4 visitas, 1 pedido/i)
-    expect(saudeProspeccaoInfo.aec.rules?.join(" ")).toMatch(/Esforço > 35/i)
-    expect(saudeProspeccaoInfo.engajados.rules?.join(" ")).toMatch(/Engajamento − Esforço ≥ 10/i)
-    expect(saudeProspeccaoInfo.eql.rules?.join(" ")).toMatch(/\|Esforço − Engajamento\| < 20/i)
-    expect(saudeProspeccaoInfo.eql.rules?.join(" ")).toMatch(/pelo menos 10 pontos à frente/i)
-    expect(saudeProspeccaoInfo.bec.rules?.join(" ")).toMatch(/Esforço ≤ 35/i)
+    expect(saudeProspeccaoInfo.aec.rules?.join(" ")).toMatch(/Esforço > 45/i)
+    expect(saudeProspeccaoInfo.aec.rules?.join(" ")).toMatch(/Engajamento ≤ 30/i)
+    expect(saudeProspeccaoInfo.engajados.rules?.join(" ")).toMatch(/Engajamento > 30/i)
+    expect(saudeProspeccaoInfo.engajados.rules?.join(" ")).toMatch(/prevalece/i)
+    expect(saudeProspeccaoInfo.bec.rules?.join(" ")).toMatch(/Esforço ≤ 45/i)
+    expect(saudeProspeccaoInfo.bec.rules?.join(" ")).toMatch(/exatamente 45%/i)
     expect(saudeProspeccaoInfo.conversao.rules?.join(" ")).toMatch(/limitado a 100%/i)
     expect(saudeProspeccaoInfo.esforco.rules?.join(" ")).toMatch(/visita realizada \(\+12,5\)/i)
     expect(saudeProspeccaoInfo.esforco.rules?.join(" ")).toMatch(/proposta \(\+25\)/i)
@@ -862,7 +872,10 @@ describe("saudeProspeccaoLeadsInfo", () => {
     expect(
       saudeProspeccaoLeadsInfo.tabela.examples?.map((exemplo) => exemplo.desc).join(" ")
     ).toMatch(/0\/0\/0 em Visitas R\/A\/C e 3\/1\/0 em Ações R\/A\/C/)
-    expect(saudeProspeccaoLeadsInfo.aec.rules?.join(" ")).toMatch(/Esforço > 35/i)
+    expect(saudeProspeccaoLeadsInfo.aec.rules?.join(" ")).toMatch(/Esforço > 45/i)
+    expect(saudeProspeccaoLeadsInfo.engajados.rules?.join(" ")).toMatch(/Engajamento > 30/i)
+    expect(saudeProspeccaoLeadsInfo.ia.rules?.join(" ")).toMatch(/consultas curadas/i)
+    expect(saudeProspeccaoLeadsInfo.ia.rules?.join(" ")).toMatch(/Concluir e enviar/i)
     expect(saudeProspeccaoLeadsInfo.itensEngajamento.rules?.join(" ")).toMatch(/9,33% cada/i)
     expect(saudeProspeccaoLeadsInfo.itensEngajamento.rules?.join(" ")).toMatch(
       /Itens de visitas e de ações de prospecção/i
@@ -881,13 +894,9 @@ describe("saudeProspeccaoAcoesInfo", () => {
         ?.map((exemplo) => `${exemplo.title}: ${exemplo.desc}`)
         .join(" ")
     ).toMatch(/4 ações, 1 pedido/i)
-    expect(saudeProspeccaoAcoesInfo.aec.rules?.join(" ")).toMatch(/Esforço > 35/i)
-    expect(saudeProspeccaoAcoesInfo.engajados.rules?.join(" ")).toMatch(
-      /Engajamento − Esforço ≥ 10/i
-    )
-    expect(saudeProspeccaoAcoesInfo.eql.rules?.join(" ")).toMatch(/\|Esforço − Engajamento\| < 20/i)
-    expect(saudeProspeccaoAcoesInfo.eql.rules?.join(" ")).toMatch(/pelo menos 10 pontos à frente/i)
-    expect(saudeProspeccaoAcoesInfo.bec.rules?.join(" ")).toMatch(/Esforço ≤ 35/i)
+    expect(saudeProspeccaoAcoesInfo.aec.rules?.join(" ")).toMatch(/Esforço > 45/i)
+    expect(saudeProspeccaoAcoesInfo.engajados.rules?.join(" ")).toMatch(/Engajamento > 30/i)
+    expect(saudeProspeccaoAcoesInfo.bec.rules?.join(" ")).toMatch(/Esforço ≤ 45/i)
     expect(saudeProspeccaoAcoesInfo.conversao.rules?.join(" ")).toMatch(/limitado a 100%/i)
     expect(saudeProspeccaoAcoesInfo.esforco.rules?.join(" ")).toMatch(/ação realizada \(\+12,5\)/i)
     expect(saudeProspeccaoAcoesInfo.esforco.rules?.join(" ")).toMatch(/proposta \(\+25\)/i)
@@ -1144,5 +1153,25 @@ describe("crmDashboardInfo", () => {
       ...(oportunidades?.rules ?? []),
     ].join("\n")
     expect(textoOportunidades).toMatch(/visualização padrão é em Cards/)
+  })
+
+  it("as telas com atalho explicam o destino Saúde da Prospecção", () => {
+    const rotas = [
+      "/comercial/crm",
+      "/comercial/crm/acoes-prospeccao",
+      "/comercial/crm/leads",
+      "/comercial/clientes",
+      "/comercial/crm/oportunidades",
+      "/comercial/crm/temperatura/kanban",
+    ]
+
+    for (const rota of rotas) {
+      const conteudo = getInfoContent(rota)
+      expect(conteudo, rota).not.toBeNull()
+      expect((conteudo?.rules ?? []).join("\n"), rota).toMatch(/Saúde da Prospecção/i)
+    }
+
+    const oportunidades = getInfoContent("/comercial/crm/oportunidades")
+    expect((oportunidades?.rules ?? []).join("\n")).toMatch(/começa em Todas/i)
   })
 })

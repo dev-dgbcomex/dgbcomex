@@ -691,7 +691,7 @@ export default function VisitasDashboardPage() {
                 bg="bg-indigo-100 dark:bg-indigo-950/50"
               />
               <QuickAction
-                href="/comercial/crm/leads/dashboard"
+                href="/comercial/crm/saude-prospeccao"
                 icon={<CheckCircle2 size={18} />}
                 label="Saúde da Prospecção"
                 color="text-green-600"

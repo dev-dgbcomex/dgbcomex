@@ -81,6 +81,23 @@ listSmokeSpec({
   matchQuery: "silva",
 })
 
+describe("ClientesComercialPage - atalho", () => {
+  it("oferece atalho para Saúde da Prospecção", () => {
+    const fetchMock = createFetchMock(({ method, url }) => {
+      if (method === "GET" && url === "/api/clientes") return { json: dados }
+      return { status: 404, json: { error: "Rota não mockada" } }
+    })
+    vi.stubGlobal("fetch", fetchMock.fn)
+
+    renderPage(<ClientesPage />)
+
+    expect(screen.getByRole("link", { name: "Saúde da Prospecção" })).toHaveAttribute(
+      "href",
+      "/comercial/crm/saude-prospeccao"
+    )
+  })
+})
+
 describe("ClientesComercialPage - cards", () => {
   it("mostra as contagens de relacionamento no lugar de solicitações e amostras", async () => {
     const fetchMock = createFetchMock(({ method, url }) => {

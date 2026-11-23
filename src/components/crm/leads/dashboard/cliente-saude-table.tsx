@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState, type CSSProperties } from "react"
+import { useEffect, useMemo, useState, type CSSProperties } from "react"
 import { FileDown, FileSpreadsheet, FileText, Loader2, Search } from "lucide-react"
 import { exportCSV, exportMarkdown, exportPDFRelatorio } from "@/lib/export-utils"
 import { corPorTitulo, iconePorTitulo } from "@/lib/dracula"
@@ -39,16 +39,16 @@ const TIPO_LABELS: Record<string, string> = {
 
 const CABECALHOS = [
   "Nome",
-  "Documento",
-  "Segmento/Porte",
   "Visitas R/A/C",
   "Ações R/A/C",
   "Última visita",
   "Próxima visita",
+  "Última ação",
+  "Próxima ação",
   "Itens de engajamento",
-  "Status oportunidade",
-  "Valor estimado",
-  "Probabilidade média",
+  "STATUS OPORT.",
+  "VALOR OPORT.",
+  "PROB. OPORT.",
   "Conversão",
   "Esforço",
   "Engajamento",
@@ -79,11 +79,13 @@ export function ClienteSaudeLeadsTable({
   isLoading,
   onSelecionar,
   onVerItens,
+  onFiltradasChange,
 }: {
   linhas: ClienteSaudeLeads[]
   isLoading?: boolean
   onSelecionar: (linha: ClienteSaudeLeads) => void
   onVerItens: (linha: ClienteSaudeLeads) => void
+  onFiltradasChange?: (linhas: ClienteSaudeLeads[], filtros: FiltrosSaude) => void
 }) {
   const [busca, setBusca] = useState("")
   const [segmento, setSegmento] = useState("")
@@ -128,6 +130,10 @@ export function ClienteSaudeLeadsTable({
 
   const filtradas = useMemo(() => filtrarClientesSaudeLeads(linhas, filtros), [linhas, filtros])
 
+  useEffect(() => {
+    onFiltradasChange?.(filtradas, filtros)
+  }, [filtradas, filtros, onFiltradasChange])
+
   const opcoes = useMemo(
     () => ({
       segmentos: opcoesUnicas(linhas.map((linha) => linha.segmento ?? "")),
@@ -146,14 +152,15 @@ export function ClienteSaudeLeadsTable({
 
   const dadosExportacao = filtradas.map((linha) => {
     const { resumo } = obterEngajamentoLeads(linha)
+    const segmento = `${linha.segmento ?? ""}${linha.porte ? ` / ${linha.porte}` : ""}`.trim() || "—"
     return [
-      linha.nome,
-      linha.documento,
-      `${linha.segmento ?? ""}${linha.porte ? ` / ${linha.porte}` : ""}`.trim() || "—",
+      `${linha.nome}\n${linha.documento ?? "—"} · ${segmento}`,
       `${linha.visitasRealizadas}/${linha.visitasAgendadas}/${linha.visitasCanceladas}`,
       `${linha.acoesRealizadas}/${linha.acoesAgendadas}/${linha.acoesCanceladas}`,
       formatarData(linha.ultimaVisita),
       formatarData(linha.proximaVisita),
+      formatarData(linha.ultimaAcao),
+      formatarData(linha.proximaAcao),
       `${resumo.quantidade}/${resumo.total} (${resumo.porcentagem}%)`,
       labelStatusOportunidade(linha.statusOportunidadeDominante),
       formatarMoeda(linha.valorEstimadoTotal),
@@ -166,72 +173,48 @@ export function ClienteSaudeLeadsTable({
 
   const aec = filtradas.filter((linha) => classificarAlertaLeads(linha).rotulo === "AEC")
   const engajados = filtradas.filter((linha) => classificarAlertaLeads(linha).rotulo === "Engajados")
-  const eql = filtradas.filter((linha) => classificarAlertaLeads(linha).rotulo === "EQL")
   const bec = filtradas.filter((linha) => classificarAlertaLeads(linha).rotulo === "BEC")
 
   const estatisticas = {
-    Registros: filtradas.length,
     AEC: aec.length,
     Engajados: engajados.length,
-    EQL: eql.length,
     BEC: bec.length,
   }
 
   const cartoes = [
     {
-      rotulo: "Registros",
-      valor: filtradas.length,
-      info: saudeProspeccaoLeadsInfo.registros,
-      clicavel: false,
-      titulo: "",
-      descricao: "",
-      linhas: [] as ClienteSaudeLeads[],
-    },
-    {
       rotulo: "AEC",
       valor: aec.length,
       info: saudeProspeccaoLeadsInfo.aec,
-      clicavel: true,
       titulo: "Alto Esforço comercial",
-      descricao: "Esforço acima de 35% e pelo menos 20 pontos à frente do engajamento",
+      descricao: "Esforço acima de 45% com engajamento de até 30%",
       linhas: aec,
     },
     {
       rotulo: "Engajados",
       valor: engajados.length,
       info: saudeProspeccaoLeadsInfo.engajados,
-      clicavel: false,
-      titulo: "",
-      descricao: "",
-      linhas: [] as ClienteSaudeLeads[],
-    },
-    {
-      rotulo: "EQL",
-      valor: eql.length,
-      info: saudeProspeccaoLeadsInfo.eql,
-      clicavel: true,
-      titulo: "Equilibrado",
-      descricao: "Esforço e engajamento acima de 35%, com diferença menor que 20 pontos",
-      linhas: eql,
+      titulo: "Cliente puxando o resultado",
+      descricao: "Engajamento acima de 30%, independente do esforço",
+      linhas: engajados,
     },
     {
       rotulo: "BEC",
       valor: bec.length,
       info: saudeProspeccaoLeadsInfo.bec,
-      clicavel: true,
       titulo: "Baixo Esforço comercial",
-      descricao: "Esforço comercial até 35%",
+      descricao: "Esforço de até 45% com engajamento de até 30%",
       linhas: bec,
     },
   ]
 
   function exportarCSV() {
-    exportCSV("saude-prospeccao-leads", [...CABECALHOS], dadosExportacao)
+    exportCSV("saude-prospeccao", [...CABECALHOS], dadosExportacao)
   }
 
   function exportarMarkdown() {
     exportMarkdown({
-      filename: "saude-prospeccao-leads",
+      filename: "saude-prospeccao",
       title: "Saúde da prospecção — leads",
       headers: [...CABECALHOS],
       rows: dadosExportacao,
@@ -246,7 +229,7 @@ export function ClienteSaudeLeadsTable({
       period: "Ano corrente",
       stats: estatisticas,
       tables: [{ headers: [...CABECALHOS], rows: dadosExportacao }],
-      filename: "saude-prospeccao-leads",
+      filename: "saude-prospeccao",
       orientation: "landscape",
     })
   }
@@ -296,7 +279,7 @@ export function ClienteSaudeLeadsTable({
         </div>
       </div>
 
-      <div className="grid gap-2 border-b border-slate-100 p-4 dark:border-slate-800 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-2 border-b border-slate-100 p-4 dark:border-slate-800 sm:grid-cols-2 lg:grid-cols-3">
         {cartoes.map((cartao) => {
           const estilo = corPorTitulo(cartao.rotulo)
           const Icone = iconePorTitulo(cartao.rotulo)
@@ -306,11 +289,8 @@ export function ClienteSaudeLeadsTable({
             "--card-borda": estilo.borda,
             "--card-realce": estilo.cor,
           } as CSSProperties
-          const classes = `rounded-lg border border-[color:var(--card-borda)] bg-[image:var(--card-fundo)] p-3 dark:bg-[image:var(--card-fundo-escuro)] ${
-            cartao.clicavel
-              ? "cursor-pointer outline-none transition hover:brightness-105 focus-visible:ring-2 focus-visible:ring-blue-500 dark:focus-visible:ring-blue-400"
-              : ""
-          }`
+          const classes =
+            "cursor-pointer rounded-lg border border-[color:var(--card-borda)] bg-[image:var(--card-fundo)] p-3 outline-none transition hover:brightness-105 focus-visible:ring-2 focus-visible:ring-blue-500 dark:bg-[image:var(--card-fundo-escuro)] dark:focus-visible:ring-blue-400"
 
           const conteudo = (
             <>
@@ -337,21 +317,12 @@ export function ClienteSaudeLeadsTable({
               <p className="mt-2 text-lg font-semibold" style={{ color: estilo.cor }}>
                 {cartao.valor}
               </p>
-              {cartao.clicavel && (
-                <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">
-                  Clique para ver a lista
-                </p>
-              )}
+              <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">
+                {cartao.descricao}
+              </p>
+              <p className="mt-0.5 text-[10px] text-slate-400">Clique para ver a lista</p>
             </>
           )
-
-          if (!cartao.clicavel) {
-            return (
-              <div key={cartao.rotulo} style={estiloCss} className={classes}>
-                {conteudo}
-              </div>
-            )
-          }
 
           const abrir = () =>
             setAlertaSelecionado({
@@ -487,7 +458,7 @@ export function ClienteSaudeLeadsTable({
             onChange={(event) => setApenasAlertas(event.target.checked)}
             className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 dark:border-slate-600"
           />
-          Só alertas
+          Só alertas (AEC/Engajados)
         </label>
       </div>
 
@@ -505,22 +476,7 @@ export function ClienteSaudeLeadsTable({
           <table className="w-full min-w-[1800px] text-xs">
             <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-slate-800">
               <tr className="border-b border-slate-200 dark:border-slate-700">
-                {[
-                  "Nome",
-                  "Documento",
-                  "Segmento/Porte",
-                  "Visitas R/A/C",
-                  "Ações R/A/C",
-                  "Última visita",
-                  "Próxima visita",
-                  "Itens de engajamento",
-                  "Status",
-                  "Valor estimado",
-                  "Prob.",
-                  "Conversão",
-                  "Esforço",
-                  "Engajamento",
-                ].map((coluna) => (
+                {CABECALHOS.map((coluna) => (
                   <th
                     key={coluna}
                     scope="col"
@@ -548,14 +504,10 @@ export function ClienteSaudeLeadsTable({
                       >
                         {linha.nome}
                       </button>
-                      <p className="text-[10px] text-slate-400 capitalize">{linha.tipo}</p>
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-2 text-slate-600 dark:text-slate-300">
-                      {linha.documento ?? "—"}
-                    </td>
-                    <td className="px-3 py-2 text-slate-600 dark:text-slate-300">
-                      {linha.segmento ?? "—"}
-                      {linha.porte ? ` / ${linha.porte}` : ""}
+                      <p className="text-[10px] text-slate-400">
+                        {linha.documento ?? "—"} · {linha.segmento ?? "—"}
+                        {linha.porte ? ` / ${linha.porte}` : ""}
+                      </p>
                     </td>
                     <td className="whitespace-nowrap px-3 py-2">
                       <button
@@ -584,6 +536,12 @@ export function ClienteSaudeLeadsTable({
                     </td>
                     <td className="whitespace-nowrap px-3 py-2 text-slate-600 dark:text-slate-300">
                       {formatarData(linha.proximaVisita)}
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-2 text-slate-600 dark:text-slate-300">
+                      {formatarData(linha.ultimaAcao)}
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-2 text-slate-600 dark:text-slate-300">
+                      {formatarData(linha.proximaAcao)}
                     </td>
                     <td className="px-3 py-2">
                       <EngajamentoBadge

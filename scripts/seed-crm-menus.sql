@@ -13,7 +13,7 @@ BEGIN
   INSERT INTO user_menu_itens (user_menu_id, titulo, url, ordem) VALUES
     (menu_id, 'Dashboard CRM', '/comercial/crm', 0),
     (menu_id, 'Leads', '/comercial/crm/leads', 1),
-    (menu_id, 'Dashboard Leads', '/comercial/crm/leads/dashboard', 2),
+    (menu_id, 'Saúde da Prospecção', '/comercial/crm/saude-prospeccao', 2),
     (menu_id, 'Contatos', '/comercial/crm/contatos', 3),
     (menu_id, 'Pessoas', '/comercial/crm/pessoas', 4),
     (menu_id, 'Oportunidades', '/comercial/crm/oportunidades', 5),
@@ -87,7 +87,7 @@ BEGIN
     INSERT INTO user_menu_itens (user_menu_id, titulo, url, ordem) VALUES
       ((SELECT id FROM user_menus WHERE role = 'COMERCIAL' AND titulo = 'CRM'), 'Dashboard CRM', '/comercial/crm', 0),
       ((SELECT id FROM user_menus WHERE role = 'COMERCIAL' AND titulo = 'CRM'), 'Leads', '/comercial/crm/leads', 1),
-      ((SELECT id FROM user_menus WHERE role = 'COMERCIAL' AND titulo = 'CRM'), 'Dashboard Leads', '/comercial/crm/leads/dashboard', 2),
+      ((SELECT id FROM user_menus WHERE role = 'COMERCIAL' AND titulo = 'CRM'), 'Saúde da Prospecção', '/comercial/crm/saude-prospeccao', 2),
       ((SELECT id FROM user_menus WHERE role = 'COMERCIAL' AND titulo = 'CRM'), 'Contatos', '/comercial/crm/contatos', 3),
       ((SELECT id FROM user_menus WHERE role = 'COMERCIAL' AND titulo = 'CRM'), 'Pessoas', '/comercial/crm/pessoas', 4),
       ((SELECT id FROM user_menus WHERE role = 'COMERCIAL' AND titulo = 'CRM'), 'Oportunidades', '/comercial/crm/oportunidades', 5),
@@ -110,7 +110,7 @@ BEGIN
     INSERT INTO user_menu_itens (user_menu_id, titulo, url, ordem) VALUES
       ((SELECT id FROM user_menus WHERE role = 'ADMIN' AND titulo = 'CRM'), 'Dashboard CRM', '/comercial/crm', 0),
       ((SELECT id FROM user_menus WHERE role = 'ADMIN' AND titulo = 'CRM'), 'Leads', '/comercial/crm/leads', 1),
-      ((SELECT id FROM user_menus WHERE role = 'ADMIN' AND titulo = 'CRM'), 'Dashboard Leads', '/comercial/crm/leads/dashboard', 2),
+      ((SELECT id FROM user_menus WHERE role = 'ADMIN' AND titulo = 'CRM'), 'Saúde da Prospecção', '/comercial/crm/saude-prospeccao', 2),
       ((SELECT id FROM user_menus WHERE role = 'ADMIN' AND titulo = 'CRM'), 'Contatos', '/comercial/crm/contatos', 3),
       ((SELECT id FROM user_menus WHERE role = 'ADMIN' AND titulo = 'CRM'), 'Pessoas', '/comercial/crm/pessoas', 4),
       ((SELECT id FROM user_menus WHERE role = 'ADMIN' AND titulo = 'CRM'), 'Oportunidades', '/comercial/crm/oportunidades', 5),
@@ -131,7 +131,7 @@ BEGIN
     INSERT INTO user_menu_itens (user_menu_id, titulo, url, ordem) VALUES
       ((SELECT id FROM user_menus WHERE role = 'SUDO' AND titulo = 'CRM'), 'Dashboard CRM', '/comercial/crm', 0),
       ((SELECT id FROM user_menus WHERE role = 'SUDO' AND titulo = 'CRM'), 'Leads', '/comercial/crm/leads', 1),
-      ((SELECT id FROM user_menus WHERE role = 'SUDO' AND titulo = 'CRM'), 'Dashboard Leads', '/comercial/crm/leads/dashboard', 2),
+      ((SELECT id FROM user_menus WHERE role = 'SUDO' AND titulo = 'CRM'), 'Saúde da Prospecção', '/comercial/crm/saude-prospeccao', 2),
       ((SELECT id FROM user_menus WHERE role = 'SUDO' AND titulo = 'CRM'), 'Contatos', '/comercial/crm/contatos', 3),
       ((SELECT id FROM user_menus WHERE role = 'SUDO' AND titulo = 'CRM'), 'Pessoas', '/comercial/crm/pessoas', 4),
       ((SELECT id FROM user_menus WHERE role = 'SUDO' AND titulo = 'CRM'), 'Oportunidades', '/comercial/crm/oportunidades', 5),

@@ -26,6 +26,25 @@
 
 > Detalhe técnico completo em [`docs/crm-cliente-e-relatorios.md`](./crm-cliente-e-relatorios.md).
 
+### Sessão 40 — Saúde da Prospecção, IA e atalhos no CRM
+
+- **Data:** 2026-11-22
+- **Commit:** `feat(crm): adiciona saude da prospeccao e atalhos`
+- **Tarefa:** consolidar visitas e ações de prospecção por cliente/lead em `/comercial/crm/saude-prospeccao`, com classificação AEC/BEC/Engajados, conversão e análise por IA; renomear a rota antiga; expor o atalho “Saúde da Prospecção” no CRM, Clientes, Leads, Ações de Prospecção, Oportunidades e Kanban de Temperatura; e abrir Oportunidades com o filtro Todas/Minhas em `Todas`.
+- **Decisões aprovadas:** Engajados prevalece quando engajamento > 30%; abaixo disso, esforço > 45% classifica como AEC e 45% ou menos como BEC; ações contam como visitas no esforço/engajamento sem espelhamento entre origens; timeline e tarefas não pontuam. A IA usa somente consultas curadas e parametrizadas, sem SQL livre, com no máximo duas consultas por retorno e envio de e-mail somente no botão “Concluir e enviar”. A antiga `/comercial/crm/leads/dashboard` virou redirect e o filtro de Oportunidades passou a carregar `/api/crm/oportunidades` por padrão.
+- **Resultado:**
+  - Nova página `/comercial/crm/saude-prospeccao` com filtro por responsável, recorte do ano corrente, cards de Visitas R/A/C, Ações R/A/C, AEC, Engajados e BEC, colunas de esforço, engajamento e conversão, exportações CSV/PDF/MD e painel `Analisar com IA`.
+  - `src/lib/crm/classificacao-saude.ts` centralizou os limiares; visitas e ações delegam para o helper, mantendo cards e tabelas consistentes.
+  - Backend de IA com análise inicial, chat seguro e conclusão: `POST/GET /api/crm/saude-prospeccao/ia/analises`, `GET /api/.../[id]`, `POST /api/.../[id]/mensagens` e `POST /api/.../[id]/concluir`, com acesso ao autor e ADMIN/SUDO/CRM.
+  - Migration `0077_saude_prospeccao_ia.sql` criou as tabelas de análises/mensagens, índices e renomeou o item de menu no Neon e no warehouse local.
+  - Atalho “Saúde da Prospecção” adicionado ao cabeçalho das seis telas; Oportunidades agora começa em `Todas`, com `Minhas` disponível.
+  - Busca global, menu seed e modais “i” das telas afetadas atualizados.
+- **Arquivos Envolvidos:** `src/app/(dashboard)/comercial/crm/{saude-prospeccao/page.tsx,leads/dashboard/page.tsx,page.tsx,acoes-prospeccao/page.tsx,leads/page.tsx,oportunidades/page.tsx,temperatura/kanban/page.tsx}`, `src/app/(dashboard)/comercial/clientes/page.tsx`, `src/components/crm/{leads/dashboard/cliente-saude-table.tsx,visitas/dashboard/cliente-saude-table.tsx,acoes-prospeccao/dashboard/cliente-saude-table.tsx,saude-prospeccao/analise-ia-panel.tsx}`, `src/lib/crm/{classificacao-saude.ts,visitas-saude.ts,acoes-prospeccao-saude.ts,leads-saude.ts,saude-prospeccao-ia.ts,saude-prospeccao-acesso.ts}`, `src/lib/db/schema/crm-saude-prospeccao-ia.ts`, `src/lib/db/migrations/0077_saude_prospeccao_ia.sql`, `src/app/api/crm/saude-prospeccao/ia/**`, `src/lib/info-content/{crm.ts,crm-dashboard.ts,comercial.ts,info-content.test.ts}`, `src/lib/search-registry.ts`, `src/lib/telas-disponiveis.test.ts`, `scripts/seed-crm-menus.sql`, `docs/Sessoes.md`.
+- **Testes:** novos em `saude-prospeccao/page.test.tsx`, `analise-ia-panel.test.tsx` e rotas de IA; ajustes nas tabelas, classificações, redirects e nas seis telas com atalho. Focados `7 arquivos / 133 testes passados`; suíte completa `npm run test` → **487 arquivos / 2840 testes passados**.
+- **Verificação:** `npm run lint` sem erros (apenas warnings pré-existentes); `tsc --noEmit --pretty false` limpo com `NODE_OPTIONS=--max-old-space-size=8192`; `npm run build` OK com `NODE_OPTIONS=--max-old-space-size=8192` (240/240 páginas estáticas); `npm run db:migrate:all`, `npm run db:comparar` (estruturas idênticas) e `npm run db:verificar-local` (**0 divergências**, local ⊇ Neon).
+
+---
+
 ### Sessão 39 — Refino visual e filtros do kanban de temperatura
 
 - **Data:** 2026-11-22

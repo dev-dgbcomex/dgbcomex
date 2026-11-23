@@ -66,6 +66,8 @@ function faixaConversao(tipo: TipoContagem) {
   end`
 }
 
+export const faixaConversaoSql = faixaConversao
+
 export function contadoresCliente() {
   return {
     totalOportunidades: sql<number>`(select count(*)::int ${baseOportunidades("cliente")})`,

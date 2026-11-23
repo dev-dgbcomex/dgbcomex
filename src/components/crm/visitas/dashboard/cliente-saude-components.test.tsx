@@ -76,7 +76,10 @@ describe("ClienteSaudeTable", () => {
   it("renderiza scores percentuais, cards, filtros e a tabela", () => {
     render(
       <ClienteSaudeTable
-        linhas={[cliente(), cliente({ id: 2, nome: "Beta Ltda", scoreEngajamento: 60 })]}
+        linhas={[
+          cliente(),
+          cliente({ id: 2, nome: "Beta Ltda", scoreEsforco: 30, scoreEngajamento: 20 }),
+        ]}
         onSelecionar={vi.fn()}
         onVerItens={vi.fn()}
       />
@@ -91,14 +94,14 @@ describe("ClienteSaudeTable", () => {
     expect(screen.getByRole("searchbox", { name: /Buscar cliente ou pessoa/i })).toBeInTheDocument()
     expect(screen.getAllByText("100%").length).toBeGreaterThan(0)
     expect(screen.getByText("90%")).toBeInTheDocument()
-    expect(screen.getByText("AEC")).toBeInTheDocument()
-    expect(screen.getByText("EQL")).toBeInTheDocument()
+    expect(screen.getByText("Engajados")).toBeInTheDocument()
     expect(screen.getByText("BEC")).toBeInTheDocument()
+    expect(screen.queryByText("EQL")).not.toBeInTheDocument()
     expect(screen.queryByText(/Diferença/i)).not.toBeInTheDocument()
     expect(screen.getByRole("columnheader", { name: "Próxima visita" })).toBeInTheDocument()
     expect(screen.getByRole("columnheader", { name: "Itens de engajamento" })).toBeInTheDocument()
     expect(screen.getByRole("columnheader", { name: "Conversão" })).toBeInTheDocument()
-    expect(screen.getAllByRole("button", { name: "Informações da tela" })).toHaveLength(6)
+    expect(screen.getAllByRole("button", { name: "Informações da tela" })).toHaveLength(4)
     expect(
       screen.getByRole("button", {
         name: /Itens de engajamento de Cliente Alpha: 5 de 5, 100%, Completo/i,
@@ -149,7 +152,7 @@ describe("ClienteSaudeTable", () => {
   it("abre o card AEC com a lista de clientes e pessoas", () => {
     render(
       <ClienteSaudeTable
-        linhas={[cliente({ nome: "Beta Ltda", scoreEngajamento: 60 })]}
+        linhas={[cliente({ nome: "Beta Ltda", scoreEsforco: 60, scoreEngajamento: 20 })]}
         onSelecionar={vi.fn()}
         onVerItens={vi.fn()}
       />
@@ -165,7 +168,7 @@ describe("ClienteSaudeTable", () => {
     expect(within(dialog).queryByText("Documento")).not.toBeInTheDocument()
   })
 
-  it("abre o card EQL com a lista de clientes equilibrados", () => {
+  it("abre o card Engajados com a lista de clientes puxando o resultado", () => {
     render(
       <ClienteSaudeTable
         linhas={[cliente({ nome: "Gama SA", scoreEsforco: 60, scoreEngajamento: 55 })]}
@@ -174,11 +177,11 @@ describe("ClienteSaudeTable", () => {
       />
     )
 
-    fireEvent.click(screen.getByRole("button", { name: /EQL: 1 registros\. Abrir lista/i }))
+    fireEvent.click(screen.getByRole("button", { name: /Engajados: 1 registros\. Abrir lista/i }))
 
     const dialog = screen.getByRole("dialog")
     expect(
-      within(dialog).getByRole("heading", { name: "Equilibrado" })
+      within(dialog).getByRole("heading", { name: "Cliente puxando o resultado" })
     ).toBeInTheDocument()
     expect(within(dialog).getByText("Gama SA")).toBeInTheDocument()
   })
@@ -186,7 +189,7 @@ describe("ClienteSaudeTable", () => {
   it("abre o card BEC com a lista de clientes e pessoas", () => {
     render(
       <ClienteSaudeTable
-        linhas={[cliente({ scoreEsforco: 30 })]}
+        linhas={[cliente({ scoreEsforco: 30, scoreEngajamento: 20 })]}
         onSelecionar={vi.fn()}
         onVerItens={vi.fn()}
       />

@@ -93,26 +93,30 @@ describe("visitas-saude", () => {
     })
   })
 
-  it("classifica AEC, Engajados, EQL e BEC com 10 pontos para Engajados", () => {
+  it("classifica Engajados por engajamento acima de 30 e AEC/BEC pelo esforço", () => {
     expect(classificarAlerta({ scoreEsforco: 100, scoreEngajamento: 70 })).toEqual({
-      rotulo: "AEC",
-      tom: "vermelho",
+      rotulo: "Engajados",
+      tom: "amarelo",
     })
     expect(classificarAlerta({ scoreEsforco: 40, scoreEngajamento: 80 })).toEqual({
       rotulo: "Engajados",
       tom: "amarelo",
     })
-    expect(classificarAlerta({ scoreEsforco: 60, scoreEngajamento: 75 })).toEqual({
+    expect(classificarAlerta({ scoreEsforco: 60, scoreEngajamento: 55 })).toEqual({
       rotulo: "Engajados",
       tom: "amarelo",
     })
-    expect(classificarAlerta({ scoreEsforco: 60, scoreEngajamento: 55 })).toEqual({
-      rotulo: "EQL",
-      tom: "verde",
-    })
     expect(classificarAlerta({ scoreEsforco: 30, scoreEngajamento: 60 })).toEqual({
+      rotulo: "Engajados",
+      tom: "amarelo",
+    })
+    expect(classificarAlerta({ scoreEsforco: 45, scoreEngajamento: 20 })).toEqual({
       rotulo: "BEC",
       tom: "azul",
+    })
+    expect(classificarAlerta({ scoreEsforco: 46, scoreEngajamento: 20 })).toEqual({
+      rotulo: "AEC",
+      tom: "vermelho",
     })
     expect(classificarAlerta({ scoreEsforco: 50, scoreEngajamento: 20 })).toEqual({
       rotulo: "AEC",
@@ -155,7 +159,9 @@ describe("visitas-saude", () => {
     expect(filtrarClientesSaude(linhas, { statusVisita: "AGENDADA" })[0].id).toBe(2)
     expect(filtrarClientesSaude(linhas, { statusOportunidade: "PERDIDO" })[0].id).toBe(2)
     expect(filtrarClientesSaude(linhas, { tipoVisita: "VIDEO" })[0].id).toBe(2)
-    expect(filtrarClientesSaude(linhas, { apenasAlertas: true })[0].id).toBe(2)
+    expect(filtrarClientesSaude(linhas, { apenasAlertas: true }).map((linha) => linha.id)).toEqual([
+      1, 2,
+    ])
     expect(filtrarClientesSaude(linhas, { busca: "inexistente" })).toHaveLength(0)
   })
 

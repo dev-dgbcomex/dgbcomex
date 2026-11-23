@@ -447,3 +447,61 @@ export const resumoIaConsultaSchema = z.object({
   tipo: z.enum(["lead", "cliente"]),
   id: z.string().regex(/^[1-9]\d*$/, "ID deve ser um número positivo").transform(Number),
 })
+
+const textoOpcionalSchema = z.string().max(300).nullable().optional()
+const percentualSchema = z.number().finite().min(0).max(100)
+const contadorSchema = z.number().finite().min(0)
+
+export const linhaAnaliseIaSchema = z.object({
+  id: idPositivoSchema,
+  tipo: z.enum(["cliente", "pessoa"]),
+  nome: z.string().min(1).max(300),
+  documento: textoOpcionalSchema,
+  segmento: textoOpcionalSchema,
+  porte: textoOpcionalSchema,
+  responsaveis: z.array(z.string().max(200)).max(20).optional(),
+  scoreEsforco: percentualSchema,
+  scoreEngajamento: percentualSchema,
+  percentualConversao: percentualSchema.optional(),
+  visitasRealizadas: contadorSchema.optional(),
+  visitasAgendadas: contadorSchema.optional(),
+  acoesRealizadas: contadorSchema.optional(),
+  acoesAgendadas: contadorSchema.optional(),
+  ultimaVisita: textoOpcionalSchema,
+  proximaVisita: textoOpcionalSchema,
+  ultimaAcao: textoOpcionalSchema,
+  proximaAcao: textoOpcionalSchema,
+  statusOportunidadeDominante: textoOpcionalSchema,
+  valorEstimadoTotal: contadorSchema.optional(),
+  probabilidadeMedia: percentualSchema.optional(),
+  pedidosVenda: contadorSchema.optional(),
+  faturamentos: contadorSchema.optional(),
+})
+
+export const filtrosSaudeIaSchema = z
+  .record(z.union([z.string().max(300), z.number(), z.boolean(), z.null()]))
+  .default({})
+
+export const saudeProspeccaoAnaliseSchema = z.object({
+  titulo: z.string().min(1).max(300).optional(),
+  linhas: z.array(linhaAnaliseIaSchema).min(1).max(200),
+  filtros: filtrosSaudeIaSchema,
+})
+
+export const saudeProspeccaoMensagemSchema = z.object({
+  mensagens: z
+    .array(
+      z.object({
+        papel: z.enum(["usuario", "assistente"]),
+        conteudo: z.string().min(1).max(8000),
+      })
+    )
+    .max(40),
+  pergunta: z.string().min(1).max(2000),
+})
+
+export const saudeProspeccaoConsultaSchema = z.object({
+  nome: z.enum(["oportunidades", "visitas", "acoes"]),
+  chave: z.object({ tipo: z.enum(["cliente", "pessoa"]), id: idPositivoSchema }),
+  limite: z.number().int().min(1).max(20).default(10),
+})

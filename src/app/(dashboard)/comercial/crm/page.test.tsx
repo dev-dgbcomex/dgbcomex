@@ -167,6 +167,15 @@ describe("CrmDashboardPage", () => {
     ).toBeInTheDocument()
   })
 
+  it("oferece atalho para Saúde da Prospecção", () => {
+    setup()
+
+    expect(screen.getByRole("link", { name: "Saúde da Prospecção" })).toHaveAttribute(
+      "href",
+      "/comercial/crm/saude-prospeccao"
+    )
+  })
+
   it("mostra o painel Top Leads somente com leads", async () => {
     setup()
 

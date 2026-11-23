@@ -461,7 +461,7 @@ export function filtrarClientesSaudeLeads<T extends ClienteSaudeVisitas>(
     ) {
       return false
     }
-    if (filtros.apenasAlertas && classificarAlertaLeads(linha).rotulo === "EQL") return false
+    if (filtros.apenasAlertas && classificarAlertaLeads(linha).rotulo === "BEC") return false
     return true
   })
 }

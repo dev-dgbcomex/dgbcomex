@@ -246,6 +246,7 @@ export const crmContent: Record<string, InfoContent> = {
       "A classificação usa o status das oportunidades e a data dos pedidos vinculados à lead, nunca o status cadastral da lead. Cada lead entra em uma única faixa, com prioridade de Quente sobre Morno e de Morno sobre Frio.",
       "As quantidades e a lista do modal respeitam a busca, os filtros de status/período e o filtro de conversão ativos na tela.",
       "Ao clicar no nome da lead, você abre o detalhe completo com timeline, WhatsApp e resumo IA.",
+      "O botão 'Saúde da Prospecção' no cabeçalho abre o painel por cliente ou lead com as classificações AEC, BEC e Engajados.",
     ],
     fields: [
       { name: "Razão Social", desc: "Nome jurídico da lead (obrigatório)" },
@@ -277,28 +278,31 @@ export const crmContent: Record<string, InfoContent> = {
       },
     ],
   },
-  "/comercial/crm/leads/dashboard": {
-    title: "Dashboard de Leads — saúde da prospecção",
+  "/comercial/crm/saude-prospeccao": {
+    title: "Saúde da Prospecção",
     description:
-      "Painel de saúde da prospecção por cliente ou lead. Reúne visitas reais e ações reais de prospecção do ano corrente lado a lado, com a mesma métrica de realizadas, agendadas e canceladas.",
+      "Painel de saúde da prospecção por cliente ou lead. Reúne visitas reais e ações reais do ano corrente, classifica cada linha em AEC, BEC ou Engajados e permite pedir uma análise de IA usando exclusivamente as regras do sistema.",
     rules: [
       "O recorte padrão é o ano corrente; a listagem de leads continua em /comercial/crm/leads.",
       "Lead promovida a cliente é agrupada com o cliente. Quem não virou cliente aparece pelo nome da lead.",
       "Cada coluna mostra somente dados reais da sua origem: ações não são espelhadas como visitas e visitas não são espelhadas como ações.",
-      "Visitas e ações usam a mesma métrica de realizadas/agendadas/canceladas e entram juntas no esforço e no engajamento com os mesmos pesos; se não houver visitas reais, a coluna de visitas fica zerada e a saúde é calculada pelas ações.",
-      "Esforço e engajamento aparecem apenas como percentual de 0 a 100%; não há mais campo de diferença.",
-      "Os cards usam os dois percentuais: esforço até 35% é BEC; esforço e engajamento acima de 35% com diferença menor que 20 pontos é EQL, exceto quando o engajamento está pelo menos 10 pontos à frente (Engajados); esforço pelo menos 20 pontos à frente é AEC.",
-      "Conversão = (pedidos de venda + faturamentos) ÷ total de registros de prospecção (visitas reais + ações reais) da linha, arredondado e limitado a 100%.",
+      "Visitas e ações entram juntas no esforço e no engajamento com os mesmos pesos; timeline e tarefas não entram na pontuação.",
+      "Engajamento acima de 30% classifica como Engajados e prevalece sobre as demais regras.",
+      "Com engajamento de até 30%, esforço acima de 45% classifica como AEC; 45% ou menos classifica como BEC.",
+      "Temperatura usa as regras do sistema: QUENTE com negociação ou ganho/pedido no mês, MORNO com proposta ou ganho/pedido no trimestre e FRIO nos demais casos.",
+      "Conversão = (pedidos de venda + faturamentos) ÷ total de visitas reais + ações reais da linha, arredondado e limitado a 100%.",
       "No badge de itens de engajamento, proposta e oportunidade valem 36% cada; ata/relato, check-in/check-out e contato dividem os 28% restantes (9,33% cada).",
       "Clique em Visitas R/A/C para listar as visitas e em Ações R/A/C para listar as ações; cada item da lista abre o cadastro correspondente.",
       "Clique no nome do cliente/lead para ver visitas, ações, contatos, propostas, oportunidades e valores do período.",
       "As tabelas exportam CSV, PDF e MD respeitando o recorte e os filtros atuais.",
       "O botão Todas/Minhas altera todo o dashboard e os dois conjuntos de dados.",
+      "O botão 'Analisar com IA' usa somente as linhas filtradas na tela. A análise sugere ações para elevar engajamento ou reduzir esforço sempre dentro das regras acima.",
+      "No modal da análise é possível fazer perguntas complementares, gerar Markdown, concluir e enviar o resultado por e-mail e consultar análises salvas depois.",
+      "O chat da IA consulta apenas consultas curadas e somente leitura; não é permitido SQL livre.",
+      "Análises salvas ficam visíveis para o autor e para usuários ADMIN, SUDO ou CRM.",
     ],
     columns: [
-      { name: "Nome", desc: "Cliente ou lead do período. Clicável — abre o modal completo." },
-      { name: "Documento", desc: "CNPJ ou CPF do cliente/lead." },
-      { name: "Segmento/Porte", desc: "Dados do cliente ou da lead, quando preenchidos." },
+      { name: "Nome", desc: "Cliente ou lead do período, com documento e segmento logo abaixo. Clicável — abre o modal completo." },
       {
         name: "Visitas R/A/C",
         desc: "Visitas reais realizadas / agendadas / canceladas no ano corrente; fica zerada quando não há visitas.",
@@ -308,22 +312,20 @@ export const crmContent: Record<string, InfoContent> = {
         desc: "Ações reais realizadas / agendadas / canceladas no ano corrente.",
       },
       {
-        name: "Última visita",
-        desc: "Data da visita real mais recente já realizada no recorte; mostra — quando não há visitas.",
+        name: "Última visita / Próxima visita",
+        desc: "Datas das visitas reais; mostra — quando não há visitas.",
       },
       {
-        name: "Próxima visita",
-        desc: "Data da próxima visita real agendada; mostra — quando não há visitas.",
+        name: "Última ação / Próxima ação",
+        desc: "Datas das ações reais; mostra — quando não há ações.",
       },
       {
         name: "Itens de engajamento",
         desc: "Quantidade de itens presentes e percentual ponderado.",
       },
-      { name: "Status", desc: "Status da oportunidade mais avançada." },
-      {
-        name: "Valor estimado / Prob.",
-        desc: "Soma dos valores das oportunidades e média das probabilidades.",
-      },
+      { name: "STATUS OPORT.", desc: "Status da oportunidade mais avançada." },
+      { name: "VALOR OPORT.", desc: "Soma dos valores das oportunidades." },
+      { name: "PROB. OPORT.", desc: "Média das probabilidades das oportunidades." },
       {
         name: "Conversão",
         desc: "Percentual de pedidos + faturamentos sobre o total de visitas reais + ações reais.",
@@ -338,7 +340,7 @@ export const crmContent: Record<string, InfoContent> = {
       { name: "Status da visita", desc: "Agendada, realizada, cancelada ou em andamento." },
       { name: "Status da oportunidade", desc: "Filtra pelo status das oportunidades vinculadas." },
       { name: "Tipo de visita", desc: "Presencial, vídeo ou telefone." },
-      { name: "Só alertas", desc: "Mostra AEC, Engajados e BEC; esconde os registros EQL." },
+      { name: "Só alertas (AEC/Engajados)", desc: "Mostra apenas AEC e Engajados; esconde BEC." },
       { name: "Todas / Minhas", desc: "Alterna entre todos os responsáveis e o usuário logado." },
     ],
     examples: [
@@ -347,10 +349,19 @@ export const crmContent: Record<string, InfoContent> = {
         desc: "Cliente com 0 visitas reais e 4 ações reais (3 realizadas e 1 agendada) aparece com 0/0/0 em Visitas R/A/C e 3/1/0 em Ações R/A/C; esforço e engajamento usam as ações.",
       },
       {
-        title: "AEC",
-        desc: "Muitas visitas e ações realizadas com relato, mas sem proposta ou oportunidade: esforço alto e engajamento baixo.",
+        title: "Engajados prevalece",
+        desc: "Esforço 80% e engajamento 45%: mesmo com esforço alto, o registro entra em Engajados.",
+      },
+      {
+        title: "BEC no limite",
+        desc: "Esforço exatamente 45% com engajamento 20% entra em BEC; apenas acima de 45% vira AEC.",
       },
     ],
+  },
+  "/comercial/crm/leads/dashboard": {
+    title: "Saúde da Prospecção (endereço antigo)",
+    description: "Endereço antigo do painel; o conteúdo foi movido para /comercial/crm/saude-prospeccao.",
+    rules: ["Esta URL redireciona para /comercial/crm/saude-prospeccao."],
   },
   "/comercial/crm/leads/novo": {
     title: "Novo Lead",
@@ -433,6 +444,8 @@ export const crmContent: Record<string, InfoContent> = {
       "O pipeline segue o fluxo: Novo → Qualificação → Proposta → Negociação → Fechado Ganho/Perdido.",
       "Os estágios e rótulos vêm do cadastro de Status (Admin → Configurações → Status, tipo Oportunidade): um novo status ativo já aparece aqui e vira coluna no Kanban.",
       "A visualização padrão é em Cards; Tabela e Kanban continuam disponíveis. Cards e Tabela usam os mesmos filtros e o Kanban organiza as oportunidades por status.",
+      "O filtro Todas/Minhas começa em Todas, mostrando as oportunidades de todos os responsáveis; Minhas continua disponível para restringir ao usuário logado.",
+      "O botão 'Saúde da Prospecção' no cabeçalho abre o painel por cliente ou lead com as classificações AEC, BEC e Engajados.",
       "Use o Kanban para arrastar oportunidades entre estágios do pipeline.",
       "Ao marcar como FECHADO_GANHO, é obrigatório ter um pedido do ERP vinculado; a lead vai para Possível Cliente, sem virar cliente automaticamente.",
       "Ao perder a última oportunidade, o sistema pergunta: marcar a lead como Perdida ou criar uma nova oportunidade e manter a lead Qualificada. Se houver outras oportunidades, a lead fica como está e você é avisado.",
@@ -559,6 +572,7 @@ export const crmContent: Record<string, InfoContent> = {
       "Se a última oportunidade de uma lead for perdida, o sistema pergunta se a lead deve ser marcada como Perdida ou mantida como Qualificada com uma nova oportunidade.",
       "Além do arraste, cada card oferece botões para mover entre faixas por teclado.",
       "Se um movimento fizer o card deixar de atender aos filtros ativos, ele desaparece da lista após a atualização e um aviso é exibido.",
+      "O botão 'Saúde da Prospecção' no cabeçalho abre o painel por cliente ou lead com as classificações AEC, BEC e Engajados.",
     ],
     fields: [
       { name: "Buscar leads e clientes", desc: "Campo de busca com limpar busca" },
@@ -614,7 +628,7 @@ export const crmContent: Record<string, InfoContent> = {
   "/comercial/crm/visitas/dashboard": {
     title: "Dashboard de Visitas",
     description:
-      "Painel de visitas comerciais do ano corrente com indicadores, gráficos de desempenho, viagens e últimas visitas com cliente/lead, documento e oportunidades. A saúde da prospecção por cliente ou lead fica no Dashboard de Leads.",
+      "Painel de visitas comerciais do ano corrente com indicadores, gráficos de desempenho, viagens e últimas visitas com cliente/lead, documento e oportunidades. A saúde da prospecção por cliente ou lead fica em /comercial/crm/saude-prospeccao.",
     rules: [
       "O recorte padrão é o ano corrente; a listagem de visitas continua em /comercial/crm/visitas.",
       "Os cards de resumo cobrem total de visitas, realizadas, canceladas, agendadas, de hoje, do mês, com pesquisa respondida e por tipo/status.",
@@ -623,7 +637,7 @@ export const crmContent: Record<string, InfoContent> = {
       "A seção Viagens cruza visitas, investimentos, retorno possível e retorno real por viagem; clique numa viagem para abrir o cronograma.",
       "A tabela Últimas visitas e as tabelas da seção Viagens exportam CSV, PDF e MD respeitando o recorte atual.",
       "O botão Todas/Minhas Visitas altera todo o dashboard.",
-      "Para comparar visitas e ações lado a lado, com esforço, engajamento e conversão por cliente/lead, use /comercial/crm/leads/dashboard.",
+      "Para comparar visitas e ações lado a lado, com esforço, engajamento e conversão por cliente/lead, use /comercial/crm/saude-prospeccao.",
     ],
     columns: [
       {
@@ -648,7 +662,7 @@ export const crmContent: Record<string, InfoContent> = {
       },
       {
         title: "Saúde da prospecção",
-        desc: "O atalho Saúde da Prospecção leva ao Dashboard de Leads, onde visitas e ações aparecem juntas por cliente/pessoa.",
+        desc: "O atalho Saúde da Prospecção leva a /comercial/crm/saude-prospeccao, onde visitas e ações aparecem juntas por cliente/pessoa.",
       },
     ],
   },
@@ -704,6 +718,7 @@ export const crmContent: Record<string, InfoContent> = {
       "No Kanban não há filtro superior: as colunas continuam agrupando as ações por status.",
       "No calendário, clique em um dia para ver as ações daquele dia. Clique em uma ação para ir ao detalhe.",
       "No Kanban, arraste os cards entre colunas para alterar o status da ação.",
+      "O botão 'Saúde da Prospecção' no cabeçalho abre o painel por cliente ou lead com visitas e ações reais e as classificações AEC, BEC e Engajados.",
     ],
     fields: [
       { name: "Lead", desc: "Lead ou cliente prospectado" },
@@ -715,7 +730,7 @@ export const crmContent: Record<string, InfoContent> = {
   "/comercial/crm/acoes-prospeccao/dashboard": {
     title: "Dashboard de Ações de Prospecção",
     description:
-      "Painel de ações de prospecção do ano corrente com indicadores, gráficos de desempenho, viagens e últimas ações com cliente/lead, documento e oportunidades. A saúde da prospecção por cliente ou lead fica no Dashboard de Leads.",
+      "Painel de ações de prospecção do ano corrente com indicadores, gráficos de desempenho, viagens e últimas ações com cliente/lead, documento e oportunidades. A saúde da prospecção por cliente ou lead fica em /comercial/crm/saude-prospeccao.",
     rules: [
       "O recorte padrão é o ano corrente; a listagem de ações continua em /comercial/crm/acoes-prospeccao.",
       "Os cards de resumo cobrem total de ações, realizadas, canceladas, agendadas, de hoje, do mês, com pesquisa respondida e por tipo/status.",
@@ -724,7 +739,7 @@ export const crmContent: Record<string, InfoContent> = {
       "A seção Viagens cruza ações, investimentos, retorno possível e retorno real por viagem; clique numa viagem para abrir o cronograma.",
       "A tabela Últimas ações e as tabelas da seção Viagens exportam CSV, PDF e MD respeitando o recorte atual.",
       "O botão Todas/Minhas Ações altera todo o dashboard.",
-      "Para comparar visitas e ações lado a lado, com esforço, engajamento e conversão por cliente/lead, use /comercial/crm/leads/dashboard.",
+      "Para comparar visitas e ações lado a lado, com esforço, engajamento e conversão por cliente/lead, use /comercial/crm/saude-prospeccao.",
     ],
     columns: [
       {
@@ -749,7 +764,7 @@ export const crmContent: Record<string, InfoContent> = {
       },
       {
         title: "Saúde da prospecção",
-        desc: "O atalho Saúde da Prospecção leva ao Dashboard de Leads, onde visitas e ações aparecem juntas por cliente/pessoa.",
+        desc: "O atalho Saúde da Prospecção leva a /comercial/crm/saude-prospeccao, onde visitas e ações aparecem juntas por cliente/pessoa.",
       },
     ],
   },
@@ -1641,7 +1656,7 @@ export const saudeProspeccaoInfo = {
   itensEngajamento: {
     title: "Itens de engajamento — pesos e detalhes",
     description:
-      "Composição ponderada do badge Itens de engajamento; ela é diferente do score de engajamento usado em AEC, Engajados, EQL e BEC.",
+      "Composição ponderada do badge Itens de engajamento; ela é diferente do score de engajamento usado em AEC, Engajados e BEC.",
     rules: [
       "Proposta e oportunidade valem 36% cada.",
       "Ata/relato, check-in/check-out e contato dividem os 28% restantes: 9,33% cada.",
@@ -1715,59 +1730,46 @@ export const saudeProspeccaoInfo = {
   },
   aec: {
     title: "AEC — Alto Esforço comercial",
-    description:
-      "Clientes e leads com esforço acima de 35% e pelo menos 20 pontos à frente do engajamento.",
+    description: "Clientes e leads com esforço acima de 45% e engajamento de até 30%.",
     rules: [
-      "Fórmula: AEC se Esforço > 35 e Esforço − Engajamento ≥ 20.",
-      "Também entra em AEC quem tem esforço acima de 35% e engajamento de até 35%.",
+      "Fórmula: AEC se Engajamento ≤ 30 e Esforço > 45.",
+      "Se o engajamento passar de 30%, o registro vai para Engajados mesmo com esforço alto.",
       "Clique no card para abrir a lista de clientes e leads desse grupo.",
     ],
     examples: [
       {
         title: "Exemplo",
-        desc: "Esforço 85% e engajamento 40%: 85 − 40 = 45. O registro entra em AEC (Alto Esforço comercial).",
+        desc: "Esforço 70% e engajamento 25%: entra em AEC (Alto Esforço comercial).",
       },
     ],
   },
   engajados: {
     title: "Engajados — clientes puxando o resultado",
-    description:
-      "Clientes e leads com engajamento acima de 35% e pelo menos 10 pontos à frente do esforço.",
-    rules: ["Fórmula: Engajados se Engajamento > 35 e Engajamento − Esforço ≥ 10."],
-    examples: [
-      {
-        title: "Exemplo",
-        desc: "Esforço 60% e engajamento 75%: 75 − 60 = 15. O registro entra em Engajados.",
-      },
-    ],
-  },
-  eql: {
-    title: "EQL — Equilibrado",
-    description: "Clientes e leads com esforço e engajamento acima de 35% e próximos um do outro.",
+    description: "Clientes e leads com engajamento acima de 30%, independente do esforço.",
     rules: [
-      "Fórmula: EQL se Esforço > 35, Engajamento > 35 e |Esforço − Engajamento| < 20.",
-      "Quando o engajamento fica pelo menos 10 pontos à frente, o registro vai para Engajados mesmo com diferença menor que 20.",
-      "Clique no card para abrir a lista de clientes e leads equilibradas.",
-    ],
-    examples: [
-      {
-        title: "Exemplo",
-        desc: "Esforço 60% e engajamento 55%: ambos acima de 35% e |60 − 55| = 5. O registro entra em EQL.",
-      },
-    ],
-  },
-  bec: {
-    title: "BEC — Baixo Esforço comercial",
-    description: "Clientes e leads com esforço comercial de até 35%.",
-    rules: [
-      "Fórmula: BEC se Esforço ≤ 35.",
-      "O engajamento pode ser qualquer valor; o que define o grupo é o esforço baixo.",
+      "Fórmula: Engajados se Engajamento > 30.",
+      "Esta regra prevalece sobre AEC e BEC.",
       "Clique no card para abrir a lista de clientes e leads desse grupo.",
     ],
     examples: [
       {
         title: "Exemplo",
-        desc: "Esforço 30% e engajamento 60%: como o esforço é 30%, o registro entra em BEC (Baixo Esforço comercial).",
+        desc: "Esforço 80% e engajamento 45%: entra em Engajados.",
+      },
+    ],
+  },
+  bec: {
+    title: "BEC — Baixo Esforço comercial",
+    description: "Clientes e leads com engajamento de até 30% e esforço de até 45%.",
+    rules: [
+      "Fórmula: BEC se Engajamento ≤ 30 e Esforço ≤ 45.",
+      "Esforço exatamente 45% entra em BEC; apenas acima disso vira AEC.",
+      "Clique no card para abrir a lista de clientes e leads desse grupo.",
+    ],
+    examples: [
+      {
+        title: "Exemplo",
+        desc: "Esforço 45% e engajamento 20%: entra em BEC (Baixo Esforço comercial).",
       },
     ],
   },
@@ -1836,6 +1838,10 @@ export const saudeProspeccaoLeadsInfo = {
       "Fórmula da conversão: (pedidos de venda + faturamentos) ÷ total de visitas reais + ações reais da linha, arredondado e limitado a 100%.",
       "No badge de itens de engajamento, proposta e oportunidade valem 36% cada e os outros três itens dividem 28% (9,33% cada); a coluna mostra quantos itens estão presentes e o percentual ponderado.",
       "Clique no nome para ver todas as visitas, ações, vínculos e valores do cliente/lead.",
+      "Última ação e Próxima ação mostram as datas das ações reais de prospecção correspondentes.",
+      "STATUS OPORT., VALOR OPORT. e PROB. OPORT. vêm das oportunidades vinculadas ao cliente/lead.",
+      "Engajamento acima de 30% classifica como Engajados; com até 30%, esforço acima de 45% é AEC e 45% ou menos é BEC.",
+      "A IA usa as linhas filtradas, as regras de temperatura do sistema e as fórmulas de esforço, engajamento e conversão; ela nunca inventa outra métrica.",
     ],
     columns: [
       {
@@ -1849,6 +1855,10 @@ export const saudeProspeccaoLeadsInfo = {
       {
         name: "Última / Próxima visita",
         desc: "Datas das visitas reais; mostra — quando não há visitas cadastradas.",
+      },
+      {
+        name: "Última / Próxima ação",
+        desc: "Datas das ações reais de prospecção; mostra — quando não há ações cadastradas.",
       },
       {
         name: "Itens de engajamento",
@@ -1913,6 +1923,32 @@ export const saudeProspeccaoLeadsInfo = {
       "Registro avulso aparece como lead.",
     ],
   },
+  ia: {
+    title: "Análise de IA — saúde da prospecção",
+    description:
+      "Análise solicitada a partir das linhas filtradas na tela. A IA usa somente as regras cadastradas no sistema para explicar a saúde da prospecção e sugerir próximos passos.",
+    rules: [
+      "O botão 'Analisar com IA' envia apenas os registros visíveis depois dos filtros atuais.",
+      "A temperatura enviada à IA segue QUENTE, MORNO ou FRIO, conforme negociações, propostas, pedidos e faturamentos do sistema.",
+      "A classificação enviada à IA segue Engajados, AEC ou BEC, com prevalência de Engajamento acima de 30%.",
+      "As sugestões devem aumentar o engajamento ou reduzir o esforço sem inventar novas métricas.",
+      "No chat é possível pedir detalhes; a IA pode consultar apenas consultas curadas e somente leitura, nunca SQL livre.",
+      "O botão 'Concluir e enviar' envia a conversa por e-mail para o usuário logado.",
+      "O botão Markdown gera o texto da análise para copiar ou salvar.",
+      "Análises salvas podem ser consultadas depois pelo autor e por usuários ADMIN, SUDO ou CRM.",
+    ],
+    columns: [
+      { name: "Análise", desc: "Texto em Markdown gerado pela IA." },
+      { name: "Perguntas e respostas", desc: "Histórico do chat sobre a análise." },
+      { name: "Salvas", desc: "Análises anteriores com data, título e autor." },
+    ],
+    examples: [
+      {
+        title: "AEC com baixo engajamento",
+        desc: "A IA pode sugerir negociar proposta existente ou abrir oportunidade, porque esses itens aumentam o engajamento nas regras do sistema.",
+      },
+    ],
+  },
 } satisfies Record<string, InfoContent>
 
 export const saudeProspeccaoAcoesInfo = {
@@ -1964,7 +2000,7 @@ export const saudeProspeccaoAcoesInfo = {
   itensEngajamento: {
     title: "Itens de engajamento — pesos e detalhes",
     description:
-      "Composição ponderada do badge Itens de engajamento; ela é diferente do score de engajamento usado em AEC, Engajados, EQL e BEC.",
+      "Composição ponderada do badge Itens de engajamento; ela é diferente do score de engajamento usado em AEC, Engajados e BEC.",
     rules: [
       "Proposta e oportunidade valem 36% cada.",
       "Ata/relato, check-in/check-out e contato dividem os 28% restantes: 9,33% cada.",
@@ -2041,59 +2077,46 @@ export const saudeProspeccaoAcoesInfo = {
   },
   aec: {
     title: "AEC — Alto Esforço comercial",
-    description:
-      "Clientes e leads com esforço acima de 35% e pelo menos 20 pontos à frente do engajamento.",
+    description: "Clientes e leads com esforço acima de 45% e engajamento de até 30%.",
     rules: [
-      "Fórmula: AEC se Esforço > 35 e Esforço − Engajamento ≥ 20.",
-      "Também entra em AEC quem tem esforço acima de 35% e engajamento de até 35%.",
+      "Fórmula: AEC se Engajamento ≤ 30 e Esforço > 45.",
+      "Se o engajamento passar de 30%, o registro vai para Engajados mesmo com esforço alto.",
       "Clique no card para abrir a lista de clientes e leads desse grupo.",
     ],
     examples: [
       {
         title: "Exemplo",
-        desc: "Esforço 85% e engajamento 40%: 85 − 40 = 45. O registro entra em AEC (Alto Esforço comercial).",
+        desc: "Esforço 70% e engajamento 25%: entra em AEC (Alto Esforço comercial).",
       },
     ],
   },
   engajados: {
     title: "Engajados — clientes puxando o resultado",
-    description:
-      "Clientes e leads com engajamento acima de 35% e pelo menos 10 pontos à frente do esforço.",
-    rules: ["Fórmula: Engajados se Engajamento > 35 e Engajamento − Esforço ≥ 10."],
-    examples: [
-      {
-        title: "Exemplo",
-        desc: "Esforço 60% e engajamento 75%: 75 − 60 = 15. O registro entra em Engajados.",
-      },
-    ],
-  },
-  eql: {
-    title: "EQL — Equilibrado",
-    description: "Clientes e leads com esforço e engajamento acima de 35% e próximos um do outro.",
+    description: "Clientes e leads com engajamento acima de 30%, independente do esforço.",
     rules: [
-      "Fórmula: EQL se Esforço > 35, Engajamento > 35 e |Esforço − Engajamento| < 20.",
-      "Quando o engajamento fica pelo menos 10 pontos à frente, o registro vai para Engajados mesmo com diferença menor que 20.",
-      "Clique no card para abrir a lista de clientes e leads equilibradas.",
-    ],
-    examples: [
-      {
-        title: "Exemplo",
-        desc: "Esforço 60% e engajamento 55%: ambos acima de 35% e |60 − 55| = 5. O registro entra em EQL.",
-      },
-    ],
-  },
-  bec: {
-    title: "BEC — Baixo Esforço comercial",
-    description: "Clientes e leads com esforço comercial de até 35%.",
-    rules: [
-      "Fórmula: BEC se Esforço ≤ 35.",
-      "O engajamento pode ser qualquer valor; o que define o grupo é o esforço baixo.",
+      "Fórmula: Engajados se Engajamento > 30.",
+      "Esta regra prevalece sobre AEC e BEC.",
       "Clique no card para abrir a lista de clientes e leads desse grupo.",
     ],
     examples: [
       {
         title: "Exemplo",
-        desc: "Esforço 30% e engajamento 60%: como o esforço é 30%, o registro entra em BEC (Baixo Esforço comercial).",
+        desc: "Esforço 80% e engajamento 45%: entra em Engajados.",
+      },
+    ],
+  },
+  bec: {
+    title: "BEC — Baixo Esforço comercial",
+    description: "Clientes e leads com engajamento de até 30% e esforço de até 45%.",
+    rules: [
+      "Fórmula: BEC se Engajamento ≤ 30 e Esforço ≤ 45.",
+      "Esforço exatamente 45% entra em BEC; apenas acima disso vira AEC.",
+      "Clique no card para abrir a lista de clientes e leads desse grupo.",
+    ],
+    examples: [
+      {
+        title: "Exemplo",
+        desc: "Esforço 45% e engajamento 20%: entra em BEC (Baixo Esforço comercial).",
       },
     ],
   },

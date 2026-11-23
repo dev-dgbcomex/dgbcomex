@@ -131,6 +131,15 @@ describe("KanbanTemperaturaPage", () => {
     expect(botaoAtual.style.outlineWidth).toBe("2px")
   })
 
+  it("oferece atalho para Saúde da Prospecção", () => {
+    setup()
+
+    expect(screen.getByRole("link", { name: "Saúde da Prospecção" })).toHaveAttribute(
+      "href",
+      "/comercial/crm/saude-prospeccao"
+    )
+  })
+
   it("abre o kanban em janela separada pelo botão Flutuar", async () => {
     const open = vi.spyOn(window, "open").mockImplementation(() => null)
     setup()

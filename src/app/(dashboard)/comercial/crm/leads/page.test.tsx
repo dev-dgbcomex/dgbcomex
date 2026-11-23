@@ -95,6 +95,15 @@ describe("LeadsPage kanban", () => {
     vi.stubGlobal("fetch", fetchMock.fn)
   })
 
+  it("oferece atalho para Saúde da Prospecção", () => {
+    renderPage(<CrmLeadsPage />)
+
+    expect(screen.getByRole("link", { name: "Saúde da Prospecção" })).toHaveAttribute(
+      "href",
+      "/comercial/crm/saude-prospeccao"
+    )
+  })
+
   it("alterna para o kanban", async () => {
     renderPage(<CrmLeadsPage />)
 

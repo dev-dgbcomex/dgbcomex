@@ -103,6 +103,15 @@ describe("AcoesProspeccaoPage", () => {
     navMock.setPathname("/comercial/crm/acoes-prospeccao")
   })
 
+  it("oferece atalho para Saúde da Prospecção", () => {
+    renderPage(<AcoesProspeccaoPage />)
+
+    expect(screen.getByRole("link", { name: "Saúde da Prospecção" })).toHaveAttribute(
+      "href",
+      "/comercial/crm/saude-prospeccao"
+    )
+  })
+
   it("abre no calendário por padrão", async () => {
     renderPage(<AcoesProspeccaoPage />)
 

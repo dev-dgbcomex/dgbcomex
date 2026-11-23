@@ -1,3 +1,5 @@
+import { classificarSaudeProspeccao } from "./classificacao-saude"
+
 export type AcaoProspeccaoSaudeDetalhe = {
   id: number
   dataAcao: string | null
@@ -460,31 +462,12 @@ export function calcularDiferenca(
   return linha.scoreEsforco - linha.scoreEngajamento
 }
 
-export type ClassificacaoSaude = "AEC" | "Engajados" | "EQL" | "BEC"
+export type { ClassificacaoSaude } from "./classificacao-saude"
 
 export function classificarAlerta(
   linha: Pick<ClienteSaude, "scoreEsforco" | "scoreEngajamento">
-): {
-  rotulo: ClassificacaoSaude
-  tom: "vermelho" | "amarelo" | "verde" | "azul"
-} {
-  const esforco = linha.scoreEsforco
-  const engajamento = linha.scoreEngajamento
-  const diferenca = esforco - engajamento
-
-  if (esforco <= 35) {
-    return { rotulo: "BEC", tom: "azul" }
-  }
-  if (engajamento <= 35) {
-    return { rotulo: "AEC", tom: "vermelho" }
-  }
-  if (engajamento - esforco >= 10) {
-    return { rotulo: "Engajados", tom: "amarelo" }
-  }
-  if (Math.abs(diferenca) < 20) {
-    return { rotulo: "EQL", tom: "verde" }
-  }
-  return { rotulo: "AEC", tom: "vermelho" }
+) {
+  return classificarSaudeProspeccao(linha)
 }
 
 function normalizar(valor: string | null | undefined): string {
@@ -519,7 +502,7 @@ export function filtrarClientesSaude(
       return false
     }
     if (filtros.tipoAcao && !linha.tiposAcao.includes(filtros.tipoAcao)) return false
-    if (filtros.apenasAlertas && classificarAlerta(linha).rotulo === "EQL") return false
+    if (filtros.apenasAlertas && classificarAlerta(linha).rotulo === "BEC") return false
     return true
   })
 }
