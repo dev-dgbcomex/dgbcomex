@@ -13,6 +13,9 @@ import { registrarLog } from "@/lib/notificar"
 import { previewVincularFaturado, aplicarVinculacaoFaturado } from "./vincular-faturado"
 import { createQueryBuilder } from "@/test/route-db-mock"
 
+const fetchMock = vi.fn()
+globalThis.fetch = fetchMock
+
 vi.mock("@/lib/db", () => ({ db: { select: vi.fn(), update: vi.fn(), insert: vi.fn() } }))
 vi.mock("@/lib/erp/cliente", () => ({ requisitarErp: vi.fn() }))
 vi.mock("@/lib/crm/verificar-pedido-faturado", () => ({
@@ -66,6 +69,7 @@ const pedidoErp = {
 
 describe("previewVincularFaturado", () => {
   beforeEach(() => {
+    fetchMock.mockReset()
     vi.resetAllMocks()
     vi.mocked(db.select).mockReset()
     vi.mocked(requisitarErp).mockReset()
@@ -76,7 +80,9 @@ describe("previewVincularFaturado", () => {
   })
 
   it("avisa quando não há faturamento para o pedido", async () => {
-    vi.mocked(requisitarErp).mockResolvedValue({ paginacao: { total: 0, pagina: 1, por_pagina: 50, total_paginas: 0 }, itens: [] })
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ paginacao: { total: 0, pagina: 1, por_pagina: 50, total_paginas: 0 }, itens: [] }), { status: 200, headers: { "Content-Type": "application/json" } })
+    )
 
     const resultado = await previewVincularFaturado({ oportunidadeId: 14, codigoPedido: "00007046" })
 
@@ -86,9 +92,10 @@ describe("previewVincularFaturado", () => {
   })
 
   it("mostra preview da nota faturada e valor da oportunidade", async () => {
-    vi.mocked(requisitarErp)
-      .mockResolvedValueOnce(notasLista)
-      .mockResolvedValueOnce(pedidoErp)
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify(notasLista), { status: 200, headers: { "Content-Type": "application/json" } })
+    )
+    vi.mocked(requisitarErp).mockResolvedValueOnce(pedidoErp)
     vi.mocked(db.select).mockReturnValueOnce(createQueryBuilder([]))
 
     const resultado = await previewVincularFaturado({ oportunidadeId: 14, codigoPedido: "00007046" })
@@ -100,15 +107,17 @@ describe("previewVincularFaturado", () => {
     expect(resultado.valorPedido).toBe(9162.37)
     expect(resultado.jaVinculado).toBe(false)
     expect(resultado.mensagem).toBeNull()
-    expect(vi.mocked(requisitarErp)).toHaveBeenCalledWith(
-      expect.stringContaining("/crm/faturamentos?pedido_origem=00007046")
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("/api/crm/erp/faturamentos?pedido_origem=00007046"),
+      expect.objectContaining({ cache: "no-store" })
     )
   })
 
   it("avisa quando pedido já vinculado a outra oportunidade", async () => {
-    vi.mocked(requisitarErp)
-      .mockResolvedValueOnce(notasLista)
-      .mockResolvedValueOnce(pedidoErp)
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify(notasLista), { status: 200, headers: { "Content-Type": "application/json" } })
+    )
+    vi.mocked(requisitarErp).mockResolvedValueOnce(pedidoErp)
     vi.mocked(db.select).mockReturnValueOnce(
       createQueryBuilder([{ id: 5, numero: "00007046", referenciaExterna: "13/00007046", oportunidadeId: 99 }])
     )
@@ -136,9 +145,12 @@ describe("aplicarVinculacaoFaturado", () => {
   })
 
   it("cria pedido, processa faturamento e fecha oportunidade", async () => {
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify(notasLista), { status: 200, headers: { "Content-Type": "application/json" } })
+    )
     vi.mocked(requisitarErp)
-      .mockResolvedValueOnce(notasLista)
-      .mockResolvedValueOnce(pedidoErp)
+      .mockResolvedValueOnce(pedidoErp) // pedidoErp for creating pedido espelho
+      .mockResolvedValueOnce({ ...notasLista.itens[0], itens: pedidoErp.itens }) // documentoErp for faturamento
     vi.mocked(db.select)
       .mockReturnValueOnce(createQueryBuilder([{ id: 14, empresaId: 17 }])) // oportunidade
       .mockReturnValueOnce(createQueryBuilder([])) // nenhum pedido vinculado
@@ -158,6 +170,10 @@ describe("aplicarVinculacaoFaturado", () => {
     expect(resultado.valorPedido).toBe(9162.37)
     expect(resultado.valorOportunidade).toBe(9162.37)
     expect(resultado.faturamentoId).toBe(100)
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("/api/crm/erp/faturamentos?pedido_origem=00007046"),
+      expect.objectContaining({ cache: "no-store" })
+    )
     expect(vi.mocked(criarPedidoEspelho)).toHaveBeenCalledWith({
       oportunidadeId: 14,
       empresa: "13",

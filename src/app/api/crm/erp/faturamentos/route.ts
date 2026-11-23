@@ -14,12 +14,14 @@ export async function GET(req: NextRequest) {
     const params = req.nextUrl.searchParams
     const busca = params.get("busca")?.trim() || ""
     const cnpj = params.get("cnpj")?.trim() || ""
+    const pedidoOrigem = params.get("pedido_origem")?.trim() || ""
     const pagina = Math.max(1, parseInt(params.get("pagina") || "1"))
     const porPagina = Math.min(200, Math.max(1, parseInt(params.get("porPagina") || "50")))
 
     const query = new URLSearchParams()
     if (busca) query.set("busca", busca)
     if (cnpj) query.set("cnpj", cnpj)
+    if (pedidoOrigem) query.set("pedido_origem", pedidoOrigem)
     query.set("pagina", String(pagina))
     query.set("por_pagina", String(porPagina))
 

@@ -77,9 +77,20 @@ export async function buscarNotasFaturadasPorPedido(codigoPedido: string): Promi
   if (!codigoPedido) {
     throw new Error("Informe o código do pedido")
   }
-  return requisitarErp<ListaErp<FaturamentoErp>>(
-    `/crm/faturamentos?pedido_origem=${encodeURIComponent(codigoPedido)}&por_pagina=50`
+  const res = await fetch(
+    `/api/crm/erp/faturamentos?pedido_origem=${encodeURIComponent(codigoPedido)}&por_pagina=50`,
+    { cache: "no-store" }
   )
+  if (!res.ok) {
+    const corpo = await res.json().catch(() => null)
+    throw new Error(corpo?.error || "Erro ao buscar faturados do ERP")
+  }
+  const dados = (await res.json()) as ListaErp<FaturamentoErp>
+  // Filtro client-side como garantia: o filtro pedido_origem do ERP pode não estar alinhado
+  const filtrados = dados.itens.filter(
+    (n) => (n.pedido_origem || "").trim() === codigoPedido.trim()
+  )
+  return { ...dados, itens: filtrados.length > 0 ? filtrados : dados.itens }
 }
 
 export async function previewVincularFaturado(params: {
