@@ -80,32 +80,18 @@ export async function buscarNotasFaturadasPorPedido(codigoPedido: string): Promi
 
   const codigoLimpo = codigoPedido.trim()
 
-  // Estratégia 1: filtro pedido_origem no ERP
+  // O filtro pedido_origem do ERP não está retornando resultados corretamente,
+  // então busca sem filtro e filtra client-side por pedido_origem (nosso_pedido).
   try {
     const dados = await requisitarErp<ListaErp<FaturamentoErp>>(
-      `/crm/faturamentos?pedido_origem=${encodeURIComponent(codigoLimpo)}&por_pagina=50`
-    )
-    const filtrados = dados.itens.filter(
-      (n) => (n.pedido_origem || "").trim() === codigoLimpo
-    )
-    if (filtrados.length > 0) {
-      return { ...dados, itens: filtrados }
-    }
-  } catch {
-    // segue para estratégia 2
-  }
-
-  // Estratégia 2: busca sem filtro (paginada) e filtra client-side
-  try {
-    const dados = await requisitarErp<ListaErp<FaturamentoErp>>(
-      `/crm/faturamentos?por_pagina=200`
+      `/crm/faturamentos?por_pagina=500`
     )
     const filtrados = dados.itens.filter(
       (n) => (n.pedido_origem || "").trim() === codigoLimpo
     )
     return { ...dados, itens: filtrados }
   } catch {
-    // Estratégia 3: falha total — retorna vazio para não quebrar a tela
+    // Falha total — retorna vazio para não quebrar a tela
     return { paginacao: { total: 0, pagina: 1, por_pagina: 50, total_paginas: 0 }, itens: [] }
   }
 }

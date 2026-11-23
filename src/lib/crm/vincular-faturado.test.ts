@@ -104,7 +104,7 @@ describe("previewVincularFaturado", () => {
     expect(resultado.jaVinculado).toBe(false)
     expect(resultado.mensagem).toBeNull()
     expect(vi.mocked(requisitarErp)).toHaveBeenCalledWith(
-      expect.stringContaining("/crm/faturamentos?pedido_origem=00007046")
+      expect.stringContaining("/crm/faturamentos?por_pagina=500")
     )
   })
 
@@ -164,7 +164,7 @@ describe("aplicarVinculacaoFaturado", () => {
     expect(resultado.faturamentoId).toBe(100)
     expect(resultado.status).toBe("FATURADO")
     expect(vi.mocked(requisitarErp)).toHaveBeenCalledWith(
-      expect.stringContaining("/crm/faturamentos?pedido_origem=00007046")
+      expect.stringContaining("/crm/faturamentos?por_pagina=500")
     )
     expect(vi.mocked(criarPedidoEspelho)).toHaveBeenCalledWith({
       oportunidadeId: 14,
