@@ -87,33 +87,36 @@ export async function buscarNotasFaturadasPorPedido(codigoPedido: string): Promi
     throw new Error("Informe o código do pedido")
   }
 
-  // Tenta primeiro com o filtro pedido_origem no ERP
+  const codigoLimpo = codigoPedido.trim()
+
+  // Estratégia 1: filtro pedido_origem no ERP
   try {
     const query = new URLSearchParams()
-    query.set("pedido_origem", codigoPedido.trim())
+    query.set("pedido_origem", codigoLimpo)
     query.set("por_pagina", "50")
     const dados = await fetchFaturamentos(query)
     const filtrados = dados.itens.filter(
-      (n) => (n.pedido_origem || "").trim() === codigoPedido.trim()
+      (n) => (n.pedido_origem || "").trim() === codigoLimpo
     )
     if (filtrados.length > 0) {
       return { ...dados, itens: filtrados }
     }
-    // Se o ERP não filtrar, retorna todos e deixa o filtro client-side abaixo
-    return { ...dados, itens: dados.itens.filter((n) => (n.pedido_origem || "").trim() === codigoPedido.trim()) }
-  } catch (erroPrimario) {
-    // Fallback: busca sem filtro e filtra client-side
-    try {
-      const query = new URLSearchParams()
-      query.set("por_pagina", "200")
-      const dados = await fetchFaturamentos(query)
-      const filtrados = dados.itens.filter(
-        (n) => (n.pedido_origem || "").trim() === codigoPedido.trim()
-      )
-      return { ...dados, itens: filtrados }
-    } catch {
-      throw erroPrimario
-    }
+  } catch {
+    // segue para estratégia 2
+  }
+
+  // Estratégia 2: busca sem filtro (paginada) e filtra client-side
+  try {
+    const query = new URLSearchParams()
+    query.set("por_pagina", "200")
+    const dados = await fetchFaturamentos(query)
+    const filtrados = dados.itens.filter(
+      (n) => (n.pedido_origem || "").trim() === codigoLimpo
+    )
+    return { ...dados, itens: filtrados }
+  } catch {
+    // Estratégia 3: falha total — retorna vazio para não quebrar a tela
+    return { paginacao: { total: 0, pagina: 1, por_pagina: 50, total_paginas: 0 }, itens: [] }
   }
 }
 
