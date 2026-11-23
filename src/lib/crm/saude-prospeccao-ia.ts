@@ -233,10 +233,12 @@ export function limparResposta(conteudo: string): string {
     .trim()
 }
 
-async function buscarChaveNVIDIA(): Promise<number | null> {
+export type ChaveIAResumo = { id: number; provedor: string; nome: string; modelo: string | null }
+
+export async function buscarChaveIAAnalise(): Promise<ChaveIAResumo | null> {
   try {
     const [chave] = await db
-      .select({ id: aiChaves.id })
+      .select({ id: aiChaves.id, provedor: aiChaves.provedor, nome: aiChaves.nome, modelo: aiChaves.modelo })
       .from(aiChaves)
       .where(
         and(
@@ -248,7 +250,7 @@ async function buscarChaveNVIDIA(): Promise<number | null> {
       )
       .orderBy(aiChaves.ordem)
       .limit(1)
-    return chave?.id ?? null
+    return chave ?? null
   } catch {
     return null
   }
@@ -337,7 +339,8 @@ export async function chamarAnaliseComConsultas({
   }
   let chaveForcada: number | null = null
   if (maxConsultas > 0) {
-    chaveForcada = chaveId ?? (await buscarChaveNVIDIA())
+    const chave = chaveId ? { id: chaveId } : await buscarChaveIAAnalise()
+    chaveForcada = chave?.id ?? null
   }
   let mensagensDecisao: MensagemIA[] = [
     ...conversa,

@@ -1929,6 +1929,7 @@ export const saudeProspeccaoLeadsInfo = {
       "Análise solicitada a partir das linhas filtradas na tela. A IA usa somente as regras cadastradas no sistema para explicar a saúde da prospecção e sugerir próximos passos.",
     rules: [
       "O botão 'Analisar com IA' envia apenas os registros visíveis depois dos filtros atuais e usa o mesmo provedor do resumo de IA do cliente.",
+      "O botão 'Ver envio à IA' mostra o payload e as mensagens que serão enviados ao provedor, sem chamar a IA, e nunca exibe a chave secreta da API.",
       "A decisão sobre consultas extras usa uma chamada curta; a resposta final mantém 700 tokens, evitando o limite de tokens por minuto do Groq.",
       "A temperatura enviada à IA segue QUENTE, MORNO ou FRIO, conforme negociações, propostas, pedidos e faturamentos do sistema.",
       "A classificação enviada à IA segue Engajados, AEC ou BEC, com prevalência de Engajamento acima de 30%.",

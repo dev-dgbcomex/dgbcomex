@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
 import ReactMarkdown from "react-markdown"
-import { Bot, Download, Loader2, MessageCircle, Send, Sparkles } from "lucide-react"
+import { Bot, Download, Eye, FileJson, Loader2, MessageCircle, Send, Sparkles } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -36,6 +36,14 @@ type Analise = {
   criadoPorNome: string | null
   createdAt: string
   enviadaEm: string | null
+}
+
+type PreviewIA = {
+  payload: { titulo: string; linhas: unknown[]; filtros: Record<string, unknown> }
+  mensagens: { role: string; content: string }[]
+  chave: { id: number; provedor: string; nome: string; modelo: string | null } | null
+  enviadoChars: number
+  estTokensAprox: number
 }
 
 const BASE = "/api/crm/saude-prospeccao/ia/analises"
@@ -87,6 +95,9 @@ export function AnaliseIaPanel({
   const [pergunta, setPergunta] = useState("")
   const [carregando, setCarregando] = useState(false)
   const [enviando, setEnviando] = useState(false)
+  const [previewData, setPreviewData] = useState<PreviewIA | null>(null)
+  const [carregandoPrevia, setCarregandoPrevia] = useState(false)
+  const [previewError, setPreviewError] = useState<string | null>(null)
 
   const payload = useMemo(
     () => ({
@@ -138,6 +149,45 @@ export function AnaliseIaPanel({
       toast.error(erro instanceof Error ? erro.message : "Falha ao gerar análise")
     } finally {
       setCarregando(false)
+    }
+  }
+
+  async function verEnvioIA() {
+    if (!linhas.length) return
+    if (previewData) {
+      setPreviewData(null)
+      setPreviewError(null)
+      return
+    }
+    setCarregandoPrevia(true)
+    setPreviewError(null)
+    try {
+      const resposta = await fetch(`${BASE}/preview`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+      const dados = await resposta.json()
+      if (!resposta.ok) {
+        throw new Error(dados.error ?? "Falha na prévia de envio")
+      }
+      setPreviewData(dados as PreviewIA)
+    } catch (erro) {
+      const mensagem = erro instanceof Error ? erro.message : "Falha na prévia de envio"
+      setPreviewError(mensagem)
+      toast.error(mensagem)
+    } finally {
+      setCarregandoPrevia(false)
+    }
+  }
+
+  async function copiarPrevia() {
+    if (!previewData) return
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(previewData, null, 2))
+      toast.success("Prévia copiada")
+    } catch {
+      toast.error("Não foi possível copiar a prévia")
     }
   }
 
@@ -292,6 +342,22 @@ export function AnaliseIaPanel({
                 </button>
                 <button
                   type="button"
+                  onClick={() => void verEnvioIA()}
+                  disabled={carregandoPrevia || !linhas.length}
+                  aria-expanded={!!previewData}
+                  aria-controls="preview-envio-ia"
+                  className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50 dark:text-slate-300 dark:hover:bg-slate-800"
+                >
+                  {carregandoPrevia ? <Loader2 size={14} className="animate-spin" /> : <FileJson size={14} />}
+                  {previewData ? "Ocultar prévia" : "Ver envio à IA"}
+                </button>
+                {previewError && (
+                  <span className="ml-2 rounded-md border border-red-200 bg-red-50 px-2 py-1.5 text-[10px] font-medium text-red-700 dark:border-red-900 dark:bg-red-950/20">
+                    {previewError}
+                  </span>
+                )}
+                <button
+                  type="button"
                   onClick={baixarMarkdown}
                   disabled={!analise}
                   className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50 dark:text-slate-300 dark:hover:bg-slate-800"
@@ -314,6 +380,53 @@ export function AnaliseIaPanel({
                   </span>
                 )}
               </div>
+
+              {previewError && (
+                <p className="mb-2 p-2 rounded border border-red-200 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-950/20 text-[11px]">
+                  {previewError}
+                </p>
+              )}
+
+              {previewData && (
+                <section
+                  id="preview-envio-ia"
+                  aria-label="Prévia do envio à IA"
+                  className="mb-3 border border-slate-200 rounded-lg bg-slate-50 dark:bg-slate-950 p-2 sm:p-3 max-h-80 overflow-auto"
+                >
+                  <div className="flex flex-wrap items-center gap-2 border-b pb-2 mb-2 text-[10px] font-semibold uppercase tracking-wide text-slate-500 sm:text-sm">
+                    <span>
+                      {previewData.mensagens.length} mensagens · {previewData.enviadoChars} chars ·
+                      ~{previewData.estTokensAprox} tokens
+                    </span>
+                    <span>
+                      {previewData.chave
+                        ? `${previewData.chave.provedor} · ${previewData.chave.nome} · id ${previewData.chave.id}`
+                        : "Sem chave NVIDIA; seleção padrão da IA"}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 text-[11px] sm:text-xs">
+                    <div>
+                      <div className="mb-1 text-slate-500">Payload enviado ao servidor</div>
+                      <pre className="whitespace-pre-wrap break-words text-slate-600 dark:text-slate-300">
+                        {JSON.stringify(previewData.payload, null, 2)}
+                      </pre>
+                    </div>
+                    <div>
+                      <div className="mb-1 text-slate-500">Mensagens enviadas à IA</div>
+                      <pre className="whitespace-pre-wrap break-words text-slate-600 dark:text-slate-300">
+                        {JSON.stringify(previewData.mensagens, null, 2)}
+                      </pre>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void copiarPrevia()}
+                    className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-2 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+                  >
+                    <FileJson size={12} /> Copiar JSON
+                  </button>
+                </section>
+              )}
 
               <div className="min-h-0 flex-1 overflow-auto p-3 sm:p-5">
                 {!analise ? (

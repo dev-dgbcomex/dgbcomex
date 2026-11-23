@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from "next/server"
-import { and, desc, eq, ilike, lt, or } from "drizzle-orm"
+import { desc, eq } from "drizzle-orm"
 import { requireAuth } from "@/lib/auth"
 import { handleApiError } from "@/lib/api-error"
 import { db } from "@/lib/db"
-import { aiChaves } from "@/lib/db/schema/ai-chaves"
 import {
   crmSaudeProspeccaoAnalises,
   crmSaudeProspeccaoMensagens,
 } from "@/lib/db/schema/crm-saude-prospeccao-ia"
 import { podeVerTodasAnalises } from "@/lib/crm/saude-prospeccao-acesso"
-import { chamarAnaliseComConsultas, contextoInicial } from "@/lib/crm/saude-prospeccao-ia"
+import { buscarChaveIAAnalise, chamarAnaliseComConsultas, contextoInicial } from "@/lib/crm/saude-prospeccao-ia"
 import { saudeProspeccaoAnaliseSchema, validateRequest } from "@/lib/validation"
 
 export const dynamic = "force-dynamic"
@@ -49,21 +48,8 @@ export async function POST(req: NextRequest) {
 
     const { titulo, linhas, filtros } = parsed.data
 
-    let chaveId: number | undefined
-    const [chaveIA] = await db
-      .select({ id: aiChaves.id })
-      .from(aiChaves)
-      .where(
-        and(
-          eq(aiChaves.ativo, true),
-          lt(aiChaves.failCount, 5),
-          eq(aiChaves.provedor, "openai_compatible"),
-          or(ilike(aiChaves.nome, "%nvidia%"), ilike(aiChaves.modelo, "%nemotron%"))
-        )
-      )
-      .orderBy(aiChaves.ordem)
-      .limit(1)
-    if (chaveIA) chaveId = chaveIA.id
+    const chave = await buscarChaveIAAnalise()
+    const chaveId = chave?.id
 
     const { linhas: preparadas, mensagens } = await contextoInicial(linhas, filtros)
     const enviadoChars = JSON.stringify(mensagens).length

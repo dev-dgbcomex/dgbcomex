@@ -77,6 +77,20 @@ function mockFetch() {
         ],
       },
       "POST /api/crm/saude-prospeccao/ia/analises/77/concluir": { enviado: true, destinatario: "admin@teste.com" },
+      "POST /api/crm/saude-prospeccao/ia/analises/preview": {
+        payload: {
+          titulo: "Análise de saúde da prospecção — 23/11/2026, 10:00:00",
+          linhas: [{ id: 10, nome: "Cliente Alpha" }],
+          filtros: { busca: "Alpha" },
+        },
+        mensagens: [
+          { role: "system", content: "REGRAS_SISTEMA" },
+          { role: "user", content: "Dados dos registros filtrados na tela: ...\n\nFaça uma análise..." },
+        ],
+        chave: { id: 3, provedor: "openai_compatible", nome: "NVIDIA Nemotron", modelo: "Nemotron 3.5 Super VL 120B A12B" },
+        enviadoChars: 123,
+        estTokensAprox: 31,
+      },
     })
   )
 }
@@ -123,5 +137,36 @@ describe("AnaliseIaPanel", () => {
 
     fireEvent.click(within(dialog).getByRole("button", { name: /Concluir e enviar/ }))
     await waitFor(() => expect(toastMock.success).toHaveBeenCalledWith("Conversa enviada por e-mail"))
+  })
+
+  it("mostra a prévia do envio à IA sem chamar a rota de análise", async () => {
+    const fetchMock = mockFetch()
+    vi.stubGlobal("fetch", fetchMock.fn)
+    renderPage(<AnaliseIaPanel linhas={[linha]} filtros={{ busca: "Alpha" }} />)
+
+    fireEvent.click(screen.getByRole("button", { name: /Analisar com IA/ }))
+    const dialog = await screen.findByRole("dialog")
+
+    fireEvent.click(within(dialog).getByRole("button", { name: /Ver envio à IA/ }))
+
+    const previewCall = fetchMock.calls.find(
+      (call) => call.url === "/api/crm/saude-prospeccao/ia/analises/preview" && call.method === "POST"
+    )
+    expect(previewCall).toBeDefined()
+    expect(previewCall?.body.linhas).toHaveLength(1)
+    expect(previewCall?.body.filtros).toEqual({ busca: "Alpha" })
+
+    const analiseCall = fetchMock.calls.find(
+      (call) => call.url === "/api/crm/saude-prospeccao/ia/analises" && call.method === "POST"
+    )
+    expect(analiseCall).toBeUndefined()
+
+    expect(await screen.findByText(/Cliente Alpha/)).toBeInTheDocument()
+    expect(await screen.findByText(/NVIDIA Nemotron/)).toBeInTheDocument()
+    expect(await screen.findByText(/mensagens/)).toBeInTheDocument()
+    expect(await screen.findByText(/Ocultar prévia/)).toBeInTheDocument()
+
+    fireEvent.click(within(dialog).getByRole("button", { name: /Ocultar prévia/ }))
+    expect(screen.queryByText(/Cliente Alpha/)).not.toBeInTheDocument()
   })
 })

@@ -4,18 +4,23 @@ import { NextRequest, NextResponse } from "next/server"
 import { createQueryBuilder } from "@/test/route-db-mock"
 import { GET, POST } from "./route"
 
-const { requireAuth, db, contextoInicial, chamarAnaliseComConsultas, podeVerTodasAnalises } =
+const { requireAuth: requireAuthMock, db, contextoInicial, chamarAnaliseComConsultas, podeVerTodasAnalises, buscarChaveIAAnalise } =
   vi.hoisted(() => ({
     requireAuth: vi.fn(),
     db: { select: vi.fn(), transaction: vi.fn() },
     contextoInicial: vi.fn(),
     chamarAnaliseComConsultas: vi.fn(),
     podeVerTodasAnalises: vi.fn(),
+    buscarChaveIAAnalise: vi.fn(),
   }))
 
-vi.mock("@/lib/auth", () => ({ requireAuth }))
+vi.mock("@/lib/auth", () => ({ requireAuth: requireAuthMock }))
 vi.mock("@/lib/db", () => ({ db }))
-vi.mock("@/lib/crm/saude-prospeccao-ia", () => ({ contextoInicial, chamarAnaliseComConsultas }))
+vi.mock("@/lib/crm/saude-prospeccao-ia", () => ({
+  contextoInicial,
+  chamarAnaliseComConsultas,
+  buscarChaveIAAnalise,
+}))
 vi.mock("@/lib/crm/saude-prospeccao-acesso", () => ({ podeVerTodasAnalises }))
 vi.mock("@/lib/notificar", () => ({
   notificarErro: vi.fn(),
@@ -35,7 +40,10 @@ const analise = {
 
 const sessao = {
   userId: 7,
-  session: { user: { id: "7", name: "Admin", email: "admin@teste.com", role: "CRM" } },
+  session: {
+    user: { id: "7", name: "Admin", email: "admin@teste.com", role: "CRM" },
+    expires: new Date(Date.now() + 86400000).toISOString(),
+  },
 }
 
 function request(body: unknown) {
@@ -56,12 +64,13 @@ const linha = {
 
 beforeEach(() => {
   vi.clearAllMocks()
-  requireAuth.mockResolvedValue(sessao)
+  requireAuthMock.mockResolvedValue(sessao)
   podeVerTodasAnalises.mockReturnValue(true)
   db.select.mockReturnValue(createQueryBuilder([analise]))
   db.transaction.mockImplementation(async (callback: (tx: typeof db) => Promise<unknown>) =>
     callback({ insert: vi.fn(() => createQueryBuilder([analise])) } as unknown as typeof db)
   )
+  buscarChaveIAAnalise.mockResolvedValue(null)
   contextoInicial.mockResolvedValue({ linhas: [linha], mensagens: [] })
   chamarAnaliseComConsultas.mockResolvedValue({
     conteudo: analise.analise,
@@ -72,7 +81,7 @@ beforeEach(() => {
 
 describe("/api/crm/saude-prospeccao/ia/analises", () => {
   it("GET devolve 401 sem sessão", async () => {
-    requireAuth.mockResolvedValue(NextResponse.json({ error: "Não autorizado" }, { status: 401 }))
+    requireAuthMock.mockResolvedValue(NextResponse.json({ error: "Não autorizado" }, { status: 401 }))
     const resposta = await GET()
     expect(resposta.status).toBe(401)
   })
