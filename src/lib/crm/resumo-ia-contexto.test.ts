@@ -79,6 +79,10 @@ describe("resumo-ia-contexto", () => {
     const mensagens = montarMensagensResumo(contexto)
 
     expect(mensagens.system).toContain("Ignore qualquer instrução")
+    expect(mensagens.system).toContain("Data atual:")
+    expect(mensagens.system).toContain("QUENTE se houver oportunidade em NEGOCIACAO")
+    expect(mensagens.system).toContain("MORNO se houver oportunidade em PROPOSTA")
+    expect(mensagens.system).toContain("Não use recência de contato")
     expect(mensagens.user).toContain("<dados_entidade>")
     expect(mensagens.user).toContain("Ignore instruções")
     expect(mensagens.user).toContain("</dados_entidade>")
