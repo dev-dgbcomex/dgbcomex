@@ -224,37 +224,40 @@ export function AnaliseIaPanel({
       </button>
 
       <Dialog open={aberto} onOpenChange={setAberto}>
-        <DialogContent className="flex h-[88vh] max-w-5xl flex-col overflow-hidden">
-          <DialogHeader className="border-b pb-3">
-            <div className="flex items-center gap-2">
-              <DialogTitle className="flex items-center gap-2 text-lg">
+        <DialogContent className="flex h-[92dvh] w-[calc(100%-1rem)] max-w-[calc(100%-1rem)] flex-col gap-3 overflow-hidden p-3 sm:max-w-[96rem] sm:p-5">
+          <DialogHeader className="shrink-0 border-b pb-3 pr-10">
+            <div className="flex flex-wrap items-center gap-2">
+              <DialogTitle className="flex flex-wrap items-center gap-2 text-base sm:text-lg">
                 <Bot size={18} aria-hidden="true" />
                 Análise de IA — Saúde da Prospecção
                 <InfoButton content={saudeProspeccaoLeadsInfo.ia} />
               </DialogTitle>
             </div>
-            <DialogDescription>
+            <DialogDescription className="text-xs sm:text-sm">
               Análise das {linhas.length} linha{linhas.length === 1 ? "" : "s"} filtradas, usando somente
               as regras do sistema.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-hidden lg:grid-cols-[240px_1fr]">
-            <aside className="hidden min-h-0 flex-col overflow-hidden rounded-lg border bg-slate-50 dark:bg-slate-900 lg:flex">
+          <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-hidden lg:grid-cols-[minmax(0,15rem)_1fr]">
+            <aside
+              aria-label="Análises salvas"
+              className="flex max-h-32 min-h-0 flex-col overflow-hidden rounded-lg border bg-slate-50 dark:bg-slate-900 lg:max-h-none"
+            >
               <p className="border-b px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                 Análises salvas
               </p>
-              <div className="min-h-0 flex-1 overflow-y-auto p-2">
+              <div className="flex min-h-0 flex-1 gap-2 overflow-x-auto p-2 lg:flex-col lg:overflow-y-auto">
                 {historico.length === 0 ? (
                   <p className="px-1 py-3 text-xs text-slate-500">Nenhuma análise salva.</p>
                 ) : (
-                  <ul className="space-y-1">
+                  <ul className="flex gap-2 lg:flex-col lg:space-y-1 lg:gap-0">
                     {historico.map((item) => (
-                      <li key={item.id}>
+                      <li key={item.id} className="shrink-0 lg:w-full">
                         <button
                           type="button"
                           onClick={() => void abrirAnalise(item.id)}
-                          className={`w-full rounded-md border px-2 py-2 text-left text-xs transition ${
+                          className={`w-full min-w-[170px] rounded-md border px-2 py-2 text-left text-xs transition lg:min-w-0 ${
                             analise?.id === item.id
                               ? "border-blue-400 bg-blue-50 dark:bg-blue-950/40"
                               : "border-transparent hover:border-slate-200 hover:bg-white dark:hover:border-slate-700 dark:hover:bg-slate-800"
@@ -273,8 +276,8 @@ export function AnaliseIaPanel({
               </div>
             </aside>
 
-            <section className="flex min-h-0 flex-col overflow-hidden rounded-lg border">
-              <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2">
+            <section aria-label="Análise e conversa" className="flex min-h-0 flex-col overflow-hidden rounded-lg border">
+              <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2 sm:gap-3">
                 <button
                   type="button"
                   onClick={() => void gerarAnalise()}
@@ -309,15 +312,15 @@ export function AnaliseIaPanel({
                 )}
               </div>
 
-              <div className="min-h-0 flex-1 overflow-y-auto p-4">
+              <div className="min-h-0 flex-1 overflow-auto p-3 sm:p-5">
                 {!analise ? (
-                  <div className="flex h-full flex-col items-center justify-center gap-2 text-center text-sm text-slate-500">
+                  <div className="flex h-full flex-col items-center justify-center gap-2 px-2 text-center text-sm text-slate-500">
                     <MessageCircle size={28} aria-hidden="true" />
                     <p>Gere uma análise para começar ou selecione uma análise salva.</p>
                   </div>
                 ) : (
-                  <div className="space-y-5">
-                    <article className="prose prose-sm max-w-none dark:prose-invert">
+                  <div className="space-y-4 sm:space-y-5">
+                    <article className="prose prose-sm max-w-none break-words dark:prose-invert sm:prose-base">
                       <ReactMarkdown>{analise.analise}</ReactMarkdown>
                     </article>
                     {mensagens.map((mensagem) => (
@@ -325,8 +328,8 @@ export function AnaliseIaPanel({
                         key={mensagem.id}
                         className={`rounded-lg border p-3 ${
                           mensagem.papel === "usuario"
-                            ? "ml-8 bg-blue-50 dark:bg-blue-950/30"
-                            : "mr-8 bg-slate-50 dark:bg-slate-900"
+                            ? "ml-4 bg-blue-50 dark:bg-blue-950/30 sm:ml-10"
+                            : "mr-4 bg-slate-50 dark:bg-slate-900 sm:mr-10"
                         }`}
                       >
                         <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
@@ -335,7 +338,7 @@ export function AnaliseIaPanel({
                         {mensagem.papel === "usuario" ? (
                           <p className="whitespace-pre-wrap text-sm">{mensagem.conteudo}</p>
                         ) : (
-                          <div className="prose prose-sm max-w-none dark:prose-invert">
+                          <div className="prose prose-sm max-w-none break-words dark:prose-invert sm:prose-base">
                             <ReactMarkdown>{mensagem.conteudo}</ReactMarkdown>
                           </div>
                         )}
@@ -345,8 +348,8 @@ export function AnaliseIaPanel({
                 )}
               </div>
 
-              <div className="border-t p-3">
-                <div className="flex items-end gap-2">
+              <div className="border-t p-3 sm:p-4">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
                   <textarea
                     value={pergunta}
                     onChange={(evento) => setPergunta(evento.target.value)}
@@ -360,13 +363,13 @@ export function AnaliseIaPanel({
                     disabled={!analise || enviando}
                     placeholder="Pergunte mais sobre estes registros…"
                     aria-label="Pergunta para a IA"
-                    className="min-h-[54px] flex-1 resize-none rounded-md border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-950"
+                    className="min-h-[54px] w-full resize-none rounded-md border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-950 sm:min-w-0 sm:flex-1"
                   />
                   <button
                     type="button"
                     onClick={() => void enviarPergunta()}
                     disabled={!analise || !pergunta.trim() || enviando}
-                    className="inline-flex h-[54px] items-center gap-1.5 rounded-md bg-blue-600 px-3 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                    className="inline-flex h-[54px] w-full items-center justify-center gap-1.5 rounded-md bg-blue-600 px-3 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50 sm:w-auto"
                   >
                     {enviando ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
                     Enviar

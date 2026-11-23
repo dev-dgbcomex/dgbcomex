@@ -1928,7 +1928,7 @@ export const saudeProspeccaoLeadsInfo = {
     description:
       "Análise solicitada a partir das linhas filtradas na tela. A IA usa somente as regras cadastradas no sistema para explicar a saúde da prospecção e sugerir próximos passos.",
     rules: [
-      "O botão 'Analisar com IA' envia apenas os registros visíveis depois dos filtros atuais.",
+      "O botão 'Analisar com IA' envia apenas os registros visíveis depois dos filtros atuais e usa o mesmo provedor e limite de resposta do resumo de IA do cliente.",
       "A temperatura enviada à IA segue QUENTE, MORNO ou FRIO, conforme negociações, propostas, pedidos e faturamentos do sistema.",
       "A classificação enviada à IA segue Engajados, AEC ou BEC, com prevalência de Engajamento acima de 30%.",
       "As sugestões devem aumentar o engajamento ou reduzir o esforço sem inventar novas métricas.",
@@ -1936,6 +1936,7 @@ export const saudeProspeccaoLeadsInfo = {
       "O botão 'Concluir e enviar' envia a conversa por e-mail para o usuário logado.",
       "O botão Markdown gera o texto da análise para copiar ou salvar.",
       "Análises salvas podem ser consultadas depois pelo autor e por usuários ADMIN, SUDO ou CRM.",
+      "O modal ocupa quase toda a tela no desktop; no mobile, empilha os componentes e mantém os botões acessíveis.",
     ],
     columns: [
       { name: "Análise", desc: "Texto em Markdown gerado pela IA." },

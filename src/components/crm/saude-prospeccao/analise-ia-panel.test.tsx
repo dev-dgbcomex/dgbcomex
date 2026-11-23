@@ -94,6 +94,16 @@ describe("AnaliseIaPanel", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /Analisar com IA/ }))
     const dialog = await screen.findByRole("dialog")
+    expect(dialog.className).toContain("h-[92dvh]")
+    expect(dialog.className).toContain("w-[calc(100%-1rem)]")
+    expect(dialog.className).toContain("sm:max-w-[96rem]")
+    expect(dialog.className).toContain("sm:p-5")
+
+    const salvas = within(dialog).getByRole("complementary", { name: "Análises salvas" })
+    expect(salvas.className).toContain("max-h-32")
+    expect(salvas.className).toContain("lg:max-h-none")
+    expect(within(dialog).getByRole("region", { name: "Análise e conversa" })).toBeInTheDocument()
+
     fireEvent.click(within(dialog).getByRole("button", { name: "Gerar análise" }))
     expect(await screen.findByText(/Engajados com temperatura QUENTE/)).toBeInTheDocument()
 

@@ -26,6 +26,23 @@
 
 > Detalhe técnico completo em [`docs/crm-cliente-e-relatorios.md`](./crm-cliente-e-relatorios.md).
 
+### Sessão 41 — Modal responsivo e provedor da análise de IA
+
+- **Data:** 2026-11-22
+- **Commit:** `fix(crm): ajusta modal e provedor da analise ia`
+- **Tarefa:** fazer o modal de análise de IA ocupar bem o desktop e se moldar ao mobile, e corrigir o erro “Nenhum provedor de IA disponível” ao gerar a análise em `/comercial/crm/saude-prospeccao`, usando o mesmo provedor/configuração que já funciona no resumo de IA do cliente.
+- **Decisões aprovadas:** o modal passa a abrir com quase toda a altura da tela (`92dvh`) e largura de até `96rem`, sobrescrevendo o `sm:max-w-sm` padrão do `DialogContent`; no mobile os componentes são empilhados, o histórico vira uma faixa horizontal e o campo de pergunta/Enviar ocupam a largura. A análise usa `maxTokens: 700`, o mesmo valor do endpoint de resumo de IA do cliente.
+- **Resultado:**
+  - `DialogContent` com `w-[calc(100%-1rem)]`, `h-[92dvh]`, `sm:max-w-[96rem]`, header com espaço para o botão de fechar e grid interno com sidebar lateral no desktop e faixa horizontal no mobile.
+  - Barra de ações com quebra controlada, Markdown com `prose-base` no desktop, balões de conversa com recuos menores no mobile e formulário de pergunta empilhado no mobile.
+  - Causa raiz do erro confirmada: o Groq recusava `max_tokens: 1100` com HTTP 429 (`OTPM: Limit 1000`); com 700 a requisição retorna 200. A análise passou a usar as mesmas opções do resumo de IA do cliente.
+  - Modal “i” da análise explica o tamanho do modal e o provedor compartilhado.
+- **Arquivos Envolvidos:** `src/components/crm/saude-prospeccao/{analise-ia-panel.tsx,analise-ia-panel.test.tsx}`, `src/lib/crm/saude-prospeccao-ia.ts`, `src/lib/crm/saude-prospeccao-ia.test.ts`, `src/lib/info-content/crm.ts`, `src/lib/info-content/info-content.test.ts`, `docs/Sessoes.md`.
+- **Testes:** novo teste unitário para `chamarAnaliseComConsultas` com `maxTokens: 700`; ajustes no teste do painel para cobrir as classes responsivas e no teste dos modais. Focados `3 arquivos / 56 testes passados`; suíte completa `npm run test` → **488 arquivos / 2841 testes passados**.
+- **Verificação:** `npm run lint` sem erros (apenas warnings pré-existentes); `tsc --noEmit --pretty false` limpo com `NODE_OPTIONS=--max-old-space-size=8192`; `npm run build` OK com `NODE_OPTIONS=--max-old-space-size=8192` (259/259 páginas estáticas).
+
+---
+
 ### Sessão 40 — Saúde da Prospecção, IA e atalhos no CRM
 
 - **Data:** 2026-11-22

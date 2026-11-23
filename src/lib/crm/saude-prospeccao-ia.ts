@@ -306,7 +306,7 @@ export async function chamarAnaliseComConsultas({
   }
 
   for (let rodada = 0; rodada <= maxConsultas; rodada++) {
-    resultado = await chamarIA(conversa, { temperatura: 0, maxTokens: 1100 })
+    resultado = await chamarIA(conversa, { temperatura: 0, maxTokens: 700 })
     if (resultado.provedor === "nenhum") break
 
     const consulta = parseConsultaCurada(resultado.conteudo)
