@@ -272,6 +272,26 @@ const TABELAS = [
      )`,
     "create index if not exists idx_crm_resumos_ia_entidade on crm_resumos_ia (entidade_tipo, entidade_id, created_at desc)",
   ],
+  [
+    "crm_faturamentos.pedido_venda_id",
+    `alter table crm_faturamentos add column if not exists pedido_venda_id integer references crm_pedidos_venda(id) on delete set null`,
+  ],
+  [
+    "crm_faturamento_pedidos",
+    `create table if not exists crm_faturamento_pedidos (
+       faturamento_id integer not null references crm_faturamentos(id) on delete cascade,
+       pedido_venda_id integer not null references crm_pedidos_venda(id) on delete cascade,
+       created_at timestamp default now(),
+       primary key (faturamento_id, pedido_venda_id)
+     )`,
+    "create index if not exists crm_faturamento_pedidos_pedido_venda_id_idx on crm_faturamento_pedidos (pedido_venda_id)",
+  ],
+  [
+    "crm_faturamento_pedidos (backfill)",
+    `insert into crm_faturamento_pedidos (faturamento_id, pedido_venda_id)
+     select id, pedido_venda_id from crm_faturamentos where pedido_venda_id is not null
+     on conflict do nothing`,
+  ],
 ]
 
 /**

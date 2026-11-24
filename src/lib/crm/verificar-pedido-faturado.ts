@@ -1,18 +1,28 @@
-import { and, eq, isNotNull } from "drizzle-orm"
+import { and, eq, inArray, isNotNull } from "drizzle-orm"
 import { db } from "@/lib/db"
 import {
   crmFaturamentos,
   crmFaturamentoItens,
+  crmFaturamentoPedidos,
   crmLeads,
   crmOportunidades,
   crmPedidosVenda,
   crmPedidoVendaItens,
 } from "@/lib/db/schema"
 import { somarValoresTotais } from "@/lib/crm/documento-venda"
-import { atualizarEspelhosErp, itensParaCrm, itensParaCrmFaturamento } from "@/lib/crm/erp-espelho"
+import {
+  atualizarEspelhosErp,
+  criarPedidoEspelho,
+  itensParaCrm,
+  itensParaCrmFaturamento,
+} from "@/lib/crm/erp-espelho"
 import { processarAutomacaoCRM } from "@/lib/crm/automacoes-crm"
 import { registrarLog } from "@/lib/notificar"
-import { requisitarErp } from "@/lib/erp/cliente"
+import {
+  buscarPedidoFaturadoErp,
+  buscarPedidosDaNotaErp,
+  requisitarErp,
+} from "@/lib/erp/cliente"
 import type { FaturamentoErp, ListaErp } from "@/lib/erp/tipos"
 
 type Autor = { id?: number | null; nome?: string | null }
@@ -77,9 +87,7 @@ async function obterPedidosVinculados(
 ): Promise<Array<{ id: number; numero: string | null; referenciaExterna: string | null; oportunidadeId: number; oportunidadeTitulo: string | null; leadId: number | null; leadNome: string | null; jaConvertida: boolean }>> {
   const condicoes = [eq(crmPedidosVenda.origem, "ERP"), isNotNull(crmPedidosVenda.referenciaExterna)]
   if (pedidoIds && pedidoIds.length > 0) {
-    for (const id of pedidoIds) {
-      condicoes.push(eq(crmPedidosVenda.id, id))
-    }
+    condicoes.push(inArray(crmPedidosVenda.id, pedidoIds))
   }
   if (oportunidadeId) {
     condicoes.push(eq(crmPedidosVenda.oportunidadeId, oportunidadeId))
@@ -100,6 +108,67 @@ async function obterPedidosVinculados(
     .innerJoin(crmOportunidades, eq(crmPedidosVenda.oportunidadeId, crmOportunidades.id))
     .leftJoin(crmLeads, eq(crmOportunidades.empresaId, crmLeads.id))
     .where(and(...condicoes))
+}
+
+export async function garantirPedidoErpVinculado(params: {
+  oportunidadeId: number
+  empresa: string | null
+  pedido: string | null
+  usuarioNome: string | null
+}): Promise<{
+  id: number
+  numero: string | null
+  referenciaExterna: string | null
+  valorPedido: number
+}> {
+  const { oportunidadeId, empresa, pedido, usuarioNome } = params
+  if (!empresa || !pedido) {
+    throw new Error("Empresa e pedido do ERP são obrigatórios")
+  }
+  const referencia = `${empresa}/${pedido}`
+
+  const [existente] = await db
+    .select({
+      id: crmPedidosVenda.id,
+      numero: crmPedidosVenda.numero,
+      referenciaExterna: crmPedidosVenda.referenciaExterna,
+      oportunidadeId: crmPedidosVenda.oportunidadeId,
+    })
+    .from(crmPedidosVenda)
+    .where(
+      and(
+        eq(crmPedidosVenda.origem, "ERP"),
+        eq(crmPedidosVenda.referenciaExterna, referencia)
+      )
+    )
+    .limit(1)
+
+  if (existente) {
+    if (existente.oportunidadeId !== oportunidadeId) {
+      throw new Error("Este pedido do ERP já está vinculado a outra oportunidade.")
+    }
+    return {
+      id: existente.id,
+      numero: existente.numero,
+      referenciaExterna: existente.referenciaExterna,
+      valorPedido: await somaItensPedido(existente.id),
+    }
+  }
+
+  const documento = await buscarPedidoFaturadoErp(empresa, pedido)
+  const criado = await criarPedidoEspelho({
+    oportunidadeId,
+    empresa,
+    pedidoReferencia: pedido,
+    documento,
+    usuarioNome,
+  })
+  return {
+    id: criado.id,
+    numero: criado.numero,
+    referenciaExterna: referencia,
+    valorPedido: criado.total,
+  }
 }
 
 export async function somaItensPedido(pedidoVendaId: number): Promise<number> {
@@ -207,7 +276,7 @@ export async function verificarPedidoFaturado(
 export async function criarOuAtualizarFaturamento(
   params: {
     oportunidadeId: number
-    pedidoVendaId: number | null
+    pedidoVendaIds: number[]
     empresa: string | null
     pedido: string | null
     pedidoReferencia?: string | null
@@ -219,7 +288,7 @@ export async function criarOuAtualizarFaturamento(
 ): Promise<number> {
   const {
     oportunidadeId,
-    pedidoVendaId,
+    pedidoVendaIds,
     empresa,
     pedido,
     pedidoReferencia,
@@ -228,6 +297,8 @@ export async function criarOuAtualizarFaturamento(
     itens,
     usuarioNome,
   } = params
+  const ids = Array.from(new Set(pedidoVendaIds.filter((id) => Number.isFinite(id))))
+  const pedidoVendaId = ids[0] ?? null
   const pedidoReferenciaFinal = pedidoReferencia ?? pedido ?? null
   const referencia = empresa && pedidoReferenciaFinal && nota.numero
     ? `${empresa}/${pedidoReferenciaFinal}/${nota.numero}`
@@ -249,9 +320,22 @@ export async function criarOuAtualizarFaturamento(
   const observacao = [
     `Faturamento vinculado do ERP (${referencia})`,
     nota.numero ? `nota ${nota.numero}` : null,
+    ids.length > 1 ? `${ids.length} pedidos faturados` : null,
   ]
     .filter(Boolean)
     .join(" · ")
+
+  const sincronizarVinculos = async (faturamentoId: number) => {
+    await db
+      .delete(crmFaturamentoPedidos)
+      .where(eq(crmFaturamentoPedidos.faturamentoId, faturamentoId))
+    if (ids.length > 0) {
+      await db
+        .insert(crmFaturamentoPedidos)
+        .values(ids.map((id) => ({ faturamentoId, pedidoVendaId: id })))
+        .onConflictDoNothing()
+    }
+  }
 
   if (existente[0]) {
     await db
@@ -266,6 +350,8 @@ export async function criarOuAtualizarFaturamento(
       })
       .where(eq(crmFaturamentos.id, existente[0].id))
 
+    await sincronizarVinculos(existente[0].id)
+
     await db
       .delete(crmFaturamentoItens)
       .where(eq(crmFaturamentoItens.faturamentoId, existente[0].id))
@@ -278,11 +364,11 @@ export async function criarOuAtualizarFaturamento(
     await registrarLog({
       tipo: "ATUALIZACAO",
       acao: "atualizar_faturamento_erp",
-      descricao: `Faturamento do ERP ${referencia} atualizado e vinculado ao pedido ${pedidoVendaId}`,
+      descricao: `Faturamento do ERP ${referencia} atualizado e vinculado aos pedidos ${ids.join(", ")}`,
       entidade: "CrmFaturamento",
       entidadeId: existente[0].id,
       usuarioNome,
-      dados: { referencia, pedidoVendaId, itens: itens.length },
+      dados: { referencia, pedidoVendaIds: ids, itens: itens.length },
     })
     return existente[0].id
   }
@@ -301,6 +387,8 @@ export async function criarOuAtualizarFaturamento(
     })
     .returning()
 
+  await sincronizarVinculos(criado.id)
+
   if (itens.length > 0) {
     await db.insert(crmFaturamentoItens).values(
       itens.map((item) => ({ ...item, faturamentoId: criado.id }))
@@ -310,11 +398,11 @@ export async function criarOuAtualizarFaturamento(
   await registrarLog({
     tipo: "CADASTRO",
     acao: "vincular_faturamento_erp",
-    descricao: `Faturamento do ERP ${referencia} vinculado à oportunidade ${oportunidadeId} e ao pedido ${pedidoVendaId}`,
+    descricao: `Faturamento do ERP ${referencia} vinculado à oportunidade ${oportunidadeId} e aos pedidos ${ids.join(", ")}`,
     entidade: "CrmFaturamento",
     entidadeId: criado.id,
     usuarioNome,
-    dados: { referencia, oportunidadeId, pedidoVendaId, itens: itens.length },
+    dados: { referencia, oportunidadeId, pedidoVendaIds: ids, itens: itens.length },
   })
   return criado.id
 }
@@ -351,14 +439,76 @@ export async function aplicarVerificacaoPedidoFaturado(
       .limit(1)
     if (!oportunidade) continue
 
+    const notasProcessadas = new Map<
+      string,
+      { faturamentoId: number | null; status: "FATURADO" | "PARCIAL"; nota: NotaPrevista }
+    >()
+
     for (const pedido of pedidosOportunidade) {
       const valorPedido = await somaItensPedido(pedido.id)
       const chave = chavePedido(pedido.referenciaExterna)
       const nota = chave ? await obterNotaERP(pedido.numero) : null
 
       let statusPedidoFinal = statusPedido
-      if (!statusPedidoFinal && nota) {
-        statusPedidoFinal = nota.valorTotal >= valorPedido ? "FATURADO" : "PARCIAL"
+      let faturamentoId: number | null = null
+
+      if (nota && chave) {
+        const chaveNota = `${nota.empresa ?? ""}/${nota.numero ?? ""}`
+        let processada = notasProcessadas.get(chaveNota)
+
+        if (!processada) {
+          const [empresaErp, pedidoErp] = chave.split("/")
+          const codigosNota = await buscarPedidosDaNotaErp(
+            empresaErp,
+            pedidoErp,
+            nota.numero
+          )
+          const codigosFinais = codigosNota.length > 0 ? codigosNota : [pedido.numero ?? pedidoErp]
+
+          const vinculados: Array<{ id: number; valorPedido: number }> = []
+          for (const codigo of codigosFinais) {
+            vinculados.push(
+              await garantirPedidoErpVinculado({
+                oportunidadeId: oportunidadeIdAtual,
+                empresa: empresaErp,
+                pedido: codigo,
+                usuarioNome,
+              })
+            )
+          }
+          const pedidoIdsNota = vinculados.map((item) => item.id)
+          const valorPedidosNota = vinculados.reduce((total, item) => total + item.valorPedido, 0)
+
+          const pedidoDetalhe = nota.pedido ?? pedidoErp
+          const documentoErp = await requisitarErp<FaturamentoErp>(
+            `/crm/faturamentos/${encodeURIComponent(empresaErp)}/${encodeURIComponent(pedidoDetalhe)}/${encodeURIComponent(nota.numero ?? "")}`
+          )
+          faturamentoId = await criarOuAtualizarFaturamento({
+            oportunidadeId: oportunidadeIdAtual,
+            pedidoVendaIds: pedidoIdsNota,
+            empresa: empresaErp,
+            pedido: pedidoErp,
+            pedidoReferencia: pedidoErp,
+            pedidoErp: pedidoDetalhe,
+            nota,
+            itens: itensParaCrmFaturamento(documentoErp.itens ?? []),
+            usuarioNome,
+          })
+
+          const statusNota = nota.valorTotal >= valorPedidosNota ? "FATURADO" : "PARCIAL"
+          for (const id of pedidoIdsNota) {
+            await db
+              .update(crmPedidosVenda)
+              .set({ status: statusNota, updatedAt: new Date() })
+              .where(eq(crmPedidosVenda.id, id))
+          }
+
+          processada = { faturamentoId, status: statusNota, nota }
+          notasProcessadas.set(chaveNota, processada)
+        }
+
+        faturamentoId = processada.faturamentoId
+        statusPedidoFinal ??= processada.status
       }
 
       if (statusPedidoFinal) {
@@ -366,26 +516,6 @@ export async function aplicarVerificacaoPedidoFaturado(
           .update(crmPedidosVenda)
           .set({ status: statusPedidoFinal, updatedAt: new Date() })
           .where(eq(crmPedidosVenda.id, pedido.id))
-      }
-
-      let faturamentoId: number | null = null
-      if (nota && chave) {
-        const [empresaErp, pedidoErp] = chave.split("/")
-        const pedidoDetalhe = nota?.pedido ?? pedidoErp
-        const documentoErp = await requisitarErp<FaturamentoErp>(
-          `/crm/faturamentos/${encodeURIComponent(empresaErp)}/${encodeURIComponent(pedidoDetalhe)}/${encodeURIComponent(nota.numero ?? "")}`
-        )
-        faturamentoId = await criarOuAtualizarFaturamento({
-          oportunidadeId: oportunidadeIdAtual,
-          pedidoVendaId: pedido.id,
-          empresa: empresaErp,
-          pedido: pedidoErp,
-          pedidoReferencia: pedidoErp,
-          pedidoErp: pedidoDetalhe,
-          nota,
-          itens: itensParaCrmFaturamento(documentoErp.itens ?? []),
-          usuarioNome,
-        })
       }
 
       let conversaoLead: AplicarPedidoResultado["conversaoLead"] = { ok: false }
@@ -419,14 +549,19 @@ export async function aplicarVerificacaoPedidoFaturado(
       }
 
       await registrarLog({
-      tipo: "ATUALIZACAO",
-      acao: "verificar_pedido_faturado",
-      descricao: `Pedido do ERP ${pedido.referenciaExterna} verificado e valor sincronizado na oportunidade ${oportunidadeIdAtual}`,
-      entidade: "CrmPedidoVenda",
-      entidadeId: pedido.id,
-      usuarioNome,
-      dados: { pedidoId: pedido.id, valorPedido, status: statusPedidoFinal, nota: nota?.numero ?? null },
-    })
+        tipo: "ATUALIZACAO",
+        acao: "verificar_pedido_faturado",
+        descricao: `Pedido do ERP ${pedido.referenciaExterna} verificado e valor sincronizado na oportunidade ${oportunidadeIdAtual}`,
+        entidade: "CrmPedidoVenda",
+        entidadeId: pedido.id,
+        usuarioNome,
+        dados: {
+          pedidoId: pedido.id,
+          valorPedido,
+          status: statusPedidoFinal,
+          nota: nota?.numero ?? null,
+        },
+      })
 
       resultados.push({
         pedidoId: pedido.id,

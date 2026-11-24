@@ -271,6 +271,10 @@ describe("getInfoContent", () => {
 
     expect(texto).toMatch(/Vincular do ERP/)
     expect(texto).toMatch(/Vincular faturado/)
+    expect(texto).toMatch(/nosso_pedido/)
+    expect(texto).toMatch(/pedido real diretamente do ERP/)
+    expect(texto).toMatch(/todos os pedidos da nota/)
+    expect(texto).toMatch(/valor da nota/)
     expect(texto).toMatch(/pedido de venda|faturamento/)
     expect(texto).toMatch(/já está vinculado/)
     expect(texto).toMatch(/varre os pedidos/)

@@ -847,6 +847,54 @@ CREATE TABLE IF NOT EXISTS crm_pedido_venda_itens (
   created_at TIMESTAMP DEFAULT NOW()
 );
 
+-- Faturamento e pedido são documentos distintos: uma nota pode faturar vários pedidos.
+DO $$ BEGIN
+  ALTER TABLE crm_faturamentos ADD COLUMN IF NOT EXISTS pedido_venda_id INTEGER;
+EXCEPTION WHEN duplicate_column THEN NULL; WHEN undefined_table THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'crm_faturamentos_pedido_venda_id_fkey'
+  ) THEN
+    ALTER TABLE crm_faturamentos
+      ADD CONSTRAINT crm_faturamentos_pedido_venda_id_fkey
+      FOREIGN KEY (pedido_venda_id) REFERENCES crm_pedidos_venda(id) ON DELETE SET NULL;
+  END IF;
+EXCEPTION WHEN undefined_table THEN NULL;
+END $$;
+
+CREATE TABLE IF NOT EXISTS crm_faturamento_pedidos (
+  faturamento_id INTEGER NOT NULL,
+  pedido_venda_id INTEGER NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW(),
+  PRIMARY KEY (faturamento_id, pedido_venda_id)
+);
+
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'crm_faturamento_pedidos_faturamento_id_fkey'
+  ) THEN
+    ALTER TABLE crm_faturamento_pedidos
+      ADD CONSTRAINT crm_faturamento_pedidos_faturamento_id_fkey
+      FOREIGN KEY (faturamento_id) REFERENCES crm_faturamentos(id) ON DELETE CASCADE;
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'crm_faturamento_pedidos_pedido_venda_id_fkey'
+  ) THEN
+    ALTER TABLE crm_faturamento_pedidos
+      ADD CONSTRAINT crm_faturamento_pedidos_pedido_venda_id_fkey
+      FOREIGN KEY (pedido_venda_id) REFERENCES crm_pedidos_venda(id) ON DELETE CASCADE;
+  END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS crm_faturamento_pedidos_pedido_venda_id_idx
+  ON crm_faturamento_pedidos(pedido_venda_id);
+
+INSERT INTO crm_faturamento_pedidos (faturamento_id, pedido_venda_id)
+SELECT id, pedido_venda_id FROM crm_faturamentos WHERE pedido_venda_id IS NOT NULL
+ON CONFLICT DO NOTHING;
+
 -- Engenharia de Processos: ontologia (Empresa → Site → Área → Processo → Subprocesso → Atividade)
 CREATE TABLE IF NOT EXISTS proc_empresas (
   id SERIAL PRIMARY KEY,

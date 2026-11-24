@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm"
+import { and, eq, inArray } from "drizzle-orm"
 import { db } from "@/lib/db"
 import {
   crmFaturamentos,
@@ -6,17 +6,20 @@ import {
   crmLeads,
   crmOportunidades,
   crmPedidosVenda,
-  crmPedidoVendaItens,
 } from "@/lib/db/schema"
 import {
   criarOuAtualizarFaturamento,
-  somaItensPedido,
+  garantirPedidoErpVinculado,
   somaOportunidade,
 } from "@/lib/crm/verificar-pedido-faturado"
-import { criarPedidoEspelho, itensParaCrmFaturamento } from "@/lib/crm/erp-espelho"
+import { itensParaCrmFaturamento } from "@/lib/crm/erp-espelho"
 import { processarAutomacaoCRM } from "@/lib/crm/automacoes-crm"
 import { registrarLog } from "@/lib/notificar"
-import { requisitarErp } from "@/lib/erp/cliente"
+import {
+  buscarPedidoFaturadoErp,
+  buscarPedidosDaNotaErp,
+  requisitarErp,
+} from "@/lib/erp/cliente"
 import type { FaturamentoErp, ListaErp, PedidoErp } from "@/lib/erp/tipos"
 import type { NotaPrevista } from "@/lib/crm/verificar-pedido-faturado"
 
@@ -34,20 +37,29 @@ type NotaFaturada = {
   pedidoOrigem: string | null
 }
 
+type PedidoExistente = {
+  id: number
+  numero: string | null
+  referenciaExterna: string | null
+  oportunidadeId: number
+}
+
 export type PreviewVinculoFaturado = {
   notas: NotaFaturada[]
-  pedidoErp: PedidoErp | null
+  pedidosErp: PedidoErp[]
   valorPedido: number
+  valorNota: number
   valorOportunidadeAntes: number
   valorOportunidadeDepois: number
   jaVinculado: boolean
-  pedidoExistente: { id: number; numero: string | null; referenciaExterna: string | null } | null
+  pedidosExistentes: PedidoExistente[]
   mensagem: string | null
 }
 
 export type AplicarVinculacaoFaturadoResult = {
   pedidoId: number
   numero: string | null
+  pedidos: Array<{ id: number; numero: string | null; valorPedido: number }>
   valorPedido: number
   status: string
   faturamentoId: number | null
@@ -73,27 +85,53 @@ function mapearNotaFaturada(nota: FaturamentoErp): NotaFaturada {
   }
 }
 
-export async function buscarNotasFaturadasPorPedido(codigoPedido: string): Promise<ListaErp<FaturamentoErp>> {
+export async function buscarNotasFaturadasPorPedido(
+  codigoPedido: string
+): Promise<ListaErp<FaturamentoErp>> {
   if (!codigoPedido) {
     throw new Error("Informe o código do pedido")
   }
-
   const codigoLimpo = codigoPedido.trim()
 
-  // O filtro pedido_origem do ERP não está retornando resultados corretamente,
-  // então busca sem filtro e filtra client-side por pedido_origem (nosso_pedido).
+  const filtrar = (itens: FaturamentoErp[]) =>
+    itens.filter((nota) => (nota.pedido_origem ?? "").trim() === codigoLimpo)
+
+  let filtradas: ListaErp<FaturamentoErp> | null = null
   try {
-    const dados = await requisitarErp<ListaErp<FaturamentoErp>>(
+    filtradas = await requisitarErp<ListaErp<FaturamentoErp>>(
+      `/crm/faturamentos?pedido_origem=${encodeURIComponent(codigoLimpo)}&por_pagina=500`
+    )
+  } catch {
+    filtradas = null
+  }
+  if (filtradas && filtradas.itens.length > 0) {
+    return { ...filtradas, itens: filtrar(filtradas.itens) }
+  }
+
+  try {
+    const todas = await requisitarErp<ListaErp<FaturamentoErp>>(
       `/crm/faturamentos?por_pagina=500`
     )
-    const filtrados = dados.itens.filter(
-      (n) => (n.pedido_origem || "").trim() === codigoLimpo
-    )
-    return { ...dados, itens: filtrados }
+    return { ...todas, itens: filtrar(todas.itens) }
   } catch {
-    // Falha total — retorna vazio para não quebrar a tela
-    return { paginacao: { total: 0, pagina: 1, por_pagina: 50, total_paginas: 0 }, itens: [] }
+    return {
+      paginacao: { total: 0, pagina: 1, por_pagina: 50, total_paginas: 0 },
+      itens: [],
+    }
   }
+}
+
+async function carregarPedidosDaNota(
+  empresa: string | null,
+  pedido: string | null,
+  nrNota: string | null
+): Promise<PedidoErp[]> {
+  if (!empresa || !pedido || !nrNota) return []
+  const codigos = await buscarPedidosDaNotaErp(empresa, pedido, nrNota)
+  const finais = codigos.length > 0 ? codigos : [pedido]
+  return Promise.all(
+    finais.map((codigo) => buscarPedidoFaturadoErp(empresa, codigo))
+  )
 }
 
 export async function previewVincularFaturado(params: {
@@ -101,84 +139,83 @@ export async function previewVincularFaturado(params: {
   codigoPedido: string
 }): Promise<PreviewVinculoFaturado> {
   const { oportunidadeId, codigoPedido } = params
-
-  let notasLista: ListaErp<FaturamentoErp>
-  try {
-    notasLista = await buscarNotasFaturadasPorPedido(codigoPedido)
-  } catch {
-    notasLista = { paginacao: { total: 0, pagina: 1, por_pagina: 50, total_paginas: 0 }, itens: [] }
-  }
+  const notasLista = await buscarNotasFaturadasPorPedido(codigoPedido)
   const notas = notasLista.itens.map(mapearNotaFaturada)
 
   if (notas.length === 0) {
     return {
       notas: [],
-      pedidoErp: null,
+      pedidosErp: [],
       valorPedido: 0,
+      valorNota: 0,
       valorOportunidadeAntes: 0,
       valorOportunidadeDepois: 0,
       jaVinculado: false,
-      pedidoExistente: null,
+      pedidosExistentes: [],
       mensagem: "Não há faturamento no ERP para este pedido.",
     }
   }
 
   const primeiraNota = notas[0]
-  const empresa = primeiraNota.empresa
-  const pedidoDetalhe = primeiraNota.pedido ?? codigoPedido
+  const pedidosErp = await carregarPedidosDaNota(
+    primeiraNota.empresa,
+    primeiraNota.pedido,
+    primeiraNota.nr_nota
+  )
+  const referencias = pedidosErp.map(
+    (pedido) => `${pedidoEmpresa(pedido)}/${pedido.pedido_origem ?? pedido.pedido ?? ""}`
+  )
 
-  let pedidoErp: PedidoErp | null = null
-  try {
-    pedidoErp = await requisitarErp<PedidoErp>(
-      `/crm/pedidos/${encodeURIComponent(empresa ?? "")}/${encodeURIComponent(pedidoDetalhe)}`
-    )
-  } catch {
-    pedidoErp = null
-  }
+  const existentes: PedidoExistente[] = referencias.length
+    ? await db
+        .select({
+          id: crmPedidosVenda.id,
+          numero: crmPedidosVenda.numero,
+          referenciaExterna: crmPedidosVenda.referenciaExterna,
+          oportunidadeId: crmPedidosVenda.oportunidadeId,
+        })
+        .from(crmPedidosVenda)
+        .where(
+          and(eq(crmPedidosVenda.origem, "ERP"), inArray(crmPedidosVenda.referenciaExterna, referencias))
+        )
+    : []
 
-  const valorPedido = pedidoErp ? Number(pedidoErp.valor_total ?? primeiraNota.valorTotal) : primeiraNota.valorTotal
-
-  const [existente] = await db
-    .select({
-      id: crmPedidosVenda.id,
-      numero: crmPedidosVenda.numero,
-      referenciaExterna: crmPedidosVenda.referenciaExterna,
-      oportunidadeId: crmPedidosVenda.oportunidadeId,
-    })
-    .from(crmPedidosVenda)
-    .where(
-      and(
-        eq(crmPedidosVenda.origem, "ERP"),
-        eq(crmPedidosVenda.referenciaExterna, `${empresa}/${codigoPedido}`)
-      )
-    )
-    .limit(1)
-
-  const jaVinculado = Boolean(existente)
+  const valorPedido = pedidosErp.reduce((total, pedido) => total + Number(pedido.valor_total ?? 0), 0)
+  const valorNota = notas.reduce((total, nota) => total + nota.valorNota, 0)
   const valorOportunidadeAntes = await somaOportunidade(oportunidadeId)
-  const valorOportunidadeDepois = jaVinculado && existente!.oportunidadeId === oportunidadeId
-    ? valorOportunidadeAntes
-    : valorOportunidadeAntes + valorPedido
+  const jaVinculado = existentes.length > 0
+  const valorPedidosNovos = pedidosErp.reduce((total, pedido, indice) => {
+    const existente = existentes.find((item) => item.referenciaExterna === referencias[indice])
+    if (existente) return total
+    return total + Number(pedido.valor_total ?? 0)
+  }, 0)
+  const valorOportunidadeDepois = valorOportunidadeAntes + valorPedidosNovos
 
+  const outraOportunidade = existentes.find((item) => item.oportunidadeId !== oportunidadeId)
   let mensagem: string | null = null
-  if (jaVinculado && existente!.oportunidadeId !== oportunidadeId) {
-    mensagem = "Este pedido do ERP já está vinculado a outra oportunidade."
+  if (outraOportunidade) {
+    mensagem = "Um dos pedidos do ERP já está vinculado a outra oportunidade."
   } else if (jaVinculado) {
-    mensagem = "Este pedido do ERP já está vinculado a esta oportunidade."
+    mensagem = "Os pedidos do ERP já estão vinculados a esta oportunidade."
+  } else if (pedidosErp.length > 1) {
+    mensagem = `Esta nota fatura ${pedidosErp.length} pedidos; todos serão vinculados.`
   }
 
   return {
     notas,
-    pedidoErp,
+    pedidosErp,
     valorPedido,
+    valorNota,
     valorOportunidadeAntes,
     valorOportunidadeDepois,
     jaVinculado,
-    pedidoExistente: existente
-      ? { id: existente.id, numero: existente.numero, referenciaExterna: existente.referenciaExterna }
-      : null,
+    pedidosExistentes: existentes,
     mensagem,
   }
+}
+
+function pedidoEmpresa(pedido: PedidoErp): string {
+  return String(pedido.empresa ?? "").trim()
 }
 
 export async function aplicarVinculacaoFaturado(params: {
@@ -189,29 +226,26 @@ export async function aplicarVinculacaoFaturado(params: {
   usuarioNome: string | null
 }): Promise<AplicarVinculacaoFaturadoResult> {
   const { oportunidadeId, codigoPedido, nrNota, statusPedido, usuarioNome } = params
-
   const notasLista = await buscarNotasFaturadasPorPedido(codigoPedido)
   if (notasLista.itens.length === 0) {
     throw new Error("Não há faturamento no ERP para este pedido.")
   }
 
-  let notaErp = notasLista.itens.find((n) => n.nr_nota === nrNota) ?? notasLista.itens[0]
+  const notaErp = notasLista.itens.find((nota) => nota.nr_nota === nrNota) ?? notasLista.itens[0]
   if (notasLista.itens.length > 1 && !nrNota) {
     throw new Error("Informe o número da nota fiscal para vincular.")
   }
 
-  const nota: NotaPrevista = {
-    numero: notaErp.nr_nota ?? null,
-    dataNota: notaErp.data_nota ?? notaErp.data_emissao ?? null,
-    valorTotal: Number(notaErp.valor_total ?? 0),
-    empresa: notaErp.empresa ?? null,
-    pedido: notaErp.pedido ?? null,
-    pedidoOrigem: notaErp.pedido_origem ?? null,
+  const empresa = notaErp.empresa ?? ""
+  const pedidoInternoNota = notaErp.pedido ?? codigoPedido
+  const pedidosDocumento = await carregarPedidosDaNota(
+    empresa,
+    pedidoInternoNota,
+    notaErp.nr_nota ?? null
+  )
+  if (pedidosDocumento.length === 0) {
+    throw new Error("Não foi possível ler os pedidos do ERP desta nota.")
   }
-
-  const empresa = nota.empresa ?? ""
-  const pedidoReferencia = codigoPedido
-  const pedidoDetalhe = nota.pedido || pedidoReferencia
 
   const [oportunidade] = await db
     .select({ id: crmOportunidades.id, empresaId: crmOportunidades.empresaId })
@@ -222,82 +256,66 @@ export async function aplicarVinculacaoFaturado(params: {
     throw new Error("Oportunidade não encontrada")
   }
 
-  let pedidoId: number
-  let pedidoCriado = true
-  let valorPedido: number
-
-  const [existente] = await db
-    .select({ id: crmPedidosVenda.id })
-    .from(crmPedidosVenda)
-    .where(
-      and(
-        eq(crmPedidosVenda.origem, "ERP"),
-        eq(crmPedidosVenda.referenciaExterna, `${empresa}/${pedidoReferencia}`)
-      )
-    )
-    .limit(1)
-
-  if (existente) {
-    if (existente.id) {
-      const [oportunidadeVinculada] = await db
-        .select({ oportunidadeId: crmPedidosVenda.oportunidadeId })
-        .from(crmPedidosVenda)
-        .where(eq(crmPedidosVenda.id, existente.id))
-        .limit(1)
-      if (oportunidadeVinculada?.oportunidadeId !== oportunidadeId) {
-        throw new Error("Este pedido do ERP já está vinculado a outra oportunidade.")
-      }
-    }
-    pedidoId = existente.id
-    pedidoCriado = false
-    valorPedido = await somaItensPedido(pedidoId)
-  } else {
-    const criado = await criarPedidoEspelho({
+  const pedidosVinculados: Array<{
+    id: number
+    numero: string | null
+    valorPedido: number
+  }> = []
+  for (const documento of pedidosDocumento) {
+    const codigo = documento.pedido_origem ?? documento.pedido
+    const vinculado = await garantirPedidoErpVinculado({
       oportunidadeId,
       empresa,
-      pedidoReferencia,
-      pedidoDetalhe,
+      pedido: codigo,
       usuarioNome,
     })
-    pedidoId = criado.id
-    valorPedido = criado.total
+    pedidosVinculados.push({
+      id: vinculado.id,
+      numero: vinculado.numero,
+      valorPedido: vinculado.valorPedido,
+    })
   }
 
+  const nota: NotaPrevista = {
+    numero: notaErp.nr_nota ?? null,
+    dataNota: notaErp.data_nota ?? notaErp.data_emissao ?? null,
+    valorTotal: Number(notaErp.valor_total ?? 0),
+    empresa,
+    pedido: notaErp.pedido ?? null,
+    pedidoOrigem: notaErp.pedido_origem ?? null,
+  }
+
+  const documentoNota = await requisitarErp<FaturamentoErp>(
+    `/crm/faturamentos/${encodeURIComponent(empresa)}/${encodeURIComponent(pedidoInternoNota)}/${encodeURIComponent(nota.numero ?? "")}`
+  )
+
+  const valorPedido = pedidosVinculados.reduce((total, item) => total + item.valorPedido, 0)
   const valorOportunidade = await somaOportunidade(oportunidadeId)
   await db
     .update(crmOportunidades)
     .set({ valorEstimado: valorOportunidade, updatedAt: new Date() })
     .where(eq(crmOportunidades.id, oportunidadeId))
 
-  let statusPedidoFinal = statusPedido
-  if (!statusPedidoFinal && nota) {
-    statusPedidoFinal = nota.valorTotal >= valorPedido ? "FATURADO" : "PARCIAL"
-  }
-
-  if (statusPedidoFinal) {
+  const statusPedidoFinal =
+    statusPedido ?? (nota.valorTotal >= valorPedido ? "FATURADO" : "PARCIAL")
+  for (const pedido of pedidosVinculados) {
     await db
       .update(crmPedidosVenda)
       .set({ status: statusPedidoFinal, updatedAt: new Date() })
-      .where(eq(crmPedidosVenda.id, pedidoId))
+      .where(eq(crmPedidosVenda.id, pedido.id))
   }
 
-  let faturamentoId: number | null = null
-  if (nota.numero && empresa) {
-    const documentoErp = await requisitarErp<FaturamentoErp>(
-      `/crm/faturamentos/${encodeURIComponent(empresa)}/${encodeURIComponent(pedidoDetalhe)}/${encodeURIComponent(nota.numero)}`
-    )
-    faturamentoId = await criarOuAtualizarFaturamento({
-      oportunidadeId,
-      pedidoVendaId: pedidoId,
-      empresa,
-      pedido: pedidoDetalhe,
-      pedidoReferencia,
-      pedidoErp: pedidoDetalhe,
-      nota,
-      itens: itensParaCrmFaturamento(documentoErp.itens ?? []),
-      usuarioNome,
-    })
-  }
+  const faturamentoId = await criarOuAtualizarFaturamento({
+    oportunidadeId,
+    pedidoVendaIds: pedidosVinculados.map((pedido) => pedido.id),
+    empresa,
+    pedido: pedidoInternoNota,
+    pedidoReferencia: codigoPedido,
+    pedidoErp: nota.pedido,
+    nota,
+    itens: itensParaCrmFaturamento(documentoNota.itens ?? []),
+    usuarioNome,
+  })
 
   let conversaoLead: AplicarVinculacaoFaturadoResult["conversaoLead"] = { ok: false }
   if (oportunidade.empresaId) {
@@ -316,7 +334,10 @@ export async function aplicarVinculacaoFaturado(params: {
           decisao: "CONVERTER",
           autor: { id: undefined, nome: usuarioNome ?? null },
         })
-        conversaoLead = { ok: Boolean(resultadoLead.ok), erro: resultadoLead.ok ? undefined : "Lead não convertida" }
+        conversaoLead = {
+          ok: Boolean(resultadoLead.ok),
+          erro: resultadoLead.ok ? undefined : "Lead não convertida",
+        }
       } catch (erro) {
         conversaoLead = {
           ok: false,
@@ -328,7 +349,9 @@ export async function aplicarVinculacaoFaturado(params: {
     }
   }
 
-  let automacaoOportunidade: AplicarVinculacaoFaturadoResult["automacaoOportunidade"] = { ok: false }
+  let automacaoOportunidade: AplicarVinculacaoFaturadoResult["automacaoOportunidade"] = {
+    ok: false,
+  }
   try {
     const resultadoOportunidade = await processarAutomacaoCRM({
       entidade: "OPORTUNIDADE",
@@ -341,7 +364,9 @@ export async function aplicarVinculacaoFaturado(params: {
     })
     automacaoOportunidade = {
       ok: Boolean(resultadoOportunidade.ok),
-      erro: resultadoOportunidade.ok ? undefined : resultadoOportunidade.decisaoPendente?.mensagem || "Oportunidade não fechada como ganha",
+      erro: resultadoOportunidade.ok
+        ? undefined
+        : resultadoOportunidade.decisaoPendente?.mensagem || "Oportunidade não fechada como ganha",
     }
   } catch (erro) {
     automacaoOportunidade = {
@@ -353,26 +378,29 @@ export async function aplicarVinculacaoFaturado(params: {
   await registrarLog({
     tipo: "ATUALIZACAO",
     acao: "vincular_faturado",
-    descricao: `Pedido do ERP ${empresa}/${pedidoReferencia} vinculado e faturamento da nota ${nota.numero ?? "-" } processado na oportunidade #${oportunidadeId}`,
+    descricao: `Nota ${nota.numero ?? "-"} vinculada na oportunidade #${oportunidadeId} com os pedidos ${pedidosVinculados
+      .map((pedido) => pedido.numero ?? "-")
+      .join(", ")}`,
     entidade: "CrmPedidoVenda",
-    entidadeId: pedidoId,
+    entidadeId: pedidosVinculados[0]?.id ?? 0,
     usuarioNome,
     dados: {
-      pedidoId,
       codigoPedido,
+      pedidos: pedidosVinculados.map((pedido) => pedido.id),
       nrNota: nota.numero,
       valorPedido,
+      valorNota: nota.valorTotal,
       status: statusPedidoFinal,
       faturamentoId,
-      pedidoCriado,
     },
   })
 
   return {
-    pedidoId,
-    numero: pedidoReferencia,
+    pedidoId: pedidosVinculados[0]?.id ?? 0,
+    numero: pedidosVinculados[0]?.numero ?? codigoPedido,
+    pedidos: pedidosVinculados,
     valorPedido,
-    status: statusPedidoFinal ?? "ABERTO",
+    status: statusPedidoFinal,
     faturamentoId,
     nota,
     valorOportunidade,

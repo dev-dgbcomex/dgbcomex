@@ -113,7 +113,7 @@ function caminhoDetalhe(
   partes: { empresa: string; pedido: string; nota: string }
 ) {
   if (tipo === "PEDIDO") {
-    return `/crm/pedidos/${encodeURIComponent(partes.empresa)}/${encodeURIComponent(partes.pedido)}`
+    return `/crm/pedidos-faturados/${encodeURIComponent(partes.empresa)}/${encodeURIComponent(partes.pedido)}`
   }
   return `/crm/faturamentos/${encodeURIComponent(partes.empresa)}/${encodeURIComponent(partes.pedido)}/${encodeURIComponent(partes.nota)}`
 }
@@ -193,15 +193,15 @@ export async function criarPedidoEspelho(params: {
   empresa: string
   pedidoReferencia: string
   pedidoDetalhe?: string
+  documento?: PedidoErp
   usuarioNome?: string | null
 }): Promise<{ id: number; numero: string | null; total: number }> {
-  const { oportunidadeId, empresa, pedidoReferencia, pedidoDetalhe, usuarioNome } = params
+  const { oportunidadeId, empresa, pedidoReferencia, pedidoDetalhe, documento: documentoFornecido, usuarioNome } = params
   const pedidoParaDetalhe = pedidoDetalhe ?? pedidoReferencia
 
-  const documento = await requisitarErp<PedidoErp>(
-    `/crm/pedidos/${encodeURIComponent(empresa)}/${encodeURIComponent(pedidoParaDetalhe)}`
+  const pedidoErp = documentoFornecido ?? await requisitarErp<PedidoErp>(
+    `/crm/pedidos-faturados/${encodeURIComponent(empresa)}/${encodeURIComponent(pedidoParaDetalhe)}`
   )
-  const pedidoErp = documento
   const referencia = `${empresa}/${pedidoReferencia}`
 
   const [existente] = await db

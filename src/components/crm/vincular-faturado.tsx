@@ -20,14 +20,27 @@ type NotaFaturada = {
   pedidoOrigem: string | null
 }
 
+type PedidoErpPreview = {
+  empresa: string | null
+  pedido: string | null
+  pedido_origem?: string | null
+  valor_total: number
+}
+
 type PreviewVinculoFaturado = {
   notas: NotaFaturada[]
-  pedidoErp: { empresa: string | null; pedido: string | null; itens?: any[] } | null
+  pedidosErp: PedidoErpPreview[]
   valorPedido: number
+  valorNota: number
   valorOportunidadeAntes: number
   valorOportunidadeDepois: number
   jaVinculado: boolean
-  pedidoExistente: { id: number; numero: string | null; referenciaExterna: string | null } | null
+  pedidosExistentes: Array<{
+    id: number
+    numero: string | null
+    referenciaExterna: string | null
+    oportunidadeId: number
+  }>
   mensagem: string | null
 }
 
@@ -76,12 +89,11 @@ export default function VincularFaturado({
       setPreview(dados as PreviewVinculoFaturado)
       const primeira = dados.notas?.[0]
       setNrNotaSelecionada(primeira?.nr_nota ?? null)
-      const sugerido =
-        primeira && dados.pedidoErp
-          ? primeira.valorTotal >= dados.valorPedido
-            ? "FATURADO"
-            : "PARCIAL"
-          : null
+      const sugerido = primeira
+        ? primeira.valorTotal >= dados.valorPedido
+          ? "FATURADO"
+          : "PARCIAL"
+        : null
       setStatusPedido(sugerido)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Erro ao buscar faturados do ERP")
@@ -113,7 +125,7 @@ export default function VincularFaturado({
       )
       const dados = await resposta.json()
       if (!resposta.ok) throw new Error(dados.error || "Não foi possível vincular o faturado")
-      toast.success("Pedido vinculado e faturamento processado com o ERP.")
+      toast.success("Pedidos vinculados e faturamento processado com o ERP.")
       setPreview(null)
       setCodigo("")
       setNrNotaSelecionada(null)
@@ -129,7 +141,10 @@ export default function VincularFaturado({
 
   const notas = preview?.notas ?? []
   const mensagem = preview?.mensagem ?? null
-  const podeAplicar = Boolean(notas.length && !mensagem)
+  const haConflito = Boolean(
+    preview?.pedidosExistentes?.some((pedido) => pedido.oportunidadeId !== oportunidadeId)
+  )
+  const podeAplicar = Boolean(notas.length && !haConflito)
 
   const notaSelecionada =
     notas.find((n) => n.nr_nota === nrNotaSelecionada) ?? notas[0]
@@ -288,10 +303,29 @@ export default function VincularFaturado({
                         </div>
                       </div>
 
+                      {preview?.pedidosErp && preview.pedidosErp.length > 0 && (
+                        <div className="mt-4 rounded-lg border border-slate-200 dark:border-slate-700 p-3">
+                          <p className="text-xs font-medium text-slate-700 dark:text-slate-200">
+                            Pedidos do ERP que compõem esta nota:
+                          </p>
+                          <ul className="mt-2 space-y-1">
+                            {preview.pedidosErp.map((pedido) => (
+                              <li
+                                key={pedido.pedido_origem ?? pedido.pedido ?? "-"}
+                                className="flex justify-between gap-3 text-xs text-slate-600 dark:text-slate-400"
+                              >
+                                <span>Pedido {pedido.pedido_origem ?? pedido.pedido}</span>
+                                <span>{formatarMoeda(pedido.valor_total)}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
                       <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
-                        Valor do pedido:{" "}
-                        {formatarMoeda(preview?.valorPedido)} · Valor da oportunidade antes:{ " "}
-                        {formatarMoeda(preview?.valorOportunidadeAntes)} · depois:{ " "}
+                        Valor dos pedidos: {formatarMoeda(preview?.valorPedido)} · Valor da nota:{" "}
+                        {formatarMoeda(notaSelecionada?.valorTotal)} · Oportunidade antes:{" "}
+                        {formatarMoeda(preview?.valorOportunidadeAntes)} · depois:{" "}
                         {formatarMoeda(preview?.valorOportunidadeDepois)}
                       </p>
                     </>

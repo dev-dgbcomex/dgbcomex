@@ -121,7 +121,7 @@ describe("atualizarEspelhosErp", () => {
 
     const resultado = await atualizarEspelhosErp("PEDIDO")
 
-    expect(requisitarErp).toHaveBeenCalledWith("/crm/pedidos/13/00006979")
+    expect(requisitarErp).toHaveBeenCalledWith("/crm/pedidos-faturados/13/00006979")
     expect(tx.update).toHaveBeenCalledOnce()
     expect(tx.delete).toHaveBeenCalledOnce()
     expect(tx.insert).toHaveBeenCalledOnce()

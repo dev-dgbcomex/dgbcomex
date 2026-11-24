@@ -20,6 +20,7 @@ export type DocumentoErpItem = {
 export type PedidoErp = {
   empresa: string | null
   pedido: string | null
+  pedido_origem?: string | null
   cliente_cnpj: string | null
   cliente_nome: string | null
   data_pedido: string | null

@@ -53,12 +53,13 @@ describe("POST /api/crm/oportunidades/[id]/vincular-faturado", () => {
   it("faz preview sem aplicar", async () => {
     vi.mocked(previewVincularFaturado).mockResolvedValue({
       notas: [],
-      pedidoErp: null,
+      pedidosErp: [],
       valorPedido: 0,
+      valorNota: 0,
       valorOportunidadeAntes: 0,
       valorOportunidadeDepois: 0,
       jaVinculado: false,
-      pedidoExistente: null,
+      pedidosExistentes: [],
       mensagem: null,
     })
 
@@ -76,6 +77,7 @@ describe("POST /api/crm/oportunidades/[id]/vincular-faturado", () => {
     vi.mocked(aplicarVinculacaoFaturado).mockResolvedValue({
       pedidoId: 10,
       numero: "00007046",
+      pedidos: [{ id: 10, numero: "00007046", valorPedido: 9162.37 }],
       valorPedido: 9162.37,
       status: "FATURADO",
       faturamentoId: 100,

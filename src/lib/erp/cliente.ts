@@ -10,6 +10,7 @@
  */
 
 import { ErroWms, requisitarWms, type OpcoesRequisicao } from "@/lib/wms/cliente"
+import type { PedidoErp } from "@/lib/erp/tipos"
 
 export class ErroErp extends Error {
   readonly status: number
@@ -34,4 +35,32 @@ export async function requisitarErp<T>(
     }
     throw erro
   }
+}
+
+/** Pedido faturado não está no warehouse: a api-microdata lê direto do SQL Server. */
+export async function buscarPedidoFaturadoErp(
+  empresa: string | null,
+  pedido: string | null
+): Promise<PedidoErp> {
+  if (!empresa || !pedido) {
+    throw new Error("Empresa e pedido do ERP são obrigatórios")
+  }
+  return requisitarErp<PedidoErp>(
+    `/crm/pedidos-faturados/${encodeURIComponent(empresa)}/${encodeURIComponent(pedido)}`
+  )
+}
+
+/** Uma nota pode faturar vários pedidos; devolve todos os `nosso_pedido` da nota. */
+export async function buscarPedidosDaNotaErp(
+  empresa: string | null,
+  pedido: string | null,
+  nrNota: string | null
+): Promise<string[]> {
+  if (!empresa || !pedido || !nrNota) return []
+  const resposta = await requisitarErp<{
+    pedidos: string[]
+  }>(
+    `/crm/faturamentos/${encodeURIComponent(empresa)}/${encodeURIComponent(pedido)}/${encodeURIComponent(nrNota)}/pedidos`
+  )
+  return (resposta.pedidos ?? []).map((item) => String(item).trim()).filter(Boolean)
 }
