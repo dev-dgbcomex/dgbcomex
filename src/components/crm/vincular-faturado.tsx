@@ -244,7 +244,7 @@ export default function VincularFaturado({
                                 </p>
                                 <p className="text-xs text-slate-500 dark:text-slate-400">
                                   {nota.dataNota ? new Date(`${nota.dataNota}T12:00:00`).toLocaleDateString("pt-BR") : "—"} ·
-                                  pedido {nota.pedido} ·
+                                  pedido {nota.pedidoOrigem ?? nota.pedido} ·
                                   {formatarMoeda(nota.valorTotal)}
                                 </p>
                               </div>
