@@ -513,7 +513,7 @@ function DetalheOportunidadePageContent() {
 
       <div className="grid gap-6 md:grid-cols-12">
         <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 md:col-span-6">
-          <div className="flex items-center justify-between mb-4 gap-2 flex-wrap sm:flex-nowrap">
+          <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
             <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-50 flex items-center gap-2">
               <Receipt size={16} className="text-emerald-600" />
               Faturamentos
@@ -521,7 +521,7 @@ function DetalheOportunidadePageContent() {
                 ({(oportunidade.faturamentos || []).length})
               </span>
             </h2>
-            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+            <div className="flex items-center gap-2 flex-wrap">
               <Link
                 href={`/comercial/crm/faturamentos/novo?oportunidadeId=${oportunidade.id}`}
                 className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 transition-colors"
@@ -577,7 +577,7 @@ function DetalheOportunidadePageContent() {
         </div>
 
         <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 md:col-span-6">
-          <div className="flex items-center justify-between mb-4 gap-2 flex-wrap sm:flex-nowrap">
+          <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
             <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-50 flex items-center gap-2">
               <ShoppingCart size={16} className="text-emerald-600" />
               Pedidos de Venda
@@ -585,7 +585,7 @@ function DetalheOportunidadePageContent() {
                 ({(oportunidade.pedidosVenda || []).length})
               </span>
             </h2>
-            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+            <div className="flex items-center gap-2 flex-wrap">
               <button
                 type="button"
                 onClick={() => setVinculoErp("PEDIDO")}
