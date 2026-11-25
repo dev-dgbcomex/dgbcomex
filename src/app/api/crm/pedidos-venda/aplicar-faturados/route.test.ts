@@ -58,6 +58,7 @@ describe("POST /api/crm/pedidos-venda/aplicar-faturados", () => {
       ],
       oportunidadeId: 10,
       valorOportunidade: 5200,
+      oportunidades: [{ oportunidadeId: 10, valorEstimado: 5200 }],
     })
 
     const res = await post({ oportunidadeId: 10, aplicar: true })
@@ -70,6 +71,7 @@ describe("POST /api/crm/pedidos-venda/aplicar-faturados", () => {
       autor: { id: 1, nome: "Tiago" },
     })
     expect(body.valorOportunidade).toBe(5200)
+    expect(body.oportunidades).toEqual([{ oportunidadeId: 10, valorEstimado: 5200 }])
     expect(body.pedidos[0].status).toBe("FATURADO")
   })
 

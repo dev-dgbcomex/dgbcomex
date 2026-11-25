@@ -10,7 +10,7 @@
  */
 
 import { ErroWms, requisitarWms, type OpcoesRequisicao } from "@/lib/wms/cliente"
-import type { PedidoErp } from "@/lib/erp/tipos"
+import type { FaturamentoErp, ListaErp, PedidoErp } from "@/lib/erp/tipos"
 
 export class ErroErp extends Error {
   readonly status: number
@@ -63,4 +63,41 @@ export async function buscarPedidosDaNotaErp(
     `/crm/faturamentos/${encodeURIComponent(empresa)}/${encodeURIComponent(pedido)}/${encodeURIComponent(nrNota)}/pedidos`
   )
   return (resposta.pedidos ?? []).map((item) => String(item).trim()).filter(Boolean)
+}
+
+export async function buscarFaturamentosPorPedido(
+  pedido: string
+): Promise<ListaErp<FaturamentoErp>> {
+  const codigo = pedido.trim()
+  const vazia: ListaErp<FaturamentoErp> = {
+    paginacao: { total: 0, pagina: 1, por_pagina: 50, total_paginas: 0 },
+    itens: [],
+  }
+  if (!codigo) return vazia
+
+  try {
+    return await requisitarErp<ListaErp<FaturamentoErp>>(
+      `/crm/faturamentos-por-pedido/${encodeURIComponent(codigo)}`
+    )
+  } catch (erro) {
+    if (!(erro instanceof ErroErp && erro.status === 404)) return vazia
+  }
+
+  const filtrar = (itens: FaturamentoErp[]) =>
+    itens.filter((nota) => (nota.pedido_origem ?? "").trim() === codigo)
+
+  try {
+    const filtradas = await requisitarErp<ListaErp<FaturamentoErp>>(
+      `/crm/faturamentos?pedido_origem=${encodeURIComponent(codigo)}&por_pagina=500`
+    )
+    if (filtradas.itens.length > 0) {
+      return { ...filtradas, itens: filtrar(filtradas.itens) }
+    }
+    const todas = await requisitarErp<ListaErp<FaturamentoErp>>(
+      `/crm/faturamentos?por_pagina=500`
+    )
+    return { ...todas, itens: filtrar(todas.itens) }
+  } catch {
+    return vazia
+  }
 }

@@ -10,12 +10,16 @@ import {
 import {
   criarOuAtualizarFaturamento,
   garantirPedidoErpVinculado,
-  somaOportunidade,
 } from "@/lib/crm/verificar-pedido-faturado"
+import {
+  recalcularValorOportunidade,
+  somaOportunidade,
+} from "@/lib/crm/valor-oportunidade"
 import { itensParaCrmFaturamento } from "@/lib/crm/erp-espelho"
 import { processarAutomacaoCRM } from "@/lib/crm/automacoes-crm"
 import { registrarLog } from "@/lib/notificar"
 import {
+  buscarFaturamentosPorPedido,
   buscarPedidoFaturadoErp,
   buscarPedidosDaNotaErp,
   requisitarErp,
@@ -91,34 +95,7 @@ export async function buscarNotasFaturadasPorPedido(
   if (!codigoPedido) {
     throw new Error("Informe o código do pedido")
   }
-  const codigoLimpo = codigoPedido.trim()
-
-  const filtrar = (itens: FaturamentoErp[]) =>
-    itens.filter((nota) => (nota.pedido_origem ?? "").trim() === codigoLimpo)
-
-  let filtradas: ListaErp<FaturamentoErp> | null = null
-  try {
-    filtradas = await requisitarErp<ListaErp<FaturamentoErp>>(
-      `/crm/faturamentos?pedido_origem=${encodeURIComponent(codigoLimpo)}&por_pagina=500`
-    )
-  } catch {
-    filtradas = null
-  }
-  if (filtradas && filtradas.itens.length > 0) {
-    return { ...filtradas, itens: filtrar(filtradas.itens) }
-  }
-
-  try {
-    const todas = await requisitarErp<ListaErp<FaturamentoErp>>(
-      `/crm/faturamentos?por_pagina=500`
-    )
-    return { ...todas, itens: filtrar(todas.itens) }
-  } catch {
-    return {
-      paginacao: { total: 0, pagina: 1, por_pagina: 50, total_paginas: 0 },
-      itens: [],
-    }
-  }
+  return buscarFaturamentosPorPedido(codigoPedido)
 }
 
 async function carregarPedidosDaNota(
@@ -159,7 +136,7 @@ export async function previewVincularFaturado(params: {
   const primeiraNota = notas[0]
   const pedidosErp = await carregarPedidosDaNota(
     primeiraNota.empresa,
-    primeiraNota.pedido,
+    primeiraNota.pedidoOrigem ?? primeiraNota.pedido,
     primeiraNota.nr_nota
   )
   const referencias = pedidosErp.map(
@@ -240,7 +217,7 @@ export async function aplicarVinculacaoFaturado(params: {
   const pedidoInternoNota = notaErp.pedido ?? codigoPedido
   const pedidosDocumento = await carregarPedidosDaNota(
     empresa,
-    pedidoInternoNota,
+    notaErp.pedido_origem ?? pedidoInternoNota,
     notaErp.nr_nota ?? null
   )
   if (pedidosDocumento.length === 0) {
@@ -290,11 +267,7 @@ export async function aplicarVinculacaoFaturado(params: {
   )
 
   const valorPedido = pedidosVinculados.reduce((total, item) => total + item.valorPedido, 0)
-  const valorOportunidade = await somaOportunidade(oportunidadeId)
-  await db
-    .update(crmOportunidades)
-    .set({ valorEstimado: valorOportunidade, updatedAt: new Date() })
-    .where(eq(crmOportunidades.id, oportunidadeId))
+  const valorOportunidade = await recalcularValorOportunidade(oportunidadeId)
 
   const statusPedidoFinal =
     statusPedido ?? (nota.valorTotal >= valorPedido ? "FATURADO" : "PARCIAL")

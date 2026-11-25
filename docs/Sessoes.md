@@ -753,6 +753,35 @@
 - **Arquivos Envolvidos:** `M:\dev\api-microdata\app\src\api\routers\crm.py`, `M:\dev\api-microdata\app\tests\test_crm.py`, `src/lib/erp/cliente.ts`, `src/lib/erp/tipos.ts`, `src/lib/crm/erp-espelho.ts`, `src/lib/crm/erp-espelho.test.ts`, `src/lib/crm/verificar-pedido-faturado.ts`, `src/lib/crm/vincular-faturado.ts`, `src/lib/crm/vincular-faturado.test.ts`, `src/components/crm/vincular-faturado.tsx`, `src/components/crm/vincular-faturado.test.tsx`, `src/app/api/crm/oportunidades/[id]/vincular-faturado/route.test.ts`, `src/lib/db/schema/crm-faturamento-pedidos.ts`, `src/lib/db/schema/index.ts`, `src/lib/db/migrations/0081_crm_faturamento_pedidos_nn.sql`, `scripts/sync-all-dbs.js`, `scripts/criar-tabelas-faltantes.js`, `src/lib/info-content/crm.ts`, `src/lib/info-content/info-content.test.ts`, `docs/Sessoes.md`.
 - **Testes:** dgbcomex: `npx.cmd vitest run` → 497 arquivos / 2905 testes passados; `tsc --noEmit` limpo; `npm run build` OK; `npm run lint` apenas warnings pré-existentes. api-microdata: `app\.venv\Scripts\python.exe -m pytest -q` em `M:\dev\api-microdata\app` → 383 passou; `app\.venv\Scripts\python.exe -m ruff check src/api/routers/crm.py tests/test_crm.py` limpo. Banco: `npm.cmd run db:migrate`, `npm.cmd run db:replicar-neon`, `npm.cmd run db:comparar` (`All databases are IDENTICAL`; único aviso pré-existente: definição do índice `idx_whatsapp_fila_status` no warehouse local) e `npm.cmd run db:verificar-local` (`✓ CRITÉRIO DE ACEITE ATINGIDO: 0 divergências (local ⊇ Neon)`, 8 tabelas com linhas a mais no local permitidas).
 
+### Sessão 49 — Busca de faturados passa a ler o ERP ao vivo (00007094)
+
+- **Data:** 2026-11-24
+- **Commit:** novo commit desta sessão (ainda não efetuado no momento deste registro).
+- **Tarefa:** o botão "Buscar faturados" e o "Verificar faturados" não encontravam o pedido `00007094`, embora a nota `012830` existisse no ERP. A busca dependia do warehouse `raw.fat_pedido`, que estava desatualizado; além disso, a api-microdata on-prem rodava uvicorn antigo e devolvia `404 {"detail":"Not Found"}` nas rotas novas.
+- **Resultado:**
+  - `M:\dev\api-microdata\app\src\api\routers\crm.py`: novo `GET /crm/faturamentos-por-pedido/{pedido}` lê `dbo.Fat_Pedido` direto do ERP por `Nosso_Pedido`, com filtro opcional de empresa e o mesmo contrato de `FaturamentoErp`; `GET /crm/faturamentos/{empresa}/{pedido}/{nr_nota}/pedidos` também passou a ler `dbo.Fat_Pedido`, deixando de depender do sync do warehouse.
+  - `M:\dev\dgbcomex\src\lib\erp\cliente.ts`: novo helper `buscarFaturamentosPorPedido` usa a rota ERP-direta primeiro e só cai para `/crm/faturamentos?pedido_origem=...` se a api-microdata antiga responder 404.
+  - `M:\dev\dgbcomex\src\lib\crm\vincular-faturado.ts` e `src/lib/crm/verificar-pedido-faturado.ts`: os dois fluxos passam a usar o helper, sem depender de `raw.fat_pedido` atualizado. A busca de pedidos da nota agora recebe `pedido_origem` em vez do número interno da nota.
+  - `M:\dev\dgbcomex\src\lib\erp\cliente.test.ts`: testes do helper (ERP primeiro, fallback só em 404, lista vazia sem fallback e erro não-404).
+  - api-microdata reiniciada com `reiniciar-api.bat` (somente porta 58245); sync de faturamentos executado uma vez (`13041` documentos / `103037` itens) para normalizar o warehouse.
+- **Arquivos Envolvidos:** `M:\dev\api-microdata\app\src\api\routers\crm.py`, `M:\dev\api-microdata\app\tests\test_crm.py`, `src/lib/erp/cliente.ts`, `src/lib/erp/cliente.test.ts`, `src/lib/crm/vincular-faturado.ts`, `src/lib/crm/vincular-faturado.test.ts`, `src/lib/crm/verificar-pedido-faturado.ts`, `src/lib/crm/verificar-pedido-faturado.test.ts`, `docs/Sessoes.md`.
+- **Testes:** dgbcomex: `npx.cmd vitest run` → 498 arquivos / 2909 testes passados; `tsc --noEmit` limpo; `npm run build` OK. api-microdata: `pytest -q` → 384 passou; `ruff check src/api/routers/crm.py tests/test_crm.py` → limpo.
+
+### Sessão 50 — Valor estimado recalculado por todos os botões de vínculo
+
+- **Data:** 2026-11-25
+- **Commit:** novo commit desta sessão (ainda não efetuado no momento deste registro).
+- **Tarefa:** os botões "Vincular do ERP", "Vincular faturado" e "Verificar faturados" precisam, como ação final, recalcular o valor da oportunidade com todos os pedidos vinculados a ela (um pedido ou a soma de vários).
+- **Resultado:**
+  - `src/lib/crm/valor-oportunidade.ts`: novo helper com `somaOportunidade` e `recalcularValorOportunidade`, que grava `valorEstimado + updatedAt` na oportunidade.
+  - `src/app/api/crm/oportunidades/[id]/vinculos/route.ts`: os ramos `PEDIDO` e `FATURAMENTO` passam a chamar o helper, substituindo o SQL inline de soma; a resposta devolve o total recalculado.
+  - `src/lib/crm/vincular-faturado.ts`: aplicação usa `recalcularValorOportunidade`; o preview continua usando apenas `somaOportunidade`.
+  - `src/lib/crm/verificar-pedido-faturado.ts`: recálculo feito por oportunidade afetada e resposta com a lista `oportunidades`, sem limitar ao primeiro pedido.
+  - `src/components/crm/verificar-pedidos-faturados.tsx`: aplicação global não injeta mais o `oportunidadeId` do primeiro pedido, preservando todas as oportunidades do preview.
+  - `src/lib/info-content/crm.ts`, `src/lib/info-content/info-content.test.ts` e `docs/Sessoes.md`: modal de informação e histórico atualizados.
+- **Arquivos Envolvidos:** `src/lib/crm/valor-oportunidade.ts`, `src/lib/crm/valor-oportunidade.test.ts`, `src/app/api/crm/oportunidades/[id]/vinculos/route.ts`, `src/app/api/crm/oportunidades/[id]/vinculos/route.test.ts`, `src/lib/crm/vincular-faturado.ts`, `src/lib/crm/vincular-faturado.test.ts`, `src/lib/crm/verificar-pedido-faturado.ts`, `src/lib/crm/verificar-pedido-faturado.test.ts`, `src/components/crm/verificar-pedidos-faturados.tsx`, `src/components/crm/verificar-pedidos-faturados.test.tsx`, `src/lib/info-content/crm.ts`, `src/lib/info-content/info-content.test.ts`, `docs/Sessoes.md`.
+- **Testes:** `npx.cmd vitest run` → 499 arquivos / 2914 testes passados; `tsc --noEmit` limpo; `npm run build` OK. Foco: `valor-oportunidade.test.ts`, `vincular-faturado.test.ts`, `verificar-pedido-faturado.test.ts`, `vinculos/route.test.ts`, `aplicar-faturados/route.test.ts` e `verificar-pedidos-faturados.test.tsx`.
+
 ---
 
 ## Estrutura de Comandos

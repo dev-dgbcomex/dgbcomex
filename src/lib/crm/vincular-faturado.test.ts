@@ -2,6 +2,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { db } from "@/lib/db"
 import {
+  buscarFaturamentosPorPedido,
   buscarPedidoFaturadoErp,
   buscarPedidosDaNotaErp,
   requisitarErp,
@@ -10,8 +11,11 @@ import type { PedidoErp } from "@/lib/erp/tipos"
 import {
   criarOuAtualizarFaturamento,
   garantirPedidoErpVinculado,
-  somaOportunidade,
 } from "@/lib/crm/verificar-pedido-faturado"
+import {
+  recalcularValorOportunidade,
+  somaOportunidade,
+} from "@/lib/crm/valor-oportunidade"
 import { criarPedidoEspelho, itensParaCrmFaturamento } from "@/lib/crm/erp-espelho"
 import { processarAutomacaoCRM } from "@/lib/crm/automacoes-crm"
 import { registrarLog } from "@/lib/notificar"
@@ -24,13 +28,17 @@ import { createQueryBuilder } from "@/test/route-db-mock"
 vi.mock("@/lib/db", () => ({ db: { select: vi.fn(), update: vi.fn(), insert: vi.fn() } }))
 vi.mock("@/lib/erp/cliente", () => ({
   requisitarErp: vi.fn(),
+  buscarFaturamentosPorPedido: vi.fn(),
   buscarPedidoFaturadoErp: vi.fn(),
   buscarPedidosDaNotaErp: vi.fn(),
 }))
 vi.mock("@/lib/crm/verificar-pedido-faturado", () => ({
   criarOuAtualizarFaturamento: vi.fn(),
   garantirPedidoErpVinculado: vi.fn(),
+}))
+vi.mock("@/lib/crm/valor-oportunidade", () => ({
   somaOportunidade: vi.fn(),
+  recalcularValorOportunidade: vi.fn(),
 }))
 vi.mock("@/lib/crm/erp-espelho", () => ({
   criarPedidoEspelho: vi.fn(),
@@ -56,6 +64,9 @@ const notasLista = {
       vr_nota: 9162.37,
       soma_itens: 9162.37,
       pedido_origem: "00007046",
+      status: "S",
+      condicao_pagamento: "A vista",
+      valor_nota: 9162.37,
       status_gravado: "2",
       cond_pagto_extenso: "A vista",
       valor_total: 9162.37,
@@ -110,6 +121,7 @@ describe("previewVincularFaturado", () => {
     vi.resetAllMocks()
     vi.mocked(db.select).mockReset()
     vi.mocked(requisitarErp).mockReset()
+    vi.mocked(buscarFaturamentosPorPedido).mockReset()
     vi.mocked(buscarPedidosDaNotaErp).mockReset()
     vi.mocked(buscarPedidoFaturadoErp).mockReset()
     vi.mocked(somaOportunidade).mockResolvedValue(0)
@@ -119,7 +131,7 @@ describe("previewVincularFaturado", () => {
   })
 
   it("avisa quando não há faturamento para o pedido", async () => {
-    vi.mocked(requisitarErp).mockResolvedValue({
+    vi.mocked(buscarFaturamentosPorPedido).mockResolvedValue({
       paginacao: { total: 0, pagina: 1, por_pagina: 50, total_paginas: 0 },
       itens: [],
     })
@@ -135,7 +147,7 @@ describe("previewVincularFaturado", () => {
   })
 
   it("mostra preview da nota e do pedido real do ERP", async () => {
-    vi.mocked(requisitarErp).mockResolvedValueOnce(notasLista)
+    vi.mocked(buscarFaturamentosPorPedido).mockResolvedValueOnce(notasLista)
     vi.mocked(buscarPedidosDaNotaErp).mockResolvedValueOnce(["00007046"])
     vi.mocked(buscarPedidoFaturadoErp).mockResolvedValueOnce(pedidoErp)
     vi.mocked(db.select).mockReturnValueOnce(createQueryBuilder([]))
@@ -153,20 +165,18 @@ describe("previewVincularFaturado", () => {
     expect(resultado.valorPedido).toBe(9162.37)
     expect(resultado.jaVinculado).toBe(false)
     expect(resultado.mensagem).toBeNull()
-    expect(vi.mocked(requisitarErp)).toHaveBeenCalledTimes(1)
-    expect(vi.mocked(requisitarErp)).toHaveBeenCalledWith(
-      expect.stringContaining("/crm/faturamentos?pedido_origem=00007046&por_pagina=500")
-    )
+    expect(vi.mocked(buscarFaturamentosPorPedido)).toHaveBeenCalledWith("00007046")
+    expect(vi.mocked(requisitarErp)).not.toHaveBeenCalled()
     expect(vi.mocked(buscarPedidosDaNotaErp)).toHaveBeenCalledWith(
       "13",
-      "013541",
+      "00007046",
       "012754"
     )
     expect(vi.mocked(buscarPedidoFaturadoErp)).toHaveBeenCalledWith("13", "00007046")
   })
 
   it("mostra todos os pedidos de uma nota com múltiplos pedidos", async () => {
-    vi.mocked(requisitarErp).mockResolvedValueOnce(notasLista)
+    vi.mocked(buscarFaturamentosPorPedido).mockResolvedValueOnce(notasLista)
     vi.mocked(buscarPedidosDaNotaErp).mockResolvedValueOnce(["00007046", "00007047"])
     vi.mocked(buscarPedidoFaturadoErp)
       .mockResolvedValueOnce(pedidoErp)
@@ -187,7 +197,7 @@ describe("previewVincularFaturado", () => {
   })
 
   it("avisa quando um dos pedidos já vinculado a outra oportunidade", async () => {
-    vi.mocked(requisitarErp).mockResolvedValueOnce(notasLista)
+    vi.mocked(buscarFaturamentosPorPedido).mockResolvedValueOnce(notasLista)
     vi.mocked(buscarPedidosDaNotaErp).mockResolvedValueOnce(["00007046"])
     vi.mocked(buscarPedidoFaturadoErp).mockResolvedValueOnce(pedidoErp)
     vi.mocked(db.select).mockReturnValueOnce(
@@ -218,11 +228,13 @@ describe("aplicarVinculacaoFaturado", () => {
     vi.resetAllMocks()
     vi.mocked(db.select).mockReset()
     vi.mocked(requisitarErp).mockReset()
+    vi.mocked(buscarFaturamentosPorPedido).mockReset()
     vi.mocked(buscarPedidosDaNotaErp).mockReset()
     vi.mocked(buscarPedidoFaturadoErp).mockReset()
     vi.mocked(garantirPedidoErpVinculado).mockReset()
     vi.mocked(criarOuAtualizarFaturamento).mockReset()
     vi.mocked(somaOportunidade).mockReset()
+    vi.mocked(recalcularValorOportunidade).mockReset()
     vi.mocked(processarAutomacaoCRM).mockResolvedValue({ ok: true } as never)
     vi.mocked(registrarLog).mockReset()
     const builder = createQueryBuilder(undefined)
@@ -231,9 +243,8 @@ describe("aplicarVinculacaoFaturado", () => {
   })
 
   it("cria pedido real, processa faturamento e fecha oportunidade", async () => {
-    vi.mocked(requisitarErp)
-      .mockResolvedValueOnce(notasLista)
-      .mockResolvedValueOnce(notaDetalhe)
+    vi.mocked(buscarFaturamentosPorPedido).mockResolvedValueOnce(notasLista)
+    vi.mocked(requisitarErp).mockResolvedValueOnce(notaDetalhe)
     vi.mocked(buscarPedidosDaNotaErp).mockResolvedValueOnce(["00007046"])
     vi.mocked(buscarPedidoFaturadoErp).mockResolvedValueOnce(pedidoErp)
     vi.mocked(garantirPedidoErpVinculado).mockResolvedValueOnce({
@@ -245,7 +256,7 @@ describe("aplicarVinculacaoFaturado", () => {
     vi.mocked(db.select)
       .mockReturnValueOnce(createQueryBuilder([{ id: 14, empresaId: 17 }]))
       .mockReturnValueOnce(createQueryBuilder([]))
-    vi.mocked(somaOportunidade).mockResolvedValue(9162.37)
+    vi.mocked(recalcularValorOportunidade).mockResolvedValue(9162.37)
     vi.mocked(criarOuAtualizarFaturamento).mockResolvedValue(100)
 
     const resultado = await aplicarVinculacaoFaturado({
@@ -260,9 +271,9 @@ describe("aplicarVinculacaoFaturado", () => {
     expect(resultado.valorOportunidade).toBe(9162.37)
     expect(resultado.faturamentoId).toBe(100)
     expect(resultado.status).toBe("FATURADO")
-    expect(vi.mocked(requisitarErp)).toHaveBeenCalledWith(
-      expect.stringContaining("/crm/faturamentos?pedido_origem=00007046&por_pagina=500")
-    )
+    expect(recalcularValorOportunidade).toHaveBeenCalledWith(14)
+    expect(somaOportunidade).not.toHaveBeenCalled()
+    expect(vi.mocked(buscarFaturamentosPorPedido)).toHaveBeenCalledWith("00007046")
     expect(vi.mocked(requisitarErp)).toHaveBeenCalledWith("/crm/faturamentos/13/013541/012754")
     expect(vi.mocked(buscarPedidoFaturadoErp)).toHaveBeenCalledWith("13", "00007046")
     expect(vi.mocked(criarPedidoEspelho)).not.toHaveBeenCalled()
@@ -291,9 +302,11 @@ describe("aplicarVinculacaoFaturado", () => {
       vr_nota: 9000,
       valor_total: 9000,
     }
-    vi.mocked(requisitarErp)
-      .mockResolvedValueOnce({ ...notasLista, itens: [notaMenor] })
-      .mockResolvedValueOnce({ ...notaMenor, itens: [] })
+    vi.mocked(buscarFaturamentosPorPedido).mockResolvedValueOnce({
+      ...notasLista,
+      itens: [notaMenor],
+    })
+    vi.mocked(requisitarErp).mockResolvedValueOnce({ ...notaMenor, itens: [] })
     vi.mocked(buscarPedidosDaNotaErp).mockResolvedValueOnce(["00007046", "00007047"])
     vi.mocked(buscarPedidoFaturadoErp)
       .mockResolvedValueOnce(pedidoErp)
@@ -314,7 +327,7 @@ describe("aplicarVinculacaoFaturado", () => {
     vi.mocked(db.select)
       .mockReturnValueOnce(createQueryBuilder([{ id: 14, empresaId: null }]))
       .mockReturnValueOnce(createQueryBuilder([]))
-    vi.mocked(somaOportunidade).mockResolvedValue(0)
+    vi.mocked(recalcularValorOportunidade).mockResolvedValue(0)
     vi.mocked(criarOuAtualizarFaturamento).mockResolvedValue(101)
 
     const resultado = await aplicarVinculacaoFaturado({
@@ -327,6 +340,7 @@ describe("aplicarVinculacaoFaturado", () => {
     expect(resultado.pedidos.map((pedido) => pedido.id)).toEqual([10, 11])
     expect(resultado.valorPedido).toBe(10162.37)
     expect(resultado.status).toBe("PARCIAL")
+    expect(recalcularValorOportunidade).toHaveBeenCalledWith(14)
     expect(garantirPedidoErpVinculado).toHaveBeenCalledTimes(2)
     expect(vi.mocked(criarOuAtualizarFaturamento)).toHaveBeenCalledWith(
       expect.objectContaining({ pedidoVendaIds: [10, 11] })

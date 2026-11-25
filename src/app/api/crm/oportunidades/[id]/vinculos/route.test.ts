@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { NextRequest, NextResponse } from "next/server"
 import { requireAuth } from "@/lib/auth"
 import { db } from "@/lib/db"
+import { recalcularValorOportunidade } from "@/lib/crm/valor-oportunidade"
 import { ErroErp, requisitarErp } from "@/lib/erp/cliente"
 import { registrarLog } from "@/lib/notificar"
 import { createQueryBuilder } from "@/test/route-db-mock"
@@ -29,6 +30,7 @@ vi.mock("@/lib/erp/cliente", () => ({
   requisitarErp: vi.fn(),
 }))
 vi.mock("@/lib/notificar", () => ({ registrarLog: vi.fn() }))
+vi.mock("@/lib/crm/valor-oportunidade", () => ({ recalcularValorOportunidade: vi.fn() }))
 
 const sessao = {
   session: { user: { id: "1", role: "CRM", name: "Tiago" } },
@@ -127,6 +129,8 @@ describe("POST /api/crm/oportunidades/[id]/vinculos", () => {
     vi.mocked(db.update).mockReturnValue(createQueryBuilder([]))
     vi.mocked(db.transaction).mockReset()
     vi.mocked(registrarLog).mockReset()
+    vi.mocked(recalcularValorOportunidade).mockReset()
+    vi.mocked(recalcularValorOportunidade).mockResolvedValue(5200)
     vi.mocked(requireAuth).mockResolvedValue(sessao as any)
     insercoes.length = 0
     mockTransaction()
@@ -192,6 +196,8 @@ describe("POST /api/crm/oportunidades/[id]/vinculos", () => {
       valorTotal: "5200",
     })
     expect(registrarLog).toHaveBeenCalled()
+    expect(recalcularValorOportunidade).toHaveBeenCalledWith(7)
+    expect((await res.json()).total).toBe(5200)
   })
 
   it("bloqueia documento do ERP já vinculado", async () => {
@@ -217,6 +223,8 @@ describe("POST /api/crm/oportunidades/[id]/vinculos", () => {
     expect(res.status).toBe(201)
     expect(requisitarErp).toHaveBeenCalledWith("/crm/faturamentos/13/00006979/12756")
     expect(registrarLog).toHaveBeenCalled()
+    expect(recalcularValorOportunidade).toHaveBeenCalledWith(7)
+    expect((await res.json()).total).toBe(5200)
   })
 
   it("repassa o erro da api-microdata", async () => {

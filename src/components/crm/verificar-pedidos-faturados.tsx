@@ -89,7 +89,7 @@ export function VerificarPedidosFaturados({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           pedidoIds: preview.pedidos.map((p) => p.pedidoId),
-          oportunidadeId: oportunidadeId ?? preview.pedidos[0].oportunidadeId,
+          oportunidadeId,
           aplicar: true,
           statusPedido: statusEscolhido,
         }),

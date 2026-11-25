@@ -34,6 +34,21 @@ const previewComNota = {
   sincronizacao: { verificados: 1, atualizados: 1, falhas: 0 },
 }
 
+const previewDuasOportunidades = {
+  pedidos: [
+    previewComNota.pedidos[0],
+    {
+      ...previewComNota.pedidos[0],
+      pedidoId: 2,
+      numero: "00007076",
+      oportunidadeId: 10,
+      oportunidadeTitulo: "ORÇAMENTO BETA",
+    },
+  ],
+  mensagem: null,
+  sincronizacao: { verificados: 2, atualizados: 2, falhas: 0 },
+}
+
 const aplicarResultado = {
   pedidos: [
     {
@@ -112,5 +127,40 @@ describe("VerificarPedidosFaturados", () => {
         "Pedido(s) verificado(s) e valor sincronizado com o ERP."
       )
     })
+  })
+
+  it("aplica a verificação global sem restringir a uma oportunidade", async () => {
+    fetchMock.mockImplementation(async (_input: any, init?: RequestInit) => {
+      const method = init?.method ?? "GET"
+      const url = String(_input ?? "")
+      if (url.endsWith("/api/crm/pedidos-venda/verificar-faturados") && method === "POST") {
+        return { ok: true, json: async () => previewDuasOportunidades }
+      }
+      if (url.endsWith("/api/crm/pedidos-venda/aplicar-faturados") && method === "POST") {
+        return { ok: true, json: async () => aplicarResultado }
+      }
+      return { ok: false, json: async () => null }
+    })
+
+    renderPage(<VerificarPedidosFaturados pedidoIds={[1, 2]} />)
+    fireEvent.click(screen.getByRole("button", { name: "Verificar pedidos faturados" }))
+
+    await screen.findByText("ORÇAMENTO BETA")
+    fireEvent.click(screen.getByRole("button", { name: /Aplicar verificação/ }))
+
+    await waitFor(() => {
+      expect(toastMock.success).toHaveBeenCalledWith(
+        "Pedido(s) verificado(s) e valor sincronizado com o ERP."
+      )
+    })
+
+    const chamadaAplicar = fetchMock.mock.calls.find(
+      ([input, init]) =>
+        String(input ?? "").endsWith("/api/crm/pedidos-venda/aplicar-faturados") &&
+        init?.method === "POST"
+    )
+    const corpo = JSON.parse(String(chamadaAplicar?.[1]?.body ?? "{}"))
+    expect(corpo).toMatchObject({ pedidoIds: [1, 2], aplicar: true })
+    expect(corpo).not.toHaveProperty("oportunidadeId")
   })
 })

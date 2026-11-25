@@ -7,8 +7,9 @@ import { crmPedidosVenda } from "@/lib/db/schema/crm-pedidos-venda"
 import { crmPedidoVendaItens } from "@/lib/db/schema/crm-pedido-venda-itens"
 import { crmFaturamentos } from "@/lib/db/schema/crm-faturamentos"
 import { crmFaturamentoItens } from "@/lib/db/schema/crm-faturamento-itens"
-import { and, eq, sql } from "drizzle-orm"
+import { and, eq } from "drizzle-orm"
 import { registrarLog } from "@/lib/notificar"
+import { recalcularValorOportunidade } from "@/lib/crm/valor-oportunidade"
 import { ErroErp, requisitarErp } from "@/lib/erp/cliente"
 import {
   STATUS_PEDIDO_ERP,
@@ -144,23 +145,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         return [novo]
       })
 
-      const [totalOportunidade] = await db
-        .select({
-          total: sql<number>`coalesce(sum(${crmPedidoVendaItens.valorTotal}), 0)`,
-        })
-        .from(crmPedidoVendaItens)
-        .innerJoin(
-          crmPedidosVenda,
-          eq(crmPedidoVendaItens.pedidoVendaId, crmPedidosVenda.id)
-        )
-        .where(eq(crmPedidosVenda.oportunidadeId, oportunidadeId))
-
-      const valorTotalOportunidade = Number((totalOportunidade?.total ?? 0))
-
-      await db
-        .update(crmOportunidades)
-        .set({ valorEstimado: valorTotalOportunidade })
-        .where(eq(crmOportunidades.id, oportunidadeId))
+      const valorTotalOportunidade = await recalcularValorOportunidade(oportunidadeId)
 
       await registrarLog({
         tipo: "CADASTRO",
@@ -237,6 +222,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return [novo]
     })
 
+    const valorTotalOportunidade = await recalcularValorOportunidade(oportunidadeId)
+
     await registrarLog({
       tipo: "CADASTRO",
       acao: "vincular_erp",
@@ -247,7 +234,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       dados: { referencia, clienteNome, itens: itensFaturamento.length },
     })
 
-    return NextResponse.json({ ...created, total: faturamentoErp.valor_total }, { status: 201 })
+    return NextResponse.json(
+      { ...created, total: valorTotalOportunidade },
+      { status: 201 }
+    )
   } catch (error) {
     if (error instanceof ErroErp) {
       return NextResponse.json({ error: error.message }, { status: error.status })

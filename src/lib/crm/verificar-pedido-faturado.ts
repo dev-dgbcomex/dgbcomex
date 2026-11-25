@@ -11,6 +11,10 @@ import {
 } from "@/lib/db/schema"
 import { somarValoresTotais } from "@/lib/crm/documento-venda"
 import {
+  recalcularValorOportunidade,
+  somaOportunidade,
+} from "@/lib/crm/valor-oportunidade"
+import {
   atualizarEspelhosErp,
   criarPedidoEspelho,
   itensParaCrm,
@@ -19,6 +23,7 @@ import {
 import { processarAutomacaoCRM } from "@/lib/crm/automacoes-crm"
 import { registrarLog } from "@/lib/notificar"
 import {
+  buscarFaturamentosPorPedido,
   buscarPedidoFaturadoErp,
   buscarPedidosDaNotaErp,
   requisitarErp,
@@ -73,6 +78,7 @@ type AplicarResultado = {
   pedidos: AplicarPedidoResultado[]
   oportunidadeId: number | null
   valorOportunidade: number
+  oportunidades: Array<{ oportunidadeId: number; valorEstimado: number }>
 }
 
 function chavePedido(referencia: string | null | undefined): string | null {
@@ -179,23 +185,11 @@ export async function somaItensPedido(pedidoVendaId: number): Promise<number> {
   return somarValoresTotais(itens)
 }
 
-export async function somaOportunidade(oportunidadeId: number): Promise<number> {
-  const itens = await db
-    .select()
-    .from(crmPedidoVendaItens)
-    .innerJoin(
-      crmPedidosVenda,
-      eq(crmPedidoVendaItens.pedidoVendaId, crmPedidosVenda.id)
-    )
-    .where(eq(crmPedidosVenda.oportunidadeId, oportunidadeId))
-  return somarValoresTotais(itens)
-}
+export { somaOportunidade } from "@/lib/crm/valor-oportunidade"
 
 async function obterNotaERP(pedidoNumero: string | null): Promise<NotaPrevista | null> {
   if (!pedidoNumero) return null
-  const resposta = await requisitarErp<ListaErp<FaturamentoErp>>(
-    `/crm/faturamentos?pedido_origem=${encodeURIComponent(pedidoNumero)}`
-  )
+  const resposta = await buscarFaturamentosPorPedido(pedidoNumero)
   const nota = resposta.itens?.[0]
   if (!nota) return null
   return {
@@ -429,6 +423,7 @@ export async function aplicarVerificacaoPedidoFaturado(
 
   const oportunidadesIds = Array.from(new Set(pedidos.map((p) => p.oportunidadeId)))
   const resultados: AplicarPedidoResultado[] = []
+  const oportunidades: AplicarResultado["oportunidades"] = []
 
   for (const oportunidadeIdAtual of oportunidadesIds) {
     const pedidosOportunidade = pedidos.filter((p) => p.oportunidadeId === oportunidadeIdAtual)
@@ -583,11 +578,8 @@ export async function aplicarVerificacaoPedidoFaturado(
       })
     }
 
-    const valorOportunidade = await somaOportunidade(oportunidadeIdAtual)
-    await db
-      .update(crmOportunidades)
-      .set({ valorEstimado: valorOportunidade, updatedAt: new Date() })
-      .where(eq(crmOportunidades.id, oportunidadeIdAtual))
+    const valorOportunidade = await recalcularValorOportunidade(oportunidadeIdAtual)
+    oportunidades.push({ oportunidadeId: oportunidadeIdAtual, valorEstimado: valorOportunidade })
 
     await processarAutomacaoCRM({
       entidade: "OPORTUNIDADE",
@@ -607,5 +599,6 @@ export async function aplicarVerificacaoPedidoFaturado(
     pedidos: resultados,
     oportunidadeId: oportunidadeIdFinal,
     valorOportunidade: valorOportunidadeFinal,
+    oportunidades,
   }
 }
