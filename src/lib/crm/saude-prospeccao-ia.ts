@@ -78,7 +78,7 @@ TEMPERATURA (critério canônico do sistema):
 PONTUAÇÃO DE SAÚDE (use somente estes pesos):
 - Esforço: visita/ação realizada (+12,5) + relato/ata (+12,5) + check-in (+12,5) + contato (+12,5) + proposta (+25) + oportunidade (+25), limitado a 100%.
 - Engajamento: visita/ação realizada (+20) + visita/ação agendada (+10) + proposta negociada (+20) + oportunidade negociada (+20) + pedido de venda (+15) + faturamento (+15), limitado a 100%.
-- Conversão: (pedidos de venda + faturamentos) ÷ (visitas reais + ações reais), arredondado e limitado a 100%.
+- Conversão: comercial = mínimo(50%, pedidos de venda ÷ oportunidades × 50%); financeira = mínimo(50%, faturamentos ÷ pedidos de venda × 50%); conversão real = comercial + financeira, arredondada e limitada a 100%. Sem oportunidades, comercial é 0%; sem pedidos, financeira é 0%.
 
 REGRAS DE RESPOSTA:
 - Responda em português do Brasil, em Markdown, com no máximo 700 palavras.

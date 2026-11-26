@@ -19,6 +19,7 @@ const comum = {
   porte: "Médio",
   responsaveis: ["Maria"],
   statusOportunidades: ["NEGOCIADA"],
+  totalOportunidades: 2,
   statusOportunidadeDominante: "NEGOCIADA",
   temContato: true,
   temProposta: true,
@@ -42,6 +43,7 @@ const basico = {
   temOportunidade: false,
   propostasNegociadas: 0,
   oportunidadesNegociadas: 0,
+  totalOportunidades: 0,
   pedidosVenda: 0,
   valorPedidosVenda: 0,
   faturamentos: 0,
@@ -225,7 +227,7 @@ describe("calcularScoresProspeccao", () => {
 })
 
 describe("calcularConversaoLeads", () => {
-  it("usa visitas reais + ações reais como denominador", () => {
+  it("soma conversão comercial e financeira com peso de 50% cada", () => {
     const visitas = linhaVisitas({
       totalVisitas: 2,
       visitasRealizadas: 2,
@@ -235,15 +237,58 @@ describe("calcularConversaoLeads", () => {
     const [linha] = mesclarSaudeProspeccao([visitas], [acoes])
 
     expect(calcularConversaoLeads(linha)).toEqual({
-      percentual: 50,
+      percentual: 75,
       rotulo: "Alta",
       tom: "verde",
-      total: 4,
-      rotuloTotal: "registros de prospecção",
+      total: 2,
+      rotuloTotal: "oportunidades vinculadas",
+      comercial: 25,
+      financeira: 50,
+      totalOportunidades: 2,
     })
   })
 
-  it("usa rótulo sem prospecção quando não há visitas nem ações", () => {
+  it("limita cada parte a 50% e o total a 100%", () => {
+    const [linha] = mesclarSaudeProspeccao(
+      [
+        linhaVisitas({
+          totalOportunidades: 1,
+          pedidosVenda: 4,
+          faturamentos: 9,
+        }),
+      ],
+      []
+    )
+
+    expect(calcularConversaoLeads(linha)).toMatchObject({
+      percentual: 100,
+      comercial: 50,
+      financeira: 50,
+      totalOportunidades: 1,
+    })
+  })
+
+  it("zera a conversão financeira quando não há pedidos", () => {
+    const [linha] = mesclarSaudeProspeccao(
+      [
+        linhaVisitas({
+          totalOportunidades: 4,
+          pedidosVenda: 0,
+          faturamentos: 2,
+        }),
+      ],
+      []
+    )
+
+    expect(calcularConversaoLeads(linha)).toMatchObject({
+      percentual: 0,
+      rotulo: "Sem pedidos",
+      comercial: 0,
+      financeira: 0,
+    })
+  })
+
+  it("usa rótulo sem oportunidades quando não há oportunidades vinculadas", () => {
     const [linha] = mesclarSaudeProspeccao(
       [
         linhaVisitas({
@@ -262,8 +307,10 @@ describe("calcularConversaoLeads", () => {
 
     expect(calcularConversaoLeads(linha)).toMatchObject({
       percentual: 0,
-      rotulo: "Sem prospecção",
+      rotulo: "Sem oportunidades",
       total: 0,
+      comercial: 0,
+      financeira: 0,
     })
   })
 })

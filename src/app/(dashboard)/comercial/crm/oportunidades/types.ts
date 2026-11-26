@@ -3,6 +3,9 @@ export type Oportunidade = {
   titulo: string
   descricao: string | null
   valorEstimado: string | null
+  temPedidoVenda?: boolean
+  statusPedidoVenda?: string | null
+  valorFaturado?: string | number | null
   status: string
   leadId: number | null
   empresaId: number | null

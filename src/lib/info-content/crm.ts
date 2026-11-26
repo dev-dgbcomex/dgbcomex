@@ -291,7 +291,7 @@ export const crmContent: Record<string, InfoContent> = {
       "Engajamento acima de 30% classifica como Engajados e prevalece sobre as demais regras.",
       "Com engajamento de até 30%, esforço acima de 45% classifica como AEC; 45% ou menos classifica como BEC.",
       "Temperatura usa as regras do sistema: QUENTE com negociação ou ganho/pedido no mês, MORNO com proposta ou ganho/pedido no trimestre e FRIO nos demais casos.",
-      "Conversão = (pedidos de venda + faturamentos) ÷ total de visitas reais + ações reais da linha, arredondado e limitado a 100%.",
+      "Conversão = conversão comercial (pedidos de venda ÷ oportunidades, até 50%) + conversão financeira (faturamentos ÷ pedidos de venda, até 50%), arredondada e limitada a 100%.",
       "No badge de itens de engajamento, proposta e oportunidade valem 36% cada; ata/relato, check-in/check-out e contato dividem os 28% restantes (9,33% cada).",
       "Clique em Visitas R/A/C para listar as visitas e em Ações R/A/C para listar as ações; cada item da lista abre o cadastro correspondente.",
       "Clique no nome do cliente/lead para ver visitas, ações, contatos, propostas, oportunidades e valores do período.",
@@ -447,6 +447,8 @@ export const crmContent: Record<string, InfoContent> = {
       "Somente NOVO e QUALIFICACAO podem ficar sem Valor Estimado e Probabilidade; Proposta, Negociação, Ganho e Perdido exigem ambos preenchidos e maiores que 1. O sistema solicita o preenchimento ao mover ou alterar o status para esses estágios.",
       "Os estágios e rótulos vêm do cadastro de Status (Admin → Configurações → Status, tipo Oportunidade): um novo status ativo já aparece aqui e vira coluna no Kanban.",
       "A visualização padrão é em Kanban, com as oportunidades agrupadas por status; Cards e Tabela continuam disponíveis e usam os mesmos filtros.",
+      "Em Tabela, Cards e Kanban, cada oportunidade mostra se há pedido vinculado, o status do pedido (Aberto, Parcial, Faturado ou Cancelado) e o valor faturado; sem pedido, o card exibe 'Sem pedido vinculado'.",
+      "O valor faturado soma os itens dos faturamentos ativos da oportunidade, exceto os cancelados, e é atualizado quando você usa 'Verificar faturados'.",
       "O filtro Todas/Minhas começa em Todas, mostrando as oportunidades de todos os responsáveis; Minhas continua disponível para restringir ao usuário logado.",
       "O botão 'Saúde da Prospecção' no cabeçalho abre o painel por cliente ou lead com as classificações AEC, BEC e Engajados.",
       "Use o Kanban para arrastar oportunidades entre estágios do pipeline.",
@@ -463,6 +465,10 @@ export const crmContent: Record<string, InfoContent> = {
       { name: "Título", desc: "Nome da oportunidade (ex: Venda de 500m de malha)" },
       { name: "Lead", desc: "Lead vinculada à oportunidade" },
       { name: "Valor Estimado", desc: "Valor potencial da negociação" },
+      {
+        name: "Pedido / Faturamento",
+        desc: "Status do pedido de venda vinculado e total faturado em reais",
+      },
       {
         name: "Status",
         desc: "Estágio no pipeline: Novo → Qualificação → Proposta → Negociação → Fechado",
@@ -1843,18 +1849,20 @@ export const saudeProspeccaoInfo = {
     ],
   },
   conversao: {
-    title: "Conversão — pedidos e faturamentos",
+    title: "Conversão — comercial + financeira",
     description:
-      "Indicador que reúne pedidos de venda e faturamentos em um único percentual sobre o total de visitas do cliente/lead.",
+      "Indicador que combina a transformação de oportunidades em pedidos com a transformação de pedidos em faturamentos.",
     rules: [
-      "Fórmula: (pedidos de venda + faturamentos) ÷ visitas no ano corrente.",
-      "O resultado é arredondado e limitado a 100%.",
-      "Clique no badge para ver a quantidade e o valor de pedidos e faturamentos.",
+      "Conversão comercial: pedidos de venda ÷ oportunidades da linha, limitada a 50%.",
+      "Conversão financeira: faturamentos ÷ pedidos de venda, limitada a 50%.",
+      "Conversão real: comercial + financeira, arredondada e limitada a 100%.",
+      "Sem oportunidades, a parte comercial é 0%; sem pedidos, a parte financeira é 0%.",
+      "Clique no badge para ver oportunidades, pedidos, faturamentos e o cálculo completo.",
     ],
     examples: [
       {
-        title: "Sem visitas",
-        desc: "Se o registro não tem visitas no período, a conversão mostra 0% e Sem visitas.",
+        title: "Conversão de 75%",
+        desc: "Cliente com 2 oportunidades, 1 pedido e 1 faturamento: comercial = 1 ÷ 2 × 50% = 25%; financeira = 1 ÷ 1 × 50% = 50%; conversão real = 75%.",
       },
     ],
   },
@@ -1873,7 +1881,8 @@ export const saudeProspeccaoLeadsInfo = {
       "Visitas R/A/C abre a lista de visitas; Ações R/A/C abre a lista de ações; cada item da lista leva ao cadastro correspondente.",
       "Fórmula do esforço: visita/ação realizada (+12,5) + relato/ata (+12,5) + check-in (+12,5) + contato (+12,5) + proposta (+25) + oportunidade (+25), limitado a 100%.",
       "Fórmula do engajamento: visita/ação realizada (+20) + visita/ação agendada (+10) + proposta negociada (+20) + oportunidade negociada (+20) + pedido de venda (+15) + faturamento (+15), limitado a 100%.",
-      "Fórmula da conversão: (pedidos de venda + faturamentos) ÷ total de visitas reais + ações reais da linha, arredondado e limitado a 100%.",
+      "A conversão não usa visitas reais + ações reais como denominador: conversão comercial = pedidos de venda ÷ oportunidades da linha (até 50%) e conversão financeira = faturamentos ÷ pedidos de venda (até 50%).",
+      "Conversão real = comercial + financeira, arredondada e limitada a 100%; sem oportunidades ou sem pedidos, a parte correspondente é 0%.",
       "No badge de itens de engajamento, proposta e oportunidade valem 36% cada e os outros três itens dividem 28% (9,33% cada); a coluna mostra quantos itens estão presentes e o percentual ponderado.",
       "Clique no nome para ver todas as visitas, ações, vínculos e valores do cliente/lead.",
       "Última ação e Próxima ação mostram as datas das ações reais de prospecção correspondentes.",
@@ -1904,7 +1913,7 @@ export const saudeProspeccaoLeadsInfo = {
       },
       {
         name: "Conversão",
-        desc: "Percentual de pedidos + faturamentos sobre visitas reais + ações reais; clique para ver quantidades e valores.",
+        desc: "Comercial (pedidos ÷ oportunidades, até 50%) + financeira (faturamentos ÷ pedidos, até 50%); clique para ver o cálculo.",
       },
       {
         name: "Esforço / Engajamento",
@@ -1917,8 +1926,8 @@ export const saudeProspeccaoLeadsInfo = {
         desc: "Cliente com 0 visitas reais e 4 ações reais (3 realizadas e 1 agendada) aparece com 0/0/0 em Visitas R/A/C e 3/1/0 em Ações R/A/C; esforço e engajamento usam as ações.",
       },
       {
-        title: "Conversão de 50%",
-        desc: "Cliente com 4 registros de prospecção (visitas + ações), 1 pedido de venda e 1 faturamento: (1 + 1) ÷ 4 = 50%. O badge fica verde e, ao clicar, mostra as quantidades e os valores.",
+        title: "Conversão de 75%",
+        desc: "Cliente com 2 oportunidades vinculadas, 1 pedido de venda e 1 faturamento: comercial = 1 ÷ 2 × 50% = 25%; financeira = 1 ÷ 1 × 50% = 50%; conversão real = 75%. O badge fica verde e o modal mostra o cálculo.",
       },
     ],
   },

@@ -37,6 +37,7 @@ export type ClienteSaude = {
   statusVisitas: string[]
   tiposVisita: string[]
   statusOportunidades: string[]
+  totalOportunidades?: number
   totalVisitas: number
   visitasRealizadas: number
   visitasAgendadas: number
@@ -291,6 +292,9 @@ export type ResumoConversao = {
   tom: "vermelho" | "amarelo" | "azul" | "verde"
   total?: number
   rotuloTotal?: string
+  comercial?: number
+  financeira?: number
+  totalOportunidades?: number
 }
 
 export function calcularConversao(

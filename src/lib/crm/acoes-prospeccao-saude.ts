@@ -37,6 +37,7 @@ export type ClienteSaude = {
   statusAcoes: string[]
   tiposAcao: string[]
   statusOportunidades: string[]
+  totalOportunidades?: number
   totalAcoes: number
   acoesRealizadas: number
   acoesAgendadas: number

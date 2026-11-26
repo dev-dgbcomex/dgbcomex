@@ -8,6 +8,10 @@ function formatarMoeda(valor: number): string {
   return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
 }
 
+function formatarPercentual(valor: number): string {
+  return `${valor.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`
+}
+
 export function ConversaoModal({
   cliente,
   onClose,
@@ -20,6 +24,7 @@ export function ConversaoModal({
   const conversao = cliente ? calcular(cliente) : null
   const total = conversao?.total ?? cliente?.totalVisitas ?? 0
   const rotuloTotal = conversao?.rotuloTotal ?? (total === 1 ? "visita" : "visitas")
+  const detalhada = conversao?.comercial !== undefined && conversao?.financeira !== undefined
 
   return (
     <Dialog
@@ -36,14 +41,28 @@ export function ConversaoModal({
                 {cliente.nome} — conversão
               </DialogTitle>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                {total} {rotuloTotal} no ano corrente
+                {total} {rotuloTotal}
+                {detalhada ? "" : " no ano corrente"}
               </p>
               <div className="pt-1">
                 <ConversaoBadge resumo={conversao} nome={cliente.nome} />
               </div>
             </DialogHeader>
 
-            <div className="grid gap-2 sm:grid-cols-2">
+            <div className={`grid gap-2 ${detalhada ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
+              {detalhada && (
+                <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-800">
+                  <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    Oportunidades
+                  </p>
+                  <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-slate-100">
+                    {conversao?.totalOportunidades ?? 0}
+                  </p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Base da conversão comercial
+                  </p>
+                </div>
+              )}
               <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-800">
                 <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
                   Pedidos de venda
@@ -69,8 +88,22 @@ export function ConversaoModal({
             </div>
 
             <p className="rounded-lg bg-slate-50 p-3 text-xs text-slate-600 dark:bg-slate-800/50 dark:text-slate-300">
-              Cálculo: ({cliente.pedidosVenda} pedidos + {cliente.faturamentos} faturamentos) ÷{" "}
-              {total} {rotuloTotal} = {conversao.percentual}%. Percentual limitado a 100%.
+              {detalhada ? (
+                <>
+                  Conversão comercial: mínimo(50%, {cliente.pedidosVenda} pedidos ÷ {total}{" "}
+                  {rotuloTotal} × 50%) = {formatarPercentual(conversao!.comercial!)}. Conversão
+                  financeira: mínimo(50%, {cliente.faturamentos} faturamentos ÷{" "}
+                  {cliente.pedidosVenda} pedidos × 50%) = {formatarPercentual(conversao!.financeira!)}.
+                  Conversão real: {formatarPercentual(conversao!.comercial!)} +{" "}
+                  {formatarPercentual(conversao!.financeira!)} = {conversao.percentual}%. Percentual
+                  limitado a 100%.
+                </>
+              ) : (
+                <>
+                  Cálculo: ({cliente.pedidosVenda} pedidos + {cliente.faturamentos} faturamentos) ÷{" "}
+                  {total} {rotuloTotal} = {conversao.percentual}%. Percentual limitado a 100%.
+                </>
+              )}
             </p>
           </>
         )}

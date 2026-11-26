@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { chamarIA } from "@/lib/ai"
-import { chamarAnaliseComConsultas } from "./saude-prospeccao-ia"
+import { chamarAnaliseComConsultas, montarMensagensAnalise } from "./saude-prospeccao-ia"
 
 vi.mock("@/lib/db", () => ({ db: {} }))
 vi.mock("@/lib/ai", () => ({ chamarIA: vi.fn() }))
@@ -88,5 +88,14 @@ describe("chamarAnaliseComConsultas", () => {
     expect(chamarIA).toHaveBeenCalledTimes(1)
     expect(resultado.resultado.provedor).toBe("nenhum")
     expect(resultado.conteudo).toBe("")
+  })
+
+  it("explica a nova fórmula de conversão nas regras do sistema", () => {
+    const mensagens = montarMensagensAnalise({ linhas: [], filtros: {} })
+    const regras = mensagens.find((mensagem) => mensagem.role === "system")?.content ?? ""
+
+    expect(regras).toMatch(/pedidos de venda ÷ oportunidades/i)
+    expect(regras).toMatch(/faturamentos ÷ pedidos de venda/i)
+    expect(regras).toMatch(/limitada a 100%/i)
   })
 })

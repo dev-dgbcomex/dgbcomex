@@ -68,4 +68,29 @@ describe("OportunidadesKanban", () => {
     expect(screen.getByText("Qualificação")).toBeInTheDocument()
     expect(screen.getByText("Perdido")).toBeInTheDocument()
   })
+
+  it("mostra pedido e faturamento no card", async () => {
+    renderPage(
+      <OportunidadesKanban
+        oportunidades={[
+          {
+            id: 11,
+            titulo: "Pedido parcial",
+            valorEstimado: "1000",
+            temPedidoVenda: true,
+            statusPedidoVenda: "PARCIAL",
+            valorFaturado: "250.50",
+            probabilidade: 50,
+            empresaNome: null,
+            clienteNome: null,
+            responsavelNome: null,
+            status: "NOVO",
+          },
+        ]}
+      />
+    )
+
+    expect(await screen.findByText(/Pedido Parcial/)).toBeInTheDocument()
+    expect(screen.getByText(/Faturado R\$\s*250,50/)).toBeInTheDocument()
+  })
 })

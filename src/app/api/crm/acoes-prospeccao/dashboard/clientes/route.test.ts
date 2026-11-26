@@ -65,7 +65,7 @@ describe("GET /api/crm/acoes-prospeccao/dashboard/clientes", () => {
     const dados = await resposta.json()
     expect(resposta.status).toBe(200)
     expect(dados).toHaveLength(1)
-    expect(dados[0]).toMatchObject({ id: 10, tipo: "cliente", nome: "Cliente SA", totalAcoes: 2, acoesRealizadas: 1, acoesAgendadas: 1, temContato: true, temProposta: true, temOportunidade: true })
+    expect(dados[0]).toMatchObject({ id: 10, tipo: "cliente", nome: "Cliente SA", totalAcoes: 2, totalOportunidades: 1, acoesRealizadas: 1, acoesAgendadas: 1, temContato: true, temProposta: true, temOportunidade: true })
     expect(dados[0].acoes.find((v: { id: number }) => v.id === 1)).toMatchObject({ id: 1, dataAcao: dataUltima, relato: "Ata da a��o", oportunidadeId: 50 })
   })
 

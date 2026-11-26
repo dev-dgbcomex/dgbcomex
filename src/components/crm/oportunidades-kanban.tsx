@@ -12,6 +12,7 @@ import {
   useSensors,
 } from "@dnd-kit/core"
 import { X } from "lucide-react"
+import { OportunidadePedidoResumo } from "@/components/crm/oportunidade-pedido-resumo"
 import { useStatuses, statusExibidosNoKanban, type StatusConfig } from "@/hooks/use-statuses"
 import { STATUS_OPORTUNIDADE_PADRAO } from "@/lib/crm/status-oportunidade"
 import {
@@ -28,6 +29,9 @@ interface OportunidadeCard {
   id: number
   titulo: string
   valorEstimado: string | null
+  temPedidoVenda?: boolean
+  statusPedidoVenda?: string | null
+  valorFaturado?: string | number | null
   probabilidade: number | null
   empresaNome: string | null
   clienteNome: string | null
@@ -92,6 +96,13 @@ function DraggableCard({ oportunidade }: { oportunidade: OportunidadeCard }) {
           {formatar(oportunidade.valorEstimado)}
         </p>
       )}
+      <div className="mt-2">
+        <OportunidadePedidoResumo
+          temPedidoVenda={oportunidade.temPedidoVenda}
+          statusPedidoVenda={oportunidade.statusPedidoVenda}
+          valorFaturado={oportunidade.valorFaturado}
+        />
+      </div>
     </div>
   )
 }
@@ -421,6 +432,13 @@ export default function OportunidadesKanban({
                   {activeCard.empresaNome || activeCard.clienteNome}
                 </p>
               )}
+              <div className="mt-2">
+                <OportunidadePedidoResumo
+                  temPedidoVenda={activeCard.temPedidoVenda}
+                  statusPedidoVenda={activeCard.statusPedidoVenda}
+                  valorFaturado={activeCard.valorFaturado}
+                />
+              </div>
             </div>
           </DragOverlay>
         )}

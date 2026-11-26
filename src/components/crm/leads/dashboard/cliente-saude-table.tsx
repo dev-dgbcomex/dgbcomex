@@ -152,6 +152,7 @@ export function ClienteSaudeLeadsTable({
 
   const dadosExportacao = filtradas.map((linha) => {
     const { resumo } = obterEngajamentoLeads(linha)
+    const conversao = calcularConversaoLeads(linha)
     const segmento = `${linha.segmento ?? ""}${linha.porte ? ` / ${linha.porte}` : ""}`.trim() || "—"
     return [
       `${linha.nome}\n${linha.documento ?? "—"} · ${segmento}`,
@@ -165,7 +166,7 @@ export function ClienteSaudeLeadsTable({
       labelStatusOportunidade(linha.statusOportunidadeDominante),
       formatarMoeda(linha.valorEstimadoTotal),
       `${linha.probabilidadeMedia}%`,
-      `${calcularConversaoLeads(linha).percentual}% (${linha.pedidosVenda} pedidos / ${linha.faturamentos} faturamentos)`,
+      `${conversao.percentual}% (${linha.pedidosVenda} pedidos / ${conversao.totalOportunidades ?? 0} oportunidades / ${linha.faturamentos} faturamentos)`,
       `${formatarPontos(linha.scoreEsforco)}%`,
       `${formatarPontos(linha.scoreEngajamento)}%`,
     ]
@@ -564,6 +565,7 @@ export function ClienteSaudeLeadsTable({
                         resumo={conversao}
                         nome={linha.nome}
                         onClick={() => setConversaoSelecionada(linha)}
+                        titulo="Ver oportunidades, pedidos e faturamentos"
                       />
                     </td>
                     <td className="px-3 py-2">

@@ -16,10 +16,12 @@ export function ConversaoBadge({
   resumo,
   nome,
   onClick,
+  titulo = "Ver pedidos e faturamentos",
 }: {
   resumo: ResumoConversao
   nome: string
   onClick?: () => void
+  titulo?: string
 }) {
   const classes = `inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-1 text-[11px] font-semibold ring-1 ${TOM_CLASSES[resumo.tom]}`
   const ariaLabel = `Conversão de ${nome}: ${resumo.percentual}%, ${resumo.rotulo}${
@@ -39,7 +41,7 @@ export function ConversaoBadge({
         type="button"
         onClick={onClick}
         aria-label={ariaLabel}
-        title="Ver pedidos e faturamentos"
+        title={titulo}
         className={`${classes} outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:focus-visible:ring-blue-400`}
       >
         {conteudo}

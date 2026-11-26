@@ -25,6 +25,7 @@ import { FloatableKanban } from "@/components/crm/floatable-kanban"
 import OportunidadesKanban from "@/components/crm/oportunidades-kanban"
 import ListFilters, { useListFilters } from "@/components/ui/list-filters"
 import { ConfirmModal } from "@/components/ui/confirm-modal"
+import { OportunidadePedidoResumo } from "@/components/crm/oportunidade-pedido-resumo"
 import { useStatuses, hexToRgba } from "@/hooks/use-statuses"
 import { STATUS_OPORTUNIDADE_PADRAO } from "@/lib/crm/status-oportunidade"
 import { VerificarPedidosFaturados } from "@/components/crm/verificar-pedidos-faturados"
@@ -284,6 +285,14 @@ export default function OportunidadesPage() {
                     </p>
                   </div>
 
+                  <div className="mt-2">
+                    <OportunidadePedidoResumo
+                      temPedidoVenda={op.temPedidoVenda}
+                      statusPedidoVenda={op.statusPedidoVenda}
+                      valorFaturado={op.valorFaturado}
+                    />
+                  </div>
+
                   <div className="mt-4 space-y-2 text-xs text-slate-500 dark:text-slate-400">
                     <div className="flex justify-between gap-3">
                       <span>Responsável</span>
@@ -373,6 +382,9 @@ export default function OportunidadesPage() {
                       <th className="px-2 py-2 md:px-4 md:py-3 text-left text-[10px] md:text-xs font-medium text-slate-500 dark:text-slate-400 uppercase whitespace-nowrap hidden sm:table-cell">
                         Valor Est.
                       </th>
+                      <th className="px-2 py-2 md:px-4 md:py-3 text-left text-[10px] md:text-xs font-medium text-slate-500 dark:text-slate-400 uppercase whitespace-nowrap hidden sm:table-cell">
+                        Pedido / Faturamento
+                      </th>
                       <th className="px-2 py-2 md:px-4 md:py-3 text-left text-[10px] md:text-xs font-medium text-slate-500 dark:text-slate-400 uppercase whitespace-nowrap">
                         Status
                       </th>
@@ -406,6 +418,13 @@ export default function OportunidadesPage() {
                         </td>
                         <td className="px-2 py-2 md:px-4 md:py-3 text-xs md:text-sm text-slate-500 hidden sm:table-cell whitespace-nowrap">
                           {formatarMoeda(op.valorEstimado)}
+                        </td>
+                        <td className="px-2 py-2 md:px-4 md:py-3 hidden sm:table-cell">
+                          <OportunidadePedidoResumo
+                            temPedidoVenda={op.temPedidoVenda}
+                            statusPedidoVenda={op.statusPedidoVenda}
+                            valorFaturado={op.valorFaturado}
+                          />
                         </td>
                         <td className="px-2 py-2 md:px-4 md:py-3">
                           {(() => {

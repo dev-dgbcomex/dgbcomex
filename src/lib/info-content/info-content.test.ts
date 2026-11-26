@@ -476,6 +476,10 @@ describe("getInfoContent", () => {
     expect(texto).toMatch(/Concluir e enviar/i)
     expect(texto).toMatch(/Markdown/i)
     expect(texto).toMatch(/Conversão/i)
+    expect(texto).toMatch(/conversão comercial/i)
+    expect(texto).toMatch(/conversão financeira/i)
+    expect(texto).toMatch(/ oportunidades/i)
+    expect(texto).toMatch(/limitada a 100%/i)
     expect(texto).toMatch(/36%/i)
     expect(texto).toMatch(/9,33%/i)
     expect(texto).toMatch(/CSV, PDF e MD/i)
@@ -854,7 +858,9 @@ describe("saudeProspeccaoInfo", () => {
     expect(saudeProspeccaoInfo.engajados.rules?.join(" ")).toMatch(/prevalece/i)
     expect(saudeProspeccaoInfo.bec.rules?.join(" ")).toMatch(/Esforço ≤ 45/i)
     expect(saudeProspeccaoInfo.bec.rules?.join(" ")).toMatch(/exatamente 45%/i)
-    expect(saudeProspeccaoInfo.conversao.rules?.join(" ")).toMatch(/limitado a 100%/i)
+    expect(saudeProspeccaoInfo.conversao.rules?.join(" ")).toMatch(/limitad[ao] a 100%/i)
+    expect(saudeProspeccaoInfo.conversao.rules?.join(" ")).toMatch(/conversão comercial/i)
+    expect(saudeProspeccaoInfo.conversao.rules?.join(" ")).toMatch(/conversão financeira/i)
     expect(saudeProspeccaoInfo.esforco.rules?.join(" ")).toMatch(/visita realizada \(\+12,5\)/i)
     expect(saudeProspeccaoInfo.esforco.rules?.join(" ")).toMatch(/proposta \(\+25\)/i)
     expect(saudeProspeccaoInfo.engajamento.rules?.join(" ")).toMatch(/proposta negociada \(\+20\)/i)
@@ -927,9 +933,24 @@ describe("saudeProspeccaoLeadsInfo", () => {
     expect(saudeProspeccaoLeadsInfo.tabela.rules?.join(" ")).toMatch(
       /visitas reais \+ ações reais/i
     )
+    expect(saudeProspeccaoLeadsInfo.tabela.rules?.join(" ")).toMatch(
+      /conversão comercial = pedidos de venda ÷ oportunidades/i
+    )
+    expect(saudeProspeccaoLeadsInfo.tabela.rules?.join(" ")).toMatch(
+      /conversão financeira = faturamentos ÷ pedidos de venda/i
+    )
+    expect(saudeProspeccaoLeadsInfo.tabela.rules?.join(" ")).toMatch(/limitada a 100%/i)
+    expect(
+      saudeProspeccaoLeadsInfo.tabela.columns
+        ?.map((coluna) => `${coluna.name}: ${coluna.desc}`)
+        .join(" ")
+    ).toMatch(/até 50%/i)
     expect(
       saudeProspeccaoLeadsInfo.tabela.examples?.map((exemplo) => exemplo.desc).join(" ")
     ).toMatch(/0\/0\/0 em Visitas R\/A\/C e 3\/1\/0 em Ações R\/A\/C/)
+    expect(
+      saudeProspeccaoLeadsInfo.tabela.examples?.map((exemplo) => exemplo.desc).join(" ")
+    ).toMatch(/conversão real = 75%/i)
     expect(saudeProspeccaoLeadsInfo.aec.rules?.join(" ")).toMatch(/Esforço > 45/i)
     expect(saudeProspeccaoLeadsInfo.engajados.rules?.join(" ")).toMatch(/Engajamento > 30/i)
     expect(saudeProspeccaoLeadsInfo.ia.rules?.join(" ")).toMatch(/consultas curadas/i)
@@ -1216,8 +1237,13 @@ describe("crmDashboardInfo", () => {
     const textoOportunidades = [
       oportunidades?.description ?? "",
       ...(oportunidades?.rules ?? []),
+      ...(oportunidades?.fields ?? []).map((campo) => campo.name),
     ].join("\n")
     expect(textoOportunidades).toMatch(/visualização padrão é em Kanban/)
+    expect(textoOportunidades).toMatch(/Pedido \/ Faturamento/)
+    expect(textoOportunidades).toMatch(/Sem pedido vinculado/)
+    expect(textoOportunidades).toMatch(/status do pedido/i)
+    expect(textoOportunidades).toMatch(/exceto os cancelados/i)
   })
 
   it("as telas com atalho explicam o destino Saúde da Prospecção", () => {

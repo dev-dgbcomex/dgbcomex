@@ -29,6 +29,7 @@ const comum = {
   porte: "Médio",
   responsaveis: ["Maria"],
   statusOportunidades: ["NEGOCIADA"],
+  totalOportunidades: 2,
   statusOportunidadeDominante: "NEGOCIADA",
   temContato: true,
   temProposta: true,
@@ -174,6 +175,35 @@ describe("SaudeProspeccaoPage", () => {
     )
     expect(findCall(fetchMock.calls, "/api/crm/visitas/dashboard/clientes")).toBeDefined()
     expect(findCall(fetchMock.calls, "/api/crm/acoes-prospeccao/dashboard/clientes")).toBeDefined()
+  })
+
+  it("exibe comercial e financeira no modal de conversão", async () => {
+    const fetchMock = mockRotas()
+    vi.stubGlobal("fetch", fetchMock.fn)
+    renderPage(<SaudeProspeccaoPage />)
+
+    const badge = await screen.findByRole("button", {
+      name: /Conversão de Cliente Alpha: 75%, Alta\. Ver detalhes/,
+    })
+    expect(badge).toHaveAttribute("title", "Ver oportunidades, pedidos e faturamentos")
+    fireEvent.click(badge)
+
+    const dialog = await screen.findByRole("dialog")
+    expect(
+      within(dialog).getByRole("heading", { name: "Cliente Alpha — conversão" })
+    ).toBeInTheDocument()
+    expect(within(dialog).getByText("2 oportunidades vinculadas")).toBeInTheDocument()
+    expect(
+      within(dialog).getByText(
+        /Conversão comercial: mínimo\(50%, 1 pedidos ÷ 2 oportunidades vinculadas × 50%\) = 25%/
+      )
+    ).toBeInTheDocument()
+    expect(
+      within(dialog).getByText(
+        /Conversão financeira: mínimo\(50%, 1 faturamentos ÷ 1 pedidos × 50%\) = 50%/
+      )
+    ).toBeInTheDocument()
+    expect(within(dialog).getByText(/Conversão real: 25% \+ 50% = 75%/)).toBeInTheDocument()
   })
 
   it("não mostra visitas derivadas quando só há ações reais", async () => {

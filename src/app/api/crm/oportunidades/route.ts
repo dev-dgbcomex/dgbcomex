@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server"
 import { requireAuth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { crmOportunidades } from "@/lib/db/schema/crm-oportunidades"
+import { crmPedidosVenda } from "@/lib/db/schema/crm-pedidos-venda"
+import { crmFaturamentos } from "@/lib/db/schema/crm-faturamentos"
+import { crmFaturamentoItens } from "@/lib/db/schema/crm-faturamento-itens"
 import { crmPessoas } from "@/lib/db/schema/crm-pessoas"
 import { crmVisitantes } from "@/lib/db/schema/crm-visitantes"
 import { crmContatos } from "@/lib/db/schema/crm-contatos"
@@ -66,6 +69,30 @@ export async function GET(req: NextRequest) {
         titulo: crmOportunidades.titulo,
         descricao: crmOportunidades.descricao,
         valorEstimado: crmOportunidades.valorEstimado,
+        temPedidoVenda: sql<boolean>`exists (
+          select 1
+          from ${crmPedidosVenda}
+          where ${crmPedidosVenda.oportunidadeId} = ${crmOportunidades.id}
+        )`,
+        statusPedidoVenda: sql<string | null>`(
+          select case
+            when count(*) filter (where upper(${crmPedidosVenda.status}) = 'FATURADO') > 0 then 'FATURADO'
+            when count(*) filter (where upper(${crmPedidosVenda.status}) = 'PARCIAL') > 0 then 'PARCIAL'
+            when count(*) filter (where upper(${crmPedidosVenda.status}) = 'CANCELADO') > 0 then 'CANCELADO'
+            when count(*) > 0 then 'ABERTO'
+            else null
+          end
+          from ${crmPedidosVenda}
+          where ${crmPedidosVenda.oportunidadeId} = ${crmOportunidades.id}
+        )`,
+        valorFaturado: sql<string>`coalesce((
+          select sum(${crmFaturamentoItens.valorTotal})
+          from ${crmFaturamentoItens}
+          inner join ${crmFaturamentos}
+            on ${crmFaturamentoItens.faturamentoId} = ${crmFaturamentos.id}
+          where ${crmFaturamentos.oportunidadeId} = ${crmOportunidades.id}
+            and upper(${crmFaturamentos.status}) <> 'CANCELADO'
+        ), 0)`,
         status: crmOportunidades.status,
         leadId: crmOportunidades.leadId,
         empresaId: crmOportunidades.empresaId,

@@ -124,7 +124,13 @@ export function mesclarSaudeProspeccao(
   for (const acao of acoes) {
     const chave = chaveClienteSaude(acao)
     const linha = mapa.get(chave)
-    mapa.set(chave, linha ? { ...linha, ...acao } : { ...acao, ...visitasZeradas() })
+    const totalOportunidades = Math.max(linha?.totalOportunidades ?? 0, acao.totalOportunidades ?? 0)
+    mapa.set(
+      chave,
+      linha
+        ? { ...linha, ...acao, totalOportunidades }
+        : { ...acao, ...visitasZeradas(), totalOportunidades }
+    )
   }
 
   return [...mapa.values()].map((linha) => ({ ...linha, ...calcularScoresProspeccao(linha) }))
@@ -297,23 +303,43 @@ export function obterEngajamentoLeads(cliente: ClienteSaudeVisitas): {
 }
 
 export function calcularConversaoLeads(cliente: ClienteSaudeVisitas): ResumoConversao {
-  const { total } = totals(cliente)
-  const convertidos = cliente.pedidosVenda + cliente.faturamentos
-  const percentual = total > 0 ? Math.min(100, Math.round((convertidos / total) * 100)) : 0
+  const oportunidades = Math.max(
+    0,
+    Math.round(cliente.totalOportunidades ?? (cliente.temOportunidade ? 1 : 0))
+  )
+  const pedidos = Math.max(0, cliente.pedidosVenda)
+  const faturamentos = Math.max(0, cliente.faturamentos)
+
+  const comercialBruta = oportunidades > 0 ? Math.min(50, (pedidos / oportunidades) * 50) : 0
+  const financeiraBruta = pedidos > 0 ? Math.min(50, (faturamentos / pedidos) * 50) : 0
+  const comercial = Math.round(comercialBruta * 10) / 10
+  const financeira = Math.round(financeiraBruta * 10) / 10
+  const percentual = Math.min(100, Math.round(comercialBruta + financeiraBruta))
   const tom =
     percentual === 0 ? "vermelho" : percentual < 25 ? "amarelo" : percentual < 50 ? "azul" : "verde"
   const rotulo =
-    total === 0
-      ? "Sem prospecção"
-      : percentual === 0
-        ? "Sem conversão"
-        : percentual < 25
-          ? "Baixa"
-          : percentual < 50
-            ? "Parcial"
-            : "Alta"
+    percentual === 0
+      ? oportunidades === 0
+        ? "Sem oportunidades"
+        : pedidos === 0
+          ? "Sem pedidos"
+          : "Sem conversão"
+      : percentual < 25
+        ? "Baixa"
+        : percentual < 50
+          ? "Parcial"
+          : "Alta"
 
-  return { percentual, rotulo, tom, total, rotuloTotal: "registros de prospecção" }
+  return {
+    percentual,
+    rotulo,
+    tom,
+    total: oportunidades,
+    rotuloTotal: oportunidades === 1 ? "oportunidade vinculada" : "oportunidades vinculadas",
+    comercial,
+    financeira,
+    totalOportunidades: oportunidades,
+  }
 }
 
 export function obterDetalheScoreLeads(

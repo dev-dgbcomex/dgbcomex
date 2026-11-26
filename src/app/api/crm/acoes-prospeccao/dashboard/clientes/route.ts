@@ -453,6 +453,7 @@ export async function GET(req: NextRequest) {
           statusAcoes: [],
           tiposAcao: [],
           statusOportunidades: [],
+          totalOportunidades: 0,
           totalAcoes: 0,
           acoesRealizadas: 0,
           acoesAgendadas: 0,
@@ -628,9 +629,12 @@ export async function GET(req: NextRequest) {
         isStatusNegociado(propostasInfo.get(id)?.status)
       ).length
 
-      const oportunidadesNegociadas = Array.from(oportunidadesPorGrupo.get(donoKey) ?? []).filter(
-        (id) => isStatusNegociado(oportunidadesInfo.get(id)?.status)
+      const oportunidades = oportunidadesPorGrupo.get(donoKey) ?? new Set<number>()
+      const oportunidadesNegociadas = Array.from(oportunidades).filter((id) =>
+        isStatusNegociado(oportunidadesInfo.get(id)?.status)
       ).length
+
+      grupo.totalOportunidades = oportunidades.size
 
       const scores = calcularScores({
         acoesRealizadas: grupo.acoesRealizadas,

@@ -7,7 +7,7 @@ import { registrarLog } from "@/lib/notificar"
 import { inserirTimelineEvento } from "@/lib/crm-timeline"
 import { clienteIdDaPessoa, idsPessoasDoCliente } from "@/lib/crm/cliente-relacionamentos"
 import { processarAutomacaoCRM } from "@/lib/crm/automacoes-crm"
-import { createQueryBuilder, resetDb } from "@/test/route-db-mock"
+import { createQueryBuilder, resetDb, sqlParaTexto } from "@/test/route-db-mock"
 import { GET, POST } from "./route"
 
 vi.mock("@/lib/auth", () => ({ requireAuth: vi.fn() }))
@@ -67,6 +67,29 @@ describe("/api/crm/oportunidades", () => {
     )
     const res = await get("http://localhost/api/crm/oportunidades")
     expect(res.status).toBe(401)
+  })
+
+  it("inclui resumo de pedido e faturamento na listagem", async () => {
+    const registro = {
+      id: 1,
+      titulo: "Malha faturada",
+      temPedidoVenda: true,
+      statusPedidoVenda: "FATURADO",
+      valorFaturado: "773.60",
+    }
+    db.select = vi.fn(() => createQueryBuilder([registro]))
+
+    const res = await get("http://localhost/api/crm/oportunidades")
+    expect(res.status).toBe(200)
+    expect((await res.json())[0]).toMatchObject(registro)
+
+    const campos = (db.select as ReturnType<typeof vi.fn>).mock.calls[0][0]
+    const sqlCampos = Object.values(campos).map(sqlParaTexto).join(" ")
+    expect(sqlCampos).toMatch(/oportunidade_id/)
+    expect(sqlCampos).toMatch(/faturamento_id/)
+    expect(sqlCampos).toMatch(/valor_total/)
+    expect(sqlCampos).toMatch(/FATURADO/)
+    expect(sqlCampos).toMatch(/CANCELADO/)
   })
 
   it("lista o negócio do cliente incluindo as pessoas promovidas", async () => {

@@ -177,6 +177,7 @@ describe("GET /api/crm/visitas/dashboard/clientes", () => {
       propostasNegociadas: 1,
       oportunidadesNegociadas: 1,
       valorEstimadoTotal: 1000,
+      totalOportunidades: 1,
       probabilidadeMedia: 50,
       statusOportunidadeDominante: "Negociada",
       pedidosVenda: 1,

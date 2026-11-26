@@ -15,6 +15,9 @@ const oportunidades = [
     titulo: "Venda de malha 100% algodão",
     empresaNome: "Tecelagem Alpha",
     valorEstimado: "5000",
+    temPedidoVenda: true,
+    statusPedidoVenda: "FATURADO",
+    valorFaturado: "773.60",
     status: "NOVO",
     responsavelNome: "Tiago",
     probabilidade: 50,
@@ -25,6 +28,9 @@ const oportunidades = [
     titulo: "Confecção de uniformes",
     empresaNome: "Confecções Lima",
     valorEstimado: "1500",
+    temPedidoVenda: false,
+    statusPedidoVenda: null,
+    valorFaturado: "0",
     status: "FECHADO_GANHO",
     responsavelNome: null,
     probabilidade: 0,
@@ -163,6 +169,45 @@ describe("OportunidadesPage cards", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Tabela" }))
     expect(await screen.findByRole("table")).toBeInTheDocument()
+  })
+})
+
+describe("OportunidadesPage resumo de pedido e faturamento", () => {
+  beforeEach(() => {
+    const fetchMock = createFetchMock(({ method, url }) => {
+      if (method === "GET" && url === "/api/crm/oportunidades") return { json: oportunidades }
+      return { json: null }
+    })
+    vi.stubGlobal("fetch", fetchMock.fn)
+  })
+
+  it("mostra pedido, faturamento e valor na tabela", async () => {
+    renderPage(<OportunidadesPage />)
+    await screen.findByText("Venda de malha 100% algodão")
+    fireEvent.click(screen.getByRole("button", { name: "Tabela" }))
+
+    expect(await screen.findByRole("columnheader", { name: /Pedido \/ Faturamento/ })).toBeInTheDocument()
+    expect(screen.getAllByText(/Pedido Faturado/).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/Faturado R\$\s*773,60/).length).toBeGreaterThan(0)
+    expect(screen.getAllByText("Sem pedido vinculado").length).toBeGreaterThan(0)
+  })
+
+  it("mostra pedido, faturamento e valor nos cards", async () => {
+    renderPage(<OportunidadesPage />)
+    await screen.findByText("Venda de malha 100% algodão")
+    fireEvent.click(screen.getByRole("button", { name: "Cards" }))
+
+    expect(await screen.findByText(/Pedido Faturado/)).toBeInTheDocument()
+    expect(screen.getByText(/Faturado R\$\s*773,60/)).toBeInTheDocument()
+    expect(screen.getByText("Sem pedido vinculado")).toBeInTheDocument()
+  })
+
+  it("mostra pedido, faturamento e valor no kanban", async () => {
+    renderPage(<OportunidadesPage />)
+
+    expect(await screen.findByText(/Pedido Faturado/)).toBeInTheDocument()
+    expect(screen.getByText(/Faturado R\$\s*773,60/)).toBeInTheDocument()
+    expect(screen.getByText("Sem pedido vinculado")).toBeInTheDocument()
   })
 })
 
