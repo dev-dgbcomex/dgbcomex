@@ -418,3 +418,77 @@ describe("testarChave — Gemini", () => {
     expect(res.mensagem).toContain("models/gemini-1.5-flash is not found")
   })
 })
+
+describe("chamarIA — payload grande (HTTP 413)", () => {
+  const chaveBanco = {
+    id: 31,
+    provedor: "groq",
+    nome: "Groq do Banco",
+    chaveApi: "banco-chave-413",
+    urlBase: null,
+    modelo: "qwen/qwen3.8-27b",
+    ordem: 1,
+    ativo: true,
+    failCount: 0,
+  }
+
+  function resposta413() {
+    return Promise.resolve({
+      ok: false,
+      status: 413,
+      text: vi.fn().mockResolvedValue(JSON.stringify({ error: { message: "Request too large" } })),
+    })
+  }
+
+  it("cai para a próxima chave sem incrementar failCount quando o erro é 413", async () => {
+    process.env.GROQ_API_KEY = "env-groq-chave"
+    vi.mocked(db.update).mockClear()
+    db.select = vi.fn(() => createQueryBuilder([chaveBanco]))
+
+    const fetchMock = vi.fn((_url: string, init: RequestInit) => {
+      const headers = init.headers as Record<string, string>
+      if (headers.Authorization === "Bearer banco-chave-413") return resposta413()
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: vi.fn().mockResolvedValue({ choices: [{ message: { content: "resposta da env" } }] }),
+      })
+    })
+    vi.stubGlobal("fetch", fetchMock)
+
+    const res = await chamarIA(MENSAGENS)
+
+    expect(res.nomeChave).toBe("Groq (env)")
+    expect(res.tentativas).toBe(2)
+    expect(db.update).not.toHaveBeenCalled()
+  })
+
+  it("marca codigo PAYLOAD_TOO_LARGE quando todas as chaves retornam 413", async () => {
+    process.env.GROQ_API_KEY = "env-groq-chave"
+    vi.mocked(db.update).mockClear()
+    db.select = vi.fn(() => createQueryBuilder([]))
+    vi.stubGlobal("fetch", vi.fn(() => resposta413()))
+
+    const res = await chamarIA(MENSAGENS)
+
+    expect(res.provedor).toBe("nenhum")
+    expect(res.status).toBe(413)
+    expect(res.codigo).toBe("PAYLOAD_TOO_LARGE")
+    expect(res.erro).toContain("HTTP 413")
+    expect(db.update).not.toHaveBeenCalled()
+  })
+
+  it("com chave forçada não tenta outra chave após 413", async () => {
+    vi.mocked(db.update).mockClear()
+    db.select = vi.fn(() => createQueryBuilder([chaveBanco]))
+    const fetchMock = vi.fn(() => resposta413())
+    vi.stubGlobal("fetch", fetchMock)
+
+    const res = await chamarIA(MENSAGENS, {}, chaveBanco.id)
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(res.provedor).toBe("nenhum")
+    expect(res.codigo).toBe("PAYLOAD_TOO_LARGE")
+    expect(db.update).not.toHaveBeenCalled()
+  })
+})

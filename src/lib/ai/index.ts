@@ -10,6 +10,8 @@ export interface MensagemIA {
   content: string
 }
 
+export type CodigoErroIA = "PAYLOAD_TOO_LARGE"
+
 export interface ResultadoIA {
   conteudo: string
   provedor: string
@@ -17,6 +19,8 @@ export interface ResultadoIA {
   nomeChave: string
   tentativas: number
   erro?: string
+  status?: number
+  codigo?: CodigoErroIA
 }
 
 export interface ChaveIA {
@@ -83,6 +87,16 @@ const MSG_ERRO_TECNICO =
 
 function isErroTecnico(texto: string): boolean {
   return texto.includes("dificuldades tecnicas") || texto.includes("nao consegui processar")
+}
+
+function statusDoErro(erro: unknown): number | undefined {
+  if (!(erro instanceof Error)) return undefined
+  const correspondencia = erro.message.match(/\bHTTP (\d{3})\b/)
+  return correspondencia ? Number(correspondencia[1]) : undefined
+}
+
+function codigoDoErro(status: number | undefined): CodigoErroIA | undefined {
+  return status === 413 ? "PAYLOAD_TOO_LARGE" : undefined
 }
 
 async function buscarChavesAtivas(): Promise<ChaveReserva[]> {
@@ -309,6 +323,8 @@ export async function chamarIA(
 
   const mensagens = montarMensagens(messages)
   let ultimoErro: unknown = null
+  let ultimoStatus: number | undefined
+  let ultimoCodigo: CodigoErroIA | undefined
   let tentativas = 0
 
   for (const chave of chaves) {
@@ -318,6 +334,8 @@ export async function chamarIA(
 
       if (isErroTecnico(conteudo)) {
         ultimoErro = new Error("Provedor retornou erro tecnico")
+        ultimoStatus = undefined
+        ultimoCodigo = undefined
         await marcarFalha(chave.id)
         continue
       }
@@ -332,8 +350,10 @@ export async function chamarIA(
       }
     } catch (err) {
       ultimoErro = err
+      ultimoStatus = statusDoErro(err)
+      ultimoCodigo = codigoDoErro(ultimoStatus)
       console.error(`[IA] Provedor ${chave.prov} (${chave.nome}) falhou:`, err)
-      if (chave.id > 0) await marcarFalha(chave.id)
+      if (chave.id > 0 && !ultimoCodigo) await marcarFalha(chave.id)
     }
   }
 
@@ -345,6 +365,8 @@ export async function chamarIA(
     nomeChave: "",
     tentativas,
     erro: ultimoErro ? String(ultimoErro) : "todos os provedores falharam",
+    status: ultimoStatus,
+    codigo: ultimoCodigo,
   }
 }
 

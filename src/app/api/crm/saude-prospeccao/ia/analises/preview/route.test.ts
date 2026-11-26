@@ -5,16 +5,17 @@ import { createQueryBuilder } from "@/test/route-db-mock"
 import { POST } from "./route"
 
 
-const { requireAuth, db, contextoInicial, buscarChaveIAAnalise } = vi.hoisted(() => ({
+const { requireAuth, db, contextoInicial, buscarChaveIAAnalise, medirMensagensIA } = vi.hoisted(() => ({
   requireAuth: vi.fn(),
   db: { select: vi.fn() },
   contextoInicial: vi.fn(),
   buscarChaveIAAnalise: vi.fn(),
+  medirMensagensIA: vi.fn(),
 }))
 
 vi.mock("@/lib/auth", () => ({ requireAuth }))
 vi.mock("@/lib/db", () => ({ db }))
-vi.mock("@/lib/crm/saude-prospeccao-ia", () => ({ contextoInicial, buscarChaveIAAnalise }))
+vi.mock("@/lib/crm/saude-prospeccao-ia", () => ({ contextoInicial, buscarChaveIAAnalise, medirMensagensIA }))
 vi.mock("@/lib/notificar", () => ({
   notificarErro: vi.fn(),
   notificar: vi.fn(),
@@ -60,7 +61,9 @@ beforeEach(() => {
       { role: "system", content: "REGRAS_SISTEMA" },
       { role: "user", content: "Dados dos registros filtrados na tela: ...\n\nFaça uma análise..." },
     ],
+    compactacao: { total: 1, incluidos: 1, omitidos: 0 },
   })
+  medirMensagensIA.mockReturnValue({ enviadoChars: 123, estTokensAprox: 31 })
 })
 
 describe("/api/crm/saude-prospeccao/ia/analises/preview", () => {
@@ -86,6 +89,7 @@ describe("/api/crm/saude-prospeccao/ia/analises/preview", () => {
     expect(corpo.chave).toEqual({ id: 3, provedor: "openai_compatible", nome: "NVIDIA Nemotron", modelo: "Nemotron 3.5 Super VL 120B A12B" })
     expect(corpo.enviadoChars).toBeGreaterThan(0)
     expect(corpo.estTokensAprox).toBeGreaterThan(0)
+    expect(corpo.compactacao).toEqual({ total: 1, incluidos: 1, omitidos: 0 })
     expect(JSON.stringify(corpo)).not.toContain("chaveApi")
     expect(resposta.headers.get("X-Enviado-Chars")).toBe(String(corpo.enviadoChars))
     expect(resposta.headers.get("X-Est-Tokens-Aprox")).toBe(String(corpo.estTokensAprox))

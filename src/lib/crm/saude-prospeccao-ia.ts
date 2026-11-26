@@ -53,9 +53,22 @@ export type ConsultaCurada = {
 }
 
 export type ResultadoConsultaCurada = ConsultaCurada & { dados: unknown[] }
+export type CompactacaoDadosIA = { total: number; incluidos: number; omitidos: number }
 
 const TOKENS_DECISAO = 80
 const TOKENS_ANALISE = 700
+const LIMITE_DADOS_IA_CHARS = 14_000
+const LIMITE_HISTORICO_IA_CHARS = 6_000
+const LIMITE_MENSAGEM_HISTORICO_CHARS = 1_000
+const MAX_HISTORICO_IA = 6
+const LIMITE_CONSULTA_IA_CHARS = 4_000
+const TAMANHO_TEXTO_CURTO = 80
+
+export function medirMensagensIA(mensagens: MensagemIA[]) {
+  const enviadoChars = JSON.stringify(mensagens).length
+  return { enviadoChars, estTokensAprox: Math.max(1, Math.ceil(enviadoChars / 4)) }
+}
+
 const INSTRUCAO_DECISAO = `Etapa de decisão: responda SOMENTE uma linha.
 Se os dados recebidos forem suficientes, responda exatamente: PRONTO
 Se precisar de mais dados, responda exatamente uma linha no formato CONSULTAR: oportunidades|cliente|123|10 (ou visitas/acoes e cliente/pessoa).
@@ -83,7 +96,7 @@ PONTUAÇÃO DE SAÚDE (use somente estes pesos):
 REGRAS DE RESPOSTA:
 - Responda em português do Brasil, em Markdown, com no máximo 700 palavras.
 - Comece com "## Diagnóstico", depois "## Como elevar a saúde" e "## Prioridades".
-- Para cada registro, cite nome, classificação, temperatura, esforço, engajamento e conversão usando os valores recebidos.
+- Para cada registro listado individualmente, cite nome, classificação, temperatura, esforço, engajamento e conversão usando os valores recebidos. Quando houver amostragem, use apenas o resumoDosOmitidos recebido, sem inventar nomes.
 - Sugira ações que aumentem o engajamento (proposta negociada, oportunidade negociada, pedido de venda, faturamento, visita/ação agendada) ou reduzam esforço sem inventar novos critérios.
 - Para AEC, prefira ações que transformem esforço em engajamento. Para BEC, prefira aumentar cadência e registrar relato/ata e check-in. Para Engajados, mantenha o movimento e avance para pedido/faturamento.
 - Para temperaturas FRIA/MORNA, sugira avançar para PROPOSTA/NEGOCIACAO conforme a regra canônica, sempre dentro do sistema.
@@ -138,9 +151,24 @@ export function prepararLinhas(
   })
 }
 
+function textoCurto(valor: string | null | undefined, limite = TAMANHO_TEXTO_CURTO) {
+  if (!valor) return null
+  const texto = String(valor)
+  return texto.length <= limite ? texto : `${texto.slice(0, limite - 1)}…`
+}
+
+function resumoFiltros(filtros: Record<string, unknown>) {
+  return Object.fromEntries(
+    Object.entries(filtros).map(([chave, valor]) => [
+      chave,
+      typeof valor === "string" ? textoCurto(valor) : valor,
+    ])
+  )
+}
+
 function resumoLinha(linha: LinhaAnaliseContexto) {
   return {
-    nome: linha.nome,
+    nome: textoCurto(linha.nome),
     tipo: linha.tipo,
     classificacao: linha.classificacao,
     temperatura: linha.temperatura,
@@ -150,55 +178,182 @@ function resumoLinha(linha: LinhaAnaliseContexto) {
     visitas: {
       realizadas: linha.visitasRealizadas ?? 0,
       agendadas: linha.visitasAgendadas ?? 0,
-      ultima: linha.ultimaVisita ?? null,
-      proxima: linha.proximaVisita ?? null,
+      ultima: textoCurto(linha.ultimaVisita, 30),
+      proxima: textoCurto(linha.proximaVisita, 30),
     },
     acoes: {
       realizadas: linha.acoesRealizadas ?? 0,
       agendadas: linha.acoesAgendadas ?? 0,
-      ultima: linha.ultimaAcao ?? null,
-      proxima: linha.proximaAcao ?? null,
+      ultima: textoCurto(linha.ultimaAcao, 30),
+      proxima: textoCurto(linha.proximaAcao, 30),
     },
     oportunidade: {
-      status: linha.statusOportunidadeDominante ?? null,
+      status: textoCurto(linha.statusOportunidadeDominante, 40),
       valor: linha.valorEstimadoTotal ?? 0,
       probabilidade: linha.probabilidadeMedia ?? 0,
     },
     pedidos: linha.pedidosVenda ?? 0,
     faturamentos: linha.faturamentos ?? 0,
-    segmento: linha.segmento ?? null,
-    responsaveis: linha.responsaveis ?? [],
+    segmento: textoCurto(linha.segmento, 40),
+    responsaveis: (linha.responsaveis ?? [])
+      .slice(0, 3)
+      .map((nome) => textoCurto(nome, 40))
+      .filter((nome): nome is string => Boolean(nome)),
   }
 }
 
-export function montarMensagensAnalise({
-  linhas,
-  filtros,
-  historico = [],
-  pergunta,
-  dadosConsulta,
-}: {
+const PESO_TEMPERATURA: Record<FaixaConversao, number> = { QUENTE: 3, MORNO: 2, FRIO: 1 }
+
+function compararRegistros(a: LinhaAnaliseContexto, b: LinhaAnaliseContexto) {
+  return (
+    PESO_TEMPERATURA[b.temperatura] - PESO_TEMPERATURA[a.temperatura] ||
+    b.scoreEngajamento - a.scoreEngajamento ||
+    (b.percentualConversao ?? 0) - (a.percentualConversao ?? 0) ||
+    a.nome.localeCompare(b.nome, "pt-BR")
+  )
+}
+
+function agregarOmitidos(linhas: LinhaAnaliseContexto[]) {
+  const porTipo: Record<string, number> = { cliente: 0, pessoa: 0 }
+  const porTemperatura: Record<FaixaConversao, number> = { QUENTE: 0, MORNO: 0, FRIO: 0 }
+  const porClassificacao: Record<string, number> = {}
+  let visitasRealizadas = 0
+  let visitasAgendadas = 0
+  let acoesRealizadas = 0
+  let acoesAgendadas = 0
+  let pedidosVenda = 0
+  let faturamentos = 0
+
+  for (const linha of linhas) {
+    porTipo[linha.tipo] = (porTipo[linha.tipo] ?? 0) + 1
+    porTemperatura[linha.temperatura] = (porTemperatura[linha.temperatura] ?? 0) + 1
+    porClassificacao[linha.classificacao] = (porClassificacao[linha.classificacao] ?? 0) + 1
+    visitasRealizadas += linha.visitasRealizadas ?? 0
+    visitasAgendadas += linha.visitasAgendadas ?? 0
+    acoesRealizadas += linha.acoesRealizadas ?? 0
+    acoesAgendadas += linha.acoesAgendadas ?? 0
+    pedidosVenda += linha.pedidosVenda ?? 0
+    faturamentos += linha.faturamentos ?? 0
+  }
+
+  return {
+    quantidade: linhas.length,
+    porTipo,
+    porTemperatura,
+    porClassificacao,
+    totais: {
+      visitasRealizadas,
+      visitasAgendadas,
+      acoesRealizadas,
+      acoesAgendadas,
+      pedidosVenda,
+      faturamentos,
+    },
+  }
+}
+
+function jsonLimitado(valor: unknown, limite: number) {
+  const texto = JSON.stringify(valor)
+  if (texto.length <= limite) return texto
+  if (Array.isArray(valor)) {
+    for (let quantidade = valor.length - 1; quantidade >= 0; quantidade--) {
+      const candidato = JSON.stringify(valor.slice(0, quantidade))
+      if (candidato.length <= limite) return candidato
+    }
+  }
+  return JSON.stringify({
+    aviso: "dados omitidos por limite de tamanho",
+    total: Array.isArray(valor) ? valor.length : 0,
+  })
+}
+
+function montarBlocoDados(linhas: LinhaAnaliseContexto[], filtros: Record<string, unknown>) {
+  const ordenadas = [...linhas].sort(compararRegistros)
+  const resumos = ordenadas.map(resumoLinha)
+  const filtrosCompactos = resumoFiltros(filtros)
+
+  for (let quantidade = resumos.length; quantidade >= 0; quantidade--) {
+    const dados = {
+      filtros: filtrosCompactos,
+      registros: resumos.slice(0, quantidade),
+      amostragem: {
+        total: resumos.length,
+        incluidos: quantidade,
+        omitidos: resumos.length - quantidade,
+        criterio: "temperatura, engajamento e conversão",
+        resumoDosOmitidos: agregarOmitidos(ordenadas.slice(quantidade)),
+      },
+    }
+    const bloco = JSON.stringify(dados)
+    if (bloco.length <= LIMITE_DADOS_IA_CHARS) {
+      return {
+        bloco,
+        compactacao: {
+          total: resumos.length,
+          incluidos: quantidade,
+          omitidos: resumos.length - quantidade,
+        },
+      }
+    }
+  }
+
+  return {
+    bloco: JSON.stringify({
+      filtros: filtrosCompactos,
+      registros: [],
+      amostragem: {
+        total: resumos.length,
+        incluidos: 0,
+        omitidos: resumos.length,
+        criterio: "temperatura, engajamento e conversão",
+        resumoDosOmitidos: agregarOmitidos(ordenadas),
+      },
+    }),
+    compactacao: { total: resumos.length, incluidos: 0, omitidos: resumos.length },
+  }
+}
+
+type OpcoesMensagensAnalise = {
   linhas: LinhaAnaliseContexto[]
   filtros: Record<string, unknown>
   historico?: { papel: "usuario" | "assistente"; conteudo: string }[]
   pergunta?: string
   dadosConsulta?: ResultadoConsultaCurada
-}): MensagemIA[] {
-  const resumo = linhas.map(resumoLinha)
-  const blocoDados = JSON.stringify({ filtros, registros: resumo }).slice(0, 24000)
+}
+
+function montarMensagensAnaliseComCompactacao({
+  linhas,
+  filtros,
+  historico = [],
+  pergunta,
+  dadosConsulta,
+}: OpcoesMensagensAnalise): { mensagens: MensagemIA[]; compactacao: CompactacaoDadosIA } {
+  const { bloco, compactacao } = montarBlocoDados(linhas, filtros)
+  const historicoSelecionado = historico.slice(-MAX_HISTORICO_IA)
+  let restante = LIMITE_HISTORICO_IA_CHARS
+  const mensagensHistorico: MensagemIA[] = []
+
+  for (let indice = historicoSelecionado.length - 1; indice >= 0; indice--) {
+    const limite = Math.min(LIMITE_MENSAGEM_HISTORICO_CHARS, restante)
+    if (limite <= 0) break
+    const conteudo = historicoSelecionado[indice].conteudo.slice(0, limite)
+    mensagensHistorico.unshift({
+      role: historicoSelecionado[indice].papel === "usuario" ? "user" : "assistant",
+      content: conteudo,
+    })
+    restante -= conteudo.length
+  }
+
   const mensagens: MensagemIA[] = [
     { role: "system", content: REGRAS_SISTEMA },
     {
       role: "user",
-      content: `Dados dos registros filtrados na tela:\n${blocoDados}\n\n${
+      content: `Dados dos registros filtrados na tela:\n${bloco}\n\n${
         pergunta ??
         "Faça uma análise da saúde da prospecção destes registros e sugira ações para melhorá-la."
       }`,
     },
-    ...historico.slice(-10).map((item) => ({
-      role: item.papel === "usuario" ? ("user" as const) : ("assistant" as const),
-      content: item.conteudo.slice(0, 6000),
-    })),
+    ...mensagensHistorico,
   ]
 
   if (dadosConsulta) {
@@ -206,11 +361,18 @@ export function montarMensagensAnalise({
       role: "user",
       content: `Dados da consulta curada ${dadosConsulta.nome} para ${
         dadosConsulta.chave.tipo
-      } ${dadosConsulta.chave.id}:\n${JSON.stringify(dadosConsulta.dados).slice(0, 12000)}\n\nAgora responda à pergunta original em Markdown, sem novas consultas.`,
+      } ${dadosConsulta.chave.id}:\n${jsonLimitado(
+        dadosConsulta.dados,
+        LIMITE_CONSULTA_IA_CHARS
+      )}\n\nAgora responda à pergunta original em Markdown, sem novas consultas.`,
     })
   }
 
-  return mensagens
+  return { mensagens, compactacao }
+}
+
+export function montarMensagensAnalise(opcoes: OpcoesMensagensAnalise): MensagemIA[] {
+  return montarMensagensAnaliseComCompactacao(opcoes).mensagens
 }
 
 export function parseConsultaCurada(conteudo: string): ConsultaCurada | null {
@@ -366,7 +528,7 @@ export async function chamarAnaliseComConsultas({
     })
     conversa.push({
       role: "user",
-      content: `Resultado da consulta curada autorizada:\n${JSON.stringify(dados).slice(0, 12000)}`,
+      content: `Resultado da consulta curada autorizada:\n${jsonLimitado(dados, LIMITE_CONSULTA_IA_CHARS)}`,
     })
     mensagensDecisao = [...conversa, { role: "user", content: INSTRUCAO_DECISAO }]
   }
@@ -393,5 +555,9 @@ export async function contextoInicial(
 ) {
   const temperaturas = await buscarTemperaturas(linhas)
   const preparadas = prepararLinhas(linhas, temperaturas)
-  return { linhas: preparadas, mensagens: montarMensagensAnalise({ linhas: preparadas, filtros }) }
+  const { mensagens, compactacao } = montarMensagensAnaliseComCompactacao({
+    linhas: preparadas,
+    filtros,
+  })
+  return { linhas: preparadas, mensagens, compactacao }
 }

@@ -15,6 +15,7 @@ const {
   prepararLinhas,
   montarMensagensAnalise,
   chamarAnaliseComConsultas,
+  medirMensagensIA,
 } = vi.hoisted(() => ({
   requireAuth: vi.fn(),
   db: { select: vi.fn(), transaction: vi.fn(), update: vi.fn() },
@@ -24,6 +25,7 @@ const {
   prepararLinhas: vi.fn(),
   montarMensagensAnalise: vi.fn(),
   chamarAnaliseComConsultas: vi.fn(),
+  medirMensagensIA: vi.fn(),
 }))
 
 vi.mock("@/lib/auth", () => ({ requireAuth }))
@@ -35,6 +37,7 @@ vi.mock("@/lib/crm/saude-prospeccao-ia", () => ({
   prepararLinhas,
   montarMensagensAnalise,
   chamarAnaliseComConsultas,
+  medirMensagensIA,
 }))
 vi.mock("@/lib/notificar", () => ({
   notificarErro: vi.fn(),
@@ -91,6 +94,7 @@ beforeEach(() => {
   buscarTemperaturas.mockResolvedValue(new Map())
   prepararLinhas.mockReturnValue([])
   montarMensagensAnalise.mockReturnValue([])
+  medirMensagensIA.mockReturnValue({ enviadoChars: 100, estTokensAprox: 25 })
   chamarAnaliseComConsultas.mockResolvedValue({
     conteudo: "Resposta",
     resultado: { provedor: "groq", modelo: "teste" },
@@ -135,6 +139,20 @@ describe("POST /api/crm/saude-prospeccao/ia/analises/[id]/mensagens", () => {
     })
     const resposta = await POST_MENSAGEM(request({ mensagens: [], pergunta: "E agora?" }), { params })
     expect(resposta.status).toBe(503)
+  })
+
+  it("devolve 413 quando a pergunta e o histórico excedem o limite do provedor", async () => {
+    chamarAnaliseComConsultas.mockResolvedValue({
+      conteudo: "",
+      resultado: { provedor: "nenhum", modelo: null, status: 413, codigo: "PAYLOAD_TOO_LARGE" },
+      consultas: [],
+    })
+    const resposta = await POST_MENSAGEM(request({ mensagens: [], pergunta: "E agora?" }), { params })
+    expect(resposta.status).toBe(413)
+    const corpo = await resposta.json()
+    expect(corpo.error).toMatch(/Dados demais/i)
+    expect(corpo.detalhe).toMatch(/tamanho da pergunta/i)
+    expect(resposta.headers.get("X-Enviado-Chars")).toBe("100")
   })
 
   it("salva pergunta e resposta", async () => {

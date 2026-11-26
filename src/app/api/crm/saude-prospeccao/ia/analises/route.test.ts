@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createQueryBuilder } from "@/test/route-db-mock"
 import { GET, POST } from "./route"
 
-const { requireAuth: requireAuthMock, db, contextoInicial, chamarAnaliseComConsultas, podeVerTodasAnalises, buscarChaveIAAnalise } =
+const { requireAuth: requireAuthMock, db, contextoInicial, chamarAnaliseComConsultas, podeVerTodasAnalises, buscarChaveIAAnalise, medirMensagensIA } =
   vi.hoisted(() => ({
     requireAuth: vi.fn(),
     db: { select: vi.fn(), transaction: vi.fn() },
@@ -12,6 +12,7 @@ const { requireAuth: requireAuthMock, db, contextoInicial, chamarAnaliseComConsu
     chamarAnaliseComConsultas: vi.fn(),
     podeVerTodasAnalises: vi.fn(),
     buscarChaveIAAnalise: vi.fn(),
+    medirMensagensIA: vi.fn(),
   }))
 
 vi.mock("@/lib/auth", () => ({ requireAuth: requireAuthMock }))
@@ -20,6 +21,7 @@ vi.mock("@/lib/crm/saude-prospeccao-ia", () => ({
   contextoInicial,
   chamarAnaliseComConsultas,
   buscarChaveIAAnalise,
+  medirMensagensIA,
 }))
 vi.mock("@/lib/crm/saude-prospeccao-acesso", () => ({ podeVerTodasAnalises }))
 vi.mock("@/lib/notificar", () => ({
@@ -71,7 +73,12 @@ beforeEach(() => {
     callback({ insert: vi.fn(() => createQueryBuilder([analise])) } as unknown as typeof db)
   )
   buscarChaveIAAnalise.mockResolvedValue(null)
-  contextoInicial.mockResolvedValue({ linhas: [linha], mensagens: [] })
+  contextoInicial.mockResolvedValue({
+    linhas: [linha],
+    mensagens: [],
+    compactacao: { total: 1, incluidos: 1, omitidos: 0 },
+  })
+  medirMensagensIA.mockReturnValue({ enviadoChars: 200, estTokensAprox: 50 })
   chamarAnaliseComConsultas.mockResolvedValue({
     conteudo: analise.analise,
     resultado: { provedor: "groq", modelo: "teste" },
@@ -105,6 +112,27 @@ describe("/api/crm/saude-prospeccao/ia/analises", () => {
     })
     const resposta = await POST(request({ linhas: [linha] }))
     expect(resposta.status).toBe(503)
+  })
+
+  it("POST devolve 413 com orientação quando o payload é grande demais", async () => {
+    chamarAnaliseComConsultas.mockResolvedValue({
+      conteudo: "",
+      resultado: {
+        provedor: "nenhum",
+        modelo: null,
+        status: 413,
+        codigo: "PAYLOAD_TOO_LARGE",
+        erro: "Error: HTTP 413: Request too large",
+      },
+      consultas: [],
+    })
+    const resposta = await POST(request({ linhas: [linha] }))
+    expect(resposta.status).toBe(413)
+    const corpo = await resposta.json()
+    expect(corpo.error).toMatch(/Dados demais/i)
+    expect(corpo.detalhe).toMatch(/Reduza os filtros/i)
+    expect(corpo.compactacao).toEqual({ total: 1, incluidos: 1, omitidos: 0 })
+    expect(resposta.headers.get("X-Enviado-Chars")).toBe("200")
   })
 
   it("POST cria análise e mensagem inicial", async () => {

@@ -8,7 +8,12 @@ import {
   crmSaudeProspeccaoMensagens,
 } from "@/lib/db/schema/crm-saude-prospeccao-ia"
 import { podeVerTodasAnalises } from "@/lib/crm/saude-prospeccao-acesso"
-import { buscarChaveIAAnalise, chamarAnaliseComConsultas, contextoInicial } from "@/lib/crm/saude-prospeccao-ia"
+import {
+  buscarChaveIAAnalise,
+  chamarAnaliseComConsultas,
+  contextoInicial,
+  medirMensagensIA,
+} from "@/lib/crm/saude-prospeccao-ia"
 import { saudeProspeccaoAnaliseSchema, validateRequest } from "@/lib/validation"
 
 export const dynamic = "force-dynamic"
@@ -51,10 +56,26 @@ export async function POST(req: NextRequest) {
     const chave = await buscarChaveIAAnalise()
     const chaveId = chave?.id
 
-    const { linhas: preparadas, mensagens } = await contextoInicial(linhas, filtros)
-    const enviadoChars = JSON.stringify(mensagens).length
-    const estTokensAprox = Math.max(1, Math.ceil(enviadoChars / 4))
+    const { linhas: preparadas, mensagens, compactacao } = await contextoInicial(linhas, filtros)
+    const { enviadoChars, estTokensAprox } = medirMensagensIA(mensagens)
     const { conteudo, resultado, consultas } = await chamarAnaliseComConsultas({ mensagens, chaveId })
+    const headers = {
+      "X-Enviado-Chars": String(enviadoChars),
+      "X-Est-Tokens-Aprox": String(estTokensAprox),
+    }
+
+    if (resultado.codigo === "PAYLOAD_TOO_LARGE") {
+      return NextResponse.json(
+        {
+          error: "Dados demais para a IA processar de uma vez",
+          detalhe: "Reduza os filtros ou o número de registros e tente novamente.",
+          enviadoChars,
+          estTokensAprox,
+          compactacao,
+        },
+        { status: 413, headers }
+      )
+    }
 
     if (resultado.provedor === "nenhum") {
       return NextResponse.json(
@@ -64,7 +85,7 @@ export async function POST(req: NextRequest) {
           enviadoChars,
           estTokensAprox,
         },
-        { status: 503, headers: { "X-Enviado-Chars": String(enviadoChars), "X-Est-Tokens-Aprox": String(estTokensAprox) } }
+        { status: 503, headers }
       )
     }
 
@@ -100,7 +121,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(
       { analise: criado },
-      { status: 201, headers: { "X-Enviado-Chars": String(enviadoChars), "X-Est-Tokens-Aprox": String(estTokensAprox) } }
+      { status: 201, headers }
     )
   } catch (error) {
     return handleApiError(error, "POST /api/crm/saude-prospeccao/ia/analises", usuarioNome)

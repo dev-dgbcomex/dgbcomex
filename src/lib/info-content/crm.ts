@@ -1975,10 +1975,12 @@ export const saudeProspeccaoLeadsInfo = {
     description:
       "Análise solicitada a partir das linhas filtradas na tela. A IA usa somente as regras cadastradas no sistema para explicar a saúde da prospecção e sugerir próximos passos.",
     rules: [
-      "O botão 'Analisar com IA' envia apenas os registros visíveis depois dos filtros atuais e usa o mesmo provedor do resumo de IA do cliente.",
-      "O botão 'Ver envio à IA' mostra o payload e as mensagens que serão enviados ao provedor, sem chamar a IA, e nunca exibe a chave secreta da API.",
-      "A decisão sobre consultas extras usa uma chamada curta; a resposta final mantém 700 tokens, evitando o limite de tokens por minuto do Groq.",
-      "A temperatura enviada à IA segue QUENTE, MORNO ou FRIO, conforme negociações, propostas, pedidos e faturamentos do sistema.",
+      "O botão 'Analisar com IA' envia apenas os registros visíveis depois dos filtros atuais, com o provedor configurado para análise e fallback para o pool padrão de IA.",
+      "O botão 'Ver envio à IA' mostra o payload e as mensagens compactadas que serão enviadas ao provedor, sem chamar a IA, e nunca exibe a chave secreta da API.",
+      "Quando há muitos registros, os mais críticos são enviados individualmente e os demais viram contagens agregadas; a prévia informa quantos registros foram incluídos e resumidos.",
+      "A decisão sobre consultas extras usa uma chamada curta; a resposta final mantém 700 tokens e o payload é limitado para não ultrapassar o teto por requisição do provedor.",
+      "Se o provedor responder que os dados são grandes demais (HTTP 413), a tela orienta a reduzir filtros; essa falha não é contabilizada como falha da chave de IA.",
+      "A temperatura do modelo é 0; QUENTE, MORNO e FRIO são enviados como dados da classificação de temperatura do sistema.",
       "A classificação enviada à IA segue Engajados, AEC ou BEC, com prevalência de Engajamento acima de 30%.",
       "As sugestões devem aumentar o engajamento ou reduzir o esforço sem inventar novas métricas.",
       "No chat é possível pedir detalhes; a IA pode consultar apenas consultas curadas e somente leitura, nunca SQL livre.",
@@ -1996,6 +1998,10 @@ export const saudeProspeccaoLeadsInfo = {
       {
         title: "AEC com baixo engajamento",
         desc: "A IA pode sugerir negociar proposta existente ou abrir oportunidade, porque esses itens aumentam o engajamento nas regras do sistema.",
+      },
+      {
+        title: "Muitos registros na fila",
+        desc: "Com 200 registros filtrados, a prévia pode mostrar 45/200 registros enviados individualmente e 155 resumidos em contagens agregadas para caber no limite do provedor.",
       },
     ],
   },

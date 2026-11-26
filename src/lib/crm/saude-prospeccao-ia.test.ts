@@ -1,7 +1,12 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { chamarIA } from "@/lib/ai"
-import { chamarAnaliseComConsultas, montarMensagensAnalise } from "./saude-prospeccao-ia"
+import {
+  chamarAnaliseComConsultas,
+  medirMensagensIA,
+  montarMensagensAnalise,
+  type LinhaAnaliseContexto,
+} from "./saude-prospeccao-ia"
 
 vi.mock("@/lib/db", () => ({ db: {} }))
 vi.mock("@/lib/ai", () => ({ chamarIA: vi.fn() }))
@@ -97,5 +102,93 @@ describe("chamarAnaliseComConsultas", () => {
     expect(regras).toMatch(/pedidos de venda ÷ oportunidades/i)
     expect(regras).toMatch(/faturamentos ÷ pedidos de venda/i)
     expect(regras).toMatch(/limitada a 100%/i)
+  })
+})
+
+describe("montarMensagensAnalise — limite de payload", () => {
+  function linha(index: number): LinhaAnaliseContexto {
+    return {
+      id: index,
+      tipo: "cliente",
+      nome: `Cliente ${index} ${"Longo ".repeat(30)}`,
+      scoreEsforco: 60,
+      scoreEngajamento: index === 199 ? 100 : 20,
+      percentualConversao: 50,
+      visitasRealizadas: 1,
+      visitasAgendadas: 1,
+      acoesRealizadas: 2,
+      acoesAgendadas: 1,
+      pedidosVenda: 1,
+      faturamentos: 1,
+      chave: `cliente:${index}`,
+      classificacao: "BEC",
+      temperatura: index === 199 ? "QUENTE" : "FRIO",
+    }
+  }
+
+  function blocoDeDados(mensagens: ReturnType<typeof montarMensagensAnalise>) {
+    const conteudo = mensagens.find((mensagem) => mensagem.role === "user")?.content ?? ""
+    const inicio = conteudo.indexOf("{")
+    const fim = conteudo.lastIndexOf("}")
+    return JSON.parse(conteudo.slice(inicio, fim + 1)) as {
+      registros: { nome: string; engajamento: number }[]
+      amostragem: {
+        total: number
+        incluidos: number
+        omitidos: number
+        resumoDosOmitidos: { quantidade: number }
+      }
+    }
+  }
+
+  it("compacta 200 registros em JSON válido dentro do limite", () => {
+    const mensagens = montarMensagensAnalise({
+      linhas: Array.from({ length: 200 }, (_, index) => linha(index)),
+      filtros: { busca: "x".repeat(300) },
+    })
+    const dados = blocoDeDados(mensagens)
+
+    expect(dados.amostragem.total).toBe(200)
+    expect(dados.amostragem.incluidos).toBeGreaterThan(0)
+    expect(dados.amostragem.incluidos).toBeLessThan(200)
+    expect(dados.amostragem.omitidos).toBe(200 - dados.amostragem.incluidos)
+    expect(dados.amostragem.resumoDosOmitidos.quantidade).toBe(dados.amostragem.omitidos)
+    expect(dados.registros).toHaveLength(dados.amostragem.incluidos)
+    expect(dados.registros[0].engajamento).toBe(100)
+    expect(medirMensagensIA(mensagens).estTokensAprox).toBeLessThan(6_000)
+  })
+
+  it("limita o histórico mesmo com muitas mensagens longas", () => {
+    const mensagens = montarMensagensAnalise({
+      linhas: [],
+      filtros: {},
+      historico: Array.from({ length: 20 }, (_, index) => ({
+        papel: index % 2 === 0 ? ("assistente" as const) : ("usuario" as const),
+        conteudo: "h".repeat(8_000),
+      })),
+    })
+
+    expect(mensagens).toHaveLength(8)
+    expect(medirMensagensIA(mensagens).enviadoChars).toBeLessThan(12_000)
+  })
+
+  it("limita dados de consulta curada sem cortar JSON no meio", () => {
+    const mensagens = montarMensagensAnalise({
+      linhas: [],
+      filtros: {},
+      dadosConsulta: {
+        nome: "oportunidades",
+        chave: { tipo: "cliente", id: 10 },
+        limite: 20,
+        dados: Array.from({ length: 100 }, () => ({ relato: "r".repeat(500) })),
+      },
+    })
+    const conteudo = mensagens[mensagens.length - 1].content
+    const inicio = conteudo.indexOf("[")
+    const fim = conteudo.lastIndexOf("]")
+
+    expect(conteudo).toMatch(/Dados da consulta curada/i)
+    expect(() => JSON.parse(conteudo.slice(inicio, fim + 1))).not.toThrow()
+    expect(medirMensagensIA(mensagens).enviadoChars).toBeLessThan(10_000)
   })
 })

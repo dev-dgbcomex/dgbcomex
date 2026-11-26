@@ -13,6 +13,7 @@ import {
   montarMensagensAnalise,
   prepararLinhas,
   buscarTemperaturas,
+  medirMensagensIA,
   type LinhaAnaliseIA,
 } from "@/lib/crm/saude-prospeccao-ia"
 import { saudeProspeccaoMensagemSchema, validateRequest } from "@/lib/validation"
@@ -57,8 +58,31 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     })
 
     const { conteudo, resultado, consultas } = await chamarAnaliseComConsultas({ mensagens })
+    const { enviadoChars, estTokensAprox } = medirMensagensIA(mensagens)
+
+    if (resultado.codigo === "PAYLOAD_TOO_LARGE") {
+      return NextResponse.json(
+        {
+          error: "Dados demais para a IA processar de uma vez",
+          detalhe: "Reduza o tamanho da pergunta ou o histórico da conversa e tente novamente.",
+          enviadoChars,
+          estTokensAprox,
+        },
+        {
+          status: 413,
+          headers: {
+            "X-Enviado-Chars": String(enviadoChars),
+            "X-Est-Tokens-Aprox": String(estTokensAprox),
+          },
+        }
+      )
+    }
+
     if (resultado.provedor === "nenhum") {
-      return NextResponse.json({ error: "Nenhum provedor de IA disponível no momento" }, { status: 503 })
+      return NextResponse.json(
+        { error: "Nenhum provedor de IA disponível no momento", detalhe: resultado.erro ?? "provedor nao encontrado" },
+        { status: 503 }
+      )
     }
 
     const criadas = await db.transaction(async (tx: typeof db) => {

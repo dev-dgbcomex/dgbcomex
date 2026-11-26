@@ -90,6 +90,7 @@ function mockFetch() {
         chave: { id: 3, provedor: "openai_compatible", nome: "NVIDIA Nemotron", modelo: "Nemotron 3.5 Super VL 120B A12B" },
         enviadoChars: 123,
         estTokensAprox: 31,
+        compactacao: { total: 1, incluidos: 1, omitidos: 0 },
       },
     })
   )
@@ -164,9 +165,37 @@ describe("AnaliseIaPanel", () => {
     expect(await screen.findByText(/Cliente Alpha/)).toBeInTheDocument()
     expect(await screen.findByText(/NVIDIA Nemotron/)).toBeInTheDocument()
     expect(await screen.findByText(/mensagens/)).toBeInTheDocument()
+    expect(await screen.findByText(/1\/1 registros/)).toBeInTheDocument()
     expect(await screen.findByText(/Ocultar prévia/)).toBeInTheDocument()
 
     fireEvent.click(within(dialog).getByRole("button", { name: /Ocultar prévia/ }))
     expect(screen.queryByText(/Cliente Alpha/)).not.toBeInTheDocument()
+  })
+
+  it("mostra orientação quando a IA rejeita o payload por tamanho", async () => {
+    const fetchMock = createFetchMock(({ method, url }) => {
+      if (method === "POST" && url === "/api/crm/saude-prospeccao/ia/analises") {
+        return {
+          status: 413,
+          json: {
+            error: "Dados demais para a IA processar de uma vez",
+            detalhe: "Reduza os filtros ou o número de registros e tente novamente.",
+          },
+        }
+      }
+      return { json: { analises: [] } }
+    })
+    vi.stubGlobal("fetch", fetchMock.fn)
+    renderPage(<AnaliseIaPanel linhas={[linha]} filtros={{ busca: "Alpha" }} />)
+
+    fireEvent.click(screen.getByRole("button", { name: /Analisar com IA/ }))
+    const dialog = await screen.findByRole("dialog")
+    fireEvent.click(within(dialog).getByRole("button", { name: "Gerar análise" }))
+
+    await waitFor(() =>
+      expect(toastMock.error).toHaveBeenCalledWith(
+        expect.stringContaining("Reduza os filtros ou o número de registros")
+      )
+    )
   })
 })

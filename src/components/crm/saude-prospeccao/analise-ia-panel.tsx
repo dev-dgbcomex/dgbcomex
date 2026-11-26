@@ -44,6 +44,7 @@ type PreviewIA = {
   chave: { id: number; provedor: string; nome: string; modelo: string | null } | null
   enviadoChars: number
   estTokensAprox: number
+  compactacao: { total: number; incluidos: number; omitidos: number } | null
 }
 
 const BASE = "/api/crm/saude-prospeccao/ia/analises"
@@ -223,7 +224,10 @@ export function AnaliseIaPanel({
         }),
       })
       const dados = await resposta.json()
-      if (!resposta.ok) throw new Error(dados.error ?? "Falha ao enviar pergunta")
+      if (!resposta.ok) {
+        const detalhe = dados.detalhe ? ` — ${String(dados.detalhe).slice(0, 160)}` : ""
+        throw new Error(`${dados.error ?? "Falha ao enviar pergunta"}${detalhe}`)
+      }
       setMensagens((atuais) => [...atuais, ...(dados.mensagens as Mensagem[])])
       setPergunta("")
     } catch (erro) {
@@ -398,6 +402,14 @@ export function AnaliseIaPanel({
                       {previewData.mensagens.length} mensagens · {previewData.enviadoChars} chars ·
                       ~{previewData.estTokensAprox} tokens
                     </span>
+                    {previewData.compactacao && (
+                      <span>
+                        {previewData.compactacao.incluidos}/{previewData.compactacao.total} registros
+                        {previewData.compactacao.omitidos > 0
+                          ? ` · ${previewData.compactacao.omitidos} resumidos`
+                          : ""}
+                      </span>
+                    )}
                     <span>
                       {previewData.chave
                         ? `${previewData.chave.provedor} · ${previewData.chave.nome} · id ${previewData.chave.id}`
