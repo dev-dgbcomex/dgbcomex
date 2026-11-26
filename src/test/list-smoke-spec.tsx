@@ -26,6 +26,7 @@ export interface ListSmokeSpecConfig {
   /** Consulta que casa apenas com o primeiro item */
   matchQuery?: string
   handler?: MockFetchHandler
+  preparar?: () => void | Promise<void>
 }
 
 /**
@@ -50,6 +51,7 @@ export function listSmokeSpec(cfg: ListSmokeSpecConfig) {
 
     it("renderiza a lista com dados e heading", async () => {
       renderPage(cfg.component)
+      await cfg.preparar?.()
       expect(screen.getByRole("heading", { name: cfg.heading })).toBeInTheDocument()
       for (const item of cfg.data) {
         expect(await screen.findByText(item[cfg.primaryField])).toBeInTheDocument()
@@ -60,6 +62,7 @@ export function listSmokeSpec(cfg: ListSmokeSpecConfig) {
       const empty = createFetchMock(() => ({ json: [] }))
       vi.stubGlobal("fetch", empty.fn)
       renderPage(cfg.component)
+      await cfg.preparar?.()
       expect(await screen.findByText(cfg.emptyText)).toBeInTheDocument()
     })
 
@@ -68,6 +71,7 @@ export function listSmokeSpec(cfg: ListSmokeSpecConfig) {
     if (searchPlaceholder && matchQuery) {
       it("filtra pela busca", async () => {
         renderPage(cfg.component)
+        await cfg.preparar?.()
         await screen.findByText(cfg.firstItemText)
 
         const search = screen.getByPlaceholderText(searchPlaceholder)
@@ -86,6 +90,7 @@ export function listSmokeSpec(cfg: ListSmokeSpecConfig) {
     it("contém link de novo registro", async () => {
       if (!cfg.newLinkText || !cfg.newHref) return
       renderPage(cfg.component)
+      await cfg.preparar?.()
       await screen.findByText(cfg.firstItemText)
       expect(screen.getByRole("link", { name: cfg.newLinkText })).toHaveAttribute(
         "href",
@@ -96,6 +101,7 @@ export function listSmokeSpec(cfg: ListSmokeSpecConfig) {
     it("contém link de edição por item", async () => {
       if (!cfg.editHref) return
       renderPage(cfg.component)
+      await cfg.preparar?.()
       await screen.findByText(cfg.firstItemText)
       const expected = cfg.editHref(cfg.data[0])
       if (cfg.editLinkText) {

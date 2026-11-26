@@ -446,7 +446,7 @@ export const crmContent: Record<string, InfoContent> = {
       "O pipeline segue o fluxo: Novo → Qualificação → Proposta → Negociação → Fechado Ganho/Perdido.",
       "Somente NOVO e QUALIFICACAO podem ficar sem Valor Estimado e Probabilidade; Proposta, Negociação, Ganho e Perdido exigem ambos preenchidos e maiores que 1. O sistema solicita o preenchimento ao mover ou alterar o status para esses estágios.",
       "Os estágios e rótulos vêm do cadastro de Status (Admin → Configurações → Status, tipo Oportunidade): um novo status ativo já aparece aqui e vira coluna no Kanban.",
-      "A visualização padrão é em Cards; Tabela e Kanban continuam disponíveis. Cards e Tabela usam os mesmos filtros e o Kanban organiza as oportunidades por status.",
+      "A visualização padrão é em Kanban, com as oportunidades agrupadas por status; Cards e Tabela continuam disponíveis e usam os mesmos filtros.",
       "O filtro Todas/Minhas começa em Todas, mostrando as oportunidades de todos os responsáveis; Minhas continua disponível para restringir ao usuário logado.",
       "O botão 'Saúde da Prospecção' no cabeçalho abre o painel por cliente ou lead com as classificações AEC, BEC e Engajados.",
       "Use o Kanban para arrastar oportunidades entre estágios do pipeline.",

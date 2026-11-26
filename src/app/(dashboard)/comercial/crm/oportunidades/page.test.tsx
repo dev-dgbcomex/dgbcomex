@@ -47,6 +47,9 @@ listSmokeSpec({
   firstItemText: "Venda de malha 100% algodão",
   secondItemText: "Confecção de uniformes",
   matchQuery: "malha",
+  preparar: () => {
+    fireEvent.click(screen.getByRole("button", { name: "Tabela" }))
+  },
 })
 
 describe("OportunidadesPage filtro de responsável", () => {
@@ -104,15 +107,13 @@ describe("OportunidadesPage kanban", () => {
     vi.stubGlobal("fetch", fetchMock.fn)
   })
 
-  it("alterna para o kanban", async () => {
+  it("abre em kanban por padrão", async () => {
     renderPage(<OportunidadesPage />)
-
-    await screen.findByText("Venda de malha 100% algodão")
-    fireEvent.click(screen.getByRole("button", { name: "Kanban" }))
 
     expect(await screen.findByRole("button", { name: "Flutuar" })).toBeInTheDocument()
     expect(screen.queryByRole("table")).not.toBeInTheDocument()
     expect(screen.getByText("Venda de malha 100% algodão")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Kanban" })).toHaveAttribute("aria-pressed", "true")
   })
 })
 
@@ -127,13 +128,13 @@ describe("OportunidadesPage cards", () => {
     vi.stubGlobal("fetch", fetchMock.fn)
   })
 
-  it("abre em cards por padrão", async () => {
+  it("mantém Cards disponível sem ser o padrão", async () => {
     renderPage(<OportunidadesPage />)
 
     await screen.findByText("Venda de malha 100% algodão")
-    expect(screen.queryByRole("table")).not.toBeInTheDocument()
-    expect(screen.queryByRole("button", { name: "Flutuar" })).not.toBeInTheDocument()
-    expect(screen.getByRole("link", { name: "Venda de malha 100% algodão" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Cards" })).toHaveAttribute("aria-pressed", "false")
+    expect(screen.getByRole("button", { name: "Flutuar" })).toBeInTheDocument()
+    expect(screen.queryByRole("link", { name: "Venda de malha 100% algodão" })).not.toBeInTheDocument()
   })
 
   it("alterna para cards mostrando os dados da oportunidade", async () => {
@@ -191,6 +192,7 @@ describe("OportunidadesPage status do cadastro", () => {
     vi.stubGlobal("fetch", fetchMock.fn)
 
     renderPage(<OportunidadesPage />)
+    fireEvent.click(screen.getByRole("button", { name: "Tabela" }))
 
     expect(await screen.findByText("Prospecção")).toBeInTheDocument()
     expect(screen.queryByText("PROSPECCAO")).not.toBeInTheDocument()
@@ -215,8 +217,8 @@ describe("OportunidadesPage exclusão", () => {
 
   it("abre modal e exclui a oportunidade confirmando", async () => {
     renderPage(<OportunidadesPage />)
-    await screen.findByText("Venda de malha 100% algodão")
     fireEvent.click(screen.getByRole("button", { name: "Tabela" }))
+    await screen.findByText("Venda de malha 100% algodão")
     await screen.findByRole("table")
 
     const row = screen.getByText("Venda de malha 100% algodão").closest("tr")!
@@ -245,8 +247,8 @@ describe("OportunidadesPage exclusão", () => {
     vi.stubGlobal("fetch", noPermMock.fn)
 
     renderPage(<OportunidadesPage />)
-    await screen.findByText("Venda de malha 100% algodão")
     fireEvent.click(screen.getByRole("button", { name: "Tabela" }))
+    await screen.findByText("Venda de malha 100% algodão")
     await screen.findByRole("table")
 
     const row = screen.getByText("Venda de malha 100% algodão").closest("tr")!
@@ -260,8 +262,8 @@ describe("OportunidadesPage exclusão", () => {
 
   it("link de edição abre a oportunidade em modo de edição", async () => {
     renderPage(<OportunidadesPage />)
-    await screen.findByText("Venda de malha 100% algodão")
     fireEvent.click(screen.getByRole("button", { name: "Tabela" }))
+    await screen.findByText("Venda de malha 100% algodão")
     await screen.findByRole("table")
     const edit = screen.getAllByTitle("Editar oportunidade")[0].closest("a")
     expect(edit).toHaveAttribute("href", "/comercial/crm/oportunidades/1?edit=true")
@@ -269,7 +271,6 @@ describe("OportunidadesPage exclusão", () => {
 
   it("botão Status leva para o cadastro filtrado no Perfil", async () => {
     renderPage(<OportunidadesPage />)
-    await screen.findByText("Venda de malha 100% algodão")
 
     const link = screen.getByRole("link", { name: "Status" })
     expect(link).toHaveAttribute("href", "/perfil/menus?statusTipo=OPORTUNIDADE")

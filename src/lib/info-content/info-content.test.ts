@@ -1195,7 +1195,7 @@ describe("crmDashboardInfo", () => {
       oportunidades?.description ?? "",
       ...(oportunidades?.rules ?? []),
     ].join("\n")
-    expect(textoOportunidades).toMatch(/visualização padrão é em Cards/)
+    expect(textoOportunidades).toMatch(/visualização padrão é em Kanban/)
   })
 
   it("as telas com atalho explicam o destino Saúde da Prospecção", () => {
