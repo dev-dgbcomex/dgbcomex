@@ -485,13 +485,14 @@ export const crmContent: Record<string, InfoContent> = {
       "Registre uma nova oportunidade de negócio. Toda oportunidade deve estar vinculada a uma lead existente no CRM.",
     rules: [
       "A lead deve estar cadastrada no CRM antes de criar a oportunidade.",
+      "O campo Lead tem caixa de busca com lupa: digite parte do nome para reduzir as opções; a seleção continua no seletor abaixo.",
       "O valor estimado e a probabilidade são obrigatórios apenas quando o status inicial for diferente de NOVO e QUALIFICACAO; nesses estágios ambos devem ser maiores que 1.",
       "A oportunidade inicia como NOVO e segue o pipeline até o fechamento.",
       "É possível vincular a oportunidade a um lead de origem.",
     ],
     fields: [
       { name: "Título", desc: "Descrição resumida da oportunidade (obrigatório)" },
-      { name: "Lead", desc: "Lead vinculada (autocomplete)" },
+      { name: "Lead", desc: "Lead vinculada, com busca por nome" },
       { name: "Valor Estimado", desc: "Valor potencial da negociação" },
       { name: "Probabilidade", desc: "Chance estimada de fechamento (0-100%)" },
     ],
@@ -685,6 +686,7 @@ export const crmContent: Record<string, InfoContent> = {
       "Agende uma visita a uma lead, a um cliente ou a um avulso. Informe o tipo, data, contato e observações sobre o objetivo da visita.",
     rules: [
       "Escolha quem será visitado: Lead (Negócio), Cliente ou Visita Avulsa.",
+      "Os seletores de Cliente, Lead, Oportunidade e Contato têm caixa de busca com lupa: digite para reduzir as opções; a escolha é feita no seletor abaixo.",
       "Escolha o tipo: Presencial (vai até o cliente), Vídeo (chamada online) ou Telefone.",
       "A data e horário definem quando a visita será realizada.",
       "O contato é opcional — você pode selecionar um contato já cadastrado da lead ou do cliente.",
@@ -692,8 +694,8 @@ export const crmContent: Record<string, InfoContent> = {
       "Ao salvar com recorrência, a agenda cria uma visita por período definido.",
     ],
     fields: [
-      { name: "Lead / Cliente", desc: "Quem será visitado (obrigatório, exceto na visita avulsa)" },
-      { name: "Contato", desc: "Contato da lead ou do cliente — pode ser cadastrado na hora" },
+      { name: "Lead / Cliente", desc: "Quem será visitado (obrigatório, exceto na visita avulsa), com busca por nome" },
+      { name: "Contato", desc: "Contato da lead ou do cliente, com busca por nome — pode ser cadastrado na hora" },
       { name: "Tipo", desc: "Presencial, Vídeo ou Telefone" },
       { name: "Data/Hora", desc: "Quando a visita será realizada" },
       { name: "Observações", desc: "Objetivo e pauta da visita" },
@@ -709,9 +711,11 @@ export const crmContent: Record<string, InfoContent> = {
       "É possível alterar o status da visita (Realizada, Cancelada).",
       "Alguns campos podem não aparecer conforme as regras de visibilidade definidas em Admin › Configurações.",
       "No modo de edição você pode trocar o contato da visita e cadastrar um novo contato (+) da lead ou do cliente vinculado.",
+      "No modo de edição, os seletores de Oportunidade e Contato têm caixa de busca com lupa: digite para reduzir as opções antes de escolher.",
+      "Ao vincular uma visita avulsa, o seletor de Cliente ou Lead também tem busca com lupa.",
     ],
     fields: [
-      { name: "Contato", desc: "Contato da visita — pode ser alterado ou cadastrado na edição" },
+      { name: "Contato", desc: "Contato da visita, com busca por nome — pode ser alterado ou cadastrado na edição" },
       { name: "Fotos", desc: "Imagens registradas durante a visita" },
       { name: "Relato", desc: "Descrição do que foi tratado na visita" },
       { name: "Próximo Passo", desc: "Ação de follow-up acordada com o cliente" },
@@ -787,6 +791,7 @@ export const crmContent: Record<string, InfoContent> = {
       "Agende uma ação de prospecção com uma lead, um cliente ou um avulso. Informe o tipo, data, contato e observações sobre o objetivo da ação.",
     rules: [
       "Escolha quem será prospectado: Lead (Negócio), Cliente ou Ação Avulsa.",
+      "Os seletores de Cliente, Lead, Oportunidade e Contato têm caixa de busca com lupa: digite para reduzir as opções; a escolha é feita no seletor abaixo.",
       "Escolha o tipo: Presencial (vai até o cliente), Vídeo (chamada online) ou Telefone.",
       "A data e horário definem quando a ação será realizada.",
       "O contato é opcional — você pode selecionar um contato já cadastrado da lead ou do cliente.",
@@ -796,9 +801,9 @@ export const crmContent: Record<string, InfoContent> = {
     fields: [
       {
         name: "Lead / Cliente",
-        desc: "Quem será prospectado (obrigatório, exceto na ação avulsa)",
+        desc: "Quem será prospectado (obrigatório, exceto na ação avulsa), com busca por nome",
       },
-      { name: "Contato", desc: "Contato da lead ou do cliente — pode ser cadastrado na hora" },
+      { name: "Contato", desc: "Contato da lead ou do cliente, com busca por nome — pode ser cadastrado na hora" },
       { name: "Tipo", desc: "Presencial, Vídeo ou Telefone" },
       { name: "Data/Hora", desc: "Quando a ação será realizada" },
       { name: "Observações", desc: "Objetivo e pauta da ação" },
@@ -814,9 +819,11 @@ export const crmContent: Record<string, InfoContent> = {
       "É possível alterar o status da ação (Realizada, Cancelada).",
       "Alguns campos podem não aparecer conforme as regras de visibilidade definidas em Admin › Configurações.",
       "No modo de edição você pode trocar o contato da ação e cadastrar um novo contato (+) da lead ou do cliente vinculado.",
+      "No modo de edição, os seletores de Oportunidade e Contato têm caixa de busca com lupa: digite para reduzir as opções antes de escolher.",
+      "Ao vincular uma ação avulsa, o seletor de Cliente ou Lead também tem busca com lupa.",
     ],
     fields: [
-      { name: "Contato", desc: "Contato da ação — pode ser alterado ou cadastrado na edição" },
+      { name: "Contato", desc: "Contato da ação, com busca por nome — pode ser alterado ou cadastrado na edição" },
       { name: "Fotos", desc: "Imagens registradas durante a ação" },
       { name: "Relato", desc: "Descrição do que foi tratado na ação" },
       { name: "Próximo Passo", desc: "Ação de follow-up acordada com o cliente" },
@@ -833,6 +840,7 @@ export const crmContent: Record<string, InfoContent> = {
       "Tarefas PENDENTES com data vencida aparecem em vermelho no topo.",
       "A IA Comercial pode criar tarefas de reativação automaticamente.",
       "Marque como CONCLUÍDA quando finalizar — a timeline registra automaticamente.",
+      "No diálogo de nova tarefa, o seletor de Empresa tem caixa de busca com lupa: digite para reduzir as opções.",
     ],
     fields: [
       { name: "Título", desc: "Descrição resumida da tarefa" },
@@ -840,6 +848,7 @@ export const crmContent: Record<string, InfoContent> = {
       { name: "Prioridade", desc: "Baixa, Média ou Alta" },
       { name: "Data Prevista", desc: "Prazo para conclusão da tarefa" },
       { name: "Status", desc: "Pendente, Em Andamento ou Concluída" },
+      { name: "Empresa", desc: "Lead opcional vinculada à tarefa, com busca por nome" },
     ],
   },
 
@@ -881,13 +890,14 @@ export const crmContent: Record<string, InfoContent> = {
       "Crie uma proposta comercial para uma lead. Preencha os dados, valores, condições e itens da proposta.",
     rules: [
       "A lead é obrigatória — a oportunidade é opcional.",
+      "Os campos Lead e Oportunidade têm caixa de busca com lupa: digite para reduzir as opções antes de selecionar.",
       "O prazo de validade define até quando a proposta pode ser aceita.",
       "Após criar, você pode imprimir em PDF.",
       "Propostas podem ser revisadas e reenviadas.",
     ],
     fields: [
-      { name: "Lead", desc: "Lead destinatária (obrigatório)" },
-      { name: "Oportunidade", desc: "Oportunidade vinculada (opcional)" },
+      { name: "Lead", desc: "Lead destinatária (obrigatório), com busca por nome" },
+      { name: "Oportunidade", desc: "Oportunidade vinculada (opcional), com busca por título" },
       { name: "Valor Total", desc: "Valor comercial da proposta" },
       { name: "Validade", desc: "Prazo para aceitação da proposta" },
     ],
@@ -939,12 +949,13 @@ export const crmContent: Record<string, InfoContent> = {
       "Registre um faturamento para uma oportunidade, informando capa (número, data, status) e os itens vendidos.",
     rules: [
       "A oportunidade é obrigatória.",
+      "O seletor de Oportunidade tem caixa de busca com lupa: digite o título para reduzir as opções.",
       "Adicione ao menos um item com produto preenchido.",
       "O valor total do item é calculado automaticamente pela quantidade × valor unitário, mas pode ser ajustado.",
       "Use 'OUTRA' na unidade quando a medida não estiver na lista.",
     ],
     fields: [
-      { name: "Oportunidade", desc: "Oportunidade vinculada (obrigatório)" },
+      { name: "Oportunidade", desc: "Oportunidade vinculada (obrigatório), com busca por título" },
       { name: "Data de Emissão", desc: "Data em que o faturamento foi emitido" },
       { name: "Itens", desc: "Produto, código, unidade, quantidade, valor unitário e valor total" },
     ],
@@ -956,6 +967,7 @@ export const crmContent: Record<string, InfoContent> = {
       "O valor total exibido é a soma dos itens.",
       "Ao editar, os itens são substituídos pelos salvos.",
       "A origem ERP exibe a referência externa do sistema de origem.",
+      "No formulário de edição, o seletor de Oportunidade tem caixa de busca com lupa por título.",
     ],
     fields: [
       { name: "Status", desc: "Emitido, Parcial, Recebido ou Cancelado" },
@@ -990,12 +1002,13 @@ export const crmContent: Record<string, InfoContent> = {
       "Registre um pedido de venda para uma oportunidade, informando capa (número, data, status) e os itens vendidos.",
     rules: [
       "A oportunidade é obrigatória.",
+      "O seletor de Oportunidade tem caixa de busca com lupa: digite o título para reduzir as opções.",
       "Adicione ao menos um item com produto preenchido.",
       "O valor total do item é calculado automaticamente pela quantidade × valor unitário, mas pode ser ajustado.",
       "Use 'OUTRA' na unidade quando a medida não estiver na lista.",
     ],
     fields: [
-      { name: "Oportunidade", desc: "Oportunidade vinculada (obrigatório)" },
+      { name: "Oportunidade", desc: "Oportunidade vinculada (obrigatório), com busca por título" },
       { name: "Data de Emissão", desc: "Data em que o pedido foi emitido" },
       { name: "Itens", desc: "Produto, código, unidade, quantidade, valor unitário e valor total" },
     ],
@@ -1007,6 +1020,7 @@ export const crmContent: Record<string, InfoContent> = {
       "O valor total exibido é a soma dos itens.",
       "Ao editar, os itens são substituídos pelos salvos.",
       "A origem ERP exibe a referência externa do sistema de origem.",
+      "No formulário de edição, o seletor de Oportunidade tem caixa de busca com lupa por título.",
     ],
     fields: [
       { name: "Status", desc: "Aberto, Parcial, Faturado ou Cancelado" },
@@ -1570,6 +1584,7 @@ export const crmContent: Record<string, InfoContent> = {
       "A ficha do contato (clique na linha da listagem) mostra os dados completos e permite trocar o vínculo entre lead, cliente ou avulso.",
       "O contato principal recebe destaque com estrela e pode ser marcado na edição.",
       "Salvar as alterações recarrega a ficha com o vínculo atual — o nome da lead ou do cliente aparece sempre atualizado.",
+      "Nos formulários de contato, os seletores de Cliente e Lead (Negócio) têm caixa de busca com lupa: digite para reduzir as opções antes de escolher.",
       "Use a busca por nome, e-mail, cargo ou empresa para localizar rapidamente.",
       "Excluir um contato não remove o cliente/empresa vinculado.",
       "A exclusão de contato é exclusiva de ADMIN e SUDO.",
@@ -1582,7 +1597,7 @@ export const crmContent: Record<string, InfoContent> = {
       { name: "Telefone / Celular / WhatsApp", desc: "Canais de acesso do contato" },
       { name: "Principal", desc: "Contato principal do vínculo (estrela na listagem)" },
       { name: "Observações", desc: "Anotações livres sobre o contato" },
-      { name: "Vínculo", desc: "Lead (Negócio), Cliente ou Sem vínculo (órfão)" },
+      { name: "Vínculo", desc: "Lead (Negócio), Cliente ou Sem vínculo (órfão); lead e cliente com busca por nome" },
       { name: "Empresa", desc: "Razão social ou nome fantasia da lead vinculada" },
     ],
   },

@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query"
 import { Loader2, Link as LinkIcon, Plus } from "lucide-react"
 import { toast } from "sonner"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { SelectComBusca, type OpcaoSelectBusca } from "@/components/ui/select-com-busca"
 import { QuickCreateCliente } from "./quick-create-cliente"
 import { QuickCreateLead } from "./quick-create-lead"
 
@@ -110,6 +111,19 @@ export default function VincularVisitaModal({ visitaId, open, onClose, onLinked 
     )
   }
 
+  const opcoesVinculo: OpcaoSelectBusca[] = (tipo === "CLIENTE" ? clientes : empresas).map(
+    (item: {
+      id: number
+      nome?: string | null
+      razaoSocial?: string | null
+      nomeFantasia?: string | null
+    }) => ({
+      value: String(item.id),
+      label:
+        tipo === "CLIENTE" ? item.nome || "Cliente" : item.razaoSocial || item.nomeFantasia || "Pessoa",
+    })
+  )
+
   return (
     <Dialog
       open={open}
@@ -171,18 +185,18 @@ export default function VincularVisitaModal({ visitaId, open, onClose, onLinked 
                 <Loader2 size={20} className="animate-spin text-slate-400" />
               </div>
             ) : (
-              <select
-                value={selectedId}
-                onChange={(e) => setSelectedId(e.target.value)}
-                className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Selecione...</option>
-                {(tipo === "CLIENTE" ? clientes : empresas).map((item: any) => (
-                  <option key={item.id} value={String(item.id)}>
-                    {tipo === "CLIENTE" ? item.nome : item.razaoSocial || item.nomeFantasia}
-                  </option>
-                ))}
-              </select>
+              <SelectComBusca
+                id="vincular-visita-entidade"
+                valor={selectedId}
+                onChange={setSelectedId}
+                opcoes={opcoesVinculo}
+                ariaLabel={tipo === "CLIENTE" ? "Selecione o Cliente" : "Selecione a Lead"}
+                placeholderBusca={
+                  tipo === "CLIENTE"
+                    ? "Digite o nome do cliente..."
+                    : "Digite o nome da lead..."
+                }
+              />
             )}
 
             {tipo === "CLIENTE" && (

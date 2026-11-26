@@ -1,8 +1,10 @@
 "use client"
 
+import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
+import { SelectComBusca, type OpcaoSelectBusca } from "@/components/ui/select-com-busca"
 
-type Cliente = { id: number; nome: string }
+type Cliente = { id: number; nome: string; cnpj?: string; razaoSocial?: string }
 
 type Props = {
   value: string
@@ -11,27 +13,33 @@ type Props = {
 }
 
 export function SelectCliente({ value, onChange, className }: Props) {
+  const [busca, setBusca] = useState("")
+  const termo = busca.trim()
+
   const { data: clientes = [] } = useQuery<Cliente[]>({
-    queryKey: ["clientes"],
+    queryKey: ["clientes", termo.length >= 2 ? termo : ""],
     queryFn: async () => {
-      const res = await fetch("/api/clientes")
+      const sufixo = termo.length >= 2 ? `?q=${encodeURIComponent(termo)}` : ""
+      const res = await fetch(`/api/clientes${sufixo}`)
       if (!res.ok) return []
       return res.json()
     },
   })
 
+  const opcoes: OpcaoSelectBusca[] = (clientes ?? []).map((cliente) => ({
+    value: String(cliente.id),
+    label: cliente.nome,
+    descricao: cliente.cnpj || cliente.razaoSocial,
+  }))
+
   return (
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className={`w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${className || ""}`}
-    >
-      <option value="">Selecione...</option>
-      {(clientes || []).map((c) => (
-        <option key={c.id} value={c.id}>
-          {c.nome}
-        </option>
-      ))}
-    </select>
+    <SelectComBusca
+      valor={value}
+      onChange={onChange}
+      opcoes={opcoes}
+      onBuscaChange={setBusca}
+      placeholderBusca="Digite o nome ou CNPJ do cliente..."
+      className={className}
+    />
   )
 }

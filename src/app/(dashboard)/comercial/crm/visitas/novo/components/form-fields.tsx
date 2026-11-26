@@ -7,6 +7,7 @@ import { QuickCreateOportunidade } from "@/components/crm/quick-create-oportunid
 import { QuickCreateProposta } from "@/components/crm/quick-create-proposta"
 import { ViagemSelect } from "@/components/crm/viagem-select"
 import { CreatableSelect } from "@/components/ui/creatable-select"
+import { SelectComBusca, type OpcaoSelectBusca } from "@/components/ui/select-com-busca"
 import type {
   ClienteResult,
   Conflito,
@@ -74,6 +75,27 @@ export function FormFields({
         ? "Visita Avulsa"
         : "Visitando Pessoa (Negócio)"
 
+  const opcoesClientes: OpcaoSelectBusca[] = (clientesList ?? []).map((cliente) => ({
+    value: String(cliente.id),
+    label: cliente.nome,
+  }))
+  const opcoesEmpresas: OpcaoSelectBusca[] = (empresas ?? []).map((empresa) => ({
+    value: String(empresa.id),
+    label: empresa.razaoSocial || empresa.nomeFantasia || `Lead ${empresa.id}`,
+  }))
+  const opcoesOportunidades: OpcaoSelectBusca[] = (oportunidades ?? [])
+    .filter((oportunidade) =>
+      tipoEntidade === "PESSOA"
+        ? !form.empresaId || String(oportunidade.empresaId) === form.empresaId
+        : !form.clienteId || String(oportunidade.clienteId) === form.clienteId
+    )
+    .map((oportunidade) => ({ value: String(oportunidade.id), label: oportunidade.titulo }))
+  const opcoesContatos: OpcaoSelectBusca[] = (contatos ?? []).map((contato) => ({
+    value: String(contato.id),
+    label: contato.nome,
+    descricao: contato.cargo || undefined,
+  }))
+
   return (
     <>
       <div className="flex items-center justify-between">
@@ -109,55 +131,53 @@ export function FormFields({
           </div>
         ) : tipoEntidade === "CLIENTE" ? (
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+            <label
+              htmlFor="visita-cliente"
+              className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1"
+            >
               Cliente *
               <QuickCreateCliente onCreated={onClienteCreated} />
             </label>
-            <select
-              value={form.clienteId}
-              onChange={(e) => {
-                setField("clienteId", e.target.value)
+            <SelectComBusca
+              id="visita-cliente"
+              valor={form.clienteId}
+              onChange={(valor) => {
+                setField("clienteId", valor)
                 setField("contatoId", "")
                 setField("oportunidadeId", "")
                 setField("propostaId", "")
                 setField("propostaTitulo", "")
               }}
-              className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              opcoes={opcoesClientes}
+              ariaLabel="Cliente"
+              placeholderBusca="Digite o nome do cliente..."
               required
-            >
-              <option value="">Selecione...</option>
-              {clientesList.map((c) => (
-                <option key={c.id} value={String(c.id)}>
-                  {c.nome}
-                </option>
-              ))}
-            </select>
+            />
           </div>
         ) : (
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+            <label
+              htmlFor="visita-empresa"
+              className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1"
+            >
               Pessoa (Negócio) *
               <QuickCreateLead onCreated={onEmpresaCreated} />
             </label>
-            <select
-              value={form.empresaId}
-              onChange={(e) => {
-                setField("empresaId", e.target.value)
+            <SelectComBusca
+              id="visita-empresa"
+              valor={form.empresaId}
+              onChange={(valor) => {
+                setField("empresaId", valor)
                 setField("oportunidadeId", "")
                 setField("contatoId", "")
                 setField("propostaId", "")
                 setField("propostaTitulo", "")
               }}
-              className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              opcoes={opcoesEmpresas}
+              ariaLabel="Pessoa (Negócio)"
+              placeholderBusca="Digite o nome da pessoa..."
               required
-            >
-              <option value="">Selecione...</option>
-              {empresas.map((e) => (
-                <option key={e.id} value={String(e.id)}>
-                  {e.razaoSocial || e.nomeFantasia}
-                </option>
-              ))}
-            </select>
+            />
           </div>
         )}
         <div>
@@ -289,7 +309,10 @@ export function FormFields({
         </div>
         {tipoEntidade !== "AVULSA" && (
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+            <label
+              htmlFor="visita-oportunidade"
+              className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1"
+            >
               Oportunidade
               {tipoEntidade === "PESSOA" && (
                 <QuickCreateOportunidade
@@ -304,33 +327,26 @@ export function FormFields({
                 />
               )}
             </label>
-            <select
-              value={form.oportunidadeId}
-              onChange={(e) => {
-                setField("oportunidadeId", e.target.value)
+            <SelectComBusca
+              id="visita-oportunidade"
+              valor={form.oportunidadeId}
+              onChange={(valor) => {
+                setField("oportunidadeId", valor)
                 setField("propostaId", "")
                 setField("propostaTitulo", "")
               }}
-              className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Selecione...</option>
-              {oportunidades
-                .filter((o) =>
-                  tipoEntidade === "PESSOA"
-                    ? !form.empresaId || String(o.empresaId) === form.empresaId
-                    : !form.clienteId || String(o.clienteId) === form.clienteId
-                )
-                .map((o) => (
-                  <option key={o.id} value={String(o.id)}>
-                    {o.titulo}
-                  </option>
-                ))}
-            </select>
+              opcoes={opcoesOportunidades}
+              ariaLabel="Oportunidade"
+              placeholderBusca="Digite o título da oportunidade..."
+            />
           </div>
         )}
         {tipoEntidade !== "AVULSA" && (
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+            <label
+              htmlFor="visita-contato"
+              className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1"
+            >
               Contato
               <QuickCreateContato
                 empresaId={tipoEntidade === "PESSOA" ? form.empresaId : ""}
@@ -350,19 +366,14 @@ export function FormFields({
                 onCreated={onContatoCreated}
               />
             </label>
-            <select
-              value={form.contatoId}
-              onChange={(e) => setField("contatoId", e.target.value)}
-              className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Selecione...</option>
-              {contatos.map((c) => (
-                <option key={c.id} value={String(c.id)}>
-                  {c.nome}
-                  {c.cargo ? ` (${c.cargo})` : ""}
-                </option>
-              ))}
-            </select>
+            <SelectComBusca
+              id="visita-contato"
+              valor={form.contatoId}
+              onChange={(valor) => setField("contatoId", valor)}
+              opcoes={opcoesContatos}
+              ariaLabel="Contato"
+              placeholderBusca="Digite o nome do contato..."
+            />
           </div>
         )}
       </div>

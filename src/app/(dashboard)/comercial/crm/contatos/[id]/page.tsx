@@ -21,6 +21,7 @@ import {
 import { toast } from "sonner"
 import { useSession } from "next-auth/react"
 import { ConfirmModal } from "@/components/ui/confirm-modal"
+import { SelectComBusca, type OpcaoSelectBusca } from "@/components/ui/select-com-busca"
 import { podeGerenciarTudo } from "@/lib/permissoes"
 import type { ClienteResumo, Contato, ContatoFormState, EmpresaResumo, VinculoTipo } from "../types"
 
@@ -196,6 +197,15 @@ export default function ContatoDetailPage() {
     )
   }
 
+  const opcoesEmpresas: OpcaoSelectBusca[] = (empresas ?? []).map((empresa) => ({
+    value: String(empresa.id),
+    label: empresa.razaoSocial || empresa.nomeFantasia || empresa.nome || `Lead ${empresa.id}`,
+  }))
+  const opcoesClientes: OpcaoSelectBusca[] = (clientes ?? []).map((cliente) => ({
+    value: String(cliente.id),
+    label: cliente.nome,
+  }))
+
   return (
     <div className="space-y-6 animate-fade-in max-w-2xl">
       <div className="flex items-center gap-3">
@@ -279,38 +289,38 @@ export default function ContatoDetailPage() {
             </div>
             {vinculoTipo === "pessoa" && (
               <div>
-                <label className="block text-xs font-medium text-slate-500 mb-1">
+                <label
+                  htmlFor="editar-contato-empresa"
+                  className="block text-xs font-medium text-slate-500 mb-1"
+                >
                   Pessoa (Negócio)
                 </label>
-                <select
-                  value={form.empresaId || ""}
-                  onChange={(e) => setForm((p) => ({ ...p, empresaId: e.target.value }))}
-                  className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
-                >
-                  <option value="">Selecione...</option>
-                  {empresas.map((e) => (
-                    <option key={e.id} value={String(e.id)}>
-                      {e.razaoSocial || e.nomeFantasia || e.nome}
-                    </option>
-                  ))}
-                </select>
+                <SelectComBusca
+                  id="editar-contato-empresa"
+                  valor={String(form.empresaId ?? "")}
+                  onChange={(valor) => setForm((p) => ({ ...p, empresaId: valor }))}
+                  opcoes={opcoesEmpresas}
+                  ariaLabel="Pessoa (Negócio)"
+                  placeholderBusca="Digite o nome da pessoa..."
+                />
               </div>
             )}
             {vinculoTipo === "cliente" && (
               <div>
-                <label className="block text-xs font-medium text-slate-500 mb-1">Cliente</label>
-                <select
-                  value={form.clienteId || ""}
-                  onChange={(e) => setForm((p) => ({ ...p, clienteId: e.target.value }))}
-                  className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
+                <label
+                  htmlFor="editar-contato-cliente"
+                  className="block text-xs font-medium text-slate-500 mb-1"
                 >
-                  <option value="">Selecione...</option>
-                  {clientes.map((c) => (
-                    <option key={c.id} value={String(c.id)}>
-                      {c.nome}
-                    </option>
-                  ))}
-                </select>
+                  Cliente
+                </label>
+                <SelectComBusca
+                  id="editar-contato-cliente"
+                  valor={String(form.clienteId ?? "")}
+                  onChange={(valor) => setForm((p) => ({ ...p, clienteId: valor }))}
+                  opcoes={opcoesClientes}
+                  ariaLabel="Cliente"
+                  placeholderBusca="Digite o nome do cliente..."
+                />
               </div>
             )}
             <div>

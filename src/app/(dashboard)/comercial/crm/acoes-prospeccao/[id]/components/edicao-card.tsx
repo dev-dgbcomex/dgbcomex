@@ -3,6 +3,7 @@ import { SelectUf } from "@/components/crm/select-uf"
 import { SelectCidade } from "@/components/crm/select-cidade"
 import { ViagemSelect } from "@/components/crm/viagem-select"
 import { CreatableSelect } from "@/components/ui/creatable-select"
+import { SelectComBusca, type OpcaoSelectBusca } from "@/components/ui/select-com-busca"
 import { QuickCreateOportunidade } from "@/components/crm/quick-create-oportunidade"
 import { QuickCreateProposta } from "@/components/crm/quick-create-proposta"
 import { QuickCreateContato } from "@/components/crm/quick-create-contato"
@@ -54,6 +55,28 @@ export function EdicaoCard({
     !contatos.some((c) => c.id === contatoAtual) &&
     !acao.contatoNome?.trim()
   const semVinculo = !form.empresaId && !form.clienteId
+  const opcoesOportunidades: OpcaoSelectBusca[] = listaOportunidades
+    .filter((oportunidade) =>
+      form.empresaId
+        ? String(oportunidade.empresaId) === String(form.empresaId)
+        : String(oportunidade.clienteId) === String(form.clienteId)
+    )
+    .map((oportunidade) => ({ value: String(oportunidade.id), label: oportunidade.titulo }))
+  const opcoesContatos: OpcaoSelectBusca[] = [
+    ...(contatoAtualForaDaLista && contatoAtual != null
+      ? [
+          {
+            value: String(contatoAtual),
+            label: acao.contatoNome || `Contato #${contatoAtual}`,
+          },
+        ]
+      : []),
+    ...contatos.map((contato) => ({
+      value: String(contato.id),
+      label: contato.nome,
+      descricao: contato.cargo || undefined,
+    })),
+  ]
 
   return (
     <>
@@ -119,29 +142,19 @@ export function EdicaoCard({
                 />
               ) : null}
             </label>
-            <select
+            <SelectComBusca
               id="editar-acao-oportunidade"
-              value={form.oportunidadeId ? String(form.oportunidadeId) : ""}
-              onChange={(e) => {
-                setField("oportunidadeId", e.target.value ? parseInt(e.target.value) : null)
+              valor={form.oportunidadeId ? String(form.oportunidadeId) : ""}
+              onChange={(valor) => {
+                setField("oportunidadeId", valor ? parseInt(valor) : null)
                 setField("propostaId", null)
                 setField("propostaTitulo", null)
               }}
-              className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
-            >
-              <option value="">Sem oportunidade</option>
-              {listaOportunidades
-                .filter((o) =>
-                  form.empresaId
-                    ? String(o.empresaId) === String(form.empresaId)
-                    : String(o.clienteId) === String(form.clienteId)
-                )
-                .map((o) => (
-                  <option key={o.id} value={String(o.id)}>
-                    {o.titulo}
-                  </option>
-                ))}
-            </select>
+              opcoes={opcoesOportunidades}
+              vazio="Sem oportunidade"
+              ariaLabel="Oportunidade"
+              placeholderBusca="Digite o título da oportunidade..."
+            />
           </div>
           <div>
             <label htmlFor="editar-acao-contato" className="block text-xs font-medium text-slate-500 mb-1">
@@ -159,27 +172,15 @@ export function EdicaoCard({
                 />
               ) : null}
             </label>
-            <select
+            <SelectComBusca
               id="editar-acao-contato"
-              value={contatoAtual ? String(contatoAtual) : ""}
-              onChange={(e) =>
-                setField("contatoId", e.target.value ? parseInt(e.target.value) : null)
-              }
-              className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
-            >
-              <option value="">Sem contato</option>
-              {contatoAtualForaDaLista && (
-                <option value={String(contatoAtual)}>
-                  {acao.contatoNome || `Contato #${contatoAtual}`}
-                </option>
-              )}
-              {contatos.map((c) => (
-                <option key={c.id} value={String(c.id)}>
-                  {c.nome}
-                  {c.cargo ? ` (${c.cargo})` : ""}
-                </option>
-              ))}
-            </select>
+              valor={contatoAtual ? String(contatoAtual) : ""}
+              onChange={(valor) => setField("contatoId", valor ? parseInt(valor) : null)}
+              opcoes={opcoesContatos}
+              vazio="Sem contato"
+              ariaLabel="Contato"
+              placeholderBusca="Digite o nome do contato..."
+            />
             {semVinculo && (
               <p className="text-[11px] text-slate-400 mt-1">
                 A ação precisa estar vinculada a uma pessoa ou cliente para cadastrar contatos.

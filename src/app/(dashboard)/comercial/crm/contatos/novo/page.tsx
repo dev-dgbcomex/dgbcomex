@@ -6,6 +6,7 @@ import Link from "next/link"
 import { ArrowLeft, Loader2, Building2, User, UserCheck } from "lucide-react"
 import { toast } from "sonner"
 import { PageSkeleton } from "@/components/ui/page-skeleton"
+import { SelectComBusca, type OpcaoSelectBusca } from "@/components/ui/select-com-busca"
 import { TipoEntidadeSelector } from "@/app/(dashboard)/comercial/crm/visitas/novo/components/tipo-entidade-selector"
 import type { ClienteResumo, EmpresaResumo } from "../types"
 
@@ -120,6 +121,15 @@ function NovoContatoPageContent() {
         ? "Contato Avulso"
         : "Contato de Pessoa (Negócio)"
 
+  const opcoesClientes: OpcaoSelectBusca[] = (clientes ?? []).map((cliente) => ({
+    value: String(cliente.id),
+    label: cliente.nome,
+  }))
+  const opcoesEmpresas: OpcaoSelectBusca[] = (empresas ?? []).map((empresa) => ({
+    value: String(empresa.id),
+    label: empresa.razaoSocial || empresa.nomeFantasia || empresa.nome || `Lead ${empresa.id}`,
+  }))
+
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
       <div className="flex items-center gap-3">
@@ -173,39 +183,41 @@ function NovoContatoPageContent() {
             </div>
           ) : tipoEntidade === "CLIENTE" ? (
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+              <label
+                htmlFor="contato-cliente"
+                className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1"
+              >
                 Cliente *
               </label>
-              <select
-                value={form.clienteId}
-                onChange={(e) => setForm((p) => ({ ...p, clienteId: e.target.value }))}
-                className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Selecione um cliente...</option>
-                {clientes.map((c) => (
-                  <option key={c.id} value={String(c.id)}>
-                    {c.nome}
-                  </option>
-                ))}
-              </select>
+              <SelectComBusca
+                id="contato-cliente"
+                valor={form.clienteId}
+                onChange={(valor) => setForm((p) => ({ ...p, clienteId: valor }))}
+                opcoes={opcoesClientes}
+                vazio="Selecione um cliente..."
+                ariaLabel="Cliente"
+                placeholderBusca="Digite o nome do cliente..."
+                required
+              />
             </div>
           ) : (
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+              <label
+                htmlFor="contato-empresa"
+                className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1"
+              >
                 Pessoa (Negócio) *
               </label>
-              <select
-                value={form.empresaId}
-                onChange={(e) => setForm((p) => ({ ...p, empresaId: e.target.value }))}
-                className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Selecione uma pessoa...</option>
-                {empresas.map((e) => (
-                  <option key={e.id} value={String(e.id)}>
-                    {e.razaoSocial || e.nomeFantasia || e.nome}
-                  </option>
-                ))}
-              </select>
+              <SelectComBusca
+                id="contato-empresa"
+                valor={form.empresaId}
+                onChange={(valor) => setForm((p) => ({ ...p, empresaId: valor }))}
+                opcoes={opcoesEmpresas}
+                vazio="Selecione uma pessoa..."
+                ariaLabel="Pessoa (Negócio)"
+                placeholderBusca="Digite o nome da pessoa..."
+                required
+              />
             </div>
           )}
 

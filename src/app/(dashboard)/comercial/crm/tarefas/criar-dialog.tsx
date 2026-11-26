@@ -3,6 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useState, useEffect } from "react"
 import { X, Loader2 } from "lucide-react"
+import { SelectComBusca, type OpcaoSelectBusca } from "@/components/ui/select-com-busca"
 import type { EmpresaResumo } from "../oportunidades/types"
 
 type TarefaCreate = {
@@ -65,6 +66,11 @@ export default function CriarTarefaDialog({ open, onClose }: Props) {
   }, [open])
 
   if (!open) return null
+
+  const opcoesEmpresas: OpcaoSelectBusca[] = (empresas || []).map((empresa) => ({
+    value: String(empresa.id),
+    label: empresa.razaoSocial || empresa.nomeFantasia || `Pessoa ${empresa.id}`,
+  }))
 
   return (
     <div
@@ -142,21 +148,21 @@ export default function CriarTarefaDialog({ open, onClose }: Props) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+            <label
+              htmlFor="tarefa-empresa"
+              className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1"
+            >
               Empresa
             </label>
-            <select
-              value={empresaId}
-              onChange={(e) => setEmpresaId(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Sem empresa</option>
-              {(empresas || []).map((e) => (
-                <option key={e.id} value={e.id}>
-                  {e.razaoSocial}
-                </option>
-              ))}
-            </select>
+            <SelectComBusca
+              id="tarefa-empresa"
+              valor={empresaId}
+              onChange={setEmpresaId}
+              opcoes={opcoesEmpresas}
+              vazio="Sem empresa"
+              ariaLabel="Empresa"
+              placeholderBusca="Digite o nome da empresa..."
+            />
           </div>
 
           <div className="flex gap-3 justify-end pt-2">

@@ -327,6 +327,36 @@ describe("getInfoContent", () => {
     }
   })
 
+  it("os formulários CRM explicam a busca com lupa nos seletores", () => {
+    const telas = [
+      "/comercial/crm/oportunidades/novo",
+      "/comercial/crm/visitas/novo",
+      "/comercial/crm/visitas/[id]",
+      "/comercial/crm/acoes-prospeccao/novo",
+      "/comercial/crm/acoes-prospeccao/[id]",
+      "/comercial/crm/tarefas",
+      "/comercial/crm/propostas/novo",
+      "/comercial/crm/pedidos-venda/novo",
+      "/comercial/crm/pedidos-venda/[id]",
+      "/comercial/crm/faturamentos/novo",
+      "/comercial/crm/faturamentos/[id]",
+      "/comercial/crm/contatos",
+    ]
+
+    for (const caminho of telas) {
+      const conteudo = getInfoContent(caminho)
+      expect(conteudo).not.toBeNull()
+
+      const texto = [
+        conteudo?.description ?? "",
+        ...(conteudo?.rules ?? []),
+        ...(conteudo?.fields ?? []).map((f) => `${f.name}: ${f.desc}`),
+      ].join("\n")
+
+      expect(texto).toMatch(/busca com lupa/i)
+    }
+  })
+
   it("o detalhe da visita menciona regras de visibilidade de campos", () => {
     const conteudo = getInfoContent("/comercial/crm/visitas/[id]")
     expect(conteudo?.rules?.join(" ")).toMatch(/visibilidade/i)

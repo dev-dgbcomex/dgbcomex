@@ -1,6 +1,7 @@
 "use client"
 
 import { FileText, Plus, Trash2, Package } from "lucide-react"
+import { SelectComBusca, type OpcaoSelectBusca } from "@/components/ui/select-com-busca"
 import type { ItemVendaLinha } from "@/lib/crm/documento-venda"
 import {
   UNIDADES_MEDIDA,
@@ -63,6 +64,10 @@ export function DocumentoVendaForm({
   }
 
   const total = somarValoresTotais(itens.map((i) => ({ valorTotal: i.valorTotal })))
+  const opcoesOportunidades: OpcaoSelectBusca[] = (oportunidades ?? []).map((oportunidade) => ({
+    value: String(oportunidade.id),
+    label: oportunidade.titulo,
+  }))
 
   return (
     <>
@@ -73,21 +78,22 @@ export function DocumentoVendaForm({
         </div>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+            <label
+              htmlFor="documento-venda-oportunidade"
+              className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1"
+            >
               Oportunidade *
             </label>
-            <select
-              value={form.oportunidadeId || ""}
-              onChange={(e) => setField("oportunidadeId", e.target.value)}
-              className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Selecione a oportunidade...</option>
-              {oportunidades.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.titulo}
-                </option>
-              ))}
-            </select>
+            <SelectComBusca
+              id="documento-venda-oportunidade"
+              valor={form.oportunidadeId ? String(form.oportunidadeId) : ""}
+              onChange={(valor) => setField("oportunidadeId", valor)}
+              opcoes={opcoesOportunidades}
+              vazio="Selecione a oportunidade..."
+              ariaLabel="Oportunidade"
+              placeholderBusca="Digite o título da oportunidade..."
+              required
+            />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>

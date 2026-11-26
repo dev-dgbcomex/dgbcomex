@@ -12,6 +12,7 @@ import { QuickCreateLead } from "@/components/crm/quick-create-lead"
 import { QuickCreateCliente } from "@/components/crm/quick-create-cliente"
 import { QuickCreateOportunidade } from "@/components/crm/quick-create-oportunidade"
 import { SelectCliente } from "@/components/crm/select-cliente"
+import { SelectComBusca, type OpcaoSelectBusca } from "@/components/ui/select-com-busca"
 import { TipoEntidadeSelector } from "@/app/(dashboard)/comercial/crm/visitas/novo/components/tipo-entidade-selector"
 import type { Proposta, PropostaCreate } from "../types"
 import type { EmpresaResumo, Oportunidade } from "../../oportunidades/types"
@@ -128,6 +129,15 @@ function NovaPropostaContent() {
         ? "Proposta Avulsa"
         : "Proposta para Pessoa (Negócio)"
 
+  const opcoesEmpresas: OpcaoSelectBusca[] = (empresas || []).map((empresa) => ({
+    value: String(empresa.id),
+    label: empresa.razaoSocial || empresa.nomeFantasia || `Lead ${empresa.id}`,
+  }))
+  const opcoesOportunidades: OpcaoSelectBusca[] = (oportunidades || []).map((oportunidade) => ({
+    value: String(oportunidade.id),
+    label: oportunidade.titulo,
+  }))
+
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
       <div className="flex items-center gap-3">
@@ -202,22 +212,20 @@ function NovaPropostaContent() {
             {tipoEntidade === "AVULSO" ? (
               <>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  <label
+                    htmlFor="proposta-empresa-avulsa"
+                    className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1"
+                  >
                     Pessoa (Negócio)
                     <QuickCreateLead onCreated={handleEmpresaCreated} />
                   </label>
-                  <select
-                    value={empresaId}
-                    onChange={(e) => setEmpresaId(e.target.value)}
-                    className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Selecione...</option>
-                    {(empresas || []).map((e) => (
-                      <option key={e.id} value={e.id}>
-                        {e.razaoSocial}
-                      </option>
-                    ))}
-                  </select>
+                  <SelectComBusca
+                    id="proposta-empresa-avulsa"
+                    valor={empresaId}
+                    onChange={setEmpresaId}
+                    opcoes={opcoesEmpresas}
+                    ariaLabel="Pessoa (Negócio)"
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
@@ -237,44 +245,43 @@ function NovaPropostaContent() {
               </div>
             ) : (
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Pessoa (Negócio) *
-                  <QuickCreateLead onCreated={handleEmpresaCreated} />
-                </label>
-                <select
-                  value={empresaId}
-                  onChange={(e) => setEmpresaId(e.target.value)}
-                  className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Selecione...</option>
-                  {(empresas || []).map((e) => (
-                    <option key={e.id} value={e.id}>
-                      {e.razaoSocial}
-                    </option>
-                  ))}
-                </select>
+              <label
+                htmlFor="proposta-empresa"
+                className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1"
+              >
+                Pessoa (Negócio) *
+                <QuickCreateLead onCreated={handleEmpresaCreated} />
+              </label>
+              <SelectComBusca
+                id="proposta-empresa"
+                valor={empresaId}
+                onChange={setEmpresaId}
+                opcoes={opcoesEmpresas}
+                ariaLabel="Pessoa (Negócio)"
+                required
+              />
               </div>
             )}
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+              <label
+                htmlFor="proposta-oportunidade"
+                className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1"
+              >
                 Oportunidade
                 <QuickCreateOportunidade
                   empresaId={empresaId}
                   onCreated={handleOportunidadeCreated}
                 />
               </label>
-              <select
-                value={oportunidadeId}
-                onChange={(e) => setOportunidadeId(e.target.value)}
-                className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Nenhuma</option>
-                {(oportunidades || []).map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.titulo}
-                  </option>
-                ))}
-              </select>
+              <SelectComBusca
+                id="proposta-oportunidade"
+                valor={oportunidadeId}
+                onChange={setOportunidadeId}
+                opcoes={opcoesOportunidades}
+                vazio="Nenhuma"
+                ariaLabel="Oportunidade"
+                placeholderBusca="Digite o título da oportunidade..."
+              />
             </div>
           </div>
 
