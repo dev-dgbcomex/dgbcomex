@@ -520,7 +520,7 @@ export async function buscarContextoResumoIA(
             'probabilidade', t.probabilidade,
             'dataFechamentoPrevista', t.data_fechamento_prevista,
             'motivoPerda', t.motivo_perda,
-            'atualizadoEm', o.updated_at
+            'atualizadoEm', t.updated_at
           ) ORDER BY t.created_at DESC)
           FROM (
             SELECT o.* FROM crm_oportunidades o CROSS JOIN escopo e
@@ -536,10 +536,10 @@ export async function buscarContextoResumoIA(
             'status', t.status,
             'total', t.total,
             'observacao', left(t.observacao, 200),
-            'criadoEm', pv.created_at
+            'criadoEm', t.created_at
           ) ORDER BY t.data_emissao DESC NULLS LAST)
           FROM (
-            SELECT pv.numero, pv.data_emissao, pv.status, pv.observacao, o.valor_estimado AS total
+            SELECT pv.created_at, pv.numero, pv.data_emissao, pv.status, pv.observacao, o.valor_estimado AS total
             FROM crm_pedidos_venda pv
             INNER JOIN crm_oportunidades o ON o.id = pv.oportunidade_id
             CROSS JOIN escopo e

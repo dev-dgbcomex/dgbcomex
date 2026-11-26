@@ -62,4 +62,20 @@ describe("handleApiError", () => {
     expect(response.status).toBe(500)
     expect(body.error).toContain("suporte")
   })
+
+  it("logs the underlying cause when available", async () => {
+    const erro = Object.assign(new Error("Failed query"), {
+      cause: new Error('missing FROM-clause entry for table "o"'),
+    })
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {})
+
+    await handleApiError(erro, "test-context")
+
+    expect(consoleSpy).toHaveBeenCalledWith(
+      "[test-context]",
+      erro,
+      ' | causa: missing FROM-clause entry for table "o"'
+    )
+    consoleSpy.mockRestore()
+  })
 })

@@ -222,9 +222,16 @@ export async function notificarAdmins(
   return notificar(tipo, mensagem, link, usuarioNome, roles)
 }
 
+function detalhesCausaErro(erro: unknown): string {
+  const causa = (erro as { cause?: unknown } | null)?.cause
+  if (causa == null) return ""
+  const texto = causa instanceof Error ? causa.message : String(causa)
+  return texto && texto !== String(erro) ? ` | causa: ${texto}` : ""
+}
+
 export async function notificarErro(contexto: string, erro: unknown, usuarioNome?: string | null) {
   const mensagem = erro instanceof Error ? erro.message : String(erro)
-  const descricao = `[ERRO] ${contexto}: ${mensagem}`
+  const descricao = `[ERRO] ${contexto}: ${mensagem}${detalhesCausaErro(erro)}`
   console.error(descricao)
 
   await registrarLog({ tipo: "ERRO", acao: "erro_sistema", descricao, usuarioNome })

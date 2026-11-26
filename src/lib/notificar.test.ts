@@ -21,6 +21,7 @@ import { sendEmail } from "@/lib/email"
 import {
   notificar,
   notificarAdmins,
+  notificarErro,
   notificarUsuario,
   rolesNotificacaoGlobal,
   ROLES_GLOBAIS_PADRAO,
@@ -219,5 +220,28 @@ describe("notificarAdmins", () => {
 
   it("usa o tipo reservado TODOS na regra global", () => {
     expect(TIPO_REGRA_GLOBAL).toBe("TODOS")
+  })
+})
+
+describe("notificarErro", () => {
+  beforeEach(() => {
+    vi.mocked(db.select).mockReset()
+    vi.mocked(db.insert).mockReset()
+    vi.mocked(sendEmail).mockReset()
+    vi.mocked(sendEmail).mockResolvedValue({ sent: 1, error: null })
+    prepararInsert()
+  })
+
+  it("registra a causa do erro na descrição do log", async () => {
+    prepararSelects([[{ roles: ["SUDO"] }], [{ roles: ["SUDO"] }], [admin]])
+    const erro = Object.assign(new Error("Failed query"), {
+      cause: new Error('missing FROM-clause entry for table "o"'),
+    })
+
+    await notificarErro("POST /api/crm/ia/resumos", erro)
+
+    const builderLog = vi.mocked(db.insert).mock.results[0].value as any
+    const dadosLog = builderLog.values.mock.calls[0][0]
+    expect(dadosLog.descricao).toContain('causa: missing FROM-clause entry for table "o"')
   })
 })

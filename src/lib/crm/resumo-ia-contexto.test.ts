@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { db } from "@/lib/db"
+import { sqlParaTexto } from "@/test/route-db-mock"
 import {
   analisarIntervalosContato,
   analisarQualidadeAta,
@@ -161,5 +162,31 @@ describe("resumo-ia-contexto", () => {
     expect(contexto.entidade.email).toBe("cliente@exemplo.com")
     expect(contexto.indicadores).toMatchObject({ oportunidades: 1, acoes: 1 })
     expect(contexto.oportunidades[0].status).toBe("FECHADO_GANHO")
+  })
+
+  it("gera a consulta com aliases válidos para oportunidades e pedidos", async () => {
+    vi.mocked(db.execute)
+      .mockResolvedValueOnce([
+        {
+          contexto: {
+            entidade: { tipo: "lead", id: 191, nome: "GVR ESTOFADOS E DECORACAO" },
+            oportunidades: [{ titulo: "Oportunidade", atualizadoEm: "2026-11-20T00:00:00Z" }],
+            pedidos: [{ numero: "0001", criadoEm: "2026-11-18T00:00:00Z" }],
+          },
+        },
+      ] as never)
+      .mockResolvedValueOnce([{ faixa: "FRIO" }] as never)
+
+    await buscarContextoResumoIA({ tipo: "lead", id: 191 })
+
+    const sql = vi.mocked(db.execute).mock.calls
+      .map((args: unknown[]) => sqlParaTexto(args[0]))
+      .join("\n")
+
+    expect(sql).toContain("'atualizadoEm', t.updated_at")
+    expect(sql).not.toContain("'atualizadoEm', o.updated_at")
+    expect(sql).toContain("SELECT pv.created_at, pv.numero")
+    expect(sql).toContain("'criadoEm', t.created_at")
+    expect(sql).not.toContain("'criadoEm', pv.created_at")
   })
 })
