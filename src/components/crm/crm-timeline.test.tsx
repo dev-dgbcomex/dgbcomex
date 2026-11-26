@@ -47,6 +47,13 @@ describe("CrmTimeline", () => {
           metadados: { pedidoVendaId: 123, faturamentoId: 45 },
         },
         {
+          id: 7,
+          tipo: "SINCRONIZACAO_ERP",
+          descricao: "Sincronização do ERP: status ERP → Aberto; status do CRM mantido em Faturado",
+          dataEvento: "2026-11-23T10:00:00.000Z",
+          metadados: { pedidoVendaId: 123, statusCrm: "FATURADO", statusErpNovo: "ABERTO" },
+        },
+        {
           id: 4,
           tipo: "RESUMO_IA",
           descricao: "MORNO: resumo salvo",
@@ -86,6 +93,7 @@ describe("CrmTimeline", () => {
     expect(await screen.findByText("Pedido criado")).toBeInTheDocument()
     expect(screen.getByText("Pedido de venda")).toBeInTheDocument()
     expect(screen.getByText("Faturamento")).toBeInTheDocument()
+    expect(screen.getByText("Sincronização ERP")).toBeInTheDocument()
     expect(findCall(fetchMock.calls, "/api/crm/timeline?pedidoVendaId=123")).toBeDefined()
     expect(screen.getByRole("link", { name: "Pedido criado" })).toHaveAttribute(
       "href",

@@ -564,7 +564,7 @@ export async function aplicarVerificacaoPedidoFaturado(
               statusNovo: statusPedidoFinal,
               faturamentoId,
               notaNumero: nota?.numero ?? null,
-              origem: "ERP",
+              origem: "CRM",
             },
             chaveEvento: `pedido-status-${pedido.id}-${statusPedidoFinal}-${faturamentoId ?? "sem-nota"}`,
           })

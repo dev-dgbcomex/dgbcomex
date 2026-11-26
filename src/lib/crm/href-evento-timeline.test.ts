@@ -56,6 +56,12 @@ describe("hrefEventoTimeline", () => {
     ).toBe("/comercial/crm/pedidos-venda/123")
   })
 
+  it("abre o pedido a partir do evento de sincronização do ERP", () => {
+    expect(
+      hrefEventoTimeline({ tipo: "SINCRONIZACAO_ERP", metadados: { pedidoVendaId: 123 } })
+    ).toBe("/comercial/crm/pedidos-venda/123")
+  })
+
   it("não gera link quebrado sem metadados ou com tipo sem rota", () => {
     expect(hrefEventoTimeline({ id: 214, tipo: "ACAO_PROSPECCAO" })).toBeNull()
     expect(hrefEventoTimeline({ tipo: "WHATSAPP", metadados: { whatsappId: 5 } })).toBeNull()

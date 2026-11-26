@@ -27,9 +27,11 @@ const pedido = {
   oportunidadeTitulo: "Malha penteada",
   numero: "PV-001",
   dataEmissao: "2026-09-01",
-  status: "ABERTO",
+  status: "FATURADO",
+  statusErp: "ABERTO",
+  statusErpCodigo: "2",
   observacao: null,
-  origem: "MANUAL",
+  origem: "ERP",
   referenciaExterna: null,
 }
 
@@ -89,6 +91,7 @@ describe("GET /api/crm/pedidos-venda/[id]", () => {
     const body = await res.json()
     expect(body.id).toBe(1)
     expect(body.numero).toBe("PV-001")
+    expect(body).toMatchObject({ status: "FATURADO", statusErp: "ABERTO", statusErpCodigo: "2" })
     expect(body.itens).toHaveLength(1)
     expect(db.select).toHaveBeenCalledTimes(2)
   })
@@ -170,7 +173,7 @@ describe("PUT /api/crm/pedidos-venda/[id]", () => {
         pedidoVendaId: 1,
         oportunidadeId: 1,
         tipo: "PEDIDO_VENDA",
-        metadados: expect.objectContaining({ statusAntigo: "ABERTO", statusNovo: "FATURADO" }),
+        metadados: expect.objectContaining({ statusAntigo: "FATURADO", statusNovo: "FATURADO" }),
       })
     )
   })

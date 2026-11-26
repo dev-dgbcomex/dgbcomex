@@ -83,6 +83,10 @@ export function hrefEventoTimeline(evento: EventoTimelineParaHref): string | nul
       const idPedido = idMetadado(metadados, "pedidoVendaId")
       return idPedido ? `/comercial/crm/pedidos-venda/${idPedido}` : null
     }
+    case "SINCRONIZACAO_ERP": {
+      const id = idMetadado(metadados, "pedidoVendaId")
+      return id ? `/comercial/crm/pedidos-venda/${id}` : null
+    }
     default:
       return null
   }

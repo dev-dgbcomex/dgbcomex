@@ -38,6 +38,10 @@ const TIPO_ICON: Record<string, { icon: any; cor: string }> = {
     cor: "text-emerald-500 bg-emerald-50 dark:bg-emerald-950/50",
   },
   FATURAMENTO: { icon: Receipt, cor: "text-orange-500 bg-orange-50 dark:bg-orange-950/50" },
+  SINCRONIZACAO_ERP: {
+    icon: RefreshCw,
+    cor: "text-sky-500 bg-sky-50 dark:bg-sky-950/50",
+  },
   RESUMO_IA: { icon: FileText, cor: "text-violet-500 bg-violet-50 dark:bg-violet-950/50" },
 }
 
@@ -54,6 +58,7 @@ const TIPO_LABEL: Record<string, string> = {
   CONVERSAO_CLIENTE: "Conversão em cliente",
   PEDIDO_VENDA: "Pedido de venda",
   FATURAMENTO: "Faturamento",
+  SINCRONIZACAO_ERP: "Sincronização ERP",
   RESUMO_IA: "Resumo IA",
 }
 

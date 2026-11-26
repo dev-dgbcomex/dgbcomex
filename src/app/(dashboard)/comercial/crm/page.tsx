@@ -30,6 +30,7 @@ import {
   Activity,
   ShoppingCart,
   Receipt,
+  RefreshCw,
 } from "lucide-react"
 
 const CrmCharts = dynamic(() => import("./charts").then((m) => m.CrmCharts), { ssr: false })
@@ -105,6 +106,7 @@ const TIPO_EVENTO_ICON: Record<string, React.ReactNode> = {
   ACAO_PROSPECCAO: <Megaphone size={14} />,
   PEDIDO_VENDA: <ShoppingCart size={14} />,
   FATURAMENTO: <Receipt size={14} />,
+  SINCRONIZACAO_ERP: <RefreshCw size={14} />,
 }
 
 function formatCurrency(value: number) {
@@ -121,6 +123,7 @@ function getTipoCor(tipo: string) {
     ACAO_PROSPECCAO: "text-violet-500",
     PEDIDO_VENDA: "text-emerald-500",
     FATURAMENTO: "text-orange-500",
+    SINCRONIZACAO_ERP: "text-sky-500",
   }
   return map[tipo] || "text-slate-400"
 }
@@ -135,6 +138,7 @@ function getTipoBg(tipo: string) {
     ACAO_PROSPECCAO: "bg-violet-100 dark:bg-violet-950/50",
     PEDIDO_VENDA: "bg-emerald-100 dark:bg-emerald-950/50",
     FATURAMENTO: "bg-orange-100 dark:bg-orange-950/50",
+    SINCRONIZACAO_ERP: "bg-sky-100 dark:bg-sky-950/50",
   }
   return map[tipo] || "bg-slate-100 dark:bg-slate-800"
 }

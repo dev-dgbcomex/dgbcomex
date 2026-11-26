@@ -79,19 +79,14 @@ export function itensParaCrmFaturamento(itens: DocumentoErpItem[] | undefined): 
     })
   }
 
-export function statusPedidoSincronizado(
-  statusErp: string | null | undefined,
-  statusAtual: string | null | undefined
-): string {
-  if (statusErp === "3") return "CANCELADO"
-  if (
-    statusAtual === "FATURADO" ||
-    statusAtual === "PARCIAL" ||
-    statusAtual === "CANCELADO"
-  ) {
-    return statusAtual
+export function statusErpSincronizado(statusErp: string | null | undefined): {
+  statusErp: string
+  statusErpCodigo: string | null
+} {
+  return {
+    statusErp: statusPedidoParaCrm(statusErp),
+    statusErpCodigo: statusErp ? String(statusErp) : null,
   }
-  return "ABERTO"
 }
 
 function texto(valor: unknown): string {
@@ -143,6 +138,7 @@ async function atualizarPedido(pedido: CrmPedidoVenda): Promise<boolean> {
   const documento = await requisitarErp<PedidoErp>(caminhoDetalhe("PEDIDO", partes))
   const itens = itensParaCrm(documento.itens)
   const statusErp = documento.status || ""
+  const dadosStatus = statusErpSincronizado(statusErp)
   const [itensAtuais, cabecalho] = await Promise.all([
     db
       .select()
@@ -164,7 +160,9 @@ async function atualizarPedido(pedido: CrmPedidoVenda): Promise<boolean> {
   const valores = {
     numero: documento.pedido ?? null,
     dataEmissao: documento.data_pedido || null,
-    status: statusPedidoSincronizado(statusErp, registro.status),
+    statusErp: dadosStatus.statusErp,
+    statusErpCodigo: dadosStatus.statusErpCodigo,
+    statusErpAtualizadoEm: new Date(),
     observacao,
     updatedAt: new Date(),
   }
@@ -172,7 +170,8 @@ async function atualizarPedido(pedido: CrmPedidoVenda): Promise<boolean> {
   if (
     texto(registro.numero) === texto(valores.numero) &&
     texto(registro.dataEmissao) === texto(valores.dataEmissao) &&
-    texto(registro.status) === valores.status &&
+    texto(registro.statusErp) === valores.statusErp &&
+    texto(registro.statusErpCodigo) === valores.statusErpCodigo &&
     texto(registro.observacao) === observacao &&
     itensIguais(itensAtuais, itens)
   ) {
@@ -204,14 +203,17 @@ async function atualizarPedido(pedido: CrmPedidoVenda): Promise<boolean> {
   await registrarEventoPedidoVenda({
     pedidoVendaId: pedido.id,
     oportunidadeId: pedido.oportunidadeId,
-    tipo: "PEDIDO_VENDA",
-    descricao: `Pedido ${documento.pedido ?? pedido.numero ?? pedido.id} atualizado pelo ERP — status ${registro.status} → ${valores.status}, ${itens.length} item(ns)`,
+    tipo: "SINCRONIZACAO_ERP",
+    descricao: `Sincronização do ERP: status ERP ${texto(registro.statusErp) || "—"} → ${valores.statusErp || "—"}; status do CRM mantido em ${registro.status}, ${itens.length} item(ns)`,
     metadados: {
-      statusAntigo: registro.status,
-      statusNovo: valores.status,
+      statusCrm: registro.status,
+      statusErpAntigo: registro.statusErp,
+      statusErpNovo: valores.statusErp,
+      statusErpCodigo: valores.statusErpCodigo,
+      itens: itens.length,
       origem: "ERP",
     },
-    chaveEvento: `pedido-sincronizacao-${pedido.id}-${valores.updatedAt.getTime()}`,
+    chaveEvento: `sincronizacao-status-${pedido.id}-${valores.statusErp}-${valores.statusErpCodigo ?? "sem-codigo"}`,
   })
 
   return true
@@ -250,6 +252,7 @@ export async function criarPedidoEspelho(params: {
 
   const itensPedido = itensParaCrm(pedidoErp.itens)
   const statusErp = pedidoErp.status || ""
+  const dadosStatus = statusErpSincronizado(statusErp)
   const observacao = [
     `Pedido vinculado do ERP (${empresa}/${pedidoErp.pedido ?? pedidoReferencia})`,
     pedidoErp.cliente_nome ? `cliente ${pedidoErp.cliente_nome}` : null,
@@ -265,7 +268,10 @@ export async function criarPedidoEspelho(params: {
         oportunidadeId,
         numero: pedidoReferencia,
         dataEmissao: pedidoErp.data_pedido || null,
-        status: statusPedidoParaCrm(statusErp),
+        status: dadosStatus.statusErp,
+        statusErp: dadosStatus.statusErp,
+        statusErpCodigo: dadosStatus.statusErpCodigo,
+        statusErpAtualizadoEm: new Date(),
         observacao,
         origem: "ERP",
         referenciaExterna: referencia,

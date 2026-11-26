@@ -834,6 +834,10 @@ CREATE TABLE IF NOT EXISTS crm_pedidos_venda (
   updated_at TIMESTAMP DEFAULT NOW()
 );
 
+ALTER TABLE crm_pedidos_venda ADD COLUMN IF NOT EXISTS status_erp VARCHAR(30);
+ALTER TABLE crm_pedidos_venda ADD COLUMN IF NOT EXISTS status_erp_codigo VARCHAR(10);
+ALTER TABLE crm_pedidos_venda ADD COLUMN IF NOT EXISTS status_erp_atualizado_em TIMESTAMP;
+
 CREATE TABLE IF NOT EXISTS crm_pedido_venda_itens (
   id SERIAL PRIMARY KEY,
   pedido_venda_id INTEGER NOT NULL REFERENCES crm_pedidos_venda(id) ON DELETE CASCADE,

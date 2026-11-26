@@ -29,7 +29,9 @@ const pedidos = [
     oportunidadeId: 1,
     oportunidadeTitulo: "Malha penteada",
     numero: "PV-001",
-    status: "ABERTO",
+    status: "FATURADO",
+    statusErp: "ABERTO",
+    statusErpCodigo: "2",
   },
   {
     id: 2,
@@ -77,6 +79,11 @@ describe("GET /api/crm/pedidos-venda", () => {
     expect(res.status).toBe(200)
     const body = await res.json()
     expect(body.data).toHaveLength(2)
+    expect(body.data[0]).toMatchObject({
+      status: "FATURADO",
+      statusErp: "ABERTO",
+      statusErpCodigo: "2",
+    })
     expect(body.total).toBe(2)
     expect(body.page).toBe(1)
     expect(body.totalPages).toBe(1)

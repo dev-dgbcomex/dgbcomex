@@ -253,11 +253,22 @@ function PedidosVendaPageContent() {
                         </span>
                       </td>
                       <td className="px-2 py-2 md:px-4 md:py-3">
-                        <span
-                          className={`inline-flex text-[10px] px-1.5 md:px-2 py-0.5 rounded-full font-medium ${STATUS_PEDIDO_VENDA_CORES[p.status] || ""}`}
-                        >
-                          {STATUS_PEDIDO_VENDA_LABELS[p.status] || p.status}
-                        </span>
+                        <div className="flex flex-wrap items-center gap-1">
+                          <span
+                            className={`inline-flex text-[10px] px-1.5 md:px-2 py-0.5 rounded-full font-medium ${STATUS_PEDIDO_VENDA_CORES[p.status] || ""}`}
+                          >
+                            {STATUS_PEDIDO_VENDA_LABELS[p.status] || p.status}
+                          </span>
+                          {p.statusErp && (
+                            <span
+                              title="Status no ERP"
+                              className="inline-flex text-[10px] px-1.5 md:px-2 py-0.5 rounded-full font-medium bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
+                            >
+                              ERP: {STATUS_PEDIDO_VENDA_LABELS[p.statusErp] || p.statusErp}
+                              {p.statusErpCodigo ? ` (${p.statusErpCodigo})` : ""}
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td
                         className="px-2 py-2 md:px-4 md:py-3"

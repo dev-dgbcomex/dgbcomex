@@ -5,7 +5,7 @@ import { requisitarErp } from "@/lib/erp/cliente"
 import { registrarLog } from "@/lib/log"
 import { registrarEventoPedidoVenda } from "@/lib/crm/timeline-pedido"
 import { createQueryBuilder } from "@/test/route-db-mock"
-import { atualizarEspelhosErp, criarPedidoEspelho, statusPedidoSincronizado } from "./erp-espelho"
+import { atualizarEspelhosErp, criarPedidoEspelho, statusErpSincronizado } from "./erp-espelho"
 
 vi.mock("@/lib/db", () => ({
   db: {
@@ -26,7 +26,10 @@ const pedido = {
   numero: "00006979",
   dataEmissao: "2026-10-30",
   status: "ABERTO",
-  observacao: "Pedido vinculado do ERP (13/00006979) · cliente ANTIGO · status ERP: Em análise",
+  statusErp: "ABERTO",
+  statusErpCodigo: "2",
+  statusErpAtualizadoEm: new Date("2026-10-30T12:00:00Z"),
+  observacao: "Pedido vinculado do ERP (13/00006979) · cliente ANTIGO · status ERP: Aprovado",
   origem: "ERP",
   referenciaExterna: "13/00006979",
 }
@@ -146,8 +149,13 @@ describe("atualizarEspelhosErp", () => {
       expect.objectContaining({
         pedidoVendaId: 10,
         oportunidadeId: 7,
-        tipo: "PEDIDO_VENDA",
-        metadados: expect.objectContaining({ statusAntigo: "ABERTO", origem: "ERP" }),
+        tipo: "SINCRONIZACAO_ERP",
+        metadados: expect.objectContaining({
+          statusCrm: "ABERTO",
+          statusErpNovo: "ABERTO",
+          statusErpCodigo: "2",
+          origem: "ERP",
+        }),
       })
     )
     expect(resultado).toEqual({ verificados: 1, atualizados: 1, falhas: 0 })
@@ -181,34 +189,38 @@ describe("atualizarEspelhosErp", () => {
     expect(resultado).toEqual({ verificados: 1, atualizados: 0, falhas: 1 })
   })
 
-  it("preserva FATURADO quando o ERP não cancelou o pedido", async () => {
+  it("preserva FATURADO quando o ERP informa outro status", async () => {
     prepararBanco({ ...pedido, status: "FATURADO" })
     vi.mocked(requisitarErp).mockResolvedValue(documento as any)
 
     await atualizarEspelhosErp("PEDIDO")
 
     const valores = vi.mocked(transacao.set).mock.calls[0][0] as any
-    expect(valores.status).toBe("FATURADO")
+    expect(valores.status).toBeUndefined()
+    expect(valores.statusErp).toBe("ABERTO")
   })
 
-  it("preserva PARCIAL quando o ERP não cancelou o pedido", async () => {
+  it("preserva PARCIAL quando o ERP informa outro status", async () => {
     prepararBanco({ ...pedido, status: "PARCIAL" })
     vi.mocked(requisitarErp).mockResolvedValue(documento as any)
 
     await atualizarEspelhosErp("PEDIDO")
 
     const valores = vi.mocked(transacao.set).mock.calls[0][0] as any
-    expect(valores.status).toBe("PARCIAL")
+    expect(valores.status).toBeUndefined()
+    expect(valores.statusErp).toBe("ABERTO")
   })
 
-  it("só altera para CANCELADO quando o ERP cancelou o pedido", async () => {
+  it("registra CANCELADO do ERP sem alterar o status do CRM", async () => {
     prepararBanco({ ...pedido, status: "FATURADO" })
     vi.mocked(requisitarErp).mockResolvedValue({ ...documento, status: "3" } as any)
 
     await atualizarEspelhosErp("PEDIDO")
 
     const valores = vi.mocked(transacao.set).mock.calls[0][0] as any
-    expect(valores.status).toBe("CANCELADO")
+    expect(valores.status).toBeUndefined()
+    expect(valores.statusErp).toBe("CANCELADO")
+    expect(valores.statusErpCodigo).toBe("3")
   })
 
   it("mantém o status atual quando já está sincronizado", async () => {
@@ -253,11 +265,9 @@ describe("atualizarEspelhosErp", () => {
     )
   })
 
-  it("mapeia status sincronizado sem depender do banco", () => {
-    expect(statusPedidoSincronizado("2", "FATURADO")).toBe("FATURADO")
-    expect(statusPedidoSincronizado(null, "PARCIAL")).toBe("PARCIAL")
-    expect(statusPedidoSincronizado("3", "FATURADO")).toBe("CANCELADO")
-    expect(statusPedidoSincronizado("2", "CANCELADO")).toBe("CANCELADO")
-    expect(statusPedidoSincronizado("2", "ABERTO")).toBe("ABERTO")
+  it("mapeia status do ERP sem depender do banco", () => {
+    expect(statusErpSincronizado("2")).toEqual({ statusErp: "ABERTO", statusErpCodigo: "2" })
+    expect(statusErpSincronizado(null)).toEqual({ statusErp: "ABERTO", statusErpCodigo: null })
+    expect(statusErpSincronizado("3")).toEqual({ statusErp: "CANCELADO", statusErpCodigo: "3" })
   })
 })

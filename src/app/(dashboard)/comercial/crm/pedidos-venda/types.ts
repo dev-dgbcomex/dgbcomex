@@ -5,6 +5,9 @@ export type PedidoVendaResumo = {
   numero: string | null
   dataEmissao: string | null
   status: string
+  statusErp: string | null
+  statusErpCodigo: string | null
+  statusErpAtualizadoEm: string | Date | null
   observacao: string | null
   origem: string
   referenciaExterna: string | null

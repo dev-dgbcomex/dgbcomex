@@ -11,6 +11,8 @@ const pedido = {
   numero: "PV-001",
   dataEmissao: "2026-09-01",
   status: "ABERTO",
+  statusErp: "CANCELADO",
+  statusErpCodigo: "3",
   observacao: "Conferir grade antes de faturar",
   origem: "MANUAL",
   referenciaExterna: null,
@@ -73,6 +75,7 @@ describe("PedidoVendaDetailPage", () => {
     expect(await screen.findByRole("heading", { name: /PV-001/ })).toBeInTheDocument()
     expect(screen.getByText("Malha penteada")).toBeInTheDocument()
     expect(screen.getByText("Aberto")).toBeInTheDocument()
+    expect(screen.getByText(/ERP: Cancelado \(3\)/)).toBeInTheDocument()
     expect(screen.getByText("Malha penteada azul")).toBeInTheDocument()
     expect(screen.getByText("R$ 1.250,00", { selector: "p" })).toBeInTheDocument()
     expect(screen.getByText("Conferir grade antes de faturar")).toBeInTheDocument()

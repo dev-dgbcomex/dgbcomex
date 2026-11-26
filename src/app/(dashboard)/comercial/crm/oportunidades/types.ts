@@ -40,6 +40,9 @@ export type DocumentoVendaResumo = {
   id: number
   numero: string | null
   status: string
+  statusErp?: string | null
+  statusErpCodigo?: string | null
+  statusErpAtualizadoEm?: string | Date | null
   origem: string
   referenciaExterna: string | null
   dataEmissao: string | null

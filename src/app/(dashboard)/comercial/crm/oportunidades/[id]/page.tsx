@@ -644,6 +644,12 @@ function DetalheOportunidadePageContent() {
                     >
                       {STATUS_PEDIDO_VENDA_LABELS[p.status] || p.status}
                     </span>
+                    {p.statusErp && (
+                      <span className="text-[10px] text-slate-400">
+                        ERP: {STATUS_PEDIDO_VENDA_LABELS[p.statusErp] || p.statusErp}
+                        {p.statusErpCodigo ? ` (${p.statusErpCodigo})` : ""}
+                      </span>
+                    )}
                   </div>
                   <span className="text-sm font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
                     {formatarMoedaProposta(String(p.total ?? 0))}

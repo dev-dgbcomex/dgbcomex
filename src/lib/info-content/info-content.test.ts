@@ -685,9 +685,11 @@ describe("getInfoContent", () => {
       ])
       .join("\n")
 
-    expect(texto).toMatch(/preserva FATURADO, PARCIAL e CANCELADO/i)
+    expect(texto).toMatch(/nunca altera o status do CRM/i)
+    expect(texto).toMatch(/status informado pelo ERP/i)
     expect(texto).toMatch(/status é escolhido individualmente por pedido/i)
     expect(texto).toMatch(/timeline/i)
+    expect(texto).toMatch(/sincronizações/i)
     expect(texto).toMatch(/abrir o registro relacionado/i)
   })
 

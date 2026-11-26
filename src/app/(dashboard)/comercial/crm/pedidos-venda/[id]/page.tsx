@@ -154,6 +154,9 @@ export default function PedidoVendaDetailPage() {
   const statusColor =
     STATUS_PEDIDO_VENDA_CORES[pedido.status] ||
     "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
+  const statusErpLabel = pedido.statusErp
+    ? `${STATUS_PEDIDO_VENDA_LABELS[pedido.statusErp] || pedido.statusErp}${pedido.statusErpCodigo ? ` (${pedido.statusErpCodigo})` : ""}`
+    : null
 
   return (
     <div className="max-w-3xl animate-fade-in">
@@ -188,6 +191,14 @@ export default function PedidoVendaDetailPage() {
             >
               {statusLabel}
             </span>
+            {statusErpLabel && (
+              <span
+                title="Status no ERP"
+                className="inline-flex text-[10px] px-2 py-0.5 rounded-full font-medium bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
+              >
+                ERP: {statusErpLabel}
+              </span>
+            )}
             {pedido.origem === "ERP" && (
               <span className="inline-flex text-[10px] px-2 py-0.5 rounded-full font-medium bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
                 ERP{pedido.referenciaExterna ? ` · ${pedido.referenciaExterna}` : ""}

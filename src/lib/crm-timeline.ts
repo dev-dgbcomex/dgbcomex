@@ -15,6 +15,7 @@ type TipoEvento =
   | "CONVERSAO_CLIENTE"
   | "PEDIDO_VENDA"
   | "FATURAMENTO"
+  | "SINCRONIZACAO_ERP"
   | "RESUMO_IA"
 
 export async function inserirTimelineEvento(params: {

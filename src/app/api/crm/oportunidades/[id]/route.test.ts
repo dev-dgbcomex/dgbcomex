@@ -84,7 +84,15 @@ describe("GET /api/crm/oportunidades/[id]", () => {
       )
       .mockReturnValueOnce(
         createQueryBuilder([
-          { id: 11, numero: "PV-001", status: "ABERTO", origem: "MANUAL", total: 850 },
+          {
+            id: 11,
+            numero: "PV-001",
+            status: "FATURADO",
+            statusErp: "ABERTO",
+            statusErpCodigo: "2",
+            origem: "ERP",
+            total: 850,
+          },
         ])
       )
 
@@ -96,7 +104,13 @@ describe("GET /api/crm/oportunidades/[id]", () => {
     expect(body.faturamentos).toHaveLength(1)
     expect(body.faturamentos[0]).toMatchObject({ numero: "NF-001", total: 1250 })
     expect(body.pedidosVenda).toHaveLength(1)
-    expect(body.pedidosVenda[0]).toMatchObject({ numero: "PV-001", total: 850 })
+    expect(body.pedidosVenda[0]).toMatchObject({
+      numero: "PV-001",
+      status: "FATURADO",
+      statusErp: "ABERTO",
+      statusErpCodigo: "2",
+      total: 850,
+    })
     expect(db.select).toHaveBeenCalledTimes(4)
   })
 })

@@ -13,12 +13,15 @@ import { recalcularValorOportunidade } from "@/lib/crm/valor-oportunidade"
 import { ErroErp, requisitarErp } from "@/lib/erp/cliente"
 import {
   STATUS_PEDIDO_ERP,
-  statusPedidoParaCrm,
   type FaturamentoErp,
   type PedidoErp,
   type TipoVinculoErp,
 } from "@/lib/erp/tipos"
-import { itensParaCrm, itensParaCrmFaturamento } from "@/lib/crm/erp-espelho"
+import {
+  itensParaCrm,
+  itensParaCrmFaturamento,
+  statusErpSincronizado,
+} from "@/lib/crm/erp-espelho"
 
 /**
  * Vincula um documento do ERP (pedido de venda ou faturamento) a uma oportunidade/pessoa.
@@ -116,6 +119,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
       const pedidoErp = documento as PedidoErp
       const statusErp = pedidoErp.status || ""
+      const dadosStatus = statusErpSincronizado(statusErp)
       const [created] = await db.transaction(async (tx: any) => {
         const [novo] = await tx
           .insert(crmPedidosVenda)
@@ -123,7 +127,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
             oportunidadeId,
             numero: pedidoErp.pedido,
             dataEmissao: pedidoErp.data_pedido || null,
-            status: statusPedidoParaCrm(statusErp),
+            status: dadosStatus.statusErp,
+            statusErp: dadosStatus.statusErp,
+            statusErpCodigo: dadosStatus.statusErpCodigo,
+            statusErpAtualizadoEm: new Date(),
             observacao: [
               `Pedido vinculado do ERP (${empresa}/${pedidoErp.pedido})`,
               clienteNome ? `cliente ${clienteNome}` : null,

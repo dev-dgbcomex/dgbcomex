@@ -240,8 +240,10 @@ describe("DetalheOportunidadePage", () => {
               {
                 id: 20,
                 numero: "PV-001",
-                status: "ABERTO",
-                origem: "MANUAL",
+                status: "FATURADO",
+                statusErp: "ABERTO",
+                statusErpCodigo: "2",
+                origem: "ERP",
                 total: 600,
                 dataEmissao: null,
                 createdAt: "2026-09-03T10:00:00Z",
@@ -261,6 +263,7 @@ describe("DetalheOportunidadePage", () => {
     expect(screen.getByText("NF-001")).toBeInTheDocument()
     expect(screen.getByText("NF-002")).toBeInTheDocument()
     expect(screen.getByText("PV-001")).toBeInTheDocument()
+    expect(screen.getByText(/ERP: Aberto \(2\)/)).toBeInTheDocument()
     expect(screen.getByText("R$ 2.100,00")).toBeInTheDocument()
     expect(screen.getAllByText("R$ 600,00").length).toBeGreaterThan(0)
     expect(screen.getByRole("link", { name: /Novo Faturamento/ })).toHaveAttribute(

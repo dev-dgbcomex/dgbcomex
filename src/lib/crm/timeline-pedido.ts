@@ -5,7 +5,7 @@ import { crmPedidosVenda } from "@/lib/db/schema/crm-pedidos-venda"
 import { crmTimelineEventos } from "@/lib/db/schema/crm-timeline-eventos"
 import { inserirTimelineEvento } from "@/lib/crm-timeline"
 
-export type TipoEventoPedidoVenda = "PEDIDO_VENDA" | "FATURAMENTO"
+export type TipoEventoPedidoVenda = "PEDIDO_VENDA" | "FATURAMENTO" | "SINCRONIZACAO_ERP"
 
 export async function registrarEventoPedidoVenda(params: {
   pedidoVendaId: number

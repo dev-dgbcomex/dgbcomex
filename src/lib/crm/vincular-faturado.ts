@@ -295,7 +295,7 @@ export async function aplicarVinculacaoFaturado(params: {
           statusAntigo: pedido.status,
           statusNovo: statusPedidoFinal,
           notaNumero: nota.numero,
-          origem: "ERP",
+          origem: "CRM",
         },
         chaveEvento: `pedido-status-vinculo-${pedido.id}-${statusPedidoFinal}-${nota.numero ?? "sem-nota"}`,
       })

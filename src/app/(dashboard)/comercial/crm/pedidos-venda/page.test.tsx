@@ -12,6 +12,8 @@ const pedidos = [
     numero: "PV-001",
     dataEmissao: "2026-09-01",
     status: "ABERTO",
+    statusErp: "FATURADO",
+    statusErpCodigo: "2",
     total: 1250,
     itensCount: 1,
   },
@@ -63,6 +65,7 @@ describe("PedidosVendaPage", () => {
     expect(screen.getByText("PV-002")).toBeInTheDocument()
     expect(screen.getAllByText("Aberto").length).toBeGreaterThan(0)
     expect(screen.getAllByText("Faturado").length).toBeGreaterThan(0)
+    expect(screen.getByText(/ERP: Faturado \(2\)/)).toBeInTheDocument()
     expect(screen.getByText("R$ 1.250,00")).toBeInTheDocument()
     expect(screen.getByText("1-2 de 2 pedido(s)")).toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Novo Pedido de Venda" })).toHaveAttribute(
