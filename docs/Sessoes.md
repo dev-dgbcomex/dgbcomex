@@ -29,6 +29,7 @@
 ### Sessão 42 — Orçamento de tokens na análise de IA
 
 - **Data:** 2026-11-23
+- **Commits:** `8a95c262` — `fix(crm): orcamenta tokens da analise ia`, `5f009871` (chave NVIDIA), `f0505fc6` (diagnóstico do provedor) e `364abb66` (prévia de envio à IA)
 - **Tarefa:** corrigir o 503 persistente em `POST /api/crm/saude-prospeccao/ia/analises` após reduzir o `max_tokens` de 1100 para 700.
 - **Causa raiz:** o Groq free tier limita a saída a 1000 tokens por minuto por modelo; a análise fazia até 3 chamadas de 700 tokens (decisão + até 2 consultas + resposta final), estourando o OTPM e fazendo o `chamarIA` devolver `provedor: "nenhum"`.
 - **Decisão aprovada:** separar a decisão sobre consultas curadas da resposta final e forçar a chave da NVIDIA cadastrada em `ai_chaves` para essa análise. A decisão usa `maxTokens: 80` por rodada (no máximo 2) e a resposta final continua com `maxTokens: 700`; pior caso: `80 + 80 + 700 = 860`, abaixo do limite de 1000 do Groq. A NVIDIA Nemotron é usada com `provedor: openai_compatible`, `ordem=1`, sem fallback automático para outro provedor nesta rota.
@@ -47,6 +48,7 @@
 ### Sessão 43 — Campos obrigatórios ao mover/alterar status de oportunidades
 
 - **Data:** 2026-11-23
+- **Commit:** `b0b2a23b` — `feat(crm): exige valor estimado e probabilidade para status além de Novo/Qualificação`
 - **Tarefa:** exigir Valor Estimado e Probabilidade maiores que 1 ao mover ou alterar o status de oportunidades para qualquer estágio diferente de NOVO e QUALIFICACAO, e corrigir o Kanban para exibir colunas de status presentes nos dados mesmo que ausentes da configuração.
 - **Decisões aprovadas:** apenas NOVO e QUALIFICACAO ficam isentos; PROPOSTA, NEGOCIACAO, FECHADO_GANHO (alias GANHO), FECHADO_PERDIDO e status customizados exigem os dois campos. O backend valida PATCH/PUT/POST e retorna 409 com `validacaoObrigatoria`; o front abre um modal solicitando o preenchimento antes de mover/alterar, com rollback do card ao cancelar.
 - **Resultado:**
@@ -62,6 +64,7 @@
 ### Sessão 44 — Kanban de leads: requisitos por status e conversão por faturamento
 
 - **Data:** 2026-11-23
+- **Commit:** `11df1f80` — `feat(crm): requisitos por status no kanban de leads e normaliza oportunidades`
 - **Tarefa:** implementar requisitos de status para leads e oportunidades no Kanban de leads, normalizar status de oportunidades, reutilizar o botão de verificação de pedidos faturados e documentar a regra de conversão em cliente.
 - **Decisões aprovadas:** requisitos centralizados no código por enquanto (`src/lib/crm/requisitos-status.ts`); configuração no banco/`/perfil/menus` é futura feature. Lead não é rebaixada: Proposta qualifica apenas Novo/Perdido/Inativo; Negociação ou Ganho leva a lead para Possível Cliente; conversão exige CNPJ e decisão `CONVERTER` via botão/modal existente. Oportunidade exige Valor Estimado e Probabilidade > 1 fora de NOVO/QUALIFICACAO; FECHADO_GANHO exige pedido ERP; FECHADO_PERDIDO exige motivo.
 - **Resultado:**
@@ -73,8 +76,8 @@
   - Tela de Leads reusa `VerificarPedidosFaturados` com `onConvertido` para refetch; `converter-faturados` segue a automação de conversão com validação de requisitos.
   - Modais “i” atualizados (`crm.ts`) para Leads, Oportunidades, Kanban de Oportunidades e Pedidos de Venda; `docs/Sessoes.md` atualizado.
 - **Arquivos Envolvidos:** `src/lib/crm/requisitos-status.ts`, `src/lib/crm/requisitos-status.test.ts`, `src/lib/crm/automacoes-crm.ts`, `src/lib/crm/automacoes-crm.test.ts`, `src/app/api/crm/oportunidades/[id]/status/route.ts`, `src/app/api/crm/oportunidades/[id]/route.ts`, `src/components/crm/oportunidades-kanban.tsx`, `src/components/crm/leads-kanban.tsx`, `src/app/(dashboard)/comercial/crm/leads/page.tsx`, `src/lib/db/migrations/0079_normalizar_status_oportunidades.sql`, `src/lib/info-content/crm.ts`, `docs/Sessoes.md`.
-- **Testes:** `requisitos-status.test.ts` (17 testes), `automacoes-crm.test.ts` (4 testes) e rotas de oportunidades/leads/pedidos (41 testes) passaram; suíte completa, typecheck, lint e build a validar antes do commit.
-- **Verificação pendente:** `npm run test`, `tsc --noEmit`, `npm run build`, `next lint`, commit e push.
+- **Testes:** `requisitos-status.test.ts` (17 testes), `automacoes-crm.test.ts` (4 testes) e rotas de oportunidades/leads/pedidos (41 testes) passaram; suíte completa, typecheck, lint e build validados antes do commit.
+- **Verificação:** concluída em `11df1f80` (commit e push efetuados).
 
 ---
 
@@ -686,7 +689,7 @@
 ### Sessão 45 — Classificação do Resumo IA passa a ser canônica (QUENTE/MORNO/FRIO)
 
 - **Data:** 2026-11-23
-- **Commit:** `11df1f80` (anterior) + novo commit desta sessão
+- **Commit:** `11df1f80` (anterior) + `c1721112` — `fix(crm): Resumo IA usa classificação canônica do sistema`
 - **Tarefa:** corrigir divergência em que o Resumo IA classificava como FRIO enquanto o sistema classificava como QUENTE (exemplo: cliente 17, pedido `00007095` emitido em 18/11/2026, status `ABERTO`).
 - **Resultado:**
   - `src/lib/crm/resumo-ia-contexto.ts`: `ContextoResumoIA` ganha `temperatura` calculada com `faixaConversaoSql("lead"|"cliente")` (mesma regra do semáforo/kanban), `motivo` detalhado e flags canônicas (`temNegociacao`, `temProposta`, `temGanhoMes`, `temPedidoMes`, etc.); `montarMensagensResumo` manda a IA copiar a classificação/motivo e não reclassificar; status do pedido (`ABERTO`/`FATURADO`) não altera a faixa.
@@ -702,7 +705,7 @@
 ### Sessão 46 — Verificar pedido faturado sincroniza valor do pedido, vincula faturamento, ganha oportunidade e converte lead
 
 - **Data:** 2026-11-23
-- **Commit:** novo commit desta sessão (ainda não efetuado no momento deste registro)
+- **Commits:** dgbcomex `8162523d` — `feat(crm): verificar pedido faturado sincroniza valor do pedido e vincula faturamento`, `6a8cb200` — `fix(crm): backfill valor_estimado de oportunidades com pedidos ERP vinculados`; api-microdata `e792c53` — `feat(crm): filtro pedido_origem em faturamentos para vincular nota ao pedido do ERP`
 - **Tarefa:** implementar “Verificar faturados” para sincronizar o valor do pedido do ERP (não da nota), vincular/gerar o faturamento da nota real na oportunação e no pedido de venda, marcar oportunidade como Fechado Ganho e converter a lead, tudo após confirmação.
 - **Resultado:**
   - Migration `0080_faturamentos_pedido_venda.sql`: adiciona `crm_faturamentos.pedido_venda_id` (FK para `crm_pedidos_venda`, `ON DELETE SET NULL`), índice e backfill de faturamentos existentes; aplicada no Neon e warehouse local via `scripts/apply-drizzle-migrations.js`.
@@ -723,7 +726,7 @@
 ### Sessão 47 — Vincular faturado: vincular pedido já faturado e processar nota real
 
 - **Data:** 2026-11-23
-- **Commits:** `acc7c9fa` (correção faturamento traz valor da nota) + novo commit desta sessão (botão Vincular faturado).
+- **Commits:** `acc7c9fa` (correção faturamento traz valor da nota), `a8089050` (botão Vincular faturado), `f327c080`, `54060876`, `cadfa561`, `31bf5b2e`, `ce0d1408`, `cccb4d3a`, `9402834e`, `c956ebd4` (filtros, resiliência da busca e layout responsivo) e `bba954f0` (redeploy Vercel).
 - **Tarefa:** criar botão “Vincular faturado” no detalhe da oportunidade que pede o código do pedido, busca notas faturadas pelo `pedido_origem` (`nosso_pedido`), vincula o pedido ao CRM e executa o fluxo do “Verificar faturados” (espelho do pedido, faturamento com itens/valor da nota, valor estimado, status, automações).
 - **Resultado:**
   - `src/lib/crm/erp-espelho.ts`: `itensParaCrmFaturamento` agora soma `valor_total + acrescimo_desconto`; adicionado `criarPedidoEspelho` (exportado) para criar/validar duplicidade do espelho do pedido.
@@ -739,7 +742,7 @@
 ### Sessão 48 — Pedido real do ERP separado da nota, faturamento N:N e vínculo de todos os pedidos da nota
 
 - **Data:** 2026-11-24
-- **Commit:** novo commit desta sessão (ainda não efetuado no momento deste registro).
+- **Commits:** dgbcomex `bd186738` — `feat(crm): separa pedido real da nota e vincula faturamento N:N`; api-microdata `f762905` — `feat(crm): expõe pedido faturado e pedidos da nota via ERP`
 - **Tarefa:** corrigir a separação entre pedido e nota/faturamento do ERP, ler o pedido faturado diretamente do ERP (sem montá-lo a partir da nota), permitir que uma nota fatura múltiplos pedidos e preparar a base para o índice diferencial no dashboard.
 - **Resultado:**
   - `M:\dev\api-microdata\app\src\api\routers\crm.py`: novo `GET /crm/pedidos-faturados/{empresa}/{pedido}` lê `Car_Pedido`/`Car_Itens_Pedido` direto do ERP e retorna no formato `PedidoErp`; novo `GET /crm/faturamentos/{empresa}/{pedido}/{nr_nota}/pedidos` lista todos os `nosso_pedido` da nota; `SQL_FATURAMENTO_ITENS` passou a buscar os itens da nota por `nr_nota`, cobrindo notas com mais de uma linha em `Fat_Pedido`.
@@ -756,7 +759,7 @@
 ### Sessão 49 — Busca de faturados passa a ler o ERP ao vivo (00007094)
 
 - **Data:** 2026-11-24
-- **Commit:** novo commit desta sessão (ainda não efetuado no momento deste registro).
+- **Commits:** api-microdata `e35d934` — `feat(crm): busca faturamentos direto no ERP`; lado app consolidado em `942550d6` (helper `buscarFaturamentosPorPedido` e testes)
 - **Tarefa:** o botão "Buscar faturados" e o "Verificar faturados" não encontravam o pedido `00007094`, embora a nota `012830` existisse no ERP. A busca dependia do warehouse `raw.fat_pedido`, que estava desatualizado; além disso, a api-microdata on-prem rodava uvicorn antigo e devolvia `404 {"detail":"Not Found"}` nas rotas novas.
 - **Resultado:**
   - `M:\dev\api-microdata\app\src\api\routers\crm.py`: novo `GET /crm/faturamentos-por-pedido/{pedido}` lê `dbo.Fat_Pedido` direto do ERP por `Nosso_Pedido`, com filtro opcional de empresa e o mesmo contrato de `FaturamentoErp`; `GET /crm/faturamentos/{empresa}/{pedido}/{nr_nota}/pedidos` também passou a ler `dbo.Fat_Pedido`, deixando de depender do sync do warehouse.
@@ -770,7 +773,7 @@
 ### Sessão 50 — Valor estimado recalculado por todos os botões de vínculo
 
 - **Data:** 2026-11-25
-- **Commit:** novo commit desta sessão (ainda não efetuado no momento deste registro).
+- **Commit:** `942550d6` — `feat(crm): recalcula valor da oportunidade em todos os vínculos`
 - **Tarefa:** os botões "Vincular do ERP", "Vincular faturado" e "Verificar faturados" precisam, como ação final, recalcular o valor da oportunidade com todos os pedidos vinculados a ela (um pedido ou a soma de vários).
 - **Resultado:**
   - `src/lib/crm/valor-oportunidade.ts`: novo helper com `somaOportunidade` e `recalcularValorOportunidade`, que grava `valorEstimado + updatedAt` na oportunidade.
@@ -781,6 +784,30 @@
   - `src/lib/info-content/crm.ts`, `src/lib/info-content/info-content.test.ts` e `docs/Sessoes.md`: modal de informação e histórico atualizados.
 - **Arquivos Envolvidos:** `src/lib/crm/valor-oportunidade.ts`, `src/lib/crm/valor-oportunidade.test.ts`, `src/app/api/crm/oportunidades/[id]/vinculos/route.ts`, `src/app/api/crm/oportunidades/[id]/vinculos/route.test.ts`, `src/lib/crm/vincular-faturado.ts`, `src/lib/crm/vincular-faturado.test.ts`, `src/lib/crm/verificar-pedido-faturado.ts`, `src/lib/crm/verificar-pedido-faturado.test.ts`, `src/components/crm/verificar-pedidos-faturados.tsx`, `src/components/crm/verificar-pedidos-faturados.test.tsx`, `src/lib/info-content/crm.ts`, `src/lib/info-content/info-content.test.ts`, `docs/Sessoes.md`.
 - **Testes:** `npx.cmd vitest run` → 499 arquivos / 2914 testes passados; `tsc --noEmit` limpo; `npm run build` OK. Foco: `valor-oportunidade.test.ts`, `vincular-faturado.test.ts`, `verificar-pedido-faturado.test.ts`, `vinculos/route.test.ts`, `aplicar-faturados/route.test.ts` e `verificar-pedidos-faturados.test.tsx`.
+
+---
+
+### Sessão 51 — Fechamento do histórico: vínculo pedido/nota do ERP no CRM (23–25/11)
+
+- **Data:** 2026-11-25
+- **Commit:** `docs(sessoes): fecha histórico das sessões 42–50`
+- **Tarefa:** registrar no histórico os commits finais das sessões anteriores e os commits de correção que ficaram sem sessão própria, para que toda a entrega esteja documentada em `docs/Sessoes.md` e não apenas no `git log`.
+- **Resultado:**
+  - Sessões 42–50 passaram a referenciar os commits reais, substituindo os marcadores “novo commit desta sessão (ainda não efetuado)”.
+  - Mapa consolidado dos commits do bloco:
+    - S42 (tokens/provedor da IA): `8a95c262`, `5f009871`, `f0505fc6`, `364abb66`.
+    - S43 (campos obrigatórios): `b0b2a23b`.
+    - S44 (requisitos por status no kanban): `11df1f80`.
+    - S45 (classificação canônica do Resumo IA): `c1721112`.
+    - S46 (Verificar faturados): `8162523d`, `6a8cb200`; api-microdata `e792c53`.
+    - S47 (Vincular faturado): `acc7c9fa`, `a8089050`, `f327c080`, `54060876`, `cadfa561`, `31bf5b2e`, `ce0d1408`, `cccb4d3a`, `9402834e`, `c956ebd4`, `bba954f0`.
+    - S48 (pedido real do ERP, nota separada e N:N): `bd186738`; api-microdata `f762905`.
+    - S49 (busca de faturados ao vivo): api-microdata `e35d934`; lado app `942550d6` (helper `buscarFaturamentosPorPedido`).
+    - S50 (recalculo do valor da oportunidade): `942550d6`.
+  - Estado final da entrega funcional: código do app consolidado em `942550d6`, api-microdata `main` em `e35d934`; ambos os repositórios sincronizados com `origin/main`, sendo este registro documental o único commit adicional.
+  - Verificações consolidadas da entrega: dgbcomex `npx.cmd vitest run` → 499 arquivos / 2914 testes passados, `tsc --noEmit` limpo, `npm run build` OK; api-microdata `pytest -q` → 384 passou e `ruff check` limpo; migrations `0080`/`0081` aplicadas no Neon e no warehouse local, `db:comparar` IDENTICAL e `db:verificar-local` com 0 divergências.
+- **Arquivos Envolvidos:** `docs/Sessoes.md`.
+- **Testes:** entrega apenas documental; suíte verde registrada na Sessão 50 (499 arquivos / 2914 testes passados).
 
 ---
 
