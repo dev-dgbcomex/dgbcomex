@@ -18,6 +18,7 @@ import {
 import { itensParaCrmFaturamento } from "@/lib/crm/erp-espelho"
 import { processarAutomacaoCRM } from "@/lib/crm/automacoes-crm"
 import { registrarLog } from "@/lib/notificar"
+import { registrarEventoPedidoVenda } from "@/lib/crm/timeline-pedido"
 import {
   buscarFaturamentosPorPedido,
   buscarPedidoFaturadoErp,
@@ -225,7 +226,11 @@ export async function aplicarVinculacaoFaturado(params: {
   }
 
   const [oportunidade] = await db
-    .select({ id: crmOportunidades.id, empresaId: crmOportunidades.empresaId })
+    .select({
+      id: crmOportunidades.id,
+      empresaId: crmOportunidades.empresaId,
+      clienteId: crmOportunidades.clienteId,
+    })
     .from(crmOportunidades)
     .where(eq(crmOportunidades.id, oportunidadeId))
     .limit(1)
@@ -236,6 +241,7 @@ export async function aplicarVinculacaoFaturado(params: {
   const pedidosVinculados: Array<{
     id: number
     numero: string | null
+    status: string | null
     valorPedido: number
   }> = []
   for (const documento of pedidosDocumento) {
@@ -249,6 +255,7 @@ export async function aplicarVinculacaoFaturado(params: {
     pedidosVinculados.push({
       id: vinculado.id,
       numero: vinculado.numero,
+      status: vinculado.status,
       valorPedido: vinculado.valorPedido,
     })
   }
@@ -276,6 +283,23 @@ export async function aplicarVinculacaoFaturado(params: {
       .update(crmPedidosVenda)
       .set({ status: statusPedidoFinal, updatedAt: new Date() })
       .where(eq(crmPedidosVenda.id, pedido.id))
+    if (pedido.status !== statusPedidoFinal) {
+      await registrarEventoPedidoVenda({
+        pedidoVendaId: pedido.id,
+        oportunidadeId,
+        empresaId: oportunidade.empresaId,
+        clienteId: oportunidade.clienteId,
+        tipo: "PEDIDO_VENDA",
+        descricao: `Pedido ${pedido.numero ?? pedido.id} alterado de ${pedido.status ?? "—"} para ${statusPedidoFinal} ao vincular a nota ${nota.numero ?? "—"}`,
+        metadados: {
+          statusAntigo: pedido.status,
+          statusNovo: statusPedidoFinal,
+          notaNumero: nota.numero,
+          origem: "ERP",
+        },
+        chaveEvento: `pedido-status-vinculo-${pedido.id}-${statusPedidoFinal}-${nota.numero ?? "sem-nota"}`,
+      })
+    }
   }
 
   const faturamentoId = await criarOuAtualizarFaturamento({
@@ -306,6 +330,7 @@ export async function aplicarVinculacaoFaturado(params: {
           statusNovo: "CONVERTIDO_CLIENTE",
           decisao: "CONVERTER",
           autor: { id: undefined, nome: usuarioNome ?? null },
+          contexto: { pedidoVendaId: pedidosVinculados[0]?.id ?? null },
         })
         conversaoLead = {
           ok: Boolean(resultadoLead.ok),
@@ -334,6 +359,7 @@ export async function aplicarVinculacaoFaturado(params: {
       valorEstimado: valorOportunidade,
       probabilidade: 100,
       autor: { id: undefined, nome: usuarioNome ?? null },
+      contexto: { pedidoVendaIds: pedidosVinculados.map((pedido) => pedido.id) },
     })
     automacaoOportunidade = {
       ok: Boolean(resultadoOportunidade.ok),

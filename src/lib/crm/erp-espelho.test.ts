@@ -3,8 +3,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { db } from "@/lib/db"
 import { requisitarErp } from "@/lib/erp/cliente"
 import { registrarLog } from "@/lib/log"
+import { registrarEventoPedidoVenda } from "@/lib/crm/timeline-pedido"
 import { createQueryBuilder } from "@/test/route-db-mock"
-import { atualizarEspelhosErp, statusPedidoSincronizado } from "./erp-espelho"
+import { atualizarEspelhosErp, criarPedidoEspelho, statusPedidoSincronizado } from "./erp-espelho"
 
 vi.mock("@/lib/db", () => ({
   db: {
@@ -17,6 +18,7 @@ vi.mock("@/lib/db", () => ({
 }))
 vi.mock("@/lib/erp/cliente", () => ({ requisitarErp: vi.fn() }))
 vi.mock("@/lib/log", () => ({ registrarLog: vi.fn() }))
+vi.mock("@/lib/crm/timeline-pedido", () => ({ registrarEventoPedidoVenda: vi.fn() }))
 
 const pedido = {
   id: 10,
@@ -100,6 +102,8 @@ function prepararBanco(cabecalho: typeof pedido = pedido, itens = [itemAtual]) {
   vi.mocked(db.select).mockReturnValueOnce(createQueryBuilder([pedido]))
   vi.mocked(db.select).mockReturnValueOnce(createQueryBuilder(itens))
   vi.mocked(db.select).mockReturnValueOnce(createQueryBuilder([cabecalho]))
+  vi.mocked(db.select).mockReturnValueOnce(createQueryBuilder([]))
+  vi.mocked(db.select).mockReturnValueOnce(createQueryBuilder([{ empresaId: 3, clienteId: null }]))
   vi.mocked(db.transaction).mockImplementation(async (callback: any) => callback(tx))
 }
 
@@ -109,6 +113,7 @@ describe("atualizarEspelhosErp", () => {
     vi.mocked(db.transaction).mockReset()
     vi.mocked(requisitarErp).mockReset()
     vi.mocked(registrarLog).mockReset()
+    vi.mocked(registrarEventoPedidoVenda).mockReset()
     vi.mocked(tx.update).mockClear()
     vi.mocked(tx.delete).mockClear()
     vi.mocked(tx.insert).mockClear()
@@ -137,6 +142,14 @@ describe("atualizarEspelhosErp", () => {
       })
     )
     expect(registrarLog).toHaveBeenCalledWith(expect.objectContaining({ acao: "atualizar_erp" }))
+    expect(registrarEventoPedidoVenda).toHaveBeenCalledWith(
+      expect.objectContaining({
+        pedidoVendaId: 10,
+        oportunidadeId: 7,
+        tipo: "PEDIDO_VENDA",
+        metadados: expect.objectContaining({ statusAntigo: "ABERTO", origem: "ERP" }),
+      })
+    )
     expect(resultado).toEqual({ verificados: 1, atualizados: 1, falhas: 0 })
   })
 
@@ -154,6 +167,7 @@ describe("atualizarEspelhosErp", () => {
     expect(tx.delete).not.toHaveBeenCalled()
     expect(tx.insert).not.toHaveBeenCalled()
     expect(registrarLog).not.toHaveBeenCalled()
+    expect(registrarEventoPedidoVenda).not.toHaveBeenCalled()
     expect(resultado).toEqual({ verificados: 1, atualizados: 0, falhas: 0 })
   })
 
@@ -210,6 +224,33 @@ describe("atualizarEspelhosErp", () => {
 
     expect(tx.update).not.toHaveBeenCalled()
     expect(resultado).toEqual({ verificados: 1, atualizados: 0, falhas: 0 })
+  })
+
+  it("registra timeline ao vincular pedido do ERP", async () => {
+    vi.mocked(db.select)
+      .mockReturnValueOnce(createQueryBuilder([]))
+      .mockReturnValueOnce(createQueryBuilder([]))
+      .mockReturnValueOnce(createQueryBuilder([{ empresaId: 3, clienteId: null }]))
+    const txNovo = {
+      insert: vi.fn(() => createQueryBuilder([{ id: 20, status: "ABERTO" }])),
+    }
+    vi.mocked(db.transaction).mockImplementation(async (callback: any) => callback(txNovo))
+
+    await criarPedidoEspelho({
+      oportunidadeId: 7,
+      empresa: "13",
+      pedidoReferencia: "00007127",
+      documento: documento as any,
+    })
+
+    expect(registrarEventoPedidoVenda).toHaveBeenCalledWith(
+      expect.objectContaining({
+        pedidoVendaId: 20,
+        oportunidadeId: 7,
+        tipo: "PEDIDO_VENDA",
+        chaveEvento: "pedido-vinculo-erp-20",
+      })
+    )
   })
 
   it("mapeia status sincronizado sem depender do banco", () => {

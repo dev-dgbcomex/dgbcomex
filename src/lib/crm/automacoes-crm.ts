@@ -8,6 +8,7 @@ import { inserirTimelineEvento } from "@/lib/crm-timeline"
 import { notificarAtividadeComercial } from "@/lib/crm/notificar-atividade"
 import { executarGatilhos } from "@/lib/crm/status-gatilhos"
 import { promoverLeadParaCliente } from "@/lib/crm/promover-cliente"
+import { registrarEventoPedidoVenda } from "@/lib/crm/timeline-pedido"
 import {
   validarRequisitosLead,
   validarRequisitosOportunidade,
@@ -209,6 +210,7 @@ async function processarStatusLead(entrada: EntradaAutomacao): Promise<Resultado
       usuarioId: entrada.autor?.id ?? null,
       usuarioNome: entrada.autor?.nome ?? null,
       notificarEquipe: false,
+      pedidoVendaId: Number(entrada.contexto?.pedidoVendaId ?? 0) || null,
     })
     resultado.registro = promocao.pessoa as unknown as Record<string, unknown>
     resultado.avisos.push("Lead convertida em cliente")
@@ -468,6 +470,26 @@ async function processarStatusOportunidade(entrada: EntradaAutomacao): Promise<R
     empresaId: oportunidade.empresaId,
     clienteId: oportunidade.clienteId,
   })
+
+  if (statusNovo === "FECHADO_GANHO") {
+    for (const pedido of totalPedidosErp) {
+      await registrarEventoPedidoVenda({
+        pedidoVendaId: pedido.id,
+        oportunidadeId: oportunidade.id,
+        empresaId: oportunidade.empresaId,
+        clienteId: oportunidade.clienteId,
+        tipo: "PEDIDO_VENDA",
+        descricao: `Oportunidade "${oportunidade.titulo}" fechada como ganha`,
+        metadados: {
+          oportunidadeId: oportunidade.id,
+          statusAntigo: oportunidade.status,
+          statusNovo,
+          origem: "AUTOMACAO",
+        },
+        chaveEvento: `oportunidade-fechada-${pedido.id}-${oportunidade.id}`,
+      })
+    }
+  }
 
   return resultado
 }

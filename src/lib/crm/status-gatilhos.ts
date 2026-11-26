@@ -8,6 +8,7 @@ import { and, eq } from "drizzle-orm"
 import { registrarLog } from "@/lib/log"
 import { acaoPorValor } from "./status-acoes"
 import { promoverLeadParaCliente } from "./promover-cliente"
+import { registrarEventoPedidoVenda } from "./timeline-pedido"
 
 export type ContextoGatilho = {
   tipo: "OPORTUNIDADE" | "PROPOSTA"
@@ -70,7 +71,19 @@ async function criarPedidoVenda(contexto: ContextoGatilho, parametros: Record<st
     descricao: `Pedido de venda #${pedido.id} criado pelo gatilho do status ${contexto.statusNome}`,
     entidade: "CrmPedidoVenda",
     entidadeId: pedido.id,
-    usuarioNome: contexto.usuarioNome || null,
+      usuarioNome: contexto.usuarioNome || null,
+    })
+
+  await registrarEventoPedidoVenda({
+    pedidoVendaId: pedido.id,
+    oportunidadeId: contexto.oportunidadeId,
+    tipo: "PEDIDO_VENDA",
+    descricao: `Pedido de venda #${pedido.id} criado pelo gatilho do status ${contexto.statusNome}`,
+    metadados: {
+      statusNovo: pedido.status,
+      origem: "GATILHO_STATUS",
+    },
+    chaveEvento: `pedido-gatilho-${pedido.id}`,
   })
 
   return true

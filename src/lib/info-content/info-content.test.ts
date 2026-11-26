@@ -671,6 +671,26 @@ describe("getInfoContent", () => {
     expect(texto).toMatch(/última oportunidade/i)
   })
 
+  it("explica a preservação de status e a timeline clicável dos pedidos", () => {
+    const conteudos = [
+      getInfoContent("/comercial/crm/pedidos-venda"),
+      getInfoContent("/comercial/crm/pedidos-venda/[id]"),
+      getInfoContent("/comercial/crm/faturamentos/[id]"),
+    ]
+    const texto = conteudos
+      .flatMap((item) => [
+        item?.description ?? "",
+        ...(item?.rules ?? []),
+        ...(item?.fields ?? []).map((f) => `${f.name}: ${f.desc}`),
+      ])
+      .join("\n")
+
+    expect(texto).toMatch(/preserva FATURADO, PARCIAL e CANCELADO/i)
+    expect(texto).toMatch(/status é escolhido individualmente por pedido/i)
+    expect(texto).toMatch(/timeline/i)
+    expect(texto).toMatch(/abrir o registro relacionado/i)
+  })
+
   it("as telas de leads explicam a tarja de cliente e a promoção", () => {
     const listagem = getInfoContent("/comercial/crm/leads")
     const detalhe = getInfoContent("/comercial/crm/leads/[id]")

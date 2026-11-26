@@ -8,6 +8,7 @@ import { eq, desc, sql, ilike, or, and, count, inArray } from "drizzle-orm"
 import { registrarLog } from "@/lib/notificar"
 import { normalizarItensVenda } from "@/lib/crm/documento-venda"
 import { idsPessoasDoCliente } from "@/lib/crm/cliente-relacionamentos"
+import { registrarEventoPedidoVenda } from "@/lib/crm/timeline-pedido"
 
 export async function GET(req: NextRequest) {
   try {
@@ -114,7 +115,12 @@ export async function POST(req: NextRequest) {
     }
 
     const [oportunidade] = await db
-      .select({ id: crmOportunidades.id, titulo: crmOportunidades.titulo })
+      .select({
+        id: crmOportunidades.id,
+        titulo: crmOportunidades.titulo,
+        empresaId: crmOportunidades.empresaId,
+        clienteId: crmOportunidades.clienteId,
+      })
       .from(crmOportunidades)
       .where(eq(crmOportunidades.id, oportunidadeId))
       .limit(1)
@@ -157,6 +163,17 @@ export async function POST(req: NextRequest) {
       entidade: "CrmPedidoVenda",
       entidadeId: pedido.id,
       usuarioNome: session.user.name,
+    })
+
+    await registrarEventoPedidoVenda({
+      pedidoVendaId: pedido.id,
+      oportunidadeId,
+      empresaId: oportunidade.empresaId,
+      clienteId: oportunidade.clienteId,
+      tipo: "PEDIDO_VENDA",
+      descricao: `Pedido de venda${pedido.numero ? ` "${pedido.numero}"` : ""} criado com ${itens.length} item(ns)`,
+      metadados: { statusNovo: pedido.status, origem: "MANUAL" },
+      chaveEvento: `pedido-criacao-${pedido.id}`,
     })
 
     return NextResponse.json(pedido, { status: 201 })

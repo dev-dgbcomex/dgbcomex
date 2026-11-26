@@ -968,6 +968,7 @@ export const crmContent: Record<string, InfoContent> = {
       "Ao editar, os itens são substituídos pelos salvos.",
       "A origem ERP exibe a referência externa do sistema de origem.",
       "No formulário de edição, o seletor de Oportunidade tem caixa de busca com lupa por título.",
+      "O vínculo com pedidos aparece na timeline de cada pedido; clique no evento para abrir este faturamento.",
     ],
     fields: [
       { name: "Status", desc: "Emitido, Parcial, Recebido ou Cancelado" },
@@ -988,6 +989,8 @@ export const crmContent: Record<string, InfoContent> = {
       "Origem ERP indica pedidos importados de sistemas externos, identificados pela referência externa.",
       "O botão 'Verificar faturados' no topo consulta todos os pedidos vinculados a oportunidades; o ícone da linha consulta apenas aquele pedido. Para cada nota, o sistema lê direto do ERP todos os pedidos faturados por ela e os vincula à mesma oportunidade.",
       "Ao confirmar, o sistema atualiza o valor da oportunidade com a soma dos pedidos, marca Fechado Ganho, registra o faturamento pelo valor da nota e converte a lead em cliente. Um faturamento pode estar vinculado a vários pedidos. Pedidos já convertidos aparecem como 'Já convertida'.",
+      "A sincronização com o ERP preserva FATURADO, PARCIAL e CANCELADO; só o cancelamento no ERP altera o status do pedido.",
+      "A timeline do pedido registra criação, vínculo com o ERP, mudanças de status e a nota faturada. Clique no evento para abrir o registro relacionado.",
     ],
     fields: [
       { name: "Número", desc: "Identificação do pedido" },
@@ -1021,10 +1024,13 @@ export const crmContent: Record<string, InfoContent> = {
       "Ao editar, os itens são substituídos pelos salvos.",
       "A origem ERP exibe a referência externa do sistema de origem.",
       "No formulário de edição, o seletor de Oportunidade tem caixa de busca com lupa por título.",
+      "Na verificação de faturados, o status é escolhido individualmente por pedido e preservado na sincronização com o ERP.",
+      "A timeline reúne eventos do pedido, da nota faturada e da oportunidade. Clique no evento para abrir o registro relacionado.",
     ],
     fields: [
       { name: "Status", desc: "Aberto, Parcial, Faturado ou Cancelado" },
       { name: "Itens", desc: "Produto, unidade, quantidade e valor total" },
+      { name: "Timeline", desc: "Histórico clicável de criação, vínculos, status e faturamento" },
     ],
   },
 

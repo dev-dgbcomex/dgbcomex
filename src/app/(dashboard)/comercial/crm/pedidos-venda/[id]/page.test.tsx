@@ -34,6 +34,25 @@ function buildHandler() {
     if (method === "PUT" && url === "/api/crm/pedidos-venda/1") return { json: pedido }
     if (method === "GET" && url === "/api/crm/oportunidades")
       return { json: [{ id: 1, titulo: "Malha penteada" }] }
+    if (method === "GET" && url === "/api/crm/timeline?pedidoVendaId=1")
+      return {
+        json: [
+          {
+            id: 10,
+            tipo: "PEDIDO_VENDA",
+            descricao: "Pedido PV-001 criado",
+            dataEvento: "2026-09-01T10:00:00.000Z",
+            metadados: { pedidoVendaId: 1 },
+          },
+          {
+            id: 11,
+            tipo: "FATURAMENTO",
+            descricao: "Nota 012804 vinculada",
+            dataEvento: "2026-09-20T10:00:00.000Z",
+            metadados: { pedidoVendaId: 1, faturamentoId: 9 },
+          },
+        ],
+      }
     return { json: null }
   }
 }
@@ -57,6 +76,22 @@ describe("PedidoVendaDetailPage", () => {
     expect(screen.getByText("Malha penteada azul")).toBeInTheDocument()
     expect(screen.getByText("R$ 1.250,00", { selector: "p" })).toBeInTheDocument()
     expect(screen.getByText("Conferir grade antes de faturar")).toBeInTheDocument()
+  })
+
+  it("exibe a timeline com links do pedido e do faturamento", async () => {
+    renderPage(<PedidoVendaDetailPage />)
+    await screen.findByRole("heading", { name: /PV-001/ })
+
+    expect(await screen.findByText("Pedido PV-001 criado")).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "Pedido PV-001 criado" })).toHaveAttribute(
+      "href",
+      "/comercial/crm/pedidos-venda/1"
+    )
+    expect(screen.getByRole("link", { name: "Nota 012804 vinculada" })).toHaveAttribute(
+      "href",
+      "/comercial/crm/faturamentos/9"
+    )
+    expect(findCall(fetchMock.calls, "/api/crm/timeline?pedidoVendaId=1")).toBeDefined()
   })
 
   it("salva edições via PUT", async () => {

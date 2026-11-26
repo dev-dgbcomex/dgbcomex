@@ -1,13 +1,15 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { fireEvent, screen } from "@testing-library/react"
-import { createFetchMock, renderPage } from "@/test/harness"
+import { createFetchMock, findCall, renderPage } from "@/test/harness"
 import { resumoIdEventoTimeline } from "@/lib/crm/href-evento-timeline"
 import CrmTimeline from "./crm-timeline"
 
 describe("CrmTimeline", () => {
+  let fetchMock: ReturnType<typeof createFetchMock>
+
   beforeEach(() => {
-    const fetchMock = createFetchMock(() => ({
+    fetchMock = createFetchMock(() => ({
       json: [
         {
           id: 1,
@@ -29,6 +31,20 @@ describe("CrmTimeline", () => {
           descricao: "Mensagem recebida",
           dataEvento: "2026-11-18T10:00:00.000Z",
           metadados: { whatsappId: 5 },
+        },
+        {
+          id: 5,
+          tipo: "PEDIDO_VENDA",
+          descricao: "Pedido criado",
+          dataEvento: "2026-11-21T10:00:00.000Z",
+          metadados: { pedidoVendaId: 123 },
+        },
+        {
+          id: 6,
+          tipo: "FATURAMENTO",
+          descricao: "Nota 012804 vinculada",
+          dataEvento: "2026-11-22T10:00:00.000Z",
+          metadados: { pedidoVendaId: 123, faturamentoId: 45 },
         },
         {
           id: 4,
@@ -62,6 +78,23 @@ describe("CrmTimeline", () => {
 
     expect(await screen.findByText("Mensagem recebida")).toBeInTheDocument()
     expect(screen.queryByRole("link", { name: "Mensagem recebida" })).not.toBeInTheDocument()
+  })
+
+  it("carrega e abre eventos do pedido de venda", async () => {
+    renderPage(<CrmTimeline pedidoVendaId="123" />)
+
+    expect(await screen.findByText("Pedido criado")).toBeInTheDocument()
+    expect(screen.getByText("Pedido de venda")).toBeInTheDocument()
+    expect(screen.getByText("Faturamento")).toBeInTheDocument()
+    expect(findCall(fetchMock.calls, "/api/crm/timeline?pedidoVendaId=123")).toBeDefined()
+    expect(screen.getByRole("link", { name: "Pedido criado" })).toHaveAttribute(
+      "href",
+      "/comercial/crm/pedidos-venda/123"
+    )
+    expect(screen.getByRole("link", { name: "Nota 012804 vinculada" })).toHaveAttribute(
+      "href",
+      "/comercial/crm/faturamentos/45"
+    )
   })
 
   it("abre o resumo IA pelo evento da timeline", async () => {

@@ -8,6 +8,7 @@ import { eq, asc } from "drizzle-orm"
 import { registrarLog, notificar, notificarDelecao } from "@/lib/notificar"
 import { handleApiError } from "@/lib/api-error"
 import { normalizarItensVenda } from "@/lib/crm/documento-venda"
+import { registrarEventoPedidoVenda } from "@/lib/crm/timeline-pedido"
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -125,6 +126,26 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       `/comercial/crm/pedidos-venda/${atualizado.id}`,
       session.user.name
     )
+
+    const alteracoes: string[] = []
+    if (body.status !== undefined && values.status !== existente.status) {
+      alteracoes.push(`Status: ${existente.status} → ${values.status}`)
+    }
+    if (itens) alteracoes.push(`${itens.length} item(ns) atualizado(s)`)
+    if (alteracoes.length > 0) {
+      await registrarEventoPedidoVenda({
+        pedidoVendaId: pedidoId,
+        oportunidadeId: values.oportunidadeId ?? existente.oportunidadeId,
+        tipo: "PEDIDO_VENDA",
+        descricao: `Pedido de venda${atualizado.numero ? ` "${atualizado.numero}"` : ""} (#${pedidoId}) atualizado — ${alteracoes.join("; ")}`,
+        metadados: {
+          statusAntigo: existente.status,
+          statusNovo: values.status ?? existente.status,
+          origem: "MANUAL",
+        },
+        chaveEvento: `pedido-atualizacao-${pedidoId}-${Date.now()}`,
+      })
+    }
 
     return NextResponse.json(atualizado)
   } catch (error) {

@@ -15,6 +15,8 @@ import {
   UserPlus,
   Megaphone,
   RefreshCw,
+  ShoppingCart,
+  Receipt,
 } from "lucide-react"
 
 const TIPO_ICON: Record<string, { icon: any; cor: string }> = {
@@ -31,6 +33,11 @@ const TIPO_ICON: Record<string, { icon: any; cor: string }> = {
     icon: RefreshCw,
     cor: "text-fuchsia-500 bg-fuchsia-50 dark:bg-fuchsia-950/50",
   },
+  PEDIDO_VENDA: {
+    icon: ShoppingCart,
+    cor: "text-emerald-500 bg-emerald-50 dark:bg-emerald-950/50",
+  },
+  FATURAMENTO: { icon: Receipt, cor: "text-orange-500 bg-orange-50 dark:bg-orange-950/50" },
   RESUMO_IA: { icon: FileText, cor: "text-violet-500 bg-violet-50 dark:bg-violet-950/50" },
 }
 
@@ -45,13 +52,21 @@ const TIPO_LABEL: Record<string, string> = {
   WHATSAPP: "WhatsApp",
   SOLICITACAO: "Solicitação",
   CONVERSAO_CLIENTE: "Conversão em cliente",
+  PEDIDO_VENDA: "Pedido de venda",
+  FATURAMENTO: "Faturamento",
   RESUMO_IA: "Resumo IA",
 }
 
-async function fetchTimeline(pessoaId?: string, clienteId?: string) {
-  const url = clienteId
-    ? `/api/crm/timeline?clienteId=${clienteId}`
-    : `/api/crm/timeline?pessoaId=${pessoaId}`
+async function fetchTimeline(params: {
+  pessoaId?: string
+  clienteId?: string
+  pedidoVendaId?: string
+}) {
+  const url = params.pedidoVendaId
+    ? `/api/crm/timeline?pedidoVendaId=${params.pedidoVendaId}`
+    : params.clienteId
+      ? `/api/crm/timeline?clienteId=${params.clienteId}`
+      : `/api/crm/timeline?pessoaId=${params.pessoaId}`
   const res = await fetch(url)
   if (!res.ok) throw new Error("Falha ao carregar timeline")
   return res.json()
@@ -64,18 +79,24 @@ async function fetchTimeline(pessoaId?: string, clienteId?: string) {
 export default function CrmTimeline({
   pessoaId,
   clienteId,
+  pedidoVendaId,
   onAbrirResumo,
 }: {
   pessoaId?: string
   clienteId?: string
+  pedidoVendaId?: string
   onAbrirResumo?: (resumoId: number) => void
 }) {
-  const queryKey = clienteId ? ["crm-timeline-cliente", clienteId] : ["crm-timeline", pessoaId]
+  const queryKey = pedidoVendaId
+    ? ["crm-timeline-pedido", pedidoVendaId]
+    : clienteId
+      ? ["crm-timeline-cliente", clienteId]
+      : ["crm-timeline", pessoaId]
 
   const { data: eventos, isLoading } = useQuery({
     queryKey,
-    queryFn: () => fetchTimeline(pessoaId, clienteId),
-    enabled: !!pessoaId || !!clienteId,
+    queryFn: () => fetchTimeline({ pessoaId, clienteId, pedidoVendaId }),
+    enabled: !!pessoaId || !!clienteId || !!pedidoVendaId,
     retry: 1,
   })
 
@@ -130,7 +151,7 @@ export default function CrmTimeline({
               ) : href ? (
                 <Link
                   href={href}
-                  className="text-sm text-slate-700 dark:text-slate-300 hover:text-blue-600 hover:underline dark:hover:text-blue-400"
+                  className="text-sm text-slate-700 dark:text-slate-300 hover:text-blue-600 hover:underline dark:hover:text-blue-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded"
                 >
                   {evento.descricao}
                 </Link>

@@ -28,6 +28,8 @@ import {
   BarChart3,
   Megaphone,
   Activity,
+  ShoppingCart,
+  Receipt,
 } from "lucide-react"
 
 const CrmCharts = dynamic(() => import("./charts").then((m) => m.CrmCharts), { ssr: false })
@@ -101,6 +103,8 @@ const TIPO_EVENTO_ICON: Record<string, React.ReactNode> = {
   TAREFA: <CheckCircle2 size={14} />,
   PROPOSTA: <FileText size={14} />,
   ACAO_PROSPECCAO: <Megaphone size={14} />,
+  PEDIDO_VENDA: <ShoppingCart size={14} />,
+  FATURAMENTO: <Receipt size={14} />,
 }
 
 function formatCurrency(value: number) {
@@ -115,6 +119,8 @@ function getTipoCor(tipo: string) {
     TAREFA: "text-amber-500",
     PROPOSTA: "text-cyan-500",
     ACAO_PROSPECCAO: "text-violet-500",
+    PEDIDO_VENDA: "text-emerald-500",
+    FATURAMENTO: "text-orange-500",
   }
   return map[tipo] || "text-slate-400"
 }
@@ -127,6 +133,8 @@ function getTipoBg(tipo: string) {
     TAREFA: "bg-amber-100 dark:bg-amber-950/50",
     PROPOSTA: "bg-cyan-100 dark:bg-cyan-950/50",
     ACAO_PROSPECCAO: "bg-violet-100 dark:bg-violet-950/50",
+    PEDIDO_VENDA: "bg-emerald-100 dark:bg-emerald-950/50",
+    FATURAMENTO: "bg-orange-100 dark:bg-orange-950/50",
   }
   return map[tipo] || "bg-slate-100 dark:bg-slate-800"
 }

@@ -49,6 +49,14 @@ describe("GET /api/crm/timeline", () => {
     expect(idsPessoasDoCliente).not.toHaveBeenCalled()
   })
 
+  it("lista a timeline do pedido de venda pelos metadados", async () => {
+    const res = await get("http://localhost/api/crm/timeline?pedidoVendaId=123")
+    expect(res.status).toBe(200)
+    const data = await res.json()
+    expect(data).toHaveLength(1)
+    expect(idsPessoasDoCliente).not.toHaveBeenCalled()
+  })
+
   it("lista a timeline do cliente somando as pessoas promovidas", async () => {
     const res = await get("http://localhost/api/crm/timeline?clienteId=5")
     expect(res.status).toBe(200)

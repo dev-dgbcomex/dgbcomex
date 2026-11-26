@@ -9,6 +9,7 @@ import { ArrowLeft, ShoppingCart, Loader2, Building2, Calendar } from "lucide-re
 import { toast } from "sonner"
 import { DocumentoVendaForm } from "@/components/crm/documento-venda-form"
 import { VerificarPedidosFaturados } from "@/components/crm/verificar-pedidos-faturados"
+import CrmTimeline from "@/components/crm/crm-timeline"
 import {
   statusOptions,
   STATUS_PEDIDO_VENDA,
@@ -320,6 +321,11 @@ export default function PedidoVendaDetailPage() {
           )}
         </div>
       )}
+
+      <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 mt-4">
+        <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-50 mb-3">Timeline</h2>
+        <CrmTimeline pedidoVendaId={String(pedido.id)} />
+      </div>
     </div>
   )
 }

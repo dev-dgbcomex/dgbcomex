@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { requireAuth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { idsPessoasDoCliente } from "@/lib/crm/cliente-relacionamentos"
+import { registrarEventoPedidoVenda } from "@/lib/crm/timeline-pedido"
 import { createQueryBuilder, resetDb, sqlParaTexto } from "@/test/route-db-mock"
 import { GET, POST } from "./route"
 
@@ -18,6 +19,7 @@ vi.mock("@/lib/db", () => ({
   db: { select: vi.fn(), transaction: vi.fn() },
 }))
 vi.mock("@/lib/crm/cliente-relacionamentos", () => ({ idsPessoasDoCliente: vi.fn() }))
+vi.mock("@/lib/crm/timeline-pedido", () => ({ registrarEventoPedidoVenda: vi.fn() }))
 
 const sessionAdmin = { session: { user: { id: "1", role: "ADMIN", name: "Tiago" } }, userId: 1 }
 
@@ -126,6 +128,7 @@ describe("GET /api/crm/pedidos-venda", () => {
 describe("POST /api/crm/pedidos-venda", () => {
   beforeEach(() => {
     vi.mocked(requireAuth).mockReset()
+    vi.mocked(registrarEventoPedidoVenda).mockReset()
     resetDb(db)
     vi.mocked(requireAuth).mockResolvedValue(sessionAdmin as any)
   })
@@ -159,7 +162,11 @@ describe("POST /api/crm/pedidos-venda", () => {
   })
 
   it("cria pedido com itens em transação", async () => {
-    db.select.mockReturnValueOnce(createQueryBuilder([{ id: 1, titulo: "Malha penteada" }]))
+    db.select
+      .mockReturnValueOnce(
+        createQueryBuilder([{ id: 1, titulo: "Malha penteada", empresaId: 3, clienteId: null }])
+      )
+      .mockReturnValueOnce(createQueryBuilder([]))
     const tx = {
       insert: vi.fn(() => createQueryBuilder([{ id: 20, numero: "PV-001", status: "ABERTO" }])),
     }
@@ -182,5 +189,15 @@ describe("POST /api/crm/pedidos-venda", () => {
     expect(res.status).toBe(201)
     expect(db.transaction).toHaveBeenCalled()
     expect(await res.json()).toEqual({ id: 20, numero: "PV-001", status: "ABERTO" })
+    expect(registrarEventoPedidoVenda).toHaveBeenCalledWith(
+      expect.objectContaining({
+        pedidoVendaId: 20,
+        oportunidadeId: 1,
+        empresaId: 3,
+        clienteId: null,
+        tipo: "PEDIDO_VENDA",
+        chaveEvento: "pedido-criacao-20",
+      })
+    )
   })
 })

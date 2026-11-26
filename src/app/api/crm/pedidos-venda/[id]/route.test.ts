@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { NextRequest, NextResponse } from "next/server"
 import { requireAuth } from "@/lib/auth"
 import { db } from "@/lib/db"
+import { registrarEventoPedidoVenda } from "@/lib/crm/timeline-pedido"
 import { createQueryBuilder, resetDb } from "@/test/route-db-mock"
 import { GET, PUT, DELETE } from "./route"
 
@@ -16,6 +17,7 @@ vi.mock("@/lib/notificar", () => ({
 vi.mock("@/lib/db", () => ({
   db: { select: vi.fn(), transaction: vi.fn() },
 }))
+vi.mock("@/lib/crm/timeline-pedido", () => ({ registrarEventoPedidoVenda: vi.fn() }))
 
 const sessionAdmin = { session: { user: { id: "1", role: "ADMIN", name: "Tiago" } }, userId: 1 }
 
@@ -95,6 +97,7 @@ describe("GET /api/crm/pedidos-venda/[id]", () => {
 describe("PUT /api/crm/pedidos-venda/[id]", () => {
   beforeEach(() => {
     vi.mocked(requireAuth).mockReset()
+    vi.mocked(registrarEventoPedidoVenda).mockReset()
     resetDb(db)
     vi.mocked(requireAuth).mockResolvedValue(sessionAdmin as any)
   })
@@ -136,7 +139,10 @@ describe("PUT /api/crm/pedidos-venda/[id]", () => {
   })
 
   it("atualiza capa e substitui itens em transação", async () => {
-    db.select.mockReturnValueOnce(createQueryBuilder([pedido]))
+    db.select
+      .mockReturnValueOnce(createQueryBuilder([pedido]))
+      .mockReturnValueOnce(createQueryBuilder([]))
+      .mockReturnValueOnce(createQueryBuilder([{ empresaId: 3, clienteId: null }]))
     const tx = {
       update: vi.fn(() => createQueryBuilder([{ id: 1, numero: "PV-001", status: "FATURADO" }])),
       delete: vi.fn(() => createQueryBuilder(undefined)),
@@ -159,6 +165,14 @@ describe("PUT /api/crm/pedidos-venda/[id]", () => {
     expect(res.status).toBe(200)
     expect(db.transaction).toHaveBeenCalled()
     expect(await res.json()).toEqual({ id: 1, numero: "PV-001", status: "FATURADO" })
+    expect(registrarEventoPedidoVenda).toHaveBeenCalledWith(
+      expect.objectContaining({
+        pedidoVendaId: 1,
+        oportunidadeId: 1,
+        tipo: "PEDIDO_VENDA",
+        metadados: expect.objectContaining({ statusAntigo: "ABERTO", statusNovo: "FATURADO" }),
+      })
+    )
   })
 })
 

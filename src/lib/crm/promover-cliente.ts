@@ -40,6 +40,7 @@ export async function promoverLeadParaCliente(params: {
   usuarioId?: number | null
   usuarioNome?: string | null
   notificarEquipe?: boolean
+  pedidoVendaId?: number | null
 }): Promise<ResultadoPromocao> {
   const { pessoaId } = params
 
@@ -189,6 +190,7 @@ export async function promoverLeadParaCliente(params: {
       propostas: resumo.propostas,
       visitas: resumo.visitas,
       acoes: resumo.acoes,
+      pedidoVendaId: params.pedidoVendaId ?? null,
     },
   })
 

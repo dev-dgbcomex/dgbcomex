@@ -22,6 +22,7 @@ import {
 } from "@/lib/crm/erp-espelho"
 import { processarAutomacaoCRM } from "@/lib/crm/automacoes-crm"
 import { registrarLog } from "@/lib/notificar"
+import { registrarEventoPedidoVenda } from "@/lib/crm/timeline-pedido"
 import {
   buscarFaturamentosPorPedido,
   buscarPedidoFaturadoErp,
@@ -90,7 +91,7 @@ function chavePedido(referencia: string | null | undefined): string | null {
 async function obterPedidosVinculados(
   pedidoIds?: number[],
   oportunidadeId?: number
-): Promise<Array<{ id: number; numero: string | null; referenciaExterna: string | null; oportunidadeId: number; oportunidadeTitulo: string | null; leadId: number | null; leadNome: string | null; jaConvertida: boolean }>> {
+): Promise<Array<{ id: number; numero: string | null; referenciaExterna: string | null; status: string | null; oportunidadeId: number; oportunidadeTitulo: string | null; leadId: number | null; leadNome: string | null; jaConvertida: boolean }>> {
   const condicoes = [eq(crmPedidosVenda.origem, "ERP"), isNotNull(crmPedidosVenda.referenciaExterna)]
   if (pedidoIds && pedidoIds.length > 0) {
     condicoes.push(inArray(crmPedidosVenda.id, pedidoIds))
@@ -104,6 +105,7 @@ async function obterPedidosVinculados(
       id: crmPedidosVenda.id,
       numero: crmPedidosVenda.numero,
       referenciaExterna: crmPedidosVenda.referenciaExterna,
+      status: crmPedidosVenda.status,
       oportunidadeId: crmOportunidades.id,
       oportunidadeTitulo: crmOportunidades.titulo,
       leadId: crmLeads.id,
@@ -125,6 +127,7 @@ export async function garantirPedidoErpVinculado(params: {
   id: number
   numero: string | null
   referenciaExterna: string | null
+  status: string | null
   valorPedido: number
 }> {
   const { oportunidadeId, empresa, pedido, usuarioNome } = params
@@ -138,6 +141,7 @@ export async function garantirPedidoErpVinculado(params: {
       id: crmPedidosVenda.id,
       numero: crmPedidosVenda.numero,
       referenciaExterna: crmPedidosVenda.referenciaExterna,
+      status: crmPedidosVenda.status,
       oportunidadeId: crmPedidosVenda.oportunidadeId,
     })
     .from(crmPedidosVenda)
@@ -155,9 +159,10 @@ export async function garantirPedidoErpVinculado(params: {
     }
     return {
       id: existente.id,
-      numero: existente.numero,
-      referenciaExterna: existente.referenciaExterna,
-      valorPedido: await somaItensPedido(existente.id),
+        numero: existente.numero,
+        referenciaExterna: existente.referenciaExterna,
+        status: existente.status,
+        valorPedido: await somaItensPedido(existente.id),
     }
   }
 
@@ -173,6 +178,7 @@ export async function garantirPedidoErpVinculado(params: {
     id: criado.id,
     numero: criado.numero,
     referenciaExterna: referencia,
+    status: criado.status,
     valorPedido: criado.total,
   }
 }
@@ -331,6 +337,32 @@ export async function criarOuAtualizarFaturamento(
     }
   }
 
+  const registrarEventosVinculo = async (faturamentoId: number) => {
+    const [vinculo] = await db
+      .select({ empresaId: crmOportunidades.empresaId, clienteId: crmOportunidades.clienteId })
+      .from(crmOportunidades)
+      .where(eq(crmOportunidades.id, oportunidadeId))
+      .limit(1)
+    for (const id of ids) {
+      await registrarEventoPedidoVenda({
+        pedidoVendaId: id,
+        oportunidadeId,
+        empresaId: vinculo?.empresaId,
+        clienteId: vinculo?.clienteId,
+        tipo: "FATURAMENTO",
+        descricao: `Nota ${nota.numero ?? "—"} vinculada ao pedido e registrada como faturamento`,
+        metadados: {
+          faturamentoId,
+          notaNumero: nota.numero,
+          pedidoVendaIds: ids,
+          statusNovo: "EMITIDO",
+          origem: "ERP",
+        },
+        chaveEvento: `faturamento-vinculo-${faturamentoId}-${id}`,
+      })
+    }
+  }
+
   if (existente[0]) {
     await db
       .update(crmFaturamentos)
@@ -364,6 +396,7 @@ export async function criarOuAtualizarFaturamento(
       usuarioNome,
       dados: { referencia, pedidoVendaIds: ids, itens: itens.length },
     })
+    await registrarEventosVinculo(existente[0].id)
     return existente[0].id
   }
 
@@ -398,6 +431,7 @@ export async function criarOuAtualizarFaturamento(
     usuarioNome,
     dados: { referencia, oportunidadeId, pedidoVendaIds: ids, itens: itens.length },
   })
+  await registrarEventosVinculo(criado.id)
   return criado.id
 }
 
@@ -429,7 +463,11 @@ export async function aplicarVerificacaoPedidoFaturado(
   for (const oportunidadeIdAtual of oportunidadesIds) {
     const pedidosOportunidade = pedidos.filter((p) => p.oportunidadeId === oportunidadeIdAtual)
     const [oportunidade] = await db
-      .select({ id: crmOportunidades.id, empresaId: crmOportunidades.empresaId })
+      .select({
+        id: crmOportunidades.id,
+        empresaId: crmOportunidades.empresaId,
+        clienteId: crmOportunidades.clienteId,
+      })
       .from(crmOportunidades)
       .where(eq(crmOportunidades.id, oportunidadeIdAtual))
       .limit(1)
@@ -513,6 +551,24 @@ export async function aplicarVerificacaoPedidoFaturado(
           .update(crmPedidosVenda)
           .set({ status: statusPedidoFinal, updatedAt: new Date() })
           .where(eq(crmPedidosVenda.id, pedido.id))
+        if (statusPedidoFinal !== pedido.status) {
+          await registrarEventoPedidoVenda({
+            pedidoVendaId: pedido.id,
+            oportunidadeId: oportunidadeIdAtual,
+            empresaId: oportunidade.empresaId,
+            clienteId: oportunidade.clienteId,
+            tipo: "PEDIDO_VENDA",
+            descricao: `Pedido ${pedido.numero ?? pedido.id} alterado de ${pedido.status ?? "—"} para ${statusPedidoFinal}`,
+            metadados: {
+              statusAntigo: pedido.status,
+              statusNovo: statusPedidoFinal,
+              faturamentoId,
+              notaNumero: nota?.numero ?? null,
+              origem: "ERP",
+            },
+            chaveEvento: `pedido-status-${pedido.id}-${statusPedidoFinal}-${faturamentoId ?? "sem-nota"}`,
+          })
+        }
       }
 
       let conversaoLead: AplicarPedidoResultado["conversaoLead"] = { ok: false }
@@ -532,6 +588,7 @@ export async function aplicarVerificacaoPedidoFaturado(
               statusNovo: "CONVERTIDO_CLIENTE",
               decisao: "CONVERTER",
               autor,
+              contexto: { pedidoVendaId: pedido.id },
             })
             conversaoLead = { ok: true }
           } catch (erro) {
@@ -591,6 +648,7 @@ export async function aplicarVerificacaoPedidoFaturado(
       valorEstimado: valorOportunidade,
       probabilidade: 100,
       autor,
+      contexto: { pedidoVendaIds: resultados.map((item) => item.pedidoId) },
     })
   }
 

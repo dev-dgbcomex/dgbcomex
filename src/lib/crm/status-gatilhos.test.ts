@@ -48,7 +48,11 @@ describe("executarGatilhos", () => {
           { id: 1, statusId: 7, acao: "CRIAR_PEDIDO_VENDA", parametros: {}, ativo: true },
         ])
       )
-    vi.mocked(db.insert).mockReturnValueOnce(createQueryBuilder([{ id: 33 }]))
+      .mockReturnValueOnce(createQueryBuilder([]))
+      .mockReturnValueOnce(createQueryBuilder([{ empresaId: 4, clienteId: null }]))
+    vi.mocked(db.insert)
+      .mockReturnValueOnce(createQueryBuilder([{ id: 33 }]))
+      .mockReturnValueOnce(createQueryBuilder(undefined))
 
     const resultado = await executarGatilhos(contexto)
 

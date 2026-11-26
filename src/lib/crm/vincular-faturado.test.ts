@@ -251,10 +251,12 @@ describe("aplicarVinculacaoFaturado", () => {
       id: 10,
       numero: "00007046",
       referenciaExterna: "13/00007046",
+      status: "ABERTO",
       valorPedido: 9162.37,
     })
     vi.mocked(db.select)
-      .mockReturnValueOnce(createQueryBuilder([{ id: 14, empresaId: 17 }]))
+      .mockReturnValueOnce(createQueryBuilder([{ id: 14, empresaId: 17, clienteId: null }]))
+      .mockReturnValueOnce(createQueryBuilder([]))
       .mockReturnValueOnce(createQueryBuilder([]))
     vi.mocked(recalcularValorOportunidade).mockResolvedValue(9162.37)
     vi.mocked(criarOuAtualizarFaturamento).mockResolvedValue(100)
@@ -316,16 +318,19 @@ describe("aplicarVinculacaoFaturado", () => {
         id: 10,
         numero: "00007046",
         referenciaExterna: "13/00007046",
+        status: "ABERTO",
         valorPedido: 9162.37,
       })
       .mockResolvedValueOnce({
         id: 11,
         numero: "00007047",
         referenciaExterna: "13/00007047",
+        status: "ABERTO",
         valorPedido: 1000,
       })
     vi.mocked(db.select)
-      .mockReturnValueOnce(createQueryBuilder([{ id: 14, empresaId: null }]))
+      .mockReturnValueOnce(createQueryBuilder([{ id: 14, empresaId: null, clienteId: 9 }]))
+      .mockReturnValueOnce(createQueryBuilder([]))
       .mockReturnValueOnce(createQueryBuilder([]))
     vi.mocked(recalcularValorOportunidade).mockResolvedValue(0)
     vi.mocked(criarOuAtualizarFaturamento).mockResolvedValue(101)

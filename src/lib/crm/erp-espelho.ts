@@ -21,6 +21,7 @@ import {
 } from "@/lib/erp/tipos"
 import { registrarLog } from "@/lib/log"
 import { UNIDADES_MEDIDA, somarValoresTotais } from "@/lib/crm/documento-venda"
+import { registrarEventoPedidoVenda } from "@/lib/crm/timeline-pedido"
 
 type ItemEspelho = {
   produto: string
@@ -200,6 +201,19 @@ async function atualizarPedido(pedido: CrmPedidoVenda): Promise<boolean> {
     dados: { itens: itens.length },
   })
 
+  await registrarEventoPedidoVenda({
+    pedidoVendaId: pedido.id,
+    oportunidadeId: pedido.oportunidadeId,
+    tipo: "PEDIDO_VENDA",
+    descricao: `Pedido ${documento.pedido ?? pedido.numero ?? pedido.id} atualizado pelo ERP — status ${registro.status} → ${valores.status}, ${itens.length} item(ns)`,
+    metadados: {
+      statusAntigo: registro.status,
+      statusNovo: valores.status,
+      origem: "ERP",
+    },
+    chaveEvento: `pedido-sincronizacao-${pedido.id}-${valores.updatedAt.getTime()}`,
+  })
+
   return true
 }
 
@@ -210,7 +224,7 @@ export async function criarPedidoEspelho(params: {
   pedidoDetalhe?: string
   documento?: PedidoErp
   usuarioNome?: string | null
-}): Promise<{ id: number; numero: string | null; total: number }> {
+}): Promise<{ id: number; numero: string | null; status: string | null; total: number }> {
   const { oportunidadeId, empresa, pedidoReferencia, pedidoDetalhe, documento: documentoFornecido, usuarioNome } = params
   const pedidoParaDetalhe = pedidoDetalhe ?? pedidoReferencia
 
@@ -279,7 +293,16 @@ export async function criarPedidoEspelho(params: {
     dados: { referencia, clienteNome: pedidoErp.cliente_nome, itens: itensPedido.length },
   })
 
-  return { id: created.id, numero: pedidoReferencia, total }
+  await registrarEventoPedidoVenda({
+    pedidoVendaId: created.id,
+    oportunidadeId,
+    tipo: "PEDIDO_VENDA",
+    descricao: `Pedido do ERP ${referencia} vinculado à oportunidade com ${itensPedido.length} item(ns)`,
+    metadados: { statusNovo: created.status, origem: "ERP", referenciaExterna: referencia },
+    chaveEvento: `pedido-vinculo-erp-${created.id}`,
+  })
+
+  return { id: created.id, numero: pedidoReferencia, status: created.status ?? null, total }
 }
 
 async function atualizarFaturamento(faturamento: CrmFaturamento): Promise<boolean> {

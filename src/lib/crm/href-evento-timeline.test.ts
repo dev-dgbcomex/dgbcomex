@@ -38,6 +38,24 @@ describe("hrefEventoTimeline", () => {
     )
   })
 
+  it("abre o pedido de venda a partir do evento de timeline", () => {
+    expect(
+      hrefEventoTimeline({ tipo: "PEDIDO_VENDA", metadados: { pedidoVendaId: 123 } })
+    ).toBe("/comercial/crm/pedidos-venda/123")
+  })
+
+  it("abre o faturamento vinculado e faz fallback para o pedido", () => {
+    expect(
+      hrefEventoTimeline({
+        tipo: "FATURAMENTO",
+        metadados: { pedidoVendaId: 123, faturamentoId: 45 },
+      })
+    ).toBe("/comercial/crm/faturamentos/45")
+    expect(
+      hrefEventoTimeline({ tipo: "FATURAMENTO", metadados: { pedidoVendaId: 123 } })
+    ).toBe("/comercial/crm/pedidos-venda/123")
+  })
+
   it("não gera link quebrado sem metadados ou com tipo sem rota", () => {
     expect(hrefEventoTimeline({ id: 214, tipo: "ACAO_PROSPECCAO" })).toBeNull()
     expect(hrefEventoTimeline({ tipo: "WHATSAPP", metadados: { whatsappId: 5 } })).toBeNull()

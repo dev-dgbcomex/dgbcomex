@@ -73,6 +73,16 @@ export function hrefEventoTimeline(evento: EventoTimelineParaHref): string | nul
       const id = idMetadado(metadados, "clienteId")
       return id ? `/comercial/clientes/${id}` : null
     }
+    case "PEDIDO_VENDA": {
+      const id = idMetadado(metadados, "pedidoVendaId")
+      return id ? `/comercial/crm/pedidos-venda/${id}` : null
+    }
+    case "FATURAMENTO": {
+      const idFaturamento = idMetadado(metadados, "faturamentoId")
+      if (idFaturamento) return `/comercial/crm/faturamentos/${idFaturamento}`
+      const idPedido = idMetadado(metadados, "pedidoVendaId")
+      return idPedido ? `/comercial/crm/pedidos-venda/${idPedido}` : null
+    }
     default:
       return null
   }
