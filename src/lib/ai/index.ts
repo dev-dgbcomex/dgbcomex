@@ -36,6 +36,12 @@ export interface ChaveIA {
   ultimaFalha?: Date | string | null
 }
 
+export interface OpcoesChamarIA {
+  temperatura?: number
+  maxTokens?: number
+  aceitarRaciocinio?: boolean
+}
+
 export const BASE_URLS: Record<ProvedorIA, string> = {
   groq: "https://api.groq.com/openai/v1",
   openai: "https://api.openai.com/v1",
@@ -159,7 +165,7 @@ function montarMensagens(messages: MensagemIA[]): MensagemIA[] {
 async function chamarProvedor(
   chave: ChaveReserva,
   messages: MensagemIA[],
-  opcoes: { temperatura?: number; maxTokens?: number }
+  opcoes: OpcoesChamarIA
 ): Promise<string> {
   const temperatura = opcoes.temperatura ?? 0.7
   const maxTokens = opcoes.maxTokens ?? 300
@@ -248,7 +254,8 @@ async function chamarProvedor(
     throw new Error(`HTTP ${res.status}${errBody ? `: ${errBody.slice(0, 300)}` : ""}`)
   }
   const data = await res.json()
-  const texto = data.choices?.[0]?.message?.content
+  const mensagem = data.choices?.[0]?.message
+  const texto = mensagem?.content || (opcoes.aceitarRaciocinio ? mensagem?.reasoning_content : undefined)
   return texto || MSG_ERRO_TECNICO
 }
 
@@ -282,9 +289,60 @@ async function carregarChavesEnvFallback(): Promise<ChaveReserva[]> {
   return []
 }
 
+async function carregarChavesPadrao(): Promise<ChaveReserva[]> {
+  const chavesEnv = await carregarChavesEnvFallback()
+  const chavesBanco = await buscarChavesAtivas().catch(() => [])
+  return [...chavesBanco, ...chavesEnv]
+}
+
+type EstadoChamadaIA = {
+  ultimoErro: unknown
+  ultimoStatus?: number
+  ultimoCodigo?: CodigoErroIA
+  tentativas: number
+}
+
+async function tentarChaves(
+  chaves: ChaveReserva[],
+  mensagens: MensagemIA[],
+  opcoes: OpcoesChamarIA,
+  estado: EstadoChamadaIA
+): Promise<ResultadoIA | null> {
+  for (const chave of chaves) {
+    estado.tentativas++
+    try {
+      const conteudo = await chamarProvedor(chave, mensagens, opcoes)
+
+      if (isErroTecnico(conteudo)) {
+        estado.ultimoErro = new Error("Provedor retornou resposta vazia")
+        estado.ultimoStatus = undefined
+        estado.ultimoCodigo = undefined
+        await marcarFalha(chave.id)
+        continue
+      }
+
+      if (chave.id > 0) await resetarFalha(chave.id)
+      return {
+        conteudo,
+        provedor: chave.prov,
+        modelo: chave.modelo,
+        nomeChave: chave.nome,
+        tentativas: estado.tentativas,
+      }
+    } catch (err) {
+      estado.ultimoErro = err
+      estado.ultimoStatus = statusDoErro(err)
+      estado.ultimoCodigo = codigoDoErro(estado.ultimoStatus)
+      console.error(`[IA] Provedor ${chave.prov} (${chave.nome}) falhou:`, err)
+      if (chave.id > 0 && !estado.ultimoCodigo) await marcarFalha(chave.id)
+    }
+  }
+  return null
+}
+
 export async function chamarIA(
   messages: MensagemIA[],
-  opcoes: { temperatura?: number; maxTokens?: number } = {},
+  opcoes: OpcoesChamarIA = {},
   chaveId?: number
 ): Promise<ResultadoIA> {
   let chaves: ChaveReserva[] = []
@@ -304,9 +362,7 @@ export async function chamarIA(
     }
     chaves = [mapearChaveReserva(r)]
   } else {
-    const chavesEnv = await carregarChavesEnvFallback()
-    const chavesBanco = await buscarChavesAtivas().catch(() => [])
-    chaves = [...chavesBanco, ...chavesEnv]
+    chaves = await carregarChavesPadrao()
   }
 
   if (chaves.length === 0) {
@@ -322,51 +378,27 @@ export async function chamarIA(
   }
 
   const mensagens = montarMensagens(messages)
-  let ultimoErro: unknown = null
-  let ultimoStatus: number | undefined
-  let ultimoCodigo: CodigoErroIA | undefined
-  let tentativas = 0
+  const estado: EstadoChamadaIA = { ultimoErro: null, tentativas: 0 }
+  let resultado = await tentarChaves(chaves, mensagens, opcoes, estado)
 
-  for (const chave of chaves) {
-    tentativas++
-    try {
-      const conteudo = await chamarProvedor(chave, mensagens, opcoes)
-
-      if (isErroTecnico(conteudo)) {
-        ultimoErro = new Error("Provedor retornou erro tecnico")
-        ultimoStatus = undefined
-        ultimoCodigo = undefined
-        await marcarFalha(chave.id)
-        continue
-      }
-
-      if (chave.id > 0) await resetarFalha(chave.id)
-      return {
-        conteudo,
-        provedor: chave.prov,
-        modelo: chave.modelo,
-        nomeChave: chave.nome,
-        tentativas,
-      }
-    } catch (err) {
-      ultimoErro = err
-      ultimoStatus = statusDoErro(err)
-      ultimoCodigo = codigoDoErro(ultimoStatus)
-      console.error(`[IA] Provedor ${chave.prov} (${chave.nome}) falhou:`, err)
-      if (chave.id > 0 && !ultimoCodigo) await marcarFalha(chave.id)
-    }
+  if (!resultado && chaveId !== undefined && estado.ultimoCodigo !== "PAYLOAD_TOO_LARGE") {
+    const jaTentadas = new Set(chaves.map((chave) => chave.id))
+    const fallback = (await carregarChavesPadrao()).filter((chave) => !jaTentadas.has(chave.id))
+    resultado = await tentarChaves(fallback, mensagens, opcoes, estado)
   }
 
-  console.error("[IA] Todos os provedores falharam:", ultimoErro)
+  if (resultado) return resultado
+
+  console.error("[IA] Todos os provedores falharam:", estado.ultimoErro)
   return {
     conteudo: MSG_ERRO_TECNICO,
     provedor: "nenhum",
     modelo: "",
     nomeChave: "",
-    tentativas,
-    erro: ultimoErro ? String(ultimoErro) : "todos os provedores falharam",
-    status: ultimoStatus,
-    codigo: ultimoCodigo,
+    tentativas: estado.tentativas,
+    erro: estado.ultimoErro ? String(estado.ultimoErro) : "todos os provedores falharam",
+    status: estado.ultimoStatus,
+    codigo: estado.ultimoCodigo,
   }
 }
 

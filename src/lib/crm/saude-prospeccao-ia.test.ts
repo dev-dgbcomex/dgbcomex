@@ -40,7 +40,7 @@ describe("chamarAnaliseComConsultas", () => {
       ],
     })
 
-    expect(chamarIA).toHaveBeenNthCalledWith(1, expect.any(Array), expect.objectContaining({ temperatura: 0, maxTokens: 80 }), undefined)
+    expect(chamarIA).toHaveBeenNthCalledWith(1, expect.any(Array), expect.objectContaining({ temperatura: 0, maxTokens: 512, aceitarRaciocinio: true }), undefined)
     expect(chamarIA).toHaveBeenNthCalledWith(2, expect.any(Array), expect.objectContaining({ temperatura: 0, maxTokens: 700 }), undefined)
     expect(resultado.conteudo).toContain("Diagnóstico")
     expect(resultado.resultado.provedor).toBe("groq")
@@ -71,7 +71,7 @@ describe("chamarAnaliseComConsultas", () => {
       chaveId: 42,
     })
 
-    expect(chamarIA).toHaveBeenNthCalledWith(1, expect.any(Array), expect.objectContaining({ maxTokens: 80 }), 42)
+    expect(chamarIA).toHaveBeenNthCalledWith(1, expect.any(Array), expect.objectContaining({ maxTokens: 512 }), 42)
     expect(chamarIA).toHaveBeenNthCalledWith(2, expect.any(Array), expect.objectContaining({ maxTokens: 700 }), 42)
     expect(resultado.conteudo).toContain("Diagnóstico")
     expect(resultado.resultado.provedor).toBe("openai_compatible")

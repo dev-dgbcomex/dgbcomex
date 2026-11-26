@@ -962,6 +962,7 @@ describe("saudeProspeccaoLeadsInfo", () => {
     expect(saudeProspeccaoLeadsInfo.ia.rules?.join(" ")).toMatch(/incluídos e resumidos/i)
     expect(saudeProspeccaoLeadsInfo.ia.rules?.join(" ")).toMatch(/chamada curta/i)
     expect(saudeProspeccaoLeadsInfo.ia.rules?.join(" ")).toMatch(/700 tokens/i)
+    expect(saudeProspeccaoLeadsInfo.ia.rules?.join(" ")).toMatch(/responder sem texto/i)
     expect(saudeProspeccaoLeadsInfo.ia.rules?.join(" ")).toMatch(/HTTP 413/i)
     expect(saudeProspeccaoLeadsInfo.ia.rules?.join(" ")).toMatch(/temperatura do modelo é 0/i)
     expect(

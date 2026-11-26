@@ -1979,6 +1979,7 @@ export const saudeProspeccaoLeadsInfo = {
       "O botão 'Ver envio à IA' mostra o payload e as mensagens compactadas que serão enviadas ao provedor, sem chamar a IA, e nunca exibe a chave secreta da API.",
       "Quando há muitos registros, os mais críticos são enviados individualmente e os demais viram contagens agregadas; a prévia informa quantos registros foram incluídos e resumidos.",
       "A decisão sobre consultas extras usa uma chamada curta; a resposta final mantém 700 tokens e o payload é limitado para não ultrapassar o teto por requisição do provedor.",
+      "Se o provedor configurado responder sem texto, a análise cai automaticamente para o pool padrão de IA; somente HTTP 413 não dispara esse fallback.",
       "Se o provedor responder que os dados são grandes demais (HTTP 413), a tela orienta a reduzir filtros; essa falha não é contabilizada como falha da chave de IA.",
       "A temperatura do modelo é 0; QUENTE, MORNO e FRIO são enviados como dados da classificação de temperatura do sistema.",
       "A classificação enviada à IA segue Engajados, AEC ou BEC, com prevalência de Engajamento acima de 30%.",

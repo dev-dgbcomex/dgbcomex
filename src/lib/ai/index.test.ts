@@ -492,3 +492,62 @@ describe("chamarIA — payload grande (HTTP 413)", () => {
     expect(db.update).not.toHaveBeenCalled()
   })
 })
+
+describe("chamarIA — chave forçada com resposta vazia", () => {
+  const chaveVazia = {
+    id: 7,
+    provedor: "openai_compatible",
+    nome: "NVIDIA Nemotron",
+    chaveApi: "nvidia-chave",
+    urlBase: "https://integrate.api.nvidia.com/v1",
+    modelo: "nvidia/nemotron-3.5-super-vl-120b-a12b",
+    ordem: 1,
+    ativo: true,
+    failCount: 0,
+  }
+
+  it("usa o fallback quando a chave forçada responde 200 sem content", async () => {
+    process.env.GROQ_API_KEY = "env-groq-chave"
+    vi.mocked(db.update).mockClear()
+    db.select = vi.fn(() => createQueryBuilder([chaveVazia]))
+
+    const fetchMock = vi.fn((_url: string, init: RequestInit) => {
+      const headers = init.headers as Record<string, string>
+      if (headers.Authorization === "Bearer nvidia-chave") {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: vi.fn().mockResolvedValue({ choices: [{ message: { reasoning_content: "PRONTO" } }] }),
+        })
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: vi.fn().mockResolvedValue({ choices: [{ message: { content: "resposta da env" } }] }),
+      })
+    })
+    vi.stubGlobal("fetch", fetchMock)
+
+    const res = await chamarIA(MENSAGENS, {}, chaveVazia.id)
+
+    expect(res.nomeChave).toBe("Groq (env)")
+    expect(res.conteudo).toBe("resposta da env")
+    expect(res.tentativas).toBe(2)
+    expect(db.update).toHaveBeenCalledTimes(1)
+  })
+
+  it("aceita reasoning_content apenas quando solicitado", async () => {
+    process.env.GROQ_API_KEY = "env-groq-chave"
+    db.select = vi.fn(() => createQueryBuilder([]))
+    const fetchMock = mockFetch(200, {
+      choices: [{ message: { reasoning_content: "CONSULTAR: oportunidades|cliente|1|10" } }],
+    })
+    vi.stubGlobal("fetch", fetchMock)
+
+    const semRaciocinio = await chamarIA(MENSAGENS)
+    const comRaciocinio = await chamarIA(MENSAGENS, { aceitarRaciocinio: true })
+
+    expect(semRaciocinio.provedor).toBe("nenhum")
+    expect(comRaciocinio.conteudo).toBe("CONSULTAR: oportunidades|cliente|1|10")
+  })
+})

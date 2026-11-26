@@ -55,7 +55,7 @@ export type ConsultaCurada = {
 export type ResultadoConsultaCurada = ConsultaCurada & { dados: unknown[] }
 export type CompactacaoDadosIA = { total: number; incluidos: number; omitidos: number }
 
-const TOKENS_DECISAO = 80
+const TOKENS_DECISAO = 512
 const TOKENS_ANALISE = 700
 const LIMITE_DADOS_IA_CHARS = 14_000
 const LIMITE_HISTORICO_IA_CHARS = 6_000
@@ -512,7 +512,7 @@ export async function chamarAnaliseComConsultas({
   for (let rodada = 0; rodada < maxConsultas; rodada++) {
     decisao = await chamarIA(
       mensagensDecisao,
-      { temperatura: 0, maxTokens: TOKENS_DECISAO },
+      { temperatura: 0, maxTokens: TOKENS_DECISAO, aceitarRaciocinio: true },
       chaveForcada ?? undefined
     )
     if (decisao.provedor === "nenhum") break
