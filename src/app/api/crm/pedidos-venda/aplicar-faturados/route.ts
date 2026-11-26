@@ -7,6 +7,7 @@ type CorpoAplicar = {
   pedidoIds?: number[]
   oportunidadeId?: number
   statusPedido?: "FATURADO" | "PARCIAL"
+  statusPorPedido?: Record<string, "FATURADO" | "PARCIAL">
   aplicar?: boolean
 }
 
@@ -27,11 +28,19 @@ export async function POST(req: NextRequest) {
       ? body.pedidoIds.map((id) => Number(id)).filter((id) => Number.isFinite(id))
       : undefined
     const oportunidadeId = body.oportunidadeId ? Number(body.oportunidadeId) : undefined
+    const statusPorPedido = body.statusPorPedido
+      ? Object.fromEntries(
+          Object.entries(body.statusPorPedido)
+            .map(([id, status]) => [Number(id), status] as const)
+            .filter(([id, status]) => Number.isFinite(id) && (status === "FATURADO" || status === "PARCIAL"))
+        )
+      : undefined
 
     const resultado = await aplicarVerificacaoPedidoFaturado({
       pedidoIds,
       oportunidadeId,
       statusPedido: body.statusPedido,
+      statusPorPedido,
       autor: {
         id:
           typeof auth.session.user.id === "number"

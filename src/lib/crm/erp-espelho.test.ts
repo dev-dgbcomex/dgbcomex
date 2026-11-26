@@ -4,7 +4,7 @@ import { db } from "@/lib/db"
 import { requisitarErp } from "@/lib/erp/cliente"
 import { registrarLog } from "@/lib/log"
 import { createQueryBuilder } from "@/test/route-db-mock"
-import { atualizarEspelhosErp } from "./erp-espelho"
+import { atualizarEspelhosErp, statusPedidoSincronizado } from "./erp-espelho"
 
 vi.mock("@/lib/db", () => ({
   db: {
@@ -112,6 +112,7 @@ describe("atualizarEspelhosErp", () => {
     vi.mocked(tx.update).mockClear()
     vi.mocked(tx.delete).mockClear()
     vi.mocked(tx.insert).mockClear()
+    vi.mocked(transacao.set).mockClear()
     vi.mocked(transacao.values).mockClear()
   })
 
@@ -164,5 +165,58 @@ describe("atualizarEspelhosErp", () => {
 
     expect(tx.update).not.toHaveBeenCalled()
     expect(resultado).toEqual({ verificados: 1, atualizados: 0, falhas: 1 })
+  })
+
+  it("preserva FATURADO quando o ERP não cancelou o pedido", async () => {
+    prepararBanco({ ...pedido, status: "FATURADO" })
+    vi.mocked(requisitarErp).mockResolvedValue(documento as any)
+
+    await atualizarEspelhosErp("PEDIDO")
+
+    const valores = vi.mocked(transacao.set).mock.calls[0][0] as any
+    expect(valores.status).toBe("FATURADO")
+  })
+
+  it("preserva PARCIAL quando o ERP não cancelou o pedido", async () => {
+    prepararBanco({ ...pedido, status: "PARCIAL" })
+    vi.mocked(requisitarErp).mockResolvedValue(documento as any)
+
+    await atualizarEspelhosErp("PEDIDO")
+
+    const valores = vi.mocked(transacao.set).mock.calls[0][0] as any
+    expect(valores.status).toBe("PARCIAL")
+  })
+
+  it("só altera para CANCELADO quando o ERP cancelou o pedido", async () => {
+    prepararBanco({ ...pedido, status: "FATURADO" })
+    vi.mocked(requisitarErp).mockResolvedValue({ ...documento, status: "3" } as any)
+
+    await atualizarEspelhosErp("PEDIDO")
+
+    const valores = vi.mocked(transacao.set).mock.calls[0][0] as any
+    expect(valores.status).toBe("CANCELADO")
+  })
+
+  it("mantém o status atual quando já está sincronizado", async () => {
+    const igual = {
+      ...pedido,
+      status: "FATURADO",
+      observacao: "Pedido vinculado do ERP (13/00006979) · cliente LINOFORTE MOVEIS · status ERP: Aprovado",
+    }
+    prepararBanco(igual, itensAtuaisIguais)
+    vi.mocked(requisitarErp).mockResolvedValue(documento as any)
+
+    const resultado = await atualizarEspelhosErp("PEDIDO")
+
+    expect(tx.update).not.toHaveBeenCalled()
+    expect(resultado).toEqual({ verificados: 1, atualizados: 0, falhas: 0 })
+  })
+
+  it("mapeia status sincronizado sem depender do banco", () => {
+    expect(statusPedidoSincronizado("2", "FATURADO")).toBe("FATURADO")
+    expect(statusPedidoSincronizado(null, "PARCIAL")).toBe("PARCIAL")
+    expect(statusPedidoSincronizado("3", "FATURADO")).toBe("CANCELADO")
+    expect(statusPedidoSincronizado("2", "CANCELADO")).toBe("CANCELADO")
+    expect(statusPedidoSincronizado("2", "ABERTO")).toBe("ABERTO")
   })
 })

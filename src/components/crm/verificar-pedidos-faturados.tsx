@@ -53,11 +53,15 @@ export function VerificarPedidosFaturados({
   const [carregando, setCarregando] = useState(false)
   const [aplicando, setAplicando] = useState(false)
   const [preview, setPreview] = useState<PreviewResultado | null>(null)
-  const [statusEscolhido, setStatusEscolhido] = useState<"FATURADO" | "PARCIAL">("PARCIAL")
+  const [statusPorPedido, setStatusPorPedido] = useState<Record<number, "FATURADO" | "PARCIAL">>({})
+
+  const statusEscolhidoPorPedido = (pedido: PedidoPrevio) =>
+    statusPorPedido[pedido.pedidoId] ?? pedido.statusSugerido ?? "PARCIAL"
 
   async function verificar() {
     setCarregando(true)
     setPreview(null)
+    setStatusPorPedido({})
     try {
       const ids = pedidoIds
       ? pedidoIds
@@ -91,7 +95,11 @@ export function VerificarPedidosFaturados({
           pedidoIds: preview.pedidos.map((p) => p.pedidoId),
           oportunidadeId,
           aplicar: true,
-          statusPedido: statusEscolhido,
+          statusPorPedido: Object.fromEntries(
+            (preview?.pedidos ?? [])
+              .filter((p) => p.statusSugerido)
+              .map((p) => [p.pedidoId, statusEscolhidoPorPedido(p)])
+          ),
         }),
       })
       const dados = await resposta.json()
@@ -211,23 +219,45 @@ export function VerificarPedidosFaturados({
                                 ) : p.statusSugerido ? (
                                   <div className="flex items-center gap-2">
                                     <input
+                                      id={`status-${p.pedidoId}-faturado`}
                                       type="radio"
                                       name={`status-${p.pedidoId}`}
                                       value="FATURADO"
-                                      checked={statusEscolhido === "FATURADO"}
-                                      onChange={() => setStatusEscolhido("FATURADO")}
+                                      checked={statusEscolhidoPorPedido(p) === "FATURADO"}
+                                      onChange={() =>
+                                        setStatusPorPedido((atual) => ({
+                                          ...atual,
+                                          [p.pedidoId]: "FATURADO",
+                                        }))
+                                      }
                                       className="rounded-slate-700 focus:ring-slate-500"
                                     />
-                                    <label className="text-xs text-slate-600 dark:text-slate-400">Faturado</label>
+                                    <label
+                                      htmlFor={`status-${p.pedidoId}-faturado`}
+                                      className="text-xs text-slate-600 dark:text-slate-400"
+                                    >
+                                      Faturado
+                                    </label>
                                     <input
+                                      id={`status-${p.pedidoId}-parcial`}
                                       type="radio"
                                       name={`status-${p.pedidoId}`}
                                       value="PARCIAL"
-                                      checked={statusEscolhido === "PARCIAL"}
-                                      onChange={() => setStatusEscolhido("PARCIAL")}
+                                      checked={statusEscolhidoPorPedido(p) === "PARCIAL"}
+                                      onChange={() =>
+                                        setStatusPorPedido((atual) => ({
+                                          ...atual,
+                                          [p.pedidoId]: "PARCIAL",
+                                        }))
+                                      }
                                       className="ml-2 rounded-slate-700 focus:ring-slate-500"
                                     />
-                                    <label className="text-xs text-slate-600 dark:text-slate-400">Parcial</label>
+                                    <label
+                                      htmlFor={`status-${p.pedidoId}-parcial`}
+                                      className="text-xs text-slate-600 dark:text-slate-400"
+                                    >
+                                      Parcial
+                                    </label>
                                     <span className="ml-2 text-[10px] text-slate-400">
                                       Sugestão: {p.statusSugerido}
                                     </span>

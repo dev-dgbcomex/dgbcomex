@@ -78,6 +78,21 @@ export function itensParaCrmFaturamento(itens: DocumentoErpItem[] | undefined): 
     })
   }
 
+export function statusPedidoSincronizado(
+  statusErp: string | null | undefined,
+  statusAtual: string | null | undefined
+): string {
+  if (statusErp === "3") return "CANCELADO"
+  if (
+    statusAtual === "FATURADO" ||
+    statusAtual === "PARCIAL" ||
+    statusAtual === "CANCELADO"
+  ) {
+    return statusAtual
+  }
+  return "ABERTO"
+}
+
 function texto(valor: unknown): string {
   return valor == null ? "" : String(valor).trim()
 }
@@ -148,7 +163,7 @@ async function atualizarPedido(pedido: CrmPedidoVenda): Promise<boolean> {
   const valores = {
     numero: documento.pedido ?? null,
     dataEmissao: documento.data_pedido || null,
-    status: statusPedidoParaCrm(statusErp),
+    status: statusPedidoSincronizado(statusErp, registro.status),
     observacao,
     updatedAt: new Date(),
   }

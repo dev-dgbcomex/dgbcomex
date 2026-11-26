@@ -68,11 +68,35 @@ describe("POST /api/crm/pedidos-venda/aplicar-faturados", () => {
       pedidoIds: undefined,
       oportunidadeId: 10,
       statusPedido: undefined,
+      statusPorPedido: undefined,
       autor: { id: 1, nome: "Tiago" },
     })
     expect(body.valorOportunidade).toBe(5200)
     expect(body.oportunidades).toEqual([{ oportunidadeId: 10, valorEstimado: 5200 }])
     expect(body.pedidos[0].status).toBe("FATURADO")
+  })
+
+  it("normaliza o status escolhido por pedido", async () => {
+    vi.mocked(aplicarVerificacaoPedidoFaturado).mockResolvedValue({
+      pedidos: [],
+      oportunidadeId: null,
+      valorOportunidade: 0,
+      oportunidades: [],
+    })
+
+    const res = await post({
+      aplicar: true,
+      statusPorPedido: { "12": "FATURADO", "13": "PARCIAL", "14": "INVALIDO" },
+    })
+
+    expect(res.status).toBe(200)
+    expect(vi.mocked(aplicarVerificacaoPedidoFaturado)).toHaveBeenCalledWith({
+      pedidoIds: undefined,
+      oportunidadeId: undefined,
+      statusPedido: undefined,
+      statusPorPedido: { 12: "FATURADO", 13: "PARCIAL" },
+      autor: { id: 1, nome: "Tiago" },
+    })
   })
 
   it("retorna 409 quando não há pedido vinculado", async () => {

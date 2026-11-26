@@ -163,4 +163,47 @@ describe("VerificarPedidosFaturados", () => {
     expect(corpo).toMatchObject({ pedidoIds: [1, 2], aplicar: true })
     expect(corpo).not.toHaveProperty("oportunidadeId")
   })
+
+  it("envia o status escolhido separadamente para cada pedido", async () => {
+    const preview = {
+      ...previewDuasOportunidades,
+      pedidos: [
+        previewComNota.pedidos[0],
+        { ...previewComNota.pedidos[0], pedidoId: 2, numero: "00007076", statusSugerido: "PARCIAL" },
+      ],
+    }
+    fetchMock.mockImplementation(async (_input: any, init?: RequestInit) => {
+      const method = init?.method ?? "GET"
+      const url = String(_input ?? "")
+      if (url.endsWith("/api/crm/pedidos-venda/verificar-faturados") && method === "POST") {
+        return { ok: true, json: async () => preview }
+      }
+      if (url.endsWith("/api/crm/pedidos-venda/aplicar-faturados") && method === "POST") {
+        return { ok: true, json: async () => aplicarResultado }
+      }
+      return { ok: false, json: async () => null }
+    })
+
+    renderPage(<VerificarPedidosFaturados pedidoIds={[1, 2]} />)
+    fireEvent.click(screen.getByRole("button", { name: "Verificar pedidos faturados" }))
+
+    await screen.findByText("00007076")
+    fireEvent.click(document.getElementById("status-1-parcial")!)
+    fireEvent.click(document.getElementById("status-2-faturado")!)
+    fireEvent.click(screen.getByRole("button", { name: /Aplicar verificação/ }))
+
+    await waitFor(() => {
+      expect(toastMock.success).toHaveBeenCalledWith(
+        "Pedido(s) verificado(s) e valor sincronizado com o ERP."
+      )
+    })
+
+    const chamadaAplicar = fetchMock.mock.calls.find(
+      ([input, init]) =>
+        String(input ?? "").endsWith("/api/crm/pedidos-venda/aplicar-faturados") &&
+        init?.method === "POST"
+    )
+    const corpo = JSON.parse(String(chamadaAplicar?.[1]?.body ?? "{}"))
+    expect(corpo.statusPorPedido).toEqual({ "1": "PARCIAL", "2": "FATURADO" })
+  })
 })

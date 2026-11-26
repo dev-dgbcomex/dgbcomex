@@ -406,10 +406,11 @@ export async function aplicarVerificacaoPedidoFaturado(
     pedidoIds?: number[]
     oportunidadeId?: number
     statusPedido?: "FATURADO" | "PARCIAL"
+    statusPorPedido?: Record<number, "FATURADO" | "PARCIAL">
     autor?: Autor
   }
 ): Promise<AplicarResultado> {
-  const { pedidoIds, oportunidadeId, statusPedido, autor } = params
+  const { pedidoIds, oportunidadeId, statusPedido, statusPorPedido, autor } = params
   const usuarioNome = autor?.nome ?? null
 
   await atualizarEspelhosErp("PEDIDO")
@@ -444,7 +445,7 @@ export async function aplicarVerificacaoPedidoFaturado(
       const chave = chavePedido(pedido.referenciaExterna)
       const nota = chave ? await obterNotaERP(pedido.numero) : null
 
-      let statusPedidoFinal = statusPedido
+      let statusPedidoFinal = statusPorPedido?.[pedido.id] ?? statusPedido
       let faturamentoId: number | null = null
 
       if (nota && chave) {
@@ -492,9 +493,10 @@ export async function aplicarVerificacaoPedidoFaturado(
 
           const statusNota = nota.valorTotal >= valorPedidosNota ? "FATURADO" : "PARCIAL"
           for (const id of pedidoIdsNota) {
+            const statusId = statusPorPedido?.[id] ?? statusPedido ?? statusNota
             await db
               .update(crmPedidosVenda)
-              .set({ status: statusNota, updatedAt: new Date() })
+              .set({ status: statusId, updatedAt: new Date() })
               .where(eq(crmPedidosVenda.id, id))
           }
 

@@ -114,7 +114,7 @@ describe("VerificarPedidosFaturados", () => {
         pedidoIds: [1],
         oportunidadeId: 10,
         aplicar: true,
-        statusPedido: "PARCIAL",
+        statusPorPedido: { "1": "FATURADO" },
       })
     )
     expect(toastMock.success).toHaveBeenCalledWith(
