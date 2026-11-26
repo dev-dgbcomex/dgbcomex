@@ -96,9 +96,16 @@ curl https://integrate.api.nvidia.com/v1/chat/completions \
   -d '{
     "model": "nvidia/nemotron-3-ultra-550b-a55b",
     "messages": [{"role": "user", "content": "Responda apenas: ok"}],
-    "max_tokens": 16
+    "max_tokens": 512,
+    "temperature": 0,
+    "reasoning_effort": "none",
+    "chat_template_kwargs": {"enable_thinking": false, "force_nonempty_content": true}
   }'
 ```
+
+> Com reasoning ligado, o *trace* e a resposta final compartilham o mesmo `max_tokens`.
+> Usar `max_tokens` muito baixo (ex.: `16`) pode devolver `finish_reason: "length"` sem `content`.
+> Para teste rápido, desligue o reasoning; para análise longa, use `8192` ou `16384`.
 
 ### Python (OpenAI SDK)
 
@@ -116,7 +123,10 @@ completion = client.chat.completions.create(
     temperature=1,
     top_p=0.95,
     max_tokens=16384,
-    extra_body={"chat_template_kwargs": {"enable_thinking": True}},
+    extra_body={
+        "reasoning_effort": "medium",
+        "chat_template_kwargs": {"enable_thinking": True},
+    },
     stream=True,
 )
 
@@ -180,5 +190,15 @@ docker run --gpus=all \
   o modelo (ex.: alternar entre `nemotron-3-ultra` para tarefas pesadas e `nemotron-nano-9b-v2`
   para uso leve/custo baixo).
 - Confirmado funcional (2026-09-04): key válida + `nemotron-3-ultra-550b-a55b` respondeu `ok` via API.
+- No PDM, a IA de Saúde da Prospecção detecta a chave NVIDIA pelo nome/modelo e usa perfil de
+  contexto ampliado (100.000 caracteres de dados, 30.000 de histórico, 20.000 de consulta curada);
+  os demais provedores continuam com 14.000 / 6.000 / 4.000.
+- A decisão interna de consultas roda com `reasoning_effort: "none"`, `enable_thinking: false`,
+  `max_tokens: 1024` e `temperature: 0`. A análise final usa `reasoning_effort: "medium"`,
+  `enable_thinking: true`, `force_nonempty_content: true`, `max_tokens: 8192` (retry `16384`),
+  `temperature: 0.6` e `top_p: 0.95`.
+- Se uma resposta NVIDIA vier sem `content` por `finish_reason: "length"`, o PDM repete com o
+  dobro de `max_tokens` na mesma chave antes de cair para o próximo provedor; HTTP 413 nunca
+  dispara fallback (o payload precisa ser reduzido).
 - Vírgula de segurança: guardar a key em variável de ambiente (`NVIDIA_API_KEY`) em vez de
   embutir no config; o config atual está embutido por conveniência do teste.

@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireAuth } from "@/lib/auth"
 import { handleApiError } from "@/lib/api-error"
-import { contextoInicial, buscarChaveIAAnalise, medirMensagensIA } from "@/lib/crm/saude-prospeccao-ia"
+import {
+  contextoInicial,
+  buscarChaveIAAnalise,
+  medirMensagensIA,
+  perfilContextoDaChave,
+} from "@/lib/crm/saude-prospeccao-ia"
 import { saudeProspeccaoAnaliseSchema, validateRequest } from "@/lib/validation"
 
 export const dynamic = "force-dynamic"
@@ -18,7 +23,11 @@ export async function POST(req: NextRequest) {
 
     const { linhas, filtros } = parsed.data
     const chave = await buscarChaveIAAnalise()
-    const { mensagens, compactacao } = await contextoInicial(linhas, filtros)
+    const { mensagens, compactacao } = await contextoInicial(
+      linhas,
+      filtros,
+      perfilContextoDaChave(chave)
+    )
     const { enviadoChars, estTokensAprox } = medirMensagensIA(mensagens)
 
     return NextResponse.json(

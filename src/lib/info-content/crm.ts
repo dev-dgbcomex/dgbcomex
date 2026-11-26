@@ -300,6 +300,9 @@ export const crmContent: Record<string, InfoContent> = {
       "O botão 'Analisar com IA' usa somente as linhas filtradas na tela. A análise sugere ações para elevar engajamento ou reduzir esforço sempre dentro das regras acima.",
       "No modal da análise é possível fazer perguntas complementares, gerar Markdown, concluir e enviar o resultado por e-mail e consultar análises salvas depois.",
       "O chat da IA consulta apenas consultas curadas e somente leitura; não é permitido SQL livre.",
+      "Com NVIDIA Nemotron, o contexto usa limite ampliado (até 100 mil caracteres de dados), a decisão interna roda sem raciocínio e a resposta final usa raciocínio médio.",
+      "Se a resposta ficar sem texto por falta de orçamento de tokens, a análise repete automaticamente com o dobro de tokens antes de tentar outro provedor.",
+      "Se nenhum provedor responder, a análise mostra erro técnico; uma resposta HTTP 413 não dispara fallback porque o problema é o tamanho do payload.",
       "Análises salvas ficam visíveis para o autor e para usuários ADMIN, SUDO ou CRM.",
     ],
     columns: [

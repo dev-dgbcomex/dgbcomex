@@ -16,6 +16,8 @@ const {
   montarMensagensAnalise,
   chamarAnaliseComConsultas,
   medirMensagensIA,
+  buscarChaveIAAnalise,
+  perfilContextoDaChave,
 } = vi.hoisted(() => ({
   requireAuth: vi.fn(),
   db: { select: vi.fn(), transaction: vi.fn(), update: vi.fn() },
@@ -26,6 +28,8 @@ const {
   montarMensagensAnalise: vi.fn(),
   chamarAnaliseComConsultas: vi.fn(),
   medirMensagensIA: vi.fn(),
+  buscarChaveIAAnalise: vi.fn(),
+  perfilContextoDaChave: vi.fn(() => "padrao"),
 }))
 
 vi.mock("@/lib/auth", () => ({ requireAuth }))
@@ -38,6 +42,8 @@ vi.mock("@/lib/crm/saude-prospeccao-ia", () => ({
   montarMensagensAnalise,
   chamarAnaliseComConsultas,
   medirMensagensIA,
+  buscarChaveIAAnalise,
+  perfilContextoDaChave,
 }))
 vi.mock("@/lib/notificar", () => ({
   notificarErro: vi.fn(),
@@ -95,6 +101,8 @@ beforeEach(() => {
   prepararLinhas.mockReturnValue([])
   montarMensagensAnalise.mockReturnValue([])
   medirMensagensIA.mockReturnValue({ enviadoChars: 100, estTokensAprox: 25 })
+  buscarChaveIAAnalise.mockResolvedValue(null)
+  perfilContextoDaChave.mockReturnValue("padrao")
   chamarAnaliseComConsultas.mockResolvedValue({
     conteudo: "Resposta",
     resultado: { provedor: "groq", modelo: "teste" },
@@ -165,6 +173,13 @@ describe("POST /api/crm/saude-prospeccao/ia/analises/[id]/mensagens", () => {
     )
     expect(resposta.status).toBe(200)
     expect(await resposta.json()).toEqual({ mensagens: [mensagem] })
+    expect(perfilContextoDaChave).toHaveBeenCalledWith(null)
+    expect(montarMensagensAnalise).toHaveBeenCalledWith(
+      expect.objectContaining({ perfil: "padrao", pergunta: "E agora?" })
+    )
+    expect(chamarAnaliseComConsultas).toHaveBeenCalledWith(
+      expect.objectContaining({ chaveId: undefined })
+    )
     expect(db.transaction).toHaveBeenCalledTimes(1)
   })
 })

@@ -21,6 +21,8 @@ export interface ResultadoIA {
   erro?: string
   status?: number
   codigo?: CodigoErroIA
+  finishReason?: string | null
+  reasoningTokens?: number
 }
 
 export interface ChaveIA {
@@ -40,6 +42,11 @@ export interface OpcoesChamarIA {
   temperatura?: number
   maxTokens?: number
   aceitarRaciocinio?: boolean
+  topP?: number
+  reasoningEffort?: "none" | "low" | "medium" | "high"
+  enableThinking?: boolean
+  forceNonemptyContent?: boolean
+  retryVazioComMaisTokens?: boolean
 }
 
 export const BASE_URLS: Record<ProvedorIA, string> = {
@@ -91,8 +98,14 @@ const cooldownCache = new Map<number, number>()
 const MSG_ERRO_TECNICO =
   "Desculpe, estou com dificuldades tecnicas no momento. Por favor, tente novamente em instantes."
 
-function isErroTecnico(texto: string): boolean {
-  return texto.includes("dificuldades tecnicas") || texto.includes("nao consegui processar")
+interface RespostaProvedor {
+  conteudo?: string
+  finishReason?: string | null
+  reasoningTokens?: number
+}
+
+function ehProvedorNvidia(chave: Pick<ChaveReserva, "prov" | "url" | "modelo">): boolean {
+  return /integrate\.api\.nvidia\.com|nvidia|nemotron/i.test(`${chave.url} ${chave.modelo}`)
 }
 
 function statusDoErro(erro: unknown): number | undefined {
@@ -166,7 +179,7 @@ async function chamarProvedor(
   chave: ChaveReserva,
   messages: MensagemIA[],
   opcoes: OpcoesChamarIA
-): Promise<string> {
+): Promise<RespostaProvedor> {
   const temperatura = opcoes.temperatura ?? 0.7
   const maxTokens = opcoes.maxTokens ?? 300
   const systemContent = messages.find((m) => m.role === "system")?.content || ""
@@ -191,8 +204,10 @@ async function chamarProvedor(
     })
     if (!res.ok) throw new Error(`Anthropic HTTP ${res.status}`)
     const data = await res.json()
-    const texto = data.content?.[0]?.text
-    return texto || MSG_ERRO_TECNICO
+    return {
+      conteudo: typeof data.content?.[0]?.text === "string" ? data.content[0].text : undefined,
+      finishReason: data.stop_reason ?? undefined,
+    }
   }
 
   if (chave.prov === "gemini") {
@@ -226,7 +241,10 @@ async function chamarProvedor(
     const data = await res.json()
     const parts: { text?: string }[] = data.candidates?.[0]?.content?.parts ?? []
     const texto = (parts.map((p) => p.text).filter(Boolean) as string[]).join(" ")
-    return texto || MSG_ERRO_TECNICO
+    return {
+      conteudo: texto || undefined,
+      finishReason: data.candidates?.[0]?.finishReason ?? undefined,
+    }
   }
 
   const headers: Record<string, string> = {
@@ -238,25 +256,49 @@ async function chamarProvedor(
     headers["X-Title"] = OPENROUTER_APP_NAME
   }
 
+  const corpo: Record<string, unknown> = {
+    model: chave.modelo,
+    messages,
+    temperature: temperatura,
+    max_tokens: maxTokens,
+  }
+
+  if (ehProvedorNvidia(chave)) {
+    if (opcoes.topP !== undefined) corpo.top_p = opcoes.topP
+    if (opcoes.reasoningEffort !== undefined) corpo.reasoning_effort = opcoes.reasoningEffort
+
+    const chatTemplateKwargs: Record<string, unknown> = {}
+    if (opcoes.enableThinking !== undefined) chatTemplateKwargs.enable_thinking = opcoes.enableThinking
+    if (opcoes.forceNonemptyContent !== undefined) {
+      chatTemplateKwargs.force_nonempty_content = opcoes.forceNonemptyContent
+    }
+    if (Object.keys(chatTemplateKwargs).length > 0) corpo.chat_template_kwargs = chatTemplateKwargs
+  }
+
   const res = await fetch(`${chave.url}/chat/completions`, {
     method: "POST",
     headers,
     signal: AbortSignal.timeout(TIMEOUT_IA_MS),
-    body: JSON.stringify({
-      model: chave.modelo,
-      messages,
-      temperature: temperatura,
-      max_tokens: maxTokens,
-    }),
+    body: JSON.stringify(corpo),
   })
   if (!res.ok) {
     const errBody = await res.text().catch(() => "")
     throw new Error(`HTTP ${res.status}${errBody ? `: ${errBody.slice(0, 300)}` : ""}`)
   }
   const data = await res.json()
-  const mensagem = data.choices?.[0]?.message
-  const texto = mensagem?.content || (opcoes.aceitarRaciocinio ? mensagem?.reasoning_content : undefined)
-  return texto || MSG_ERRO_TECNICO
+  const escolha = data.choices?.[0]
+  const mensagem = escolha?.message
+  const conteudo = typeof mensagem?.content === "string" && mensagem.content.trim() ? mensagem.content : undefined
+  const raciocinio = [mensagem?.reasoning_content, mensagem?.reasoning].find(
+    (valor): valor is string => typeof valor === "string" && Boolean(valor.trim())
+  )
+  const tokensRaciocinio = data.usage?.completion_tokens_details?.reasoning_tokens
+
+  return {
+    conteudo: conteudo ?? (opcoes.aceitarRaciocinio ? raciocinio : undefined),
+    finishReason: escolha?.finish_reason ?? null,
+    reasoningTokens: typeof tokensRaciocinio === "number" ? tokensRaciocinio : undefined,
+  }
 }
 
 function mapearChaveReserva(r: AiChave): ChaveReserva {
@@ -299,6 +341,8 @@ type EstadoChamadaIA = {
   ultimoErro: unknown
   ultimoStatus?: number
   ultimoCodigo?: CodigoErroIA
+  ultimoFinishReason?: string | null
+  ultimoMotivoVazio?: boolean
   tentativas: number
 }
 
@@ -311,28 +355,39 @@ async function tentarChaves(
   for (const chave of chaves) {
     estado.tentativas++
     try {
-      const conteudo = await chamarProvedor(chave, mensagens, opcoes)
+      const resposta = await chamarProvedor(chave, mensagens, opcoes)
 
-      if (isErroTecnico(conteudo)) {
-        estado.ultimoErro = new Error("Provedor retornou resposta vazia")
+      if (!resposta.conteudo?.trim()) {
+        estado.ultimoErro = new Error(
+          resposta.finishReason === "length"
+            ? "Provedor retornou resposta vazia (finish_reason=length)"
+            : "Provedor retornou resposta vazia"
+        )
+        estado.ultimoFinishReason = resposta.finishReason ?? undefined
+        estado.ultimoMotivoVazio = true
         estado.ultimoStatus = undefined
         estado.ultimoCodigo = undefined
         await marcarFalha(chave.id)
         continue
       }
 
+      estado.ultimoMotivoVazio = false
       if (chave.id > 0) await resetarFalha(chave.id)
       return {
-        conteudo,
+        conteudo: resposta.conteudo,
         provedor: chave.prov,
         modelo: chave.modelo,
         nomeChave: chave.nome,
         tentativas: estado.tentativas,
+        finishReason: resposta.finishReason,
+        reasoningTokens: resposta.reasoningTokens,
       }
     } catch (err) {
       estado.ultimoErro = err
       estado.ultimoStatus = statusDoErro(err)
       estado.ultimoCodigo = codigoDoErro(estado.ultimoStatus)
+      estado.ultimoFinishReason = undefined
+      estado.ultimoMotivoVazio = false
       console.error(`[IA] Provedor ${chave.prov} (${chave.nome}) falhou:`, err)
       if (chave.id > 0 && !estado.ultimoCodigo) await marcarFalha(chave.id)
     }
@@ -381,6 +436,21 @@ export async function chamarIA(
   const estado: EstadoChamadaIA = { ultimoErro: null, tentativas: 0 }
   let resultado = await tentarChaves(chaves, mensagens, opcoes, estado)
 
+  if (
+    !resultado &&
+    opcoes.retryVazioComMaisTokens &&
+    estado.ultimoMotivoVazio &&
+    !estado.ultimoCodigo &&
+    chaves.length > 0
+  ) {
+    const opcoesRetry: OpcoesChamarIA = {
+      ...opcoes,
+      maxTokens: Math.max((opcoes.maxTokens ?? 300) * 2, 8192),
+      retryVazioComMaisTokens: false,
+    }
+    resultado = await tentarChaves(chaves, mensagens, opcoesRetry, estado)
+  }
+
   if (!resultado && chaveId !== undefined && estado.ultimoCodigo !== "PAYLOAD_TOO_LARGE") {
     const jaTentadas = new Set(chaves.map((chave) => chave.id))
     const fallback = (await carregarChavesPadrao()).filter((chave) => !jaTentadas.has(chave.id))
@@ -399,6 +469,7 @@ export async function chamarIA(
     erro: estado.ultimoErro ? String(estado.ultimoErro) : "todos os provedores falharam",
     status: estado.ultimoStatus,
     codigo: estado.ultimoCodigo,
+    finishReason: estado.ultimoFinishReason,
   }
 }
 
@@ -409,8 +480,14 @@ export async function testarChave(
   const url = chave.urlBase || BASE_URLS[prov] || BASE_URLS.groq
   const modelo = chave.modelo || MODELOS_PADRAO[prov] || ""
 
+  const opcoes: OpcoesChamarIA = { maxTokens: 512, aceitarRaciocinio: true }
+  if (ehProvedorNvidia({ prov, url, modelo })) {
+    opcoes.reasoningEffort = "none"
+    opcoes.enableThinking = false
+  }
+
   try {
-    const conteudo = await chamarProvedor(
+    const resposta = await chamarProvedor(
       {
         id: chave.id,
         prov,
@@ -424,13 +501,18 @@ export async function testarChave(
         { role: "system", content: "Voce e um assistente." },
         { role: "user", content: "Responda apenas: OK" },
       ],
-      { maxTokens: 100 }
+      opcoes
     )
-    if (isErroTecnico(conteudo)) {
-      return { ok: false, mensagem: "Provedor respondeu com erro tecnico", detalhe: conteudo }
+    if (!resposta.conteudo?.trim()) {
+      return {
+        ok: false,
+        mensagem: "Provedor respondeu com erro tecnico",
+        detalhe: resposta.finishReason ? `finish_reason=${resposta.finishReason}` : undefined,
+      }
     }
-    return { ok: true, mensagem: `Provedor respondeu: ${conteudo.substring(0, 200)}` }
-  } catch (err: any) {
-    return { ok: false, mensagem: `Falha: ${err?.message || "erro desconhecido"}` }
+    return { ok: true, mensagem: `Provedor respondeu: ${resposta.conteudo.substring(0, 200)}` }
+  } catch (err) {
+    const mensagem = err instanceof Error ? err.message : "erro desconhecido"
+    return { ok: false, mensagem: `Falha: ${mensagem}` }
   }
 }

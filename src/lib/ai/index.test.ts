@@ -551,3 +551,129 @@ describe("chamarIA — chave forçada com resposta vazia", () => {
     expect(comRaciocinio.conteudo).toBe("CONSULTAR: oportunidades|cliente|1|10")
   })
 })
+
+describe("chamarIA — NVIDIA Nemotron (reasoning e orçamento)", () => {
+  const chaveNvidia = {
+    id: 40,
+    provedor: "openai_compatible" as const,
+    nome: "NVIDIA Nemotron",
+    chaveApi: "nvidia-chave",
+    urlBase: "https://integrate.api.nvidia.com/v1",
+    modelo: "nvidia/nemotron-3-ultra-550b-a55b",
+    ordem: 1,
+    ativo: true,
+    failCount: 0,
+  }
+
+  beforeEach(() => {
+    delete process.env.GROQ_API_KEY
+    vi.mocked(db.update).mockClear()
+    db.select = vi.fn(() => createQueryBuilder([chaveNvidia]))
+  })
+
+  it("envia controles NVIDIA e captura finish_reason e reasoning_tokens", async () => {
+    const fetchMock = vi.fn((_url: string, init: RequestInit) => {
+      const body = JSON.parse(String(init.body))
+      expect(body.temperature).toBe(0.6)
+      expect(body.top_p).toBe(0.95)
+      expect(body.max_tokens).toBe(8192)
+      expect(body.reasoning_effort).toBe("medium")
+      expect(body.chat_template_kwargs).toEqual({
+        enable_thinking: true,
+        force_nonempty_content: true,
+      })
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: vi.fn().mockResolvedValue({
+          choices: [{ message: { content: "## Diagnóstico\nOK" }, finish_reason: "stop" }],
+          usage: { completion_tokens_details: { reasoning_tokens: 1234 } },
+        }),
+      })
+    })
+    vi.stubGlobal("fetch", fetchMock)
+
+    const res = await chamarIA(MENSAGENS, {
+      temperatura: 0.6,
+      topP: 0.95,
+      maxTokens: 8192,
+      reasoningEffort: "medium",
+      enableThinking: true,
+      forceNonemptyContent: true,
+    })
+
+    expect(res.conteudo).toBe("## Diagnóstico\nOK")
+    expect(res.finishReason).toBe("stop")
+    expect(res.reasoningTokens).toBe(1234)
+    expect(res.provedor).toBe("openai_compatible")
+  })
+
+  it("aceita o campo reasoning alternativo quando solicitado", async () => {
+    vi.stubGlobal(
+      "fetch",
+      mockFetch(200, { choices: [{ message: { reasoning: "RACIOCINIO" } }] })
+    )
+
+    const res = await chamarIA(MENSAGENS, { aceitarRaciocinio: true })
+
+    expect(res.conteudo).toBe("RACIOCINIO")
+  })
+
+  it("repete com o dobro de tokens quando o reasoning esgota o orçamento", async () => {
+    let chamada = 0
+    const fetchMock = vi.fn((_url: string, init: RequestInit) => {
+      chamada++
+      const body = JSON.parse(String(init.body))
+      if (chamada === 1) {
+        expect(body.max_tokens).toBe(8192)
+        expect(body.chat_template_kwargs).toEqual({ enable_thinking: false })
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: vi.fn().mockResolvedValue({
+            choices: [{ message: { reasoning: "pensando" }, finish_reason: "length" }],
+          }),
+        })
+      }
+      expect(body.max_tokens).toBe(16384)
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: vi.fn().mockResolvedValue({
+          choices: [{ message: { content: "Resposta final" }, finish_reason: "stop" }],
+        }),
+      })
+    })
+    vi.stubGlobal("fetch", fetchMock)
+
+    const res = await chamarIA(MENSAGENS, {
+      maxTokens: 8192,
+      enableThinking: false,
+      retryVazioComMaisTokens: true,
+    })
+
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(res.conteudo).toBe("Resposta final")
+    expect(res.tentativas).toBe(2)
+  })
+
+  it("testarChave usa 512 tokens e desliga o reasoning NVIDIA", async () => {
+    const fetchMock = vi.fn((_url: string, init: RequestInit) => {
+      const body = JSON.parse(String(init.body))
+      expect(body.max_tokens).toBe(512)
+      expect(body.reasoning_effort).toBe("none")
+      expect(body.chat_template_kwargs).toEqual({ enable_thinking: false })
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: vi.fn().mockResolvedValue({ choices: [{ message: { content: "OK" } }] }),
+      })
+    })
+    vi.stubGlobal("fetch", fetchMock)
+
+    const res = await testarChave(chaveNvidia)
+
+    expect(res.ok).toBe(true)
+    expect(res.mensagem).toContain("OK")
+  })
+})

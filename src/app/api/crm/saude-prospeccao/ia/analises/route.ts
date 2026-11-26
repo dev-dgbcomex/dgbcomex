@@ -13,6 +13,7 @@ import {
   chamarAnaliseComConsultas,
   contextoInicial,
   medirMensagensIA,
+  perfilContextoDaChave,
 } from "@/lib/crm/saude-prospeccao-ia"
 import { saudeProspeccaoAnaliseSchema, validateRequest } from "@/lib/validation"
 
@@ -55,10 +56,19 @@ export async function POST(req: NextRequest) {
 
     const chave = await buscarChaveIAAnalise()
     const chaveId = chave?.id
+    const perfil = perfilContextoDaChave(chave)
 
-    const { linhas: preparadas, mensagens, compactacao } = await contextoInicial(linhas, filtros)
+    const { linhas: preparadas, mensagens, compactacao } = await contextoInicial(
+      linhas,
+      filtros,
+      perfil
+    )
     const { enviadoChars, estTokensAprox } = medirMensagensIA(mensagens)
-    const { conteudo, resultado, consultas } = await chamarAnaliseComConsultas({ mensagens, chaveId })
+    const { conteudo, resultado, consultas } = await chamarAnaliseComConsultas({
+      mensagens,
+      chaveId,
+      perfil,
+    })
     const headers = {
       "X-Enviado-Chars": String(enviadoChars),
       "X-Est-Tokens-Aprox": String(estTokensAprox),

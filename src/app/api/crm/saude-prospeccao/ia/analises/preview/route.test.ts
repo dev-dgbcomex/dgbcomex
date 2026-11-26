@@ -5,17 +5,24 @@ import { createQueryBuilder } from "@/test/route-db-mock"
 import { POST } from "./route"
 
 
-const { requireAuth, db, contextoInicial, buscarChaveIAAnalise, medirMensagensIA } = vi.hoisted(() => ({
-  requireAuth: vi.fn(),
-  db: { select: vi.fn() },
-  contextoInicial: vi.fn(),
-  buscarChaveIAAnalise: vi.fn(),
-  medirMensagensIA: vi.fn(),
-}))
+const { requireAuth, db, contextoInicial, buscarChaveIAAnalise, medirMensagensIA, perfilContextoDaChave } =
+  vi.hoisted(() => ({
+    requireAuth: vi.fn(),
+    db: { select: vi.fn() },
+    contextoInicial: vi.fn(),
+    buscarChaveIAAnalise: vi.fn(),
+    medirMensagensIA: vi.fn(),
+    perfilContextoDaChave: vi.fn(() => "padrao"),
+  }))
 
 vi.mock("@/lib/auth", () => ({ requireAuth }))
 vi.mock("@/lib/db", () => ({ db }))
-vi.mock("@/lib/crm/saude-prospeccao-ia", () => ({ contextoInicial, buscarChaveIAAnalise, medirMensagensIA }))
+vi.mock("@/lib/crm/saude-prospeccao-ia", () => ({
+  contextoInicial,
+  buscarChaveIAAnalise,
+  medirMensagensIA,
+  perfilContextoDaChave,
+}))
 vi.mock("@/lib/notificar", () => ({
   notificarErro: vi.fn(),
   notificar: vi.fn(),
@@ -64,6 +71,7 @@ beforeEach(() => {
     compactacao: { total: 1, incluidos: 1, omitidos: 0 },
   })
   medirMensagensIA.mockReturnValue({ enviadoChars: 123, estTokensAprox: 31 })
+  perfilContextoDaChave.mockReturnValue("padrao")
 })
 
 describe("/api/crm/saude-prospeccao/ia/analises/preview", () => {
@@ -93,7 +101,17 @@ describe("/api/crm/saude-prospeccao/ia/analises/preview", () => {
     expect(JSON.stringify(corpo)).not.toContain("chaveApi")
     expect(resposta.headers.get("X-Enviado-Chars")).toBe(String(corpo.enviadoChars))
     expect(resposta.headers.get("X-Est-Tokens-Aprox")).toBe(String(corpo.estTokensAprox))
-    expect(contextoInicial).toHaveBeenCalledWith([linha], { busca: "Alpha" })
+    expect(contextoInicial).toHaveBeenCalledWith([linha], { busca: "Alpha" }, "padrao")
+  })
+
+  it("usa o perfil nvidia quando a chave selecionada é NVIDIA", async () => {
+    perfilContextoDaChave.mockReturnValue("nvidia")
+
+    const resposta = await POST(request({ linhas: [linha] }))
+
+    expect(resposta.status).toBe(200)
+    expect(perfilContextoDaChave).toHaveBeenCalledWith(chave)
+    expect(contextoInicial).toHaveBeenCalledWith([linha], {}, "nvidia")
   })
 
   it("funciona sem chave NVIDIA correspondente", async () => {

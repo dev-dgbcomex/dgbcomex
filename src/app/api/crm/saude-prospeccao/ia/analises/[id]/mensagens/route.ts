@@ -14,6 +14,8 @@ import {
   prepararLinhas,
   buscarTemperaturas,
   medirMensagensIA,
+  buscarChaveIAAnalise,
+  perfilContextoDaChave,
   type LinhaAnaliseIA,
 } from "@/lib/crm/saude-prospeccao-ia"
 import { saudeProspeccaoMensagemSchema, validateRequest } from "@/lib/validation"
@@ -50,14 +52,21 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     const temperaturas = await buscarTemperaturas(registros)
     const linhas = prepararLinhas(registros, temperaturas)
+    const chave = await buscarChaveIAAnalise()
+    const perfil = perfilContextoDaChave(chave)
     const mensagens = montarMensagensAnalise({
       linhas,
       filtros: analise.filtros,
       historico,
       pergunta,
+      perfil,
     })
 
-    const { conteudo, resultado, consultas } = await chamarAnaliseComConsultas({ mensagens })
+    const { conteudo, resultado, consultas } = await chamarAnaliseComConsultas({
+      mensagens,
+      chaveId: chave?.id,
+      perfil,
+    })
     const { enviadoChars, estTokensAprox } = medirMensagensIA(mensagens)
 
     if (resultado.codigo === "PAYLOAD_TOO_LARGE") {

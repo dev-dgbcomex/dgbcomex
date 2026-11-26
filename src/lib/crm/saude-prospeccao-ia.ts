@@ -55,14 +55,31 @@ export type ConsultaCurada = {
 export type ResultadoConsultaCurada = ConsultaCurada & { dados: unknown[] }
 export type CompactacaoDadosIA = { total: number; incluidos: number; omitidos: number }
 
-const TOKENS_DECISAO = 512
-const TOKENS_ANALISE = 700
-const LIMITE_DADOS_IA_CHARS = 14_000
-const LIMITE_HISTORICO_IA_CHARS = 6_000
-const LIMITE_MENSAGEM_HISTORICO_CHARS = 1_000
-const MAX_HISTORICO_IA = 6
-const LIMITE_CONSULTA_IA_CHARS = 4_000
+const TOKENS_DECISAO = 1024
+const TOKENS_ANALISE = 8192
 const TAMANHO_TEXTO_CURTO = 80
+
+export type PerfilContextoIA = "padrao" | "nvidia"
+
+const LIMITES_CONTEXTO_IA: Record<
+  PerfilContextoIA,
+  { dados: number; historico: number; mensagemHistorico: number; consulta: number }
+> = {
+  padrao: {
+    dados: 14_000,
+    historico: 6_000,
+    mensagemHistorico: 1_000,
+    consulta: 4_000,
+  },
+  nvidia: {
+    dados: 100_000,
+    historico: 30_000,
+    mensagemHistorico: 4_000,
+    consulta: 20_000,
+  },
+}
+
+const MAX_HISTORICO_IA = 6
 
 export function medirMensagensIA(mensagens: MensagemIA[]) {
   const enviadoChars = JSON.stringify(mensagens).length
@@ -267,7 +284,11 @@ function jsonLimitado(valor: unknown, limite: number) {
   })
 }
 
-function montarBlocoDados(linhas: LinhaAnaliseContexto[], filtros: Record<string, unknown>) {
+function montarBlocoDados(
+  linhas: LinhaAnaliseContexto[],
+  filtros: Record<string, unknown>,
+  perfil: PerfilContextoIA
+) {
   const ordenadas = [...linhas].sort(compararRegistros)
   const resumos = ordenadas.map(resumoLinha)
   const filtrosCompactos = resumoFiltros(filtros)
@@ -285,7 +306,7 @@ function montarBlocoDados(linhas: LinhaAnaliseContexto[], filtros: Record<string
       },
     }
     const bloco = JSON.stringify(dados)
-    if (bloco.length <= LIMITE_DADOS_IA_CHARS) {
+    if (bloco.length <= LIMITES_CONTEXTO_IA[perfil].dados) {
       return {
         bloco,
         compactacao: {
@@ -319,6 +340,7 @@ type OpcoesMensagensAnalise = {
   historico?: { papel: "usuario" | "assistente"; conteudo: string }[]
   pergunta?: string
   dadosConsulta?: ResultadoConsultaCurada
+  perfil?: PerfilContextoIA
 }
 
 function montarMensagensAnaliseComCompactacao({
@@ -327,14 +349,16 @@ function montarMensagensAnaliseComCompactacao({
   historico = [],
   pergunta,
   dadosConsulta,
+  perfil = "padrao",
 }: OpcoesMensagensAnalise): { mensagens: MensagemIA[]; compactacao: CompactacaoDadosIA } {
-  const { bloco, compactacao } = montarBlocoDados(linhas, filtros)
+  const limites = LIMITES_CONTEXTO_IA[perfil]
+  const { bloco, compactacao } = montarBlocoDados(linhas, filtros, perfil)
   const historicoSelecionado = historico.slice(-MAX_HISTORICO_IA)
-  let restante = LIMITE_HISTORICO_IA_CHARS
+  let restante = limites.historico
   const mensagensHistorico: MensagemIA[] = []
 
   for (let indice = historicoSelecionado.length - 1; indice >= 0; indice--) {
-    const limite = Math.min(LIMITE_MENSAGEM_HISTORICO_CHARS, restante)
+    const limite = Math.min(limites.mensagemHistorico, restante)
     if (limite <= 0) break
     const conteudo = historicoSelecionado[indice].conteudo.slice(0, limite)
     mensagensHistorico.unshift({
@@ -363,7 +387,7 @@ function montarMensagensAnaliseComCompactacao({
         dadosConsulta.chave.tipo
       } ${dadosConsulta.chave.id}:\n${jsonLimitado(
         dadosConsulta.dados,
-        LIMITE_CONSULTA_IA_CHARS
+        limites.consulta
       )}\n\nAgora responda à pergunta original em Markdown, sem novas consultas.`,
     })
   }
@@ -373,6 +397,12 @@ function montarMensagensAnaliseComCompactacao({
 
 export function montarMensagensAnalise(opcoes: OpcoesMensagensAnalise): MensagemIA[] {
   return montarMensagensAnaliseComCompactacao(opcoes).mensagens
+}
+
+export function perfilContextoDaChave(chave: ChaveIAResumo | null): PerfilContextoIA {
+  return chave && /nvidia|nemotron/i.test(`${chave.nome ?? ""} ${chave.modelo ?? ""}`)
+    ? "nvidia"
+    : "padrao"
 }
 
 export function parseConsultaCurada(conteudo: string): ConsultaCurada | null {
@@ -485,10 +515,12 @@ export async function chamarAnaliseComConsultas({
   mensagens,
   maxConsultas = 2,
   chaveId,
+  perfil = "padrao",
 }: {
   mensagens: MensagemIA[]
   maxConsultas?: number
   chaveId?: number
+  perfil?: PerfilContextoIA
 }): Promise<{ conteudo: string; resultado: ResultadoIA; consultas: ResultadoConsultaCurada[] }> {
   const conversa = [...mensagens]
   const consultas: ResultadoConsultaCurada[] = []
@@ -512,7 +544,13 @@ export async function chamarAnaliseComConsultas({
   for (let rodada = 0; rodada < maxConsultas; rodada++) {
     decisao = await chamarIA(
       mensagensDecisao,
-      { temperatura: 0, maxTokens: TOKENS_DECISAO, aceitarRaciocinio: true },
+      {
+        temperatura: 0,
+        maxTokens: TOKENS_DECISAO,
+        aceitarRaciocinio: true,
+        reasoningEffort: "none",
+        enableThinking: false,
+      },
       chaveForcada ?? undefined
     )
     if (decisao.provedor === "nenhum") break
@@ -528,7 +566,7 @@ export async function chamarAnaliseComConsultas({
     })
     conversa.push({
       role: "user",
-      content: `Resultado da consulta curada autorizada:\n${jsonLimitado(dados, LIMITE_CONSULTA_IA_CHARS)}`,
+      content: `Resultado da consulta curada autorizada:\n${jsonLimitado(dados, LIMITES_CONTEXTO_IA[perfil].consulta)}`,
     })
     mensagensDecisao = [...conversa, { role: "user", content: INSTRUCAO_DECISAO }]
   }
@@ -542,7 +580,15 @@ export async function chamarAnaliseComConsultas({
       ...conversa,
       { role: "user", content: "Agora responda à solicitação original em Markdown, sem novas consultas." },
     ],
-    { temperatura: 0, maxTokens: TOKENS_ANALISE },
+    {
+      temperatura: 0.6,
+      topP: 0.95,
+      maxTokens: TOKENS_ANALISE,
+      reasoningEffort: "medium",
+      enableThinking: true,
+      forceNonemptyContent: true,
+      retryVazioComMaisTokens: true,
+    },
     chaveForcada ?? undefined
   )
 
@@ -551,13 +597,15 @@ export async function chamarAnaliseComConsultas({
 
 export async function contextoInicial(
   linhas: LinhaAnaliseIA[],
-  filtros: Record<string, unknown>
+  filtros: Record<string, unknown>,
+  perfil: PerfilContextoIA = "padrao"
 ) {
   const temperaturas = await buscarTemperaturas(linhas)
   const preparadas = prepararLinhas(linhas, temperaturas)
   const { mensagens, compactacao } = montarMensagensAnaliseComCompactacao({
     linhas: preparadas,
     filtros,
+    perfil,
   })
   return { linhas: preparadas, mensagens, compactacao }
 }

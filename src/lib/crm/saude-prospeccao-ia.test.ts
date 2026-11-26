@@ -5,6 +5,7 @@ import {
   chamarAnaliseComConsultas,
   medirMensagensIA,
   montarMensagensAnalise,
+  perfilContextoDaChave,
   type LinhaAnaliseContexto,
 } from "./saude-prospeccao-ia"
 
@@ -16,7 +17,7 @@ describe("chamarAnaliseComConsultas", () => {
     vi.mocked(chamarIA).mockReset()
   })
 
-  it("usa chamada curta para decidir consultas e mantém 700 tokens na resposta final", async () => {
+  it("usa chamada curta sem raciocínio e 8192 tokens na resposta final", async () => {
     vi.mocked(chamarIA)
       .mockResolvedValueOnce({
         conteudo: "PRONTO",
@@ -40,8 +41,32 @@ describe("chamarAnaliseComConsultas", () => {
       ],
     })
 
-    expect(chamarIA).toHaveBeenNthCalledWith(1, expect.any(Array), expect.objectContaining({ temperatura: 0, maxTokens: 512, aceitarRaciocinio: true }), undefined)
-    expect(chamarIA).toHaveBeenNthCalledWith(2, expect.any(Array), expect.objectContaining({ temperatura: 0, maxTokens: 700 }), undefined)
+    expect(chamarIA).toHaveBeenNthCalledWith(
+      1,
+      expect.any(Array),
+      expect.objectContaining({
+        temperatura: 0,
+        maxTokens: 1024,
+        aceitarRaciocinio: true,
+        reasoningEffort: "none",
+        enableThinking: false,
+      }),
+      undefined
+    )
+    expect(chamarIA).toHaveBeenNthCalledWith(
+      2,
+      expect.any(Array),
+      expect.objectContaining({
+        temperatura: 0.6,
+        topP: 0.95,
+        maxTokens: 8192,
+        reasoningEffort: "medium",
+        enableThinking: true,
+        forceNonemptyContent: true,
+        retryVazioComMaisTokens: true,
+      }),
+      undefined
+    )
     expect(resultado.conteudo).toContain("Diagnóstico")
     expect(resultado.resultado.provedor).toBe("groq")
   })
@@ -71,8 +96,8 @@ describe("chamarAnaliseComConsultas", () => {
       chaveId: 42,
     })
 
-    expect(chamarIA).toHaveBeenNthCalledWith(1, expect.any(Array), expect.objectContaining({ maxTokens: 512 }), 42)
-    expect(chamarIA).toHaveBeenNthCalledWith(2, expect.any(Array), expect.objectContaining({ maxTokens: 700 }), 42)
+    expect(chamarIA).toHaveBeenNthCalledWith(1, expect.any(Array), expect.objectContaining({ maxTokens: 1024 }), 42)
+    expect(chamarIA).toHaveBeenNthCalledWith(2, expect.any(Array), expect.objectContaining({ maxTokens: 8192 }), 42)
     expect(resultado.conteudo).toContain("Diagnóstico")
     expect(resultado.resultado.provedor).toBe("openai_compatible")
   })
@@ -190,5 +215,52 @@ describe("montarMensagensAnalise — limite de payload", () => {
     expect(conteudo).toMatch(/Dados da consulta curada/i)
     expect(() => JSON.parse(conteudo.slice(inicio, fim + 1))).not.toThrow()
     expect(medirMensagensIA(mensagens).enviadoChars).toBeLessThan(10_000)
+  })
+})
+
+describe("perfil de contexto NVIDIA", () => {
+  function linha(index: number): LinhaAnaliseContexto {
+    return {
+      id: index,
+      tipo: "cliente",
+      nome: `Cliente ${index} ${"Longo ".repeat(30)}`,
+      scoreEsforco: 60,
+      scoreEngajamento: 20,
+      percentualConversao: 50,
+      chave: `cliente:${index}`,
+      classificacao: "BEC",
+      temperatura: "FRIO",
+    }
+  }
+
+  it("identifica a chave NVIDIA pelo nome ou modelo", () => {
+    expect(perfilContextoDaChave(null)).toBe("padrao")
+    expect(
+      perfilContextoDaChave({
+        id: 1,
+        provedor: "openai_compatible",
+        nome: "NVIDIA Nemotron",
+        modelo: "nvidia/nemotron-3-ultra-550b-a55b",
+      })
+    ).toBe("nvidia")
+    expect(
+      perfilContextoDaChave({ id: 2, provedor: "groq", nome: "Groq", modelo: "qwen/qwen3.8-27b" })
+    ).toBe("padrao")
+  })
+
+  it("usa limite ampliado e inclui todos os registros com perfil nvidia", () => {
+    const registros = Array.from({ length: 200 }, (_, index) => linha(index))
+    const mensagens = montarMensagensAnalise({ linhas: registros, filtros: {}, perfil: "nvidia" })
+    const conteudo = mensagens.find((mensagem) => mensagem.role === "user")?.content ?? ""
+    const dados = JSON.parse(conteudo.slice(conteudo.indexOf("{"), conteudo.lastIndexOf("}") + 1)) as {
+      registros: unknown[]
+      amostragem: { total: number; incluidos: number; omitidos: number }
+    }
+
+    expect(dados.amostragem.total).toBe(200)
+    expect(dados.amostragem.incluidos).toBe(200)
+    expect(dados.amostragem.omitidos).toBe(0)
+    expect(dados.registros).toHaveLength(200)
+    expect(medirMensagensIA(mensagens).estTokensAprox).toBeGreaterThan(6_000)
   })
 })
