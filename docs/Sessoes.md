@@ -809,6 +809,20 @@
 - **Arquivos Envolvidos:** `docs/Sessoes.md`.
 - **Testes:** entrega apenas documental; suíte verde registrada na Sessão 50 (499 arquivos / 2914 testes passados).
 
+### Sessão 52 — Análise de saúde da prospecção processada em fatias
+
+- **Data:** 2026-11-27
+- **Commit:** `4041fa7` — `feat(ia): processa saúde da prospecção em fatias`
+- **Tarefa:** evitar HTTP 413 na IA de Saúde da Prospecção ao analisar muitos registros, mantendo o contexto entre os lotes e o contrato atual do front.
+- **Resultado:**
+  - `src/lib/crm/saude-prospeccao-ia.ts`: novo fatiamento server-side quando os registros resumidos passam de 45.000 caracteres; lotes de até 18.000 caracteres são compactados com chamadas curtas (1024 tokens, sem raciocínio) e todos os resumos voltam para o contexto da resposta final junto de filtros, pergunta e histórico.
+  - `dividirLinhasEmFatias()` e `PERGUNTA_ANALISE_PADRAO` exportados; extração de `montarHistoricoMensagens()` reaproveitada pela montagem normal e pelo modo fatiado; metadados `FatiamentoAnaliseIA` propagados até as rotas.
+  - `POST /analises`, `POST /analises/preview` e `POST /analises/[id]/mensagens`: envio de `dadosFonte`, exposição de `fatiamento`/`fatiamentoPrevisto` e persistência dos metadados em `contexto`/`dadosUsados`.
+  - `analise-ia-panel.tsx`: prévia informa quantas fatias serão usadas e o toast de sucesso destaca quando a análise foi gerada em várias fatias.
+  - Modal “i”, `docs/opencode-nemotron.md` e testes de lib/rotas/UI atualizados; textos obsoletos sobre “700 tokens” e registro resumido removidos.
+- **Arquivos Envolvidos:** `src/lib/crm/saude-prospeccao-ia.ts`, `src/lib/crm/saude-prospeccao-ia.test.ts`, `src/app/api/crm/saude-prospeccao/ia/analises/route.ts`, `src/app/api/crm/saude-prospeccao/ia/analises/route.test.ts`, `src/app/api/crm/saude-prospeccao/ia/analises/preview/route.ts`, `src/app/api/crm/saude-prospeccao/ia/analises/preview/route.test.ts`, `src/app/api/crm/saude-prospeccao/ia/analises/[id]/mensagens/route.ts`, `src/app/api/crm/saude-prospeccao/ia/analises/rotas-auxiliares.test.ts`, `src/components/crm/saude-prospeccao/analise-ia-panel.tsx`, `src/components/crm/saude-prospeccao/analise-ia-panel.test.tsx`, `src/lib/info-content/crm.ts`, `src/lib/info-content/info-content.test.ts`, `docs/opencode-nemotron.md`, `docs/Sessoes.md`.
+- **Testes:** foco 7 arquivos / 117 testes verdes; `npm run test` → 503 arquivos / 2982 testes passados; `npm run lint` apenas warnings pré-existentes; `tsc --noEmit` limpo; `npm run build` OK.
+
 ---
 
 ## Estrutura de Comandos
