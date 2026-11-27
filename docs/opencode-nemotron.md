@@ -203,6 +203,9 @@ docker run --gpus=all \
 - A memória do bloco compactado — ou dos resumos das fatias — fica salva em `contexto.memoria`.
   O chat posterior reusa a análise salva e essa memória, sem reenviar os registros brutos a cada
   mensagem; análises antigas sem memória usam o caminho legado e são fatiadas sob demanda.
+- Saída obrigatória em Markdown/GFM: títulos `##`/`###`, tabelas com colunas fixas para comparações,
+  `- [ ]` para checklist e links apenas com URL presente nos dados. O front usa
+  `src/components/ui/markdown-ia.tsx` com `remark-gfm` e `urlTransform` restritivo.
 - Se uma resposta NVIDIA vier sem `content` por `finish_reason: "length"`, o PDM repete com o
   dobro de `max_tokens` na mesma chave antes de cair para o próximo provedor; HTTP 413 nunca
   dispara fallback (o payload precisa ser reduzido).

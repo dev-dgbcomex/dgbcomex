@@ -73,7 +73,7 @@ function mockFetch() {
       "POST /api/crm/saude-prospeccao/ia/analises/77/mensagens": {
         mensagens: [
           { id: 1, analiseId: 77, papel: "usuario", conteudo: "Como melhorar?", dadosUsados: {}, createdAt: "2026-11-22T10:01:00.000Z" },
-          { id: 2, analiseId: 77, papel: "assistente", conteudo: "## Resposta\n\nAgende proposta.", dadosUsados: {}, createdAt: "2026-11-22T10:01:01.000Z" },
+          { id: 2, analiseId: 77, papel: "assistente", conteudo: "## Resposta\n\n| Registro | Classe |\n| --- | --- |\n| Cliente Alpha | Engajados |\n\n- [ ] Agende proposta.", dadosUsados: {}, createdAt: "2026-11-22T10:01:01.000Z" },
         ],
       },
       "POST /api/crm/saude-prospeccao/ia/analises/77/concluir": { enviado: true, destinatario: "admin@teste.com" },
@@ -137,6 +137,9 @@ describe("AnaliseIaPanel", () => {
     })
     fireEvent.click(within(dialog).getByRole("button", { name: "Enviar" }))
     expect(await screen.findByText(/Agende proposta/)).toBeInTheDocument()
+    expect(within(dialog).getByRole("table")).toBeInTheDocument()
+    expect(within(dialog).getByRole("cell", { name: "Cliente Alpha" })).toBeInTheDocument()
+    expect(within(dialog).getByRole("checkbox")).toBeDisabled()
 
     fireEvent.click(within(dialog).getByRole("button", { name: /Concluir e enviar/ }))
     await waitFor(() => expect(toastMock.success).toHaveBeenCalledWith("Conversa enviada por e-mail"))

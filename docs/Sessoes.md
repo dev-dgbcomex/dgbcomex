@@ -826,7 +826,7 @@
 ### Sessão 53 — Chat reutiliza a análise salva da saúde da prospecção
 
 - **Data:** 2026-11-27
-- **Commit:** `feat(ia): reutiliza análise salva no chat`
+- **Commit:** `b47eb41a` — `feat(ia): reutiliza análise salva no chat`
 - **Tarefa:** fazer o chat da análise de Saúde da Prospecção trabalhar sobre a análise já criada, sem reenviar a grade completa de registros a cada clique em “Enviar”.
 - **Resultado:**
   - `POST /analises` passou a salvar `contexto.memoria`: o bloco compactado quando a análise cabe em uma chamada, ou a concatenação dos resumos das fatias quando há fatiamento.
@@ -835,6 +835,19 @@
   - Modal “i”, `docs/opencode-nemotron.md` e testes de lib/rotas atualizados para o novo comportamento; contrato da UI mantido.
 - **Arquivos Envolvidos:** `src/lib/crm/saude-prospeccao-ia.ts`, `src/lib/crm/saude-prospeccao-ia.test.ts`, `src/app/api/crm/saude-prospeccao/ia/analises/route.ts`, `src/app/api/crm/saude-prospeccao/ia/analises/route.test.ts`, `src/app/api/crm/saude-prospeccao/ia/analises/[id]/mensagens/route.ts`, `src/app/api/crm/saude-prospeccao/ia/analises/rotas-auxiliares.test.ts`, `src/lib/info-content/crm.ts`, `src/lib/info-content/info-content.test.ts`, `docs/opencode-nemotron.md`, `docs/Sessoes.md`.
 - **Testes:** foco 5 arquivos / 95 testes verdes; `npm run test` → 503 arquivos / 2985 testes passados; `npm run lint` apenas warnings pré-existentes; `tsc --noEmit` limpo; `npm run build` OK.
+
+### Sessão 54 — Saída Markdown/GFM na análise de saúde da prospecção
+
+- **Data:** 2026-11-27
+- **Commit:** `feat(ia): formata análise e chat em Markdown/Gfm`
+- **Tarefa:** deixar as respostas da IA mais limpas e estruturadas, com títulos, tabelas, checklist, destaques e links seguros.
+- **Resultado:**
+  - `REGRAS_SISTEMA`: contrato explícito de Markdown — `##`/`###`, tabela com colunas fixas para 3 ou mais registros, `- [ ]`, `**negrito**`, `> `, sem emoji/HTML/bloco de código e sem URL inventada.
+  - `REGRAS_FATIAMENTO`: resumo de cada fatia preserva os campos separados por ` | ` para montar tabelas depois; `limparResposta()` remove cerca de código Markdown no início/fim.
+  - Novo `src/components/ui/markdown-ia.tsx`: `ReactMarkdown` + `remark-gfm`, tabela com rolagem horizontal, `th scope="col"`, checkbox desabilitado e links restritos a `http(s)`, `mailto`, `#` e `/` com `target`/`rel` seguros.
+  - `analise-ia-panel.tsx`: análise salva e respostas do chat passam a usar o renderer comum; modal “i” e testes atualizados.
+- **Arquivos Envolvidos:** `src/lib/crm/saude-prospeccao-ia.ts`, `src/lib/crm/saude-prospeccao-ia.test.ts`, `src/components/ui/markdown-ia.tsx`, `src/components/ui/markdown-ia.test.tsx`, `src/components/crm/saude-prospeccao/analise-ia-panel.tsx`, `src/components/crm/saude-prospeccao/analise-ia-panel.test.tsx`, `src/lib/info-content/crm.ts`, `src/lib/info-content/info-content.test.ts`, `docs/opencode-nemotron.md`, `docs/Sessoes.md`.
+- **Testes:** foco 4 arquivos / 75 testes verdes; `npm run test` → 504 arquivos / 2987 testes passados; `npm run lint` apenas warnings pré-existentes; `tsc --noEmit` limpo; `npm run build` OK.
 
 ---
 

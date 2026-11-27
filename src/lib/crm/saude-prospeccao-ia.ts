@@ -118,8 +118,11 @@ PONTUAÇÃO DE SAÚDE (use somente estes pesos):
 - Conversão: comercial = mínimo(50%, pedidos de venda ÷ oportunidades × 50%); financeira = mínimo(50%, faturamentos ÷ pedidos de venda × 50%); conversão real = comercial + financeira, arredondada e limitada a 100%. Sem oportunidades, comercial é 0%; sem pedidos, financeira é 0%.
 
 REGRAS DE RESPOSTA:
-- Responda em português do Brasil, em Markdown, com no máximo 700 palavras.
-- Comece com "## Diagnóstico", depois "## Como elevar a saúde" e "## Prioridades".
+- Responda em português do Brasil, em Markdown limpo e estruturado, com no máximo 700 palavras.
+- Comece com "## Diagnóstico", depois "## Como elevar a saúde" e "## Prioridades". Use "###" para subtítulos dentro dessas seções.
+- Sempre que comparar 3 ou mais registros ou métricas, use uma tabela Markdown com cabeçalho. Quando listar registros individualmente, use as colunas: Registro | Classe | Temp. | Esforço | Engaj. | Conv. | Próxima ação.
+- Use "- [ ]" para checklist de ações, "**negrito**" para destaques e "> " para alertas curtos. Não use emoji, HTML, bloco de código envolvendo a resposta nem repita em prosa o que já está na tabela.
+- Use links Markdown [texto](url) somente quando a URL estiver nos dados recebidos; nunca invente URL nem use javascript:.
 - Para cada registro listado individualmente, cite nome, classificação, temperatura, esforço, engajamento e conversão usando os valores recebidos. Quando houver amostragem, use apenas o resumoDosOmitidos recebido, sem inventar nomes.
 - Sugira ações que aumentem o engajamento (proposta negociada, oportunidade negociada, pedido de venda, faturamento, visita/ação agendada) ou reduzam esforço sem inventar novos critérios.
 - Para AEC, prefira ações que transformem esforço em engajamento. Para BEC, prefira aumentar cadência e registrar relato/ata e check-in. Para Engajados, mantenha o movimento e avance para pedido/faturamento.
@@ -129,9 +132,9 @@ REGRAS DE RESPOSTA:
 
 const REGRAS_FATIAMENTO = `Você compacta um lote de registros da Saúde da Prospecção para manter o contexto de uma análise maior.
 Não faça análise final, não sugira ações e nunca responda CONSULTAR.
-Preserve, para cada registro recebido, uma linha fiel com: chave, nome, classificação, temperatura, esforço, engajamento, conversão, visitas realizadas/agendadas, ações realizadas/agendadas, status/valor/probabilidade da oportunidade, pedidos e faturamentos.
+Preserve, para cada registro recebido, uma linha fiel com: chave, nome, classificação, temperatura, esforço, engajamento, conversão, visitas realizadas/agendadas, ações realizadas/agendadas, status/valor/probabilidade da oportunidade, pedidos e faturamentos. Separe esses campos por " | " para permitir montar tabela Markdown depois.
 Ao final, inclua contagens por classificação e temperatura e os registros que exigem atenção.
-Use português do Brasil, formato compacto e no máximo 3500 caracteres. Não invente dados.`
+Use português do Brasil, formato compacto, sem Markdown e com no máximo 3500 caracteres. Não invente dados.`
 
 function chaveDeLinha(linha: Pick<LinhaAnaliseIA, "tipo" | "id">) {
   return `${linha.tipo}:${linha.id}`
@@ -450,7 +453,7 @@ export function montarMensagensConversaAnalise({
     { role: "system", content: REGRAS_SISTEMA },
     {
       role: "user",
-      content: `Você está respondendo sobre uma análise já salva no sistema. Use aquela análise e o contexto compactado abaixo; não peça os registros novamente.\n\nTítulo: ${analise.titulo ?? "Análise salva"}\nResumo: ${analise.resumo ?? "—"}\n\nAnálise salva:\n${textoLimitado(
+      content: `Você está respondendo sobre uma análise já salva no sistema. Use aquela análise e o contexto compactado abaixo; não peça os registros novamente. Responda em Markdown limpo, mantendo títulos, tabelas, checklist e destaques quando ajudarem.\n\nTítulo: ${analise.titulo ?? "Análise salva"}\nResumo: ${analise.resumo ?? "—"}\n\nAnálise salva:\n${textoLimitado(
         analise.analise,
         limites.dados
       )}\n\nContexto compactado dos registros usados na análise:\n${textoLimitado(
@@ -483,6 +486,8 @@ export function parseConsultaCurada(conteudo: string): ConsultaCurada | null {
 
 export function limparResposta(conteudo: string): string {
   return conteudo
+    .replace(/^\s*```(?:markdown|md)?\s*\n/i, "")
+    .replace(/\n```\s*$/i, "")
     .replace(/^\s*CONSULTAR:.*$/gim, "")
     .replace(/\n{3,}/g, "\n\n")
     .trim()

@@ -4,6 +4,7 @@ import { chamarIA } from "@/lib/ai"
 import {
   chamarAnaliseComConsultas,
   dividirLinhasEmFatias,
+  limparResposta,
   medirMensagensIA,
   montarMensagensAnalise,
   montarMensagensConversaAnalise,
@@ -234,6 +235,14 @@ describe("chamarAnaliseComConsultas", () => {
     expect(regras).toMatch(/pedidos de venda ÷ oportunidades/i)
     expect(regras).toMatch(/faturamentos ÷ pedidos de venda/i)
     expect(regras).toMatch(/limitada a 100%/i)
+    expect(regras).toMatch(/tabela Markdown/i)
+    expect(regras).toMatch(/checklist/i)
+    expect(regras).toMatch(/não use emoji, html/i)
+    expect(regras).toMatch(/nunca invente url/i)
+  })
+
+  it("remove cerca de código Markdown da resposta final", () => {
+    expect(limparResposta("```markdown\n## Diagnóstico\n\nOk.\n```")).toBe("## Diagnóstico\n\nOk.")
   })
 })
 
@@ -261,6 +270,8 @@ describe("montarMensagensConversaAnalise", () => {
     expect(conteudo).toContain("Diagnóstico salvo")
     expect(conteudo).toContain("MEMORIA COMPACTA DOS REGISTROS")
     expect(conteudo).toContain("Consultas já feitas nesta análise")
+    expect(conteudo).toMatch(/Markdown limpo/i)
+    expect(conteudo).toMatch(/tabelas, checklist e destaques/i)
     expect(conteudo).toContain("E agora?")
     expect(conteudo).not.toMatch(/Dados dos registros filtrados na tela/i)
     expect(mensagens[mensagens.length - 1]).toEqual({

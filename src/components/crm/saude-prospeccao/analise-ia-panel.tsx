@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
-import ReactMarkdown from "react-markdown"
 import { Bot, Download, Eye, FileJson, Loader2, MessageCircle, Send, Sparkles } from "lucide-react"
 import {
   Dialog,
@@ -12,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { InfoButton } from "@/components/ui/info-button"
+import { MarkdownIa } from "@/components/ui/markdown-ia"
 import { calcularConversaoLeads, type ClienteSaudeLeads } from "@/lib/crm/leads-saude"
 import type { FiltrosSaude } from "@/lib/crm/visitas-saude"
 import { saudeProspeccaoLeadsInfo } from "@/lib/info-content/crm"
@@ -459,8 +459,8 @@ export function AnaliseIaPanel({
                   </div>
                 ) : (
                   <div className="space-y-4 sm:space-y-5">
-                    <article className="prose prose-sm max-w-none break-words dark:prose-invert sm:prose-base">
-                      <ReactMarkdown>{analise.analise}</ReactMarkdown>
+                    <article>
+                      <MarkdownIa conteudo={analise.analise} />
                     </article>
                     {mensagens.map((mensagem) => (
                       <div
@@ -477,9 +477,7 @@ export function AnaliseIaPanel({
                         {mensagem.papel === "usuario" ? (
                           <p className="whitespace-pre-wrap text-sm">{mensagem.conteudo}</p>
                         ) : (
-                          <div className="prose prose-sm max-w-none break-words dark:prose-invert sm:prose-base">
-                            <ReactMarkdown>{mensagem.conteudo}</ReactMarkdown>
-                          </div>
+                          <MarkdownIa conteudo={mensagem.conteudo} />
                         )}
                       </div>
                     ))}
