@@ -3,7 +3,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { fireEvent, screen, waitFor, within } from "@testing-library/react"
 import { createFetchMock, renderPage, routeJson, toastMock } from "@/test/harness"
 import type { ClienteSaudeLeads } from "@/lib/crm/leads-saude"
+import { exportarAnaliseIA } from "@/lib/crm/saude-prospeccao-ia-export"
 import { AnaliseIaPanel } from "./analise-ia-panel"
+
+vi.mock("@/lib/crm/saude-prospeccao-ia-export", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/crm/saude-prospeccao-ia-export")>()
+  return { ...actual, exportarAnaliseIA: vi.fn().mockResolvedValue(undefined) }
+})
 
 const linha = {
   id: 10,
@@ -101,6 +107,7 @@ describe("AnaliseIaPanel", () => {
   beforeEach(() => {
     toastMock.success.mockClear()
     toastMock.error.mockClear()
+    vi.mocked(exportarAnaliseIA).mockClear()
   })
 
   it("gera análise com as linhas filtradas e permite conversar e concluir", async () => {
@@ -140,6 +147,23 @@ describe("AnaliseIaPanel", () => {
     expect(within(dialog).getByRole("table")).toBeInTheDocument()
     expect(within(dialog).getByRole("cell", { name: "Cliente Alpha" })).toBeInTheDocument()
     expect(within(dialog).getByRole("checkbox")).toBeDisabled()
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Exportar MD" }))
+    fireEvent.click(within(dialog).getByRole("button", { name: "Exportar PDF" }))
+    fireEvent.click(within(dialog).getByRole("button", { name: "Exportar resposta 1 em Markdown" }))
+    fireEvent.click(within(dialog).getByRole("button", { name: "Exportar resposta 1 em PDF" }))
+    expect(exportarAnaliseIA).toHaveBeenCalledWith(
+      expect.objectContaining({ formato: "md", escopo: "conversa" })
+    )
+    expect(exportarAnaliseIA).toHaveBeenCalledWith(
+      expect.objectContaining({ formato: "pdf", escopo: "conversa" })
+    )
+    expect(exportarAnaliseIA).toHaveBeenCalledWith(
+      expect.objectContaining({ formato: "md", escopo: "interacao", indice: 1 })
+    )
+    expect(exportarAnaliseIA).toHaveBeenCalledWith(
+      expect.objectContaining({ formato: "pdf", escopo: "interacao", indice: 1 })
+    )
 
     fireEvent.click(within(dialog).getByRole("button", { name: /Concluir e enviar/ }))
     await waitFor(() => expect(toastMock.success).toHaveBeenCalledWith("Conversa enviada por e-mail"))

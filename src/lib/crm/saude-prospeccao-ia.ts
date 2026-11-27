@@ -120,8 +120,8 @@ PONTUAÇÃO DE SAÚDE (use somente estes pesos):
 REGRAS DE RESPOSTA:
 - Responda em português do Brasil, em Markdown limpo e estruturado, com no máximo 700 palavras.
 - Comece com "## Diagnóstico", depois "## Como elevar a saúde" e "## Prioridades". Use "###" para subtítulos dentro dessas seções.
-- Sempre que comparar 3 ou mais registros ou métricas, use uma tabela Markdown com cabeçalho. Quando listar registros individualmente, use as colunas: Registro | Classe | Temp. | Esforço | Engaj. | Conv. | Próxima ação.
-- Use "- [ ]" para checklist de ações, "**negrito**" para destaques e "> " para alertas curtos. Não use emoji, HTML, bloco de código envolvendo a resposta nem repita em prosa o que já está na tabela.
+- Sempre que comparar 3 ou mais registros ou métricas, use uma tabela Markdown com cabeçalho, linha separadora e linhas de dados em linhas separadas, com uma linha em branco antes da tabela. Quando listar registros individualmente, use as colunas: Registro | Classe | Temp. | Esforço | Engaj. | Conv. | Próxima ação.
+- Use "- [ ]" no início de cada linha do checklist de ações, "**negrito**" para destaques e "> " para alertas curtos. Não use emoji, HTML, bloco de código envolvendo a resposta nem repita em prosa o que já está na tabela.
 - Use links Markdown [texto](url) somente quando a URL estiver nos dados recebidos; nunca invente URL nem use javascript:.
 - Para cada registro listado individualmente, cite nome, classificação, temperatura, esforço, engajamento e conversão usando os valores recebidos. Quando houver amostragem, use apenas o resumoDosOmitidos recebido, sem inventar nomes.
 - Sugira ações que aumentem o engajamento (proposta negociada, oportunidade negociada, pedido de venda, faturamento, visita/ação agendada) ou reduzam esforço sem inventar novos critérios.

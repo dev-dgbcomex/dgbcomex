@@ -13,6 +13,7 @@ import {
 import { InfoButton } from "@/components/ui/info-button"
 import { MarkdownIa } from "@/components/ui/markdown-ia"
 import { calcularConversaoLeads, type ClienteSaudeLeads } from "@/lib/crm/leads-saude"
+import { exportarAnaliseIA, numeroDaInteracao } from "@/lib/crm/saude-prospeccao-ia-export"
 import type { FiltrosSaude } from "@/lib/crm/visitas-saude"
 import { saudeProspeccaoLeadsInfo } from "@/lib/info-content/crm"
 
@@ -260,18 +261,22 @@ export function AnaliseIaPanel({
     }
   }
 
-  function baixarMarkdown() {
+  async function exportar(
+    formato: "md" | "pdf",
+    escopo: "conversa" | "interacao",
+    indice?: number
+  ) {
     if (!analise) return
-    const conversa = mensagens
-      .map((mensagem) => `### ${mensagem.papel === "usuario" ? "Pergunta" : "Resposta"}\n\n${mensagem.conteudo}`)
-      .join("\n\n")
-    const conteudo = `# ${analise.titulo}\n\n${analise.analise}\n\n## Conversa\n\n${conversa}\n`
-    const url = URL.createObjectURL(new Blob([conteudo], { type: "text/markdown;charset=utf-8" }))
-    const link = document.createElement("a")
-    link.href = url
-    link.download = "saude-prospeccao-analise.md"
-    link.click()
-    URL.revokeObjectURL(url)
+    try {
+      await exportarAnaliseIA({ analise, mensagens, formato, escopo, indice })
+      toast.success(
+        escopo === "conversa"
+          ? `Conversa exportada em ${formato.toUpperCase()}`
+          : `Resposta exportada em ${formato.toUpperCase()}`
+      )
+    } catch {
+      toast.error(`Não foi possível exportar a conversa em ${formato.toUpperCase()}`)
+    }
   }
 
   return (
@@ -368,12 +373,21 @@ export function AnaliseIaPanel({
                 )}
                 <button
                   type="button"
-                  onClick={baixarMarkdown}
+                  onClick={() => void exportar("md", "conversa")}
                   disabled={!analise}
                   className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50 dark:text-slate-300 dark:hover:bg-slate-800"
                 >
                   <Download size={14} />
-                  Markdown
+                  Exportar MD
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void exportar("pdf", "conversa")}
+                  disabled={!analise}
+                  className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50 dark:text-slate-300 dark:hover:bg-slate-800"
+                >
+                  <Download size={14} />
+                  Exportar PDF
                 </button>
                 <button
                   type="button"
@@ -462,7 +476,7 @@ export function AnaliseIaPanel({
                     <article>
                       <MarkdownIa conteudo={analise.analise} />
                     </article>
-                    {mensagens.map((mensagem) => (
+                    {mensagens.map((mensagem, indice) => (
                       <div
                         key={mensagem.id}
                         className={`rounded-lg border p-3 ${
@@ -471,9 +485,31 @@ export function AnaliseIaPanel({
                             : "mr-4 bg-slate-50 dark:bg-slate-900 sm:mr-10"
                         }`}
                       >
-                        <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                          {mensagem.papel === "usuario" ? "Pergunta" : "Resposta"}
-                        </p>
+                        <div className="mb-1 flex items-center justify-between gap-2">
+                          <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                            {mensagem.papel === "usuario" ? "Pergunta" : "Resposta"}
+                          </p>
+                          {mensagem.papel !== "usuario" && (
+                            <div className="flex gap-1">
+                              <button
+                                type="button"
+                                onClick={() => void exportar("md", "interacao", indice)}
+                                aria-label={`Exportar resposta ${numeroDaInteracao(mensagens, indice)} em Markdown`}
+                                className="rounded border px-1.5 py-0.5 text-[10px] font-medium text-slate-600 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-slate-300 dark:hover:bg-slate-800"
+                              >
+                                MD
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => void exportar("pdf", "interacao", indice)}
+                                aria-label={`Exportar resposta ${numeroDaInteracao(mensagens, indice)} em PDF`}
+                                className="rounded border px-1.5 py-0.5 text-[10px] font-medium text-slate-600 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-slate-300 dark:hover:bg-slate-800"
+                              >
+                                PDF
+                              </button>
+                            </div>
+                          )}
+                        </div>
                         {mensagem.papel === "usuario" ? (
                           <p className="whitespace-pre-wrap text-sm">{mensagem.conteudo}</p>
                         ) : (

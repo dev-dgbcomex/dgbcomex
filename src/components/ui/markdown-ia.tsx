@@ -2,6 +2,7 @@
 
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
+import { normalizarMarkdownIa } from "@/lib/markdown-ia"
 
 type MarkdownIaProps = {
   conteudo: string
@@ -56,12 +57,13 @@ export function MarkdownIa({ conteudo, className = "" }: MarkdownIaProps) {
                 checked={Boolean(checked)}
                 readOnly
                 disabled
+                aria-label={checked ? "Item concluído" : "Item pendente"}
                 className="mr-2 accent-blue-600"
               />
             ) : null,
         }}
       >
-        {conteudo}
+        {normalizarMarkdownIa(conteudo)}
       </ReactMarkdown>
     </div>
   )

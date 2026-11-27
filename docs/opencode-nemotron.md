@@ -206,6 +206,12 @@ docker run --gpus=all \
 - Saída obrigatória em Markdown/GFM: títulos `##`/`###`, tabelas com colunas fixas para comparações,
   `- [ ]` para checklist e links apenas com URL presente nos dados. O front usa
   `src/components/ui/markdown-ia.tsx` com `remark-gfm` e `urlTransform` restritivo.
+- Quando o modelo devolve tabela compactada em uma linha ou checklist sem o `- `,
+  `src/lib/markdown-ia.ts` normaliza o texto antes de renderizar e exportar; o prompt também pede
+  cabeçalho, separador e linhas em linhas separadas, com cada item iniciando em `- [ ]`.
+- O modal exporta a conversa inteira ou apenas uma resposta em MD/PDF
+  (`src/lib/crm/saude-prospeccao-ia-export.ts`): o MD mantém Markdown válido, e o PDF converte o
+  conteúdo em texto paginado A4 via `jspdf` carregado sob demanda.
 - Se uma resposta NVIDIA vier sem `content` por `finish_reason: "length"`, o PDM repete com o
   dobro de `max_tokens` na mesma chave antes de cair para o próximo provedor; HTTP 413 nunca
   dispara fallback (o payload precisa ser reduzido).
