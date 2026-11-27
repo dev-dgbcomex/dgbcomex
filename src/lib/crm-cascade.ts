@@ -7,6 +7,7 @@ import { crmFaturamentos } from "@/lib/db/schema/crm-faturamentos"
 import { crmFaturamentoItens } from "@/lib/db/schema/crm-faturamento-itens"
 import { crmPedidosVenda } from "@/lib/db/schema/crm-pedidos-venda"
 import { crmPedidoVendaItens } from "@/lib/db/schema/crm-pedido-venda-itens"
+import { crmAcoesProspeccao } from "@/lib/db/schema/crm-acoes-prospeccao"
 import { excluirTimelineEventosEntidade } from "./crm-timeline"
 
 export async function excluirOportunidadeCascade(tx: any, oportunidadeId: number) {
@@ -36,6 +37,11 @@ export async function excluirOportunidadeCascade(tx: any, oportunidadeId: number
     await excluirTimelineEventosEntidade({ tipo: "PROPOSTA", campo: "propostaId", id: p.id }, tx)
   }
   await tx.delete(crmPropostas).where(eq(crmPropostas.oportunidadeId, oportunidadeId))
+
+  await tx
+    .update(crmAcoesProspeccao)
+    .set({ oportunidadeId: null })
+    .where(eq(crmAcoesProspeccao.oportunidadeId, oportunidadeId))
 
   const faturamentos = await tx
     .select({ id: crmFaturamentos.id })

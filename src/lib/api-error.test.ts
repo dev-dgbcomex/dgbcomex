@@ -56,6 +56,16 @@ describe("handleApiError", () => {
     expect(body.fkError).toBe(true)
   })
 
+  it("returns 409 for foreign key errors wrapped in a cause", async () => {
+    const fkError = Object.assign(new Error("Failed query"), {
+      cause: Object.assign(new Error("FK violation"), { code: "23503" }),
+    })
+    const response = await handleApiError(fkError, "test-context")
+    const body = await response.json()
+    expect(response.status).toBe(409)
+    expect(body.fkError).toBe(true)
+  })
+
   it("returns 500 for generic errors", async () => {
     const response = await handleApiError(new Error("boom"), "test-context")
     const body = await response.json()

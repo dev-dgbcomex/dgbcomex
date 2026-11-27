@@ -38,6 +38,7 @@ function txMock() {
   return {
     select: vi.fn(() => createQueryBuilder([])),
     delete: vi.fn(() => createQueryBuilder(undefined)),
+    update: vi.fn(() => createQueryBuilder(undefined)),
   }
 }
 

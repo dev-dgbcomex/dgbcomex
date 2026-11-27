@@ -10,9 +10,22 @@ function detalhesCausa(error: unknown): string {
   return texto && texto !== String(error) ? ` | causa: ${texto}` : ""
 }
 
+function pgErrorCode(error: unknown): string | undefined {
+  const visitados = new Set<unknown>()
+  let atual: unknown = error
+
+  while (atual && typeof atual === "object" && !visitados.has(atual)) {
+    visitados.add(atual)
+    const codigo = (atual as { code?: unknown }).code
+    if (typeof codigo === "string") return codigo
+    atual = (atual as { cause?: unknown }).cause
+  }
+
+  return undefined
+}
+
 export async function handleApiError(error: unknown, context: string, usuarioNome?: string | null) {
-  const pgError = error as { code?: string; detail?: string; message?: string }
-  const isFK = pgError?.code === FK_ERROR
+  const isFK = pgErrorCode(error) === FK_ERROR
 
   const detalhes = detalhesCausa(error)
   if (detalhes) console.error(`[${context}]`, error, detalhes)

@@ -849,6 +849,23 @@
 - **Arquivos Envolvidos:** `src/lib/crm/saude-prospeccao-ia.ts`, `src/lib/crm/saude-prospeccao-ia.test.ts`, `src/components/ui/markdown-ia.tsx`, `src/components/ui/markdown-ia.test.tsx`, `src/components/crm/saude-prospeccao/analise-ia-panel.tsx`, `src/components/crm/saude-prospeccao/analise-ia-panel.test.tsx`, `src/lib/info-content/crm.ts`, `src/lib/info-content/info-content.test.ts`, `docs/opencode-nemotron.md`, `docs/Sessoes.md`.
 - **Testes:** foco 4 arquivos / 75 testes verdes; `npm run test` → 504 arquivos / 2987 testes passados; `npm run lint` apenas warnings pré-existentes; `tsc --noEmit` limpo; `npm run build` OK.
 
+### Sessão 55 — Exportação MD/PDF da análise e correção do DELETE de oportunidade
+
+- **Data:** 2026-11-27
+- **Commits:** `bf8513b8` — `feat(ia): exporta conversa da analise em md e pdf`, `fix(crm): corrige exclusao de oportunidade com acao vinculada`
+- **Tarefa:** fazer o chat renderizar/exportar Markdown de verdade e corrigir o 500 em produção no `DELETE /api/crm/oportunidades/3`.
+- **Causa raiz do 500:** a oportunidade 3 tinha uma ação de prospecção (`crm_acoes_prospeccao`, FK `NO ACTION`) que `excluirOportunidadeCascade()` não desvinculava; além disso, `handleApiError()` lia apenas `error.code`, então o `PostgresError` dentro de `cause` do Drizzle não era reconhecido como FK e virava 500 em vez de 409.
+- **Resultado:**
+  - Novo `src/lib/markdown-ia.ts`: `normalizarMarkdownIa()` quebra tabelas compactadas em uma linha, transforma `[ ]`/`[x]` em `- [ ]`/`- [x]` e remove cerca de código; `markdownIaParaTexto()` converte Markdown em texto para PDF.
+  - `MarkdownIa` renderiza o conteúdo normalizado, mantém `remark-gfm`, `urlTransform` restritivo e checkbox com `aria-label`.
+  - `REGRAS_SISTEMA` e `REGRAS_FATIAMENTO` passaram a pedir tabela com cabeçalho/separador/linhas em linhas separadas e checklist iniciando com `- [ ]`.
+  - Novo `src/lib/crm/saude-prospeccao-ia-export.ts`: `exportarAnaliseIA()` gera MD da conversa inteira ou de uma interação (pergunta anterior + resposta) e PDF A4 via `jspdf` dinâmico; o painel ganhou `Exportar MD`/`Exportar PDF` no topo e botões MD/PDF por resposta.
+  - `excluirOportunidadeCascade()` desvincula as ações de prospecção (`oportunidade_id = null`) antes de apagar a oportunidade, preservando agenda/histórico; nenhuma migration foi necessária.
+  - `handleApiError()` passou a procurar `code` de forma recursiva em `error.cause`, com proteção contra ciclo; FK embrulhado pelo Drizzle volta como 409 `fkError`.
+  - Modal “i”, `docs/opencode-nemotron.md` e testes atualizados; contrato das rotas mantido.
+- **Arquivos Envolvidos:** `src/lib/markdown-ia.ts`, `src/lib/markdown-ia.test.ts`, `src/components/ui/markdown-ia.tsx`, `src/components/crm/saude-prospeccao/analise-ia-panel.tsx`, `src/components/crm/saude-prospeccao/analise-ia-panel.test.tsx`, `src/lib/crm/saude-prospeccao-ia.ts`, `src/lib/crm/saude-prospeccao-ia-export.ts`, `src/lib/crm/saude-prospeccao-ia-export.test.ts`, `src/lib/crm-cascade.ts`, `src/lib/crm-cascade.test.ts`, `src/lib/api-error.ts`, `src/lib/api-error.test.ts`, `src/app/api/crm/oportunidades/[id]/route.test.ts`, `src/lib/info-content/crm.ts`, `src/lib/info-content/info-content.test.ts`, `docs/opencode-nemotron.md`, `docs/Sessoes.md`.
+- **Testes:** foco 10 arquivos verdes; `npm run test` → 507 arquivos / 2996 testes passados; `tsc --noEmit` limpo; `npm run lint` apenas warnings pré-existentes; `npm run build` OK. DELETE da oportunidade 3 validado no Neon em transação com rollback: exclusão concluída sem violação de FK e dados preservados.
+
 ---
 
 ## Estrutura de Comandos
