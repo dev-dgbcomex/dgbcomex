@@ -210,8 +210,10 @@ docker run --gpus=all \
   `src/lib/markdown-ia.ts` normaliza o texto antes de renderizar e exportar; o prompt também pede
   cabeçalho, separador e linhas em linhas separadas, com cada item iniciando em `- [ ]`.
 - O modal exporta a conversa inteira ou apenas uma resposta em MD/PDF
-  (`src/lib/crm/saude-prospeccao-ia-export.ts`): o MD mantém Markdown válido, e o PDF converte o
-  conteúdo em texto paginado A4 via `jspdf` carregado sob demanda.
+  (`src/lib/crm/saude-prospeccao-ia-export.ts`): o MD mantém Markdown válido, e o PDF A4 é montado
+  a partir dos blocos de `src/lib/markdown-ia-pdf.ts` com `jspdf` + `jspdf-autotable` carregados sob
+  demanda — títulos, parágrafos, listas/checklist, citações, código e tabelas saem formatados, com
+  cabeçalho Dracula, linhas alternadas e rodapé com numeração de página.
 - Se uma resposta NVIDIA vier sem `content` por `finish_reason: "length"`, o PDM repete com o
   dobro de `max_tokens` na mesma chave antes de cair para o próximo provedor; HTTP 413 nunca
   dispara fallback (o payload precisa ser reduzido).

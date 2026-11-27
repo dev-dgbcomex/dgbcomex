@@ -866,6 +866,19 @@
 - **Arquivos Envolvidos:** `src/lib/markdown-ia.ts`, `src/lib/markdown-ia.test.ts`, `src/components/ui/markdown-ia.tsx`, `src/components/crm/saude-prospeccao/analise-ia-panel.tsx`, `src/components/crm/saude-prospeccao/analise-ia-panel.test.tsx`, `src/lib/crm/saude-prospeccao-ia.ts`, `src/lib/crm/saude-prospeccao-ia-export.ts`, `src/lib/crm/saude-prospeccao-ia-export.test.ts`, `src/lib/crm-cascade.ts`, `src/lib/crm-cascade.test.ts`, `src/lib/api-error.ts`, `src/lib/api-error.test.ts`, `src/app/api/crm/oportunidades/[id]/route.test.ts`, `src/lib/info-content/crm.ts`, `src/lib/info-content/info-content.test.ts`, `docs/opencode-nemotron.md`, `docs/Sessoes.md`.
 - **Testes:** foco 10 arquivos verdes; `npm run test` → 507 arquivos / 2996 testes passados; `tsc --noEmit` limpo; `npm run lint` apenas warnings pré-existentes; `npm run build` OK. DELETE da oportunidade 3 validado no Neon em transação com rollback: exclusão concluída sem violação de FK e dados preservados.
 
+### Sessão 56 — PDF formatado da análise e do chat de Saúde da Prospecção
+
+- **Data:** 2026-11-27
+- **Commit:** `feat(ia): formata exportacao pdf da analise com tabelas`
+- **Tarefa:** fazer o botão “Exportar PDF” da análise/chat gerar um documento com a mesma leitura do Markdown exibido na tela, inclusive tabelas.
+- **Resultado:**
+  - Novo `src/lib/markdown-ia-pdf.ts`: parser puro que converte o Markdown normalizado em blocos de título, parágrafo, lista/checklist, tabela, citação, código e separador.
+  - `src/lib/crm/saude-prospeccao-ia-export.ts` passou a renderizar esses blocos com `jspdf` + `jspdf-autotable` dinâmicos: cabeçalho Dracula, tabelas com linhas alternadas, checklist legível, quebra de página, rodapé e numeração.
+  - A exportação por resposta mantém a pergunta anterior e agora também sai com a tabela da própria mensagem; o MD continua idêntico ao renderizado.
+  - Modal “i”, `docs/opencode-nemotron.md` e testes atualizados.
+- **Arquivos Envolvidos:** `src/lib/markdown-ia-pdf.ts`, `src/lib/markdown-ia-pdf.test.ts`, `src/lib/crm/saude-prospeccao-ia-export.ts`, `src/lib/crm/saude-prospeccao-ia-export.test.ts`, `src/lib/info-content/crm.ts`, `src/lib/info-content/info-content.test.ts`, `docs/opencode-nemotron.md`, `docs/Sessoes.md`.
+- **Testes:** foco 5 arquivos / 73 testes verdes; `npm run test` → 508 arquivos / 3001 testes passados; `tsc --noEmit` limpo; `npm run lint` apenas warnings pré-existentes; `npm run build` OK.
+
 ---
 
 ## Estrutura de Comandos

@@ -489,6 +489,7 @@ describe("getInfoContent", () => {
     expect(texto).toMatch(/conversa inteira/i)
     expect(texto).toMatch(/cada resposta/i)
     expect(texto).toMatch(/normalizados antes da renderização/i)
+    expect(texto).toMatch(/PDF mantém tabelas, checklist, cabeçalho e rodapé/i)
     expect(texto).toMatch(/Markdown/i)
     expect(texto).toMatch(/Conversão/i)
     expect(texto).toMatch(/conversão comercial/i)

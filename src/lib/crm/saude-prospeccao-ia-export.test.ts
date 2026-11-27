@@ -6,26 +6,60 @@ import {
   type MensagemIAExportacao,
 } from "./saude-prospeccao-ia-export"
 
-const { salvarPdf } = vi.hoisted(() => ({ salvarPdf: vi.fn() }))
+const { salvarPdf, autoTable, textos } = vi.hoisted(() => ({
+  salvarPdf: vi.fn(),
+  autoTable: vi.fn(),
+  textos: [] as string[],
+}))
 
 vi.mock("jspdf", () => ({
   default: class {
+    lastAutoTable = { finalY: 80 }
     setFont() {
       return this
     }
     setFontSize() {
       return this
     }
-    text() {
+    setFillColor() {
       return this
     }
-    splitTextToSize(texto: string) {
-      return String(texto).split("\n")
+    setDrawColor() {
+      return this
+    }
+    setTextColor() {
+      return this
+    }
+    text(texto: string | string[]) {
+      textos.push(...(Array.isArray(texto) ? texto : [texto]))
+      return this
+    }
+    splitTextToSize(texto: string | string[]) {
+      return Array.isArray(texto) ? texto : [texto]
+    }
+    rect() {
+      return this
+    }
+    line() {
+      return this
     }
     addPage() {
       return this
     }
+    getNumberOfPages() {
+      return 1
+    }
+    setPage() {
+      return this
+    }
     save = salvarPdf
+  },
+}))
+
+vi.mock("jspdf-autotable", () => ({
+  default: (doc: { lastAutoTable?: { finalY: number } }, opcoes: unknown) => {
+    autoTable(doc, opcoes)
+    doc.lastAutoTable = { finalY: 80 }
   },
 }))
 
@@ -41,7 +75,8 @@ const mensagens: MensagemIAExportacao[] = [
   { papel: "usuario", conteudo: "Como melhorar?", createdAt: "2026-11-27T10:01:00Z" },
   {
     papel: "assistente",
-    conteudo: "## Resposta\n\n[ ] Negociar proposta",
+    conteudo:
+      "## Resposta\n\n| Registro | Classe |\n| --- | --- |\n| Alpha | AEC |\n\n[ ] Negociar proposta",
     createdAt: "2026-11-27T10:02:00Z",
   },
 ]
@@ -53,7 +88,9 @@ describe("exportarAnaliseIA", () => {
   beforeEach(() => {
     blobs = []
     downloads = []
+    textos.length = 0
     salvarPdf.mockClear()
+    autoTable.mockClear()
     vi.stubGlobal(
       "URL",
       Object.assign(URL, {
@@ -109,10 +146,24 @@ describe("exportarAnaliseIA", () => {
     expect(conteudo).toContain("- [ ] Negociar proposta")
   })
 
-  it("exporta conversa e interação em PDF", async () => {
+  it("exporta conversa em PDF com tabelas, cabeçalho e rodapé", async () => {
     await exportarAnaliseIA({ analise, mensagens, formato: "pdf", escopo: "conversa" })
-    expect(salvarPdf).toHaveBeenNthCalledWith(1, "saude-prospeccao-ia-analise-de-saude-conversa.pdf")
 
+    expect(salvarPdf).toHaveBeenCalledWith("saude-prospeccao-ia-analise-de-saude-conversa.pdf")
+    expect(autoTable).toHaveBeenCalledTimes(2)
+    expect(autoTable.mock.calls[0]![1]).toMatchObject({
+      head: [["Registro", "Classe"]],
+      body: [["Alpha", "AEC"]],
+      theme: "grid",
+    })
+    const conteudo = textos.join(" ")
+    expect(conteudo).toContain("Conversa — Análise de saúde")
+    expect(conteudo).toContain("Diagnóstico")
+    expect(conteudo).toContain("[ ] Negociar proposta")
+    expect(conteudo).toContain("Página 1 de 1")
+  })
+
+  it("exporta a resposta em PDF com a tabela da própria mensagem", async () => {
     await exportarAnaliseIA({
       analise,
       mensagens,
@@ -120,6 +171,13 @@ describe("exportarAnaliseIA", () => {
       escopo: "interacao",
       indice: 1,
     })
-    expect(salvarPdf).toHaveBeenNthCalledWith(2, "saude-prospeccao-ia-analise-de-saude-interacao-1.pdf")
+
+    expect(salvarPdf).toHaveBeenCalledWith("saude-prospeccao-ia-analise-de-saude-interacao-1.pdf")
+    expect(autoTable).toHaveBeenCalledTimes(1)
+    expect(autoTable.mock.calls[0]![1]).toMatchObject({
+      head: [["Registro", "Classe"]],
+      body: [["Alpha", "AEC"]],
+    })
+    expect(textos.join(" ")).toContain("Interação 1 — Análise de saúde")
   })
 })
