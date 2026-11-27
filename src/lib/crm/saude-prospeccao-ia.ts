@@ -57,7 +57,14 @@ export type CompactacaoDadosIA = { total: number; incluidos: number; omitidos: n
 
 const TOKENS_DECISAO = 1024
 const TOKENS_ANALISE = 8192
+const TOKENS_RESUMO_FATIA = 1024
 const TAMANHO_TEXTO_CURTO = 80
+const LIMITE_FATIAMENTO_CHARS = 45_000
+const TAMANHO_FATIA_CHARS = 18_000
+const LIMITE_MEMORIA_FATIAS_CHARS = 40_000
+
+export const PERGUNTA_ANALISE_PADRAO =
+  "Faça uma análise da saúde da prospecção destes registros e sugira ações para melhorá-la."
 
 export type PerfilContextoIA = "padrao" | "nvidia"
 
@@ -119,6 +126,12 @@ REGRAS DE RESPOSTA:
 - Para temperaturas FRIA/MORNA, sugira avançar para PROPOSTA/NEGOCIACAO conforme a regra canônica, sempre dentro do sistema.
 - Se precisar de mais dados, responda EXATAMENTE uma linha no formato: CONSULTAR: oportunidades|cliente|123|10 (ou visitas/acoes e cliente/pessoa). Não escreva mais nada nessa resposta. Você pode pedir no máximo 2 consultas por análise.
 - Consultas permitidas: oportunidades, visitas, acoes. Nunca peça SQL livre.`
+
+const REGRAS_FATIAMENTO = `Você compacta um lote de registros da Saúde da Prospecção para manter o contexto de uma análise maior.
+Não faça análise final, não sugira ações e nunca responda CONSULTAR.
+Preserve, para cada registro recebido, uma linha fiel com: chave, nome, classificação, temperatura, esforço, engajamento, conversão, visitas realizadas/agendadas, ações realizadas/agendadas, status/valor/probabilidade da oportunidade, pedidos e faturamentos.
+Ao final, inclua contagens por classificação e temperatura e os registros que exigem atenção.
+Use português do Brasil, formato compacto e no máximo 3500 caracteres. Não invente dados.`
 
 function chaveDeLinha(linha: Pick<LinhaAnaliseIA, "tipo" | "id">) {
   return `${linha.tipo}:${linha.id}`
@@ -334,6 +347,28 @@ function montarBlocoDados(
   }
 }
 
+function montarHistoricoMensagens(
+  historico: { papel: "usuario" | "assistente"; conteudo: string }[],
+  perfil: PerfilContextoIA
+) {
+  const historicoSelecionado = historico.slice(-MAX_HISTORICO_IA)
+  let restante = LIMITES_CONTEXTO_IA[perfil].historico
+  const mensagensHistorico: MensagemIA[] = []
+
+  for (let indice = historicoSelecionado.length - 1; indice >= 0; indice--) {
+    const limite = Math.min(LIMITES_CONTEXTO_IA[perfil].mensagemHistorico, restante)
+    if (limite <= 0) break
+    const conteudo = historicoSelecionado[indice].conteudo.slice(0, limite)
+    mensagensHistorico.unshift({
+      role: historicoSelecionado[indice].papel === "usuario" ? "user" : "assistant",
+      content: conteudo,
+    })
+    restante -= conteudo.length
+  }
+
+  return mensagensHistorico
+}
+
 type OpcoesMensagensAnalise = {
   linhas: LinhaAnaliseContexto[]
   filtros: Record<string, unknown>
@@ -353,28 +388,14 @@ function montarMensagensAnaliseComCompactacao({
 }: OpcoesMensagensAnalise): { mensagens: MensagemIA[]; compactacao: CompactacaoDadosIA } {
   const limites = LIMITES_CONTEXTO_IA[perfil]
   const { bloco, compactacao } = montarBlocoDados(linhas, filtros, perfil)
-  const historicoSelecionado = historico.slice(-MAX_HISTORICO_IA)
-  let restante = limites.historico
-  const mensagensHistorico: MensagemIA[] = []
-
-  for (let indice = historicoSelecionado.length - 1; indice >= 0; indice--) {
-    const limite = Math.min(limites.mensagemHistorico, restante)
-    if (limite <= 0) break
-    const conteudo = historicoSelecionado[indice].conteudo.slice(0, limite)
-    mensagensHistorico.unshift({
-      role: historicoSelecionado[indice].papel === "usuario" ? "user" : "assistant",
-      content: conteudo,
-    })
-    restante -= conteudo.length
-  }
+  const mensagensHistorico = montarHistoricoMensagens(historico, perfil)
 
   const mensagens: MensagemIA[] = [
     { role: "system", content: REGRAS_SISTEMA },
     {
       role: "user",
       content: `Dados dos registros filtrados na tela:\n${bloco}\n\n${
-        pergunta ??
-        "Faça uma análise da saúde da prospecção destes registros e sugira ações para melhorá-la."
+        pergunta ?? PERGUNTA_ANALISE_PADRAO
       }`,
     },
     ...mensagensHistorico,
@@ -511,18 +532,148 @@ export async function executarConsultaCurada(consulta: ConsultaCurada): Promise<
   return { ...consulta, dados }
 }
 
+export type FatiamentoAnaliseIA = {
+  total: number
+  fatias: number
+  incluidos: number
+  omitidos: number
+}
+
+type DadosFonteAnaliseIA = {
+  linhas: LinhaAnaliseContexto[]
+  filtros: Record<string, unknown>
+  pergunta?: string
+  historico?: { papel: "usuario" | "assistente"; conteudo: string }[]
+}
+
+type ResumoLinhaIA = ReturnType<typeof resumoLinha>
+
+export function dividirLinhasEmFatias(
+  linhas: LinhaAnaliseContexto[],
+  filtros: Record<string, unknown>,
+  limite = TAMANHO_FATIA_CHARS
+): string[] {
+  const resumos = [...linhas].sort(compararRegistros).map(resumoLinha)
+  const filtrosCompactos = resumoFiltros(filtros)
+  const fatias: string[] = []
+  let atual: ResumoLinhaIA[] = []
+
+  for (const resumo of resumos) {
+    const candidato = JSON.stringify({ filtros: filtrosCompactos, registros: [...atual, resumo] })
+    if (candidato.length > limite && atual.length > 0) {
+      fatias.push(JSON.stringify({ filtros: filtrosCompactos, registros: atual }))
+      atual = [resumo]
+    } else {
+      atual.push(resumo)
+    }
+  }
+
+  if (atual.length > 0) {
+    fatias.push(JSON.stringify({ filtros: filtrosCompactos, registros: atual }))
+  }
+
+  return fatias
+}
+
+function textoLimitado(texto: string, limite: number) {
+  if (texto.length <= limite) return texto
+  const aviso = `\n\n[resumo truncado para caber no contexto: ${texto.length} caracteres originais]`
+  return `${texto.slice(0, Math.max(0, limite - aviso.length))}${aviso}`
+}
+
+async function processarAnaliseEmFatias({
+  dadosFonte,
+  chaveForcada,
+  perfil,
+}: {
+  dadosFonte: DadosFonteAnaliseIA
+  chaveForcada: number | null
+  perfil: PerfilContextoIA
+}): Promise<{
+  mensagens: MensagemIA[]
+  fatiamento: FatiamentoAnaliseIA
+  resultado: ResultadoIA
+}> {
+  const fatias = dividirLinhasEmFatias(dadosFonte.linhas, dadosFonte.filtros)
+  const resumos: string[] = []
+  let resultadoFatia: ResultadoIA = {
+    conteudo: "",
+    provedor: "nenhum",
+    modelo: "",
+    nomeChave: "",
+    tentativas: 0,
+  }
+
+  for (let indice = 0; indice < fatias.length; indice++) {
+    resultadoFatia = await chamarIA(
+      [
+        { role: "system", content: REGRAS_FATIAMENTO },
+        {
+          role: "user",
+          content: `Fatia ${indice + 1} de ${fatias.length} dos registros filtrados.\n${fatias[indice]}\n\nCompacte apenas esta fatia, preservando todos os registros.`,
+        },
+      ],
+      {
+        temperatura: 0,
+        maxTokens: TOKENS_RESUMO_FATIA,
+        reasoningEffort: "none",
+        enableThinking: false,
+      },
+      chaveForcada ?? undefined
+    )
+    if (resultadoFatia.provedor === "nenhum") break
+    resumos.push(`### Fatia ${indice + 1}\n${limparResposta(resultadoFatia.conteudo)}`)
+  }
+
+  const fatiamento: FatiamentoAnaliseIA = {
+    total: dadosFonte.linhas.length,
+    fatias: fatias.length,
+    incluidos: resumos.length === fatias.length ? dadosFonte.linhas.length : 0,
+    omitidos: resumos.length === fatias.length ? 0 : dadosFonte.linhas.length,
+  }
+
+  if (resultadoFatia.provedor === "nenhum" || resumos.length !== fatias.length) {
+    return {
+      mensagens: [],
+      fatiamento,
+      resultado: resultadoFatia,
+    }
+  }
+
+  const memoria = textoLimitado(resumos.join("\n\n"), LIMITE_MEMORIA_FATIAS_CHARS)
+  const pergunta = dadosFonte.pergunta ?? PERGUNTA_ANALISE_PADRAO
+  const mensagens: MensagemIA[] = [
+    { role: "system", content: REGRAS_SISTEMA },
+    {
+      role: "user",
+      content: `Os ${dadosFonte.linhas.length} registros filtrados foram processados em ${fatias.length} fatias. Este é o resumo integral mantido em contexto:\n\n${memoria}\n\nFiltros: ${JSON.stringify(
+        resumoFiltros(dadosFonte.filtros)
+      )}\nCobertura: ${fatiamento.incluidos} de ${fatiamento.total} registros.\n\n${pergunta}`,
+    },
+    ...montarHistoricoMensagens(dadosFonte.historico ?? [], perfil),
+  ]
+
+  return { mensagens, fatiamento, resultado: resultadoFatia }
+}
+
 export async function chamarAnaliseComConsultas({
   mensagens,
   maxConsultas = 2,
   chaveId,
   perfil = "padrao",
+  dadosFonte,
 }: {
   mensagens: MensagemIA[]
   maxConsultas?: number
   chaveId?: number
   perfil?: PerfilContextoIA
-}): Promise<{ conteudo: string; resultado: ResultadoIA; consultas: ResultadoConsultaCurada[] }> {
-  const conversa = [...mensagens]
+  dadosFonte?: DadosFonteAnaliseIA
+}): Promise<{
+  conteudo: string
+  resultado: ResultadoIA
+  consultas: ResultadoConsultaCurada[]
+  fatiamento?: FatiamentoAnaliseIA
+}> {
   const consultas: ResultadoConsultaCurada[] = []
   let decisao: ResultadoIA = {
     conteudo: "",
@@ -531,11 +682,27 @@ export async function chamarAnaliseComConsultas({
     nomeChave: "",
     tentativas: 0,
   }
-  let chaveForcada: number | null = null
-  if (maxConsultas > 0) {
-    const chave = chaveId ? { id: chaveId } : await buscarChaveIAAnalise()
+  let chaveForcada: number | null = chaveId ?? null
+  if (maxConsultas > 0 && !chaveForcada) {
+    const chave = await buscarChaveIAAnalise()
     chaveForcada = chave?.id ?? null
   }
+
+  let fatiamento: FatiamentoAnaliseIA | undefined
+  let conversa = [...mensagens]
+  if (dadosFonte) {
+    const tamanhoFonte = JSON.stringify(dadosFonte.linhas.map(resumoLinha)).length
+    const enviadoChars = medirMensagensIA(mensagens).enviadoChars
+    if (tamanhoFonte > LIMITE_FATIAMENTO_CHARS || enviadoChars > LIMITE_FATIAMENTO_CHARS) {
+      const processado = await processarAnaliseEmFatias({ dadosFonte, chaveForcada, perfil })
+      fatiamento = processado.fatiamento
+      if (processado.resultado.provedor === "nenhum") {
+        return { conteudo: "", resultado: processado.resultado, consultas, fatiamento }
+      }
+      conversa = processado.mensagens
+    }
+  }
+
   let mensagensDecisao: MensagemIA[] = [
     ...conversa,
     { role: "user", content: INSTRUCAO_DECISAO },
@@ -592,7 +759,7 @@ export async function chamarAnaliseComConsultas({
     chaveForcada ?? undefined
   )
 
-  return { conteudo: limparResposta(resultado.conteudo), resultado, consultas }
+  return { conteudo: limparResposta(resultado.conteudo), resultado, consultas, fatiamento }
 }
 
 export async function contextoInicial(

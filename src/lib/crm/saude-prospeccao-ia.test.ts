@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { chamarIA } from "@/lib/ai"
 import {
   chamarAnaliseComConsultas,
+  dividirLinhasEmFatias,
   medirMensagensIA,
   montarMensagensAnalise,
   perfilContextoDaChave,
@@ -118,6 +119,110 @@ describe("chamarAnaliseComConsultas", () => {
     expect(chamarIA).toHaveBeenCalledTimes(1)
     expect(resultado.resultado.provedor).toBe("nenhum")
     expect(resultado.conteudo).toBe("")
+  })
+
+  function linhaLonga(index: number): LinhaAnaliseContexto {
+    return {
+      id: index,
+      tipo: "cliente",
+      nome: `Cliente ${index} ${"Nome extenso ".repeat(20)}`,
+      scoreEsforco: 60,
+      scoreEngajamento: 20,
+      percentualConversao: 50,
+      chave: `cliente:${index}`,
+      classificacao: "BEC",
+      temperatura: "FRIO",
+    }
+  }
+
+  it("processa registros em fatias e mantém todos os resumos no contexto final", async () => {
+    const linhas = Array.from({ length: 200 }, (_, index) => linhaLonga(index))
+    const fatias = dividirLinhasEmFatias(linhas, { busca: "alpha" })
+    expect(fatias.length).toBeGreaterThan(1)
+
+    fatias.forEach((_, indice) => {
+      vi.mocked(chamarIA).mockResolvedValueOnce({
+        conteudo: `RESUMO FATIA ${indice + 1}`,
+        provedor: "openai_compatible",
+        modelo: "nemotron-3-ultra-550b-a55b",
+        nomeChave: "NVIDIA Nemotron",
+        tentativas: 1,
+      })
+    })
+    vi.mocked(chamarIA).mockResolvedValueOnce({
+      conteudo: "## Diagnóstico final\n\nContexto preservado.",
+      provedor: "openai_compatible",
+      modelo: "nemotron-3-ultra-550b-a55b",
+      nomeChave: "NVIDIA Nemotron",
+      tentativas: 1,
+    })
+
+    const resultado = await chamarAnaliseComConsultas({
+      mensagens: [{ role: "user", content: "Pergunta curta" }],
+      maxConsultas: 0,
+      chaveId: 7,
+      perfil: "nvidia",
+      dadosFonte: { linhas, filtros: { busca: "alpha" }, pergunta: "Pergunta curta" },
+    })
+
+    expect(chamarIA).toHaveBeenCalledTimes(fatias.length + 1)
+    fatias.forEach((_, indice) => {
+      expect(chamarIA).toHaveBeenNthCalledWith(
+        indice + 1,
+        expect.any(Array),
+        expect.objectContaining({
+          temperatura: 0,
+          maxTokens: 1024,
+          reasoningEffort: "none",
+          enableThinking: false,
+        }),
+        7
+      )
+    })
+
+    const mensagensFinais = vi.mocked(chamarIA).mock.calls[fatias.length][0] as Parameters<typeof chamarIA>[0]
+    const contextoFinal = mensagensFinais.find((mensagem) => mensagem.role === "user")?.content ?? ""
+    expect(contextoFinal).toMatch(/processados em \d+ fatias/i)
+    expect(contextoFinal).toMatch(/cobertura: 200 de 200 registros/i)
+    fatias.forEach((_, indice) => expect(contextoFinal).toContain(`RESUMO FATIA ${indice + 1}`))
+    expect(resultado.conteudo).toContain("Diagnóstico final")
+    expect(resultado.fatiamento).toEqual({ total: 200, fatias: fatias.length, incluidos: 200, omitidos: 0 })
+  })
+
+  it("não gera a análise final se uma fatia falhar", async () => {
+    const linhas = Array.from({ length: 200 }, (_, index) => linhaLonga(index))
+    const fatias = dividirLinhasEmFatias(linhas, {})
+
+    vi.mocked(chamarIA).mockResolvedValueOnce({
+      conteudo: "RESUMO FATIA 1",
+      provedor: "openai_compatible",
+      modelo: "nemotron-3-ultra-550b-a55b",
+      nomeChave: "NVIDIA Nemotron",
+      tentativas: 1,
+    })
+    vi.mocked(chamarIA).mockResolvedValueOnce({
+      conteudo: "",
+      provedor: "nenhum",
+      modelo: "",
+      nomeChave: "",
+      tentativas: 2,
+      codigo: "PAYLOAD_TOO_LARGE",
+    })
+
+    const resultado = await chamarAnaliseComConsultas({
+      mensagens: [{ role: "user", content: "Pergunta curta" }],
+      maxConsultas: 0,
+      chaveId: 7,
+      perfil: "nvidia",
+      dadosFonte: { linhas, filtros: {} },
+    })
+
+    expect(chamarIA).toHaveBeenCalledTimes(2)
+    expect(fatias.length).toBeGreaterThan(2)
+    expect(resultado.conteudo).toBe("")
+    expect(resultado.resultado.codigo).toBe("PAYLOAD_TOO_LARGE")
+    expect(resultado.fatiamento?.incluidos).toBe(0)
+    expect(resultado.fatiamento?.omitidos).toBe(200)
   })
 
   it("explica a nova fórmula de conversão nas regras do sistema", () => {

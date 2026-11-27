@@ -91,6 +91,7 @@ function mockFetch() {
         enviadoChars: 123,
         estTokensAprox: 31,
         compactacao: { total: 1, incluidos: 1, omitidos: 0 },
+        fatiamentoPrevisto: null,
       },
     })
   )
@@ -121,6 +122,7 @@ describe("AnaliseIaPanel", () => {
 
     fireEvent.click(within(dialog).getByRole("button", { name: "Gerar análise" }))
     expect(await screen.findByText(/Engajados com temperatura QUENTE/)).toBeInTheDocument()
+    expect(toastMock.success).toHaveBeenCalledWith("Análise gerada com as regras do sistema")
 
     const body =
       fetchMock.calls.find(
@@ -170,6 +172,59 @@ describe("AnaliseIaPanel", () => {
 
     fireEvent.click(within(dialog).getByRole("button", { name: /Ocultar prévia/ }))
     expect(screen.queryByText(/Cliente Alpha/)).not.toBeInTheDocument()
+  })
+
+  it("informa ao usuário quando a análise foi gerada em fatias", async () => {
+    const fetchMock = createFetchMock(({ method, url }) => {
+      if (method === "POST" && url === "/api/crm/saude-prospeccao/ia/analises") {
+        return {
+          json: {
+            analise,
+            fatiamento: { total: 200, fatias: 5, incluidos: 200, omitidos: 0 },
+          },
+        }
+      }
+      return { json: { analises: [] } }
+    })
+    vi.stubGlobal("fetch", fetchMock.fn)
+    renderPage(<AnaliseIaPanel linhas={[linha]} filtros={{ busca: "Alpha" }} />)
+
+    fireEvent.click(screen.getByRole("button", { name: /Analisar com IA/ }))
+    const dialog = await screen.findByRole("dialog")
+    fireEvent.click(within(dialog).getByRole("button", { name: "Gerar análise" }))
+
+    await waitFor(() =>
+      expect(toastMock.success).toHaveBeenCalledWith(
+        "Análise gerada em 5 fatias, mantendo o contexto entre elas"
+      )
+    )
+  })
+
+  it("mostra o número de fatias na prévia do envio", async () => {
+    const fetchMock = createFetchMock(({ method, url }) => {
+      if (method === "POST" && url === "/api/crm/saude-prospeccao/ia/analises/preview") {
+        return {
+          json: {
+            payload: { titulo: "Prévia", linhas: [], filtros: {} },
+            mensagens: [],
+            chave: null,
+            enviadoChars: 10,
+            estTokensAprox: 2,
+            compactacao: null,
+            fatiamentoPrevisto: { total: 200, fatias: 5 },
+          },
+        }
+      }
+      return { json: { analises: [] } }
+    })
+    vi.stubGlobal("fetch", fetchMock.fn)
+    renderPage(<AnaliseIaPanel linhas={[linha]} filtros={{ busca: "Alpha" }} />)
+
+    fireEvent.click(screen.getByRole("button", { name: /Analisar com IA/ }))
+    const dialog = await screen.findByRole("dialog")
+    fireEvent.click(within(dialog).getByRole("button", { name: /Ver envio à IA/ }))
+
+    expect(await screen.findByText(/Processamento em 5 fatias/)).toBeInTheDocument()
   })
 
   it("mostra orientação quando a IA rejeita o payload por tamanho", async () => {

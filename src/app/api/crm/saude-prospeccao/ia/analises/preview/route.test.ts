@@ -5,11 +5,12 @@ import { createQueryBuilder } from "@/test/route-db-mock"
 import { POST } from "./route"
 
 
-const { requireAuth, db, contextoInicial, buscarChaveIAAnalise, medirMensagensIA, perfilContextoDaChave } =
+const { requireAuth, db, contextoInicial, dividirLinhasEmFatias, buscarChaveIAAnalise, medirMensagensIA, perfilContextoDaChave } =
   vi.hoisted(() => ({
     requireAuth: vi.fn(),
     db: { select: vi.fn() },
     contextoInicial: vi.fn(),
+    dividirLinhasEmFatias: vi.fn(() => ["fatia-1"]),
     buscarChaveIAAnalise: vi.fn(),
     medirMensagensIA: vi.fn(),
     perfilContextoDaChave: vi.fn(() => "padrao"),
@@ -19,6 +20,7 @@ vi.mock("@/lib/auth", () => ({ requireAuth }))
 vi.mock("@/lib/db", () => ({ db }))
 vi.mock("@/lib/crm/saude-prospeccao-ia", () => ({
   contextoInicial,
+  dividirLinhasEmFatias,
   buscarChaveIAAnalise,
   medirMensagensIA,
   perfilContextoDaChave,
@@ -72,6 +74,7 @@ beforeEach(() => {
   })
   medirMensagensIA.mockReturnValue({ enviadoChars: 123, estTokensAprox: 31 })
   perfilContextoDaChave.mockReturnValue("padrao")
+  dividirLinhasEmFatias.mockReturnValue(["fatia-1"])
 })
 
 describe("/api/crm/saude-prospeccao/ia/analises/preview", () => {
@@ -98,10 +101,20 @@ describe("/api/crm/saude-prospeccao/ia/analises/preview", () => {
     expect(corpo.enviadoChars).toBeGreaterThan(0)
     expect(corpo.estTokensAprox).toBeGreaterThan(0)
     expect(corpo.compactacao).toEqual({ total: 1, incluidos: 1, omitidos: 0 })
+    expect(corpo.fatiamentoPrevisto).toBeNull()
     expect(JSON.stringify(corpo)).not.toContain("chaveApi")
     expect(resposta.headers.get("X-Enviado-Chars")).toBe(String(corpo.enviadoChars))
     expect(resposta.headers.get("X-Est-Tokens-Aprox")).toBe(String(corpo.estTokensAprox))
     expect(contextoInicial).toHaveBeenCalledWith([linha], { busca: "Alpha" }, "padrao")
+  })
+
+  it("informa quando a análise será processada em fatias", async () => {
+    dividirLinhasEmFatias.mockReturnValue(["fatia-1", "fatia-2", "fatia-3"])
+
+    const resposta = await POST(request({ linhas: [linha], filtros: {} }))
+    expect(resposta.status).toBe(200)
+    const corpo = await resposta.json()
+    expect(corpo.fatiamentoPrevisto).toEqual({ total: 1, fatias: 3 })
   })
 
   it("usa o perfil nvidia quando a chave selecionada é NVIDIA", async () => {

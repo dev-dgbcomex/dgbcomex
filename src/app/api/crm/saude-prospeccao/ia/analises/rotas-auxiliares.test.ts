@@ -107,6 +107,7 @@ beforeEach(() => {
     conteudo: "Resposta",
     resultado: { provedor: "groq", modelo: "teste" },
     consultas: [],
+    fatiamento: undefined,
   })
   sendEmail.mockResolvedValue({ sent: 1, error: null })
 })
@@ -172,15 +173,37 @@ describe("POST /api/crm/saude-prospeccao/ia/analises/[id]/mensagens", () => {
       { params }
     )
     expect(resposta.status).toBe(200)
-    expect(await resposta.json()).toEqual({ mensagens: [mensagem] })
+    expect(await resposta.json()).toEqual({ mensagens: [mensagem], fatiamento: undefined })
     expect(perfilContextoDaChave).toHaveBeenCalledWith(null)
     expect(montarMensagensAnalise).toHaveBeenCalledWith(
       expect.objectContaining({ perfil: "padrao", pergunta: "E agora?" })
     )
     expect(chamarAnaliseComConsultas).toHaveBeenCalledWith(
-      expect.objectContaining({ chaveId: undefined })
+      expect.objectContaining({
+        chaveId: undefined,
+        dadosFonte: {
+          linhas: [],
+          filtros: { busca: "Alpha" },
+          pergunta: "E agora?",
+          historico: [{ papel: "assistente", conteudo: "Resposta anterior" }],
+        },
+      })
     )
     expect(db.transaction).toHaveBeenCalledTimes(1)
+  })
+
+  it("devolve metadados do fatiamento ao responder uma mensagem", async () => {
+    const fatiamento = { total: 200, fatias: 4, incluidos: 200, omitidos: 0 }
+    chamarAnaliseComConsultas.mockResolvedValue({
+      conteudo: "Resposta",
+      resultado: { provedor: "groq", modelo: "teste" },
+      consultas: [],
+      fatiamento,
+    })
+
+    const resposta = await POST_MENSAGEM(request({ mensagens: [], pergunta: "E agora?" }), { params })
+    expect(resposta.status).toBe(200)
+    expect(await resposta.json()).toEqual({ mensagens: [mensagem], fatiamento })
   })
 })
 

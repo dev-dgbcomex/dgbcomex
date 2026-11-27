@@ -45,6 +45,7 @@ type PreviewIA = {
   enviadoChars: number
   estTokensAprox: number
   compactacao: { total: number; incluidos: number; omitidos: number } | null
+  fatiamentoPrevisto: { total: number; fatias: number } | null
 }
 
 const BASE = "/api/crm/saude-prospeccao/ia/analises"
@@ -145,7 +146,12 @@ export function AnaliseIaPanel({
       setMensagens([])
       setPergunta("")
       await carregarHistorico()
-      toast.success("Análise gerada com as regras do sistema")
+      const fatiamento = dados.fatiamento as { fatias?: number } | undefined
+      toast.success(
+        (fatiamento?.fatias ?? 0) > 1
+          ? `Análise gerada em ${fatiamento?.fatias} fatias, mantendo o contexto entre elas`
+          : "Análise gerada com as regras do sistema"
+      )
     } catch (erro) {
       toast.error(erro instanceof Error ? erro.message : "Falha ao gerar análise")
     } finally {
@@ -408,6 +414,11 @@ export function AnaliseIaPanel({
                         {previewData.compactacao.omitidos > 0
                           ? ` · ${previewData.compactacao.omitidos} resumidos`
                           : ""}
+                      </span>
+                    )}
+                    {previewData.fatiamentoPrevisto && (
+                      <span>
+                        Processamento em {previewData.fatiamentoPrevisto.fatias} fatias
                       </span>
                     )}
                     <span>

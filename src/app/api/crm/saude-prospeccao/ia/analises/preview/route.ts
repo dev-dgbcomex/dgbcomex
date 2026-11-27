@@ -4,6 +4,7 @@ import { handleApiError } from "@/lib/api-error"
 import {
   contextoInicial,
   buscarChaveIAAnalise,
+  dividirLinhasEmFatias,
   medirMensagensIA,
   perfilContextoDaChave,
 } from "@/lib/crm/saude-prospeccao-ia"
@@ -23,12 +24,15 @@ export async function POST(req: NextRequest) {
 
     const { linhas, filtros } = parsed.data
     const chave = await buscarChaveIAAnalise()
-    const { mensagens, compactacao } = await contextoInicial(
+    const { linhas: preparadas, mensagens, compactacao } = await contextoInicial(
       linhas,
       filtros,
       perfilContextoDaChave(chave)
     )
     const { enviadoChars, estTokensAprox } = medirMensagensIA(mensagens)
+    const fatias = dividirLinhasEmFatias(preparadas, filtros)
+    const fatiamentoPrevisto =
+      fatias.length > 1 ? { total: preparadas.length, fatias: fatias.length } : null
 
     return NextResponse.json(
       {
@@ -42,6 +46,7 @@ export async function POST(req: NextRequest) {
         enviadoChars,
         estTokensAprox,
         compactacao: compactacao ?? null,
+        fatiamentoPrevisto,
       },
       { headers: { "X-Enviado-Chars": String(enviadoChars), "X-Est-Tokens-Aprox": String(estTokensAprox) } }
     )

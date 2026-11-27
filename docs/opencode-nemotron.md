@@ -197,6 +197,9 @@ docker run --gpus=all \
   `max_tokens: 1024` e `temperature: 0`. A análise final usa `reasoning_effort: "medium"`,
   `enable_thinking: true`, `force_nonempty_content: true`, `max_tokens: 8192` (retry `16384`),
   `temperature: 0.6` e `top_p: 0.95`.
+- Quando os registros filtrados passam de 45.000 caracteres resumidos, o PDM processa os dados em
+  fatias sequenciais de até 18.000 caracteres: cada fatia vira um resumo compacto (1024 tokens,
+  sem raciocínio) e todos os resumos entram no contexto da resposta final.
 - Se uma resposta NVIDIA vier sem `content` por `finish_reason: "length"`, o PDM repete com o
   dobro de `max_tokens` na mesma chave antes de cair para o próximo provedor; HTTP 413 nunca
   dispara fallback (o payload precisa ser reduzido).

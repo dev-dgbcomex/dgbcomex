@@ -62,10 +62,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       perfil,
     })
 
-    const { conteudo, resultado, consultas } = await chamarAnaliseComConsultas({
+    const { conteudo, resultado, consultas, fatiamento } = await chamarAnaliseComConsultas({
       mensagens,
       chaveId: chave?.id,
       perfil,
+      dadosFonte: {
+        linhas,
+        filtros: analise.filtros,
+        pergunta,
+        historico,
+      },
     })
     const { enviadoChars, estTokensAprox } = medirMensagensIA(mensagens)
 
@@ -76,6 +82,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           detalhe: "Reduza o tamanho da pergunta ou o histórico da conversa e tente novamente.",
           enviadoChars,
           estTokensAprox,
+          fatiamento,
         },
         {
           status: 413,
@@ -89,7 +96,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     if (resultado.provedor === "nenhum") {
       return NextResponse.json(
-        { error: "Nenhum provedor de IA disponível no momento", detalhe: resultado.erro ?? "provedor nao encontrado" },
+        { error: "Nenhum provedor de IA disponível no momento", detalhe: resultado.erro ?? "provedor nao encontrado", fatiamento },
         { status: 503 }
       )
     }
@@ -108,7 +115,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
             analiseId: id,
             papel: "assistente",
             conteudo,
-            dadosUsados: { consultas },
+            dadosUsados: { consultas, fatiamento },
           },
         ])
         .returning()
@@ -121,7 +128,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return inseridas
     })
 
-    return NextResponse.json({ mensagens: criadas })
+    return NextResponse.json({ mensagens: criadas, fatiamento })
   } catch (error) {
     return handleApiError(error, "POST /api/crm/saude-prospeccao/ia/analises/[id]/mensagens", usuarioNome)
   }

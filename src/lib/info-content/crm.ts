@@ -301,6 +301,7 @@ export const crmContent: Record<string, InfoContent> = {
       "No modal da análise é possível fazer perguntas complementares, gerar Markdown, concluir e enviar o resultado por e-mail e consultar análises salvas depois.",
       "O chat da IA consulta apenas consultas curadas e somente leitura; não é permitido SQL livre.",
       "Com NVIDIA Nemotron, o contexto usa limite ampliado (até 100 mil caracteres de dados), a decisão interna roda sem raciocínio e a resposta final usa raciocínio médio.",
+      "Quando os registros filtrados excedem o limite seguro, o servidor processa os dados em fatias sequenciais, resume cada fatia e mantém todos os resumos no contexto da resposta final; a prévia mostra quantas fatias serão usadas.",
       "Se a resposta ficar sem texto por falta de orçamento de tokens, a análise repete automaticamente com o dobro de tokens antes de tentar outro provedor.",
       "Se nenhum provedor responder, a análise mostra erro técnico; uma resposta HTTP 413 não dispara fallback porque o problema é o tamanho do payload.",
       "Análises salvas ficam visíveis para o autor e para usuários ADMIN, SUDO ou CRM.",
@@ -1980,8 +1981,8 @@ export const saudeProspeccaoLeadsInfo = {
     rules: [
       "O botão 'Analisar com IA' envia apenas os registros visíveis depois dos filtros atuais, com o provedor configurado para análise e fallback para o pool padrão de IA.",
       "O botão 'Ver envio à IA' mostra o payload e as mensagens compactadas que serão enviadas ao provedor, sem chamar a IA, e nunca exibe a chave secreta da API.",
-      "Quando há muitos registros, os mais críticos são enviados individualmente e os demais viram contagens agregadas; a prévia informa quantos registros foram incluídos e resumidos.",
-      "A decisão sobre consultas extras usa uma chamada curta; a resposta final mantém 700 tokens e o payload é limitado para não ultrapassar o teto por requisição do provedor.",
+      "Quando há muitos registros, o servidor processa os dados em fatias sequenciais, resume cada fatia e mantém todos os resumos no contexto; a prévia informa quantas fatias serão usadas.",
+      "A decisão sobre consultas extras usa uma chamada curta; a resposta final começa com 8192 tokens e, se ficar sem texto, repete com 16384 antes de tentar outro provedor.",
       "Se o provedor configurado responder sem texto, a análise cai automaticamente para o pool padrão de IA; somente HTTP 413 não dispara esse fallback.",
       "Se o provedor responder que os dados são grandes demais (HTTP 413), a tela orienta a reduzir filtros; essa falha não é contabilizada como falha da chave de IA.",
       "A temperatura do modelo é 0; QUENTE, MORNO e FRIO são enviados como dados da classificação de temperatura do sistema.",

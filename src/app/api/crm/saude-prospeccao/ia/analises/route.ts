@@ -64,10 +64,11 @@ export async function POST(req: NextRequest) {
       perfil
     )
     const { enviadoChars, estTokensAprox } = medirMensagensIA(mensagens)
-    const { conteudo, resultado, consultas } = await chamarAnaliseComConsultas({
+    const { conteudo, resultado, consultas, fatiamento } = await chamarAnaliseComConsultas({
       mensagens,
       chaveId,
       perfil,
+      dadosFonte: { linhas: preparadas, filtros },
     })
     const headers = {
       "X-Enviado-Chars": String(enviadoChars),
@@ -82,6 +83,7 @@ export async function POST(req: NextRequest) {
           enviadoChars,
           estTokensAprox,
           compactacao,
+          fatiamento,
         },
         { status: 413, headers }
       )
@@ -94,13 +96,14 @@ export async function POST(req: NextRequest) {
           detalhe: resultado.erro ?? "provedor nao encontrado",
           enviadoChars,
           estTokensAprox,
+          fatiamento,
         },
         { status: 503, headers }
       )
     }
 
     const resumo = conteudo.replace(/[#*`>]/g, " ").replace(/\s+/g, " ").trim().slice(0, 240)
-    const contexto = { registros: preparadas, consultas }
+    const contexto = { registros: preparadas, consultas, fatiamento }
 
     const criado = await db.transaction(async (tx: typeof db) => {
       const [analise] = await tx
@@ -123,14 +126,14 @@ export async function POST(req: NextRequest) {
         analiseId: analise.id,
         papel: "assistente",
         conteudo,
-        dadosUsados: { consultas },
+        dadosUsados: { consultas, fatiamento },
       })
 
       return analise
     })
 
     return NextResponse.json(
-      { analise: criado },
+      { analise: criado, fatiamento },
       { status: 201, headers }
     )
   } catch (error) {

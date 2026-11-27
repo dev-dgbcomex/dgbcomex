@@ -86,6 +86,7 @@ beforeEach(() => {
     conteudo: analise.analise,
     resultado: { provedor: "groq", modelo: "teste" },
     consultas: [],
+    fatiamento: undefined,
   })
 })
 
@@ -141,9 +142,31 @@ describe("/api/crm/saude-prospeccao/ia/analises", () => {
   it("POST cria análise e mensagem inicial", async () => {
     const resposta = await POST(request({ titulo: "Análise teste", linhas: [linha], filtros: { busca: "Alpha" } }))
     expect(resposta.status).toBe(201)
-    expect(await resposta.json()).toEqual({ analise })
+    expect(await resposta.json()).toEqual({ analise, fatiamento: undefined })
     expect(contextoInicial).toHaveBeenCalledWith([linha], { busca: "Alpha" }, "padrao")
+    expect(chamarAnaliseComConsultas).toHaveBeenCalledWith(
+      expect.objectContaining({
+        mensagens: [],
+        chaveId: undefined,
+        perfil: "padrao",
+        dadosFonte: { linhas: [linha], filtros: { busca: "Alpha" } },
+      })
+    )
     expect(db.transaction).toHaveBeenCalledTimes(1)
+  })
+
+  it("POST devolve os metadados do processamento em fatias", async () => {
+    const fatiamento = { total: 200, fatias: 5, incluidos: 200, omitidos: 0 }
+    chamarAnaliseComConsultas.mockResolvedValue({
+      conteudo: analise.analise,
+      resultado: { provedor: "groq", modelo: "teste" },
+      consultas: [],
+      fatiamento,
+    })
+
+    const resposta = await POST(request({ titulo: "Análise teste", linhas: [linha], filtros: {} }))
+    expect(resposta.status).toBe(201)
+    expect(await resposta.json()).toEqual({ analise, fatiamento })
   })
 
   it("POST passa o perfil nvidia ao montar o contexto", async () => {
