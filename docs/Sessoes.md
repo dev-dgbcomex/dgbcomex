@@ -823,6 +823,19 @@
 - **Arquivos Envolvidos:** `src/lib/crm/saude-prospeccao-ia.ts`, `src/lib/crm/saude-prospeccao-ia.test.ts`, `src/app/api/crm/saude-prospeccao/ia/analises/route.ts`, `src/app/api/crm/saude-prospeccao/ia/analises/route.test.ts`, `src/app/api/crm/saude-prospeccao/ia/analises/preview/route.ts`, `src/app/api/crm/saude-prospeccao/ia/analises/preview/route.test.ts`, `src/app/api/crm/saude-prospeccao/ia/analises/[id]/mensagens/route.ts`, `src/app/api/crm/saude-prospeccao/ia/analises/rotas-auxiliares.test.ts`, `src/components/crm/saude-prospeccao/analise-ia-panel.tsx`, `src/components/crm/saude-prospeccao/analise-ia-panel.test.tsx`, `src/lib/info-content/crm.ts`, `src/lib/info-content/info-content.test.ts`, `docs/opencode-nemotron.md`, `docs/Sessoes.md`.
 - **Testes:** foco 7 arquivos / 117 testes verdes; `npm run test` → 503 arquivos / 2982 testes passados; `npm run lint` apenas warnings pré-existentes; `tsc --noEmit` limpo; `npm run build` OK.
 
+### Sessão 53 — Chat reutiliza a análise salva da saúde da prospecção
+
+- **Data:** 2026-11-27
+- **Commit:** `feat(ia): reutiliza análise salva no chat`
+- **Tarefa:** fazer o chat da análise de Saúde da Prospecção trabalhar sobre a análise já criada, sem reenviar a grade completa de registros a cada clique em “Enviar”.
+- **Resultado:**
+  - `POST /analises` passou a salvar `contexto.memoria`: o bloco compactado quando a análise cabe em uma chamada, ou a concatenação dos resumos das fatias quando há fatiamento.
+  - `src/lib/crm/saude-prospeccao-ia.ts`: novo `montarMensagensConversaAnalise()` monta o prompt do chat com título, resumo, texto salvo, memória compacta, filtros, consultas curadas já feitas e histórico; `processarAnaliseEmFatias()` e `chamarAnaliseComConsultas()` propagam `memoria`.
+  - `POST /analises/[id]/mensagens`: com memória salva, não chama `buscarTemperaturas()`/`prepararLinhas()` nem reconstrói os registros brutos; quando a memória é gerada no caminho legado, ela é persistida para as próximas perguntas.
+  - Modal “i”, `docs/opencode-nemotron.md` e testes de lib/rotas atualizados para o novo comportamento; contrato da UI mantido.
+- **Arquivos Envolvidos:** `src/lib/crm/saude-prospeccao-ia.ts`, `src/lib/crm/saude-prospeccao-ia.test.ts`, `src/app/api/crm/saude-prospeccao/ia/analises/route.ts`, `src/app/api/crm/saude-prospeccao/ia/analises/route.test.ts`, `src/app/api/crm/saude-prospeccao/ia/analises/[id]/mensagens/route.ts`, `src/app/api/crm/saude-prospeccao/ia/analises/rotas-auxiliares.test.ts`, `src/lib/info-content/crm.ts`, `src/lib/info-content/info-content.test.ts`, `docs/opencode-nemotron.md`, `docs/Sessoes.md`.
+- **Testes:** foco 5 arquivos / 95 testes verdes; `npm run test` → 503 arquivos / 2985 testes passados; `npm run lint` apenas warnings pré-existentes; `tsc --noEmit` limpo; `npm run build` OK.
+
 ---
 
 ## Estrutura de Comandos

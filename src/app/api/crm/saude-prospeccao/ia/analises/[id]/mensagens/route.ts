@@ -11,12 +11,15 @@ import { carregarAnaliseAutorizada } from "@/lib/crm/saude-prospeccao-acesso"
 import {
   chamarAnaliseComConsultas,
   montarMensagensAnalise,
+  montarMensagensConversaAnalise,
   prepararLinhas,
   buscarTemperaturas,
   medirMensagensIA,
   buscarChaveIAAnalise,
   perfilContextoDaChave,
-  type LinhaAnaliseIA,
+  type FatiamentoAnaliseIA,
+  type LinhaAnaliseContexto,
+  type ResultadoConsultaCurada,
 } from "@/lib/crm/saude-prospeccao-ia"
 import { saudeProspeccaoMensagemSchema, validateRequest } from "@/lib/validation"
 
@@ -45,34 +48,69 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if ("error" in parsed) return parsed.error
     const { mensagens: historico, pergunta } = parsed.data
 
-    const registros = (analise.contexto as { registros?: LinhaAnaliseIA[] }).registros
-    if (!Array.isArray(registros) || registros.length === 0) {
-      return NextResponse.json({ error: "Contexto da análise indisponível" }, { status: 422 })
+    const contexto = analise.contexto as {
+      registros?: LinhaAnaliseContexto[]
+      consultas?: ResultadoConsultaCurada[]
+      memoria?: string
+      fatiamento?: FatiamentoAnaliseIA
     }
-
-    const temperaturas = await buscarTemperaturas(registros)
-    const linhas = prepararLinhas(registros, temperaturas)
+    const memoriaSalva =
+      typeof contexto.memoria === "string" && contexto.memoria.trim().length > 0
+        ? contexto.memoria
+        : null
+    const filtros = (analise.filtros ?? {}) as Record<string, unknown>
     const chave = await buscarChaveIAAnalise()
     const perfil = perfilContextoDaChave(chave)
-    const mensagens = montarMensagensAnalise({
-      linhas,
-      filtros: analise.filtros,
-      historico,
-      pergunta,
-      perfil,
-    })
 
-    const { conteudo, resultado, consultas, fatiamento } = await chamarAnaliseComConsultas({
-      mensagens,
-      chaveId: chave?.id,
-      perfil,
-      dadosFonte: {
-        linhas,
-        filtros: analise.filtros,
-        pergunta,
+    let mensagens: ReturnType<typeof montarMensagensAnalise>
+    let dadosFonte:
+      | {
+          linhas: LinhaAnaliseContexto[]
+          filtros: Record<string, unknown>
+          pergunta: string
+          historico: typeof historico
+        }
+      | undefined
+
+    if (memoriaSalva) {
+      mensagens = montarMensagensConversaAnalise({
+        analise: {
+          titulo: analise.titulo ?? null,
+          analise: analise.analise,
+          resumo: analise.resumo ?? null,
+        },
+        memoria: memoriaSalva,
+        filtros,
+        consultas: contexto.consultas,
         historico,
-      },
-    })
+        pergunta,
+        perfil,
+      })
+    } else {
+      const registros = contexto.registros
+      if (!Array.isArray(registros) || registros.length === 0) {
+        return NextResponse.json({ error: "Contexto da análise indisponível" }, { status: 422 })
+      }
+
+      const temperaturas = await buscarTemperaturas(registros)
+      const linhas = prepararLinhas(registros, temperaturas)
+      mensagens = montarMensagensAnalise({
+        linhas,
+        filtros,
+        historico,
+        pergunta,
+        perfil,
+      })
+      dadosFonte = { linhas, filtros, pergunta, historico }
+    }
+
+    const { conteudo, resultado, consultas, fatiamento, memoria: memoriaDasFatias } =
+      await chamarAnaliseComConsultas({
+        mensagens,
+        chaveId: chave?.id,
+        perfil,
+        dadosFonte,
+      })
     const { enviadoChars, estTokensAprox } = medirMensagensIA(mensagens)
 
     if (resultado.codigo === "PAYLOAD_TOO_LARGE") {
@@ -101,6 +139,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       )
     }
 
+    const contextoAtualizado = memoriaDasFatias
+      ? {
+          ...contexto,
+          memoria: memoriaDasFatias,
+          fatiamento: fatiamento ?? contexto.fatiamento,
+        }
+      : contexto
+
     const criadas = await db.transaction(async (tx: typeof db) => {
       const inseridas = await tx
         .insert(crmSaudeProspeccaoMensagens)
@@ -122,7 +168,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
       await tx
         .update(crmSaudeProspeccaoAnalises)
-        .set({ updatedAt: new Date() })
+        .set({ updatedAt: new Date(), contexto: contextoAtualizado })
         .where(eq(crmSaudeProspeccaoAnalises.id, id))
 
       return inseridas

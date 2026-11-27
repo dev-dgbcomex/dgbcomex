@@ -4,10 +4,11 @@ import { NextRequest, NextResponse } from "next/server"
 import { createQueryBuilder } from "@/test/route-db-mock"
 import { GET, POST } from "./route"
 
-const { requireAuth: requireAuthMock, db, contextoInicial, chamarAnaliseComConsultas, podeVerTodasAnalises, buscarChaveIAAnalise, medirMensagensIA, perfilContextoDaChave } =
+const { requireAuth: requireAuthMock, db, builder, contextoInicial, chamarAnaliseComConsultas, podeVerTodasAnalises, buscarChaveIAAnalise, medirMensagensIA, perfilContextoDaChave } =
   vi.hoisted(() => ({
     requireAuth: vi.fn(),
     db: { select: vi.fn(), transaction: vi.fn() },
+    builder: { current: null as ReturnType<typeof createQueryBuilder> | null },
     contextoInicial: vi.fn(),
     chamarAnaliseComConsultas: vi.fn(),
     podeVerTodasAnalises: vi.fn(),
@@ -71,8 +72,9 @@ beforeEach(() => {
   requireAuthMock.mockResolvedValue(sessao)
   podeVerTodasAnalises.mockReturnValue(true)
   db.select.mockReturnValue(createQueryBuilder([analise]))
+  builder.current = createQueryBuilder([analise])
   db.transaction.mockImplementation(async (callback: (tx: typeof db) => Promise<unknown>) =>
-    callback({ insert: vi.fn(() => createQueryBuilder([analise])) } as unknown as typeof db)
+    callback({ insert: vi.fn(() => builder.current) } as unknown as typeof db)
   )
   buscarChaveIAAnalise.mockResolvedValue(null)
   perfilContextoDaChave.mockReturnValue("padrao")
@@ -80,6 +82,7 @@ beforeEach(() => {
     linhas: [linha],
     mensagens: [],
     compactacao: { total: 1, incluidos: 1, omitidos: 0 },
+    memoria: "BLOCO COMPACTO INICIAL",
   })
   medirMensagensIA.mockReturnValue({ enviadoChars: 200, estTokensAprox: 50 })
   chamarAnaliseComConsultas.mockResolvedValue({
@@ -153,6 +156,10 @@ describe("/api/crm/saude-prospeccao/ia/analises", () => {
       })
     )
     expect(db.transaction).toHaveBeenCalledTimes(1)
+    const valoresAnalise = builder.current?.values.mock.calls[0]?.[0] as {
+      contexto: { memoria: string }
+    }
+    expect(valoresAnalise.contexto.memoria).toBe("BLOCO COMPACTO INICIAL")
   })
 
   it("POST devolve os metadados do processamento em fatias", async () => {
@@ -167,6 +174,23 @@ describe("/api/crm/saude-prospeccao/ia/analises", () => {
     const resposta = await POST(request({ titulo: "Análise teste", linhas: [linha], filtros: {} }))
     expect(resposta.status).toBe(201)
     expect(await resposta.json()).toEqual({ analise, fatiamento })
+  })
+
+  it("POST persiste a memória das fatias para o chat reutilizar", async () => {
+    chamarAnaliseComConsultas.mockResolvedValue({
+      conteudo: analise.analise,
+      resultado: { provedor: "groq", modelo: "teste" },
+      consultas: [],
+      fatiamento: { total: 200, fatias: 5, incluidos: 200, omitidos: 0 },
+      memoria: "RESUMOS DAS FATIAS",
+    })
+
+    const resposta = await POST(request({ titulo: "Análise teste", linhas: [linha], filtros: {} }))
+    expect(resposta.status).toBe(201)
+    const valoresAnalise = builder.current?.values.mock.calls[0]?.[0] as {
+      contexto: { memoria: string }
+    }
+    expect(valoresAnalise.contexto.memoria).toBe("RESUMOS DAS FATIAS")
   })
 
   it("POST passa o perfil nvidia ao montar o contexto", async () => {

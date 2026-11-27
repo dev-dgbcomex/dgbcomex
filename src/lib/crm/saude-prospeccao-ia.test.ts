@@ -6,6 +6,7 @@ import {
   dividirLinhasEmFatias,
   medirMensagensIA,
   montarMensagensAnalise,
+  montarMensagensConversaAnalise,
   perfilContextoDaChave,
   type LinhaAnaliseContexto,
 } from "./saude-prospeccao-ia"
@@ -187,6 +188,7 @@ describe("chamarAnaliseComConsultas", () => {
     fatias.forEach((_, indice) => expect(contextoFinal).toContain(`RESUMO FATIA ${indice + 1}`))
     expect(resultado.conteudo).toContain("Diagnóstico final")
     expect(resultado.fatiamento).toEqual({ total: 200, fatias: fatias.length, incluidos: 200, omitidos: 0 })
+    expect(resultado.memoria).toContain("RESUMO FATIA 1")
   })
 
   it("não gera a análise final se uma fatia falhar", async () => {
@@ -232,6 +234,39 @@ describe("chamarAnaliseComConsultas", () => {
     expect(regras).toMatch(/pedidos de venda ÷ oportunidades/i)
     expect(regras).toMatch(/faturamentos ÷ pedidos de venda/i)
     expect(regras).toMatch(/limitada a 100%/i)
+  })
+})
+
+describe("montarMensagensConversaAnalise", () => {
+  it("monta o chat a partir da análise salva e do contexto compactado", () => {
+    const mensagens = montarMensagensConversaAnalise({
+      analise: {
+        titulo: "Análise de novembro",
+        analise: "## Diagnóstico salvo\n\nEngajados.",
+        resumo: "Resumo salvo",
+      },
+      memoria: "MEMORIA COMPACTA DOS REGISTROS",
+      filtros: { busca: "Alpha" },
+      consultas: [
+        { nome: "visitas", chave: { tipo: "cliente", id: 10 }, limite: 10, dados: [{ id: 1 }] },
+      ],
+      historico: [{ papel: "assistente", conteudo: "Resposta anterior" }],
+      pergunta: "E agora?",
+      perfil: "nvidia",
+    })
+
+    const conteudo = mensagens.find((mensagem) => mensagem.role === "user")?.content ?? ""
+    expect(mensagens[0].role).toBe("system")
+    expect(conteudo).toContain("Análise de novembro")
+    expect(conteudo).toContain("Diagnóstico salvo")
+    expect(conteudo).toContain("MEMORIA COMPACTA DOS REGISTROS")
+    expect(conteudo).toContain("Consultas já feitas nesta análise")
+    expect(conteudo).toContain("E agora?")
+    expect(conteudo).not.toMatch(/Dados dos registros filtrados na tela/i)
+    expect(mensagens[mensagens.length - 1]).toEqual({
+      role: "assistant",
+      content: "Resposta anterior",
+    })
   })
 })
 

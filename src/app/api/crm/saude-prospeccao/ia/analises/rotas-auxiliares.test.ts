@@ -9,11 +9,13 @@ import { POST as POST_CONCLUIR } from "./[id]/concluir/route"
 const {
   requireAuth,
   db,
+  builder,
   carregarAnaliseAutorizada,
   sendEmail,
   buscarTemperaturas,
   prepararLinhas,
   montarMensagensAnalise,
+  montarMensagensConversaAnalise,
   chamarAnaliseComConsultas,
   medirMensagensIA,
   buscarChaveIAAnalise,
@@ -21,11 +23,13 @@ const {
 } = vi.hoisted(() => ({
   requireAuth: vi.fn(),
   db: { select: vi.fn(), transaction: vi.fn(), update: vi.fn() },
+  builder: { current: null as ReturnType<typeof createQueryBuilder> | null },
   carregarAnaliseAutorizada: vi.fn(),
   sendEmail: vi.fn(),
   buscarTemperaturas: vi.fn(),
   prepararLinhas: vi.fn(),
   montarMensagensAnalise: vi.fn(),
+  montarMensagensConversaAnalise: vi.fn(),
   chamarAnaliseComConsultas: vi.fn(),
   medirMensagensIA: vi.fn(),
   buscarChaveIAAnalise: vi.fn(),
@@ -40,6 +44,7 @@ vi.mock("@/lib/crm/saude-prospeccao-ia", () => ({
   buscarTemperaturas,
   prepararLinhas,
   montarMensagensAnalise,
+  montarMensagensConversaAnalise,
   chamarAnaliseComConsultas,
   medirMensagensIA,
   buscarChaveIAAnalise,
@@ -91,15 +96,17 @@ beforeEach(() => {
   carregarAnaliseAutorizada.mockResolvedValue(analise)
   db.select.mockReturnValue(createQueryBuilder([mensagem]))
   db.update.mockReturnValue(createQueryBuilder([analise]))
+  builder.current = createQueryBuilder([analise])
   db.transaction.mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) =>
     callback({
       insert: vi.fn(() => createQueryBuilder([mensagem])),
-      update: vi.fn(() => createQueryBuilder([analise])),
+      update: vi.fn(() => builder.current),
     })
   )
   buscarTemperaturas.mockResolvedValue(new Map())
   prepararLinhas.mockReturnValue([])
   montarMensagensAnalise.mockReturnValue([])
+  montarMensagensConversaAnalise.mockReturnValue([])
   medirMensagensIA.mockReturnValue({ enviadoChars: 100, estTokensAprox: 25 })
   buscarChaveIAAnalise.mockResolvedValue(null)
   perfilContextoDaChave.mockReturnValue("padrao")
@@ -192,6 +199,25 @@ describe("POST /api/crm/saude-prospeccao/ia/analises/[id]/mensagens", () => {
     expect(db.transaction).toHaveBeenCalledTimes(1)
   })
 
+  it("usa a análise salva no chat sem reenviar os registros brutos", async () => {
+    carregarAnaliseAutorizada.mockResolvedValue({
+      ...analise,
+      contexto: { registros: [{ id: 10, tipo: "cliente", nome: "Alpha" }], memoria: "MEMORIA SALVA" },
+    })
+
+    const resposta = await POST_MENSAGEM(request({ mensagens: [], pergunta: "E agora?" }), { params })
+    expect(resposta.status).toBe(200)
+    expect(montarMensagensConversaAnalise).toHaveBeenCalledWith(
+      expect.objectContaining({ memoria: "MEMORIA SALVA", pergunta: "E agora?" })
+    )
+    expect(buscarTemperaturas).not.toHaveBeenCalled()
+    expect(prepararLinhas).not.toHaveBeenCalled()
+    expect(montarMensagensAnalise).not.toHaveBeenCalled()
+    expect(chamarAnaliseComConsultas).toHaveBeenCalledWith(
+      expect.objectContaining({ dadosFonte: undefined })
+    )
+  })
+
   it("devolve metadados do fatiamento ao responder uma mensagem", async () => {
     const fatiamento = { total: 200, fatias: 4, incluidos: 200, omitidos: 0 }
     chamarAnaliseComConsultas.mockResolvedValue({
@@ -199,11 +225,17 @@ describe("POST /api/crm/saude-prospeccao/ia/analises/[id]/mensagens", () => {
       resultado: { provedor: "groq", modelo: "teste" },
       consultas: [],
       fatiamento,
+      memoria: "MEMORIA DAS FATIAS",
     })
 
     const resposta = await POST_MENSAGEM(request({ mensagens: [], pergunta: "E agora?" }), { params })
     expect(resposta.status).toBe(200)
     expect(await resposta.json()).toEqual({ mensagens: [mensagem], fatiamento })
+    expect(builder.current?.set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        contexto: expect.objectContaining({ memoria: "MEMORIA DAS FATIAS" }),
+      })
+    )
   })
 })
 

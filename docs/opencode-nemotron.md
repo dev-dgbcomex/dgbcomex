@@ -200,6 +200,9 @@ docker run --gpus=all \
 - Quando os registros filtrados passam de 45.000 caracteres resumidos, o PDM processa os dados em
   fatias sequenciais de até 18.000 caracteres: cada fatia vira um resumo compacto (1024 tokens,
   sem raciocínio) e todos os resumos entram no contexto da resposta final.
+- A memória do bloco compactado — ou dos resumos das fatias — fica salva em `contexto.memoria`.
+  O chat posterior reusa a análise salva e essa memória, sem reenviar os registros brutos a cada
+  mensagem; análises antigas sem memória usam o caminho legado e são fatiadas sob demanda.
 - Se uma resposta NVIDIA vier sem `content` por `finish_reason: "length"`, o PDM repete com o
   dobro de `max_tokens` na mesma chave antes de cair para o próximo provedor; HTTP 413 nunca
   dispara fallback (o payload precisa ser reduzido).

@@ -58,13 +58,13 @@ export async function POST(req: NextRequest) {
     const chaveId = chave?.id
     const perfil = perfilContextoDaChave(chave)
 
-    const { linhas: preparadas, mensagens, compactacao } = await contextoInicial(
+    const { linhas: preparadas, mensagens, compactacao, memoria: memoriaInicial } = await contextoInicial(
       linhas,
       filtros,
       perfil
     )
     const { enviadoChars, estTokensAprox } = medirMensagensIA(mensagens)
-    const { conteudo, resultado, consultas, fatiamento } = await chamarAnaliseComConsultas({
+    const { conteudo, resultado, consultas, fatiamento, memoria: memoriaDasFatias } = await chamarAnaliseComConsultas({
       mensagens,
       chaveId,
       perfil,
@@ -103,7 +103,8 @@ export async function POST(req: NextRequest) {
     }
 
     const resumo = conteudo.replace(/[#*`>]/g, " ").replace(/\s+/g, " ").trim().slice(0, 240)
-    const contexto = { registros: preparadas, consultas, fatiamento }
+    const memoria = memoriaDasFatias || memoriaInicial
+    const contexto = { registros: preparadas, consultas, fatiamento, memoria }
 
     const criado = await db.transaction(async (tx: typeof db) => {
       const [analise] = await tx

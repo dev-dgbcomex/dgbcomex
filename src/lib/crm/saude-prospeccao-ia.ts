@@ -385,7 +385,11 @@ function montarMensagensAnaliseComCompactacao({
   pergunta,
   dadosConsulta,
   perfil = "padrao",
-}: OpcoesMensagensAnalise): { mensagens: MensagemIA[]; compactacao: CompactacaoDadosIA } {
+}: OpcoesMensagensAnalise): {
+  mensagens: MensagemIA[]
+  compactacao: CompactacaoDadosIA
+  memoria: string
+} {
   const limites = LIMITES_CONTEXTO_IA[perfil]
   const { bloco, compactacao } = montarBlocoDados(linhas, filtros, perfil)
   const mensagensHistorico = montarHistoricoMensagens(historico, perfil)
@@ -413,11 +417,49 @@ function montarMensagensAnaliseComCompactacao({
     })
   }
 
-  return { mensagens, compactacao }
+  return { mensagens, compactacao, memoria: bloco }
 }
 
 export function montarMensagensAnalise(opcoes: OpcoesMensagensAnalise): MensagemIA[] {
   return montarMensagensAnaliseComCompactacao(opcoes).mensagens
+}
+
+export function montarMensagensConversaAnalise({
+  analise,
+  memoria,
+  filtros,
+  consultas = [],
+  historico = [],
+  pergunta,
+  perfil = "padrao",
+}: {
+  analise: { titulo: string | null; analise: string; resumo: string | null }
+  memoria: string
+  filtros: Record<string, unknown>
+  consultas?: ResultadoConsultaCurada[]
+  historico?: { papel: "usuario" | "assistente"; conteudo: string }[]
+  pergunta: string
+  perfil?: PerfilContextoIA
+}): MensagemIA[] {
+  const limites = LIMITES_CONTEXTO_IA[perfil]
+  const contextoConsultas = consultas.length
+    ? `\n\nConsultas já feitas nesta análise:\n${jsonLimitado(consultas, limites.consulta)}`
+    : ""
+
+  return [
+    { role: "system", content: REGRAS_SISTEMA },
+    {
+      role: "user",
+      content: `Você está respondendo sobre uma análise já salva no sistema. Use aquela análise e o contexto compactado abaixo; não peça os registros novamente.\n\nTítulo: ${analise.titulo ?? "Análise salva"}\nResumo: ${analise.resumo ?? "—"}\n\nAnálise salva:\n${textoLimitado(
+        analise.analise,
+        limites.dados
+      )}\n\nContexto compactado dos registros usados na análise:\n${textoLimitado(
+        memoria,
+        limites.dados
+      )}\n\nFiltros originais: ${JSON.stringify(resumoFiltros(filtros))}${contextoConsultas}\n\nPergunta atual: ${pergunta}`,
+    },
+    ...montarHistoricoMensagens(historico, perfil),
+  ]
 }
 
 export function perfilContextoDaChave(chave: ChaveIAResumo | null): PerfilContextoIA {
@@ -593,6 +635,7 @@ async function processarAnaliseEmFatias({
   mensagens: MensagemIA[]
   fatiamento: FatiamentoAnaliseIA
   resultado: ResultadoIA
+  memoria: string
 }> {
   const fatias = dividirLinhasEmFatias(dadosFonte.linhas, dadosFonte.filtros)
   const resumos: string[] = []
@@ -637,6 +680,7 @@ async function processarAnaliseEmFatias({
       mensagens: [],
       fatiamento,
       resultado: resultadoFatia,
+      memoria: "",
     }
   }
 
@@ -653,7 +697,7 @@ async function processarAnaliseEmFatias({
     ...montarHistoricoMensagens(dadosFonte.historico ?? [], perfil),
   ]
 
-  return { mensagens, fatiamento, resultado: resultadoFatia }
+  return { mensagens, fatiamento, resultado: resultadoFatia, memoria }
 }
 
 export async function chamarAnaliseComConsultas({
@@ -673,6 +717,7 @@ export async function chamarAnaliseComConsultas({
   resultado: ResultadoIA
   consultas: ResultadoConsultaCurada[]
   fatiamento?: FatiamentoAnaliseIA
+  memoria?: string
 }> {
   const consultas: ResultadoConsultaCurada[] = []
   let decisao: ResultadoIA = {
@@ -689,6 +734,7 @@ export async function chamarAnaliseComConsultas({
   }
 
   let fatiamento: FatiamentoAnaliseIA | undefined
+  let memoria: string | undefined
   let conversa = [...mensagens]
   if (dadosFonte) {
     const tamanhoFonte = JSON.stringify(dadosFonte.linhas.map(resumoLinha)).length
@@ -696,8 +742,9 @@ export async function chamarAnaliseComConsultas({
     if (tamanhoFonte > LIMITE_FATIAMENTO_CHARS || enviadoChars > LIMITE_FATIAMENTO_CHARS) {
       const processado = await processarAnaliseEmFatias({ dadosFonte, chaveForcada, perfil })
       fatiamento = processado.fatiamento
+      memoria = processado.memoria
       if (processado.resultado.provedor === "nenhum") {
-        return { conteudo: "", resultado: processado.resultado, consultas, fatiamento }
+        return { conteudo: "", resultado: processado.resultado, consultas, fatiamento, memoria }
       }
       conversa = processado.mensagens
     }
@@ -759,7 +806,7 @@ export async function chamarAnaliseComConsultas({
     chaveForcada ?? undefined
   )
 
-  return { conteudo: limparResposta(resultado.conteudo), resultado, consultas, fatiamento }
+  return { conteudo: limparResposta(resultado.conteudo), resultado, consultas, fatiamento, memoria }
 }
 
 export async function contextoInicial(
@@ -769,10 +816,10 @@ export async function contextoInicial(
 ) {
   const temperaturas = await buscarTemperaturas(linhas)
   const preparadas = prepararLinhas(linhas, temperaturas)
-  const { mensagens, compactacao } = montarMensagensAnaliseComCompactacao({
+  const { mensagens, compactacao, memoria } = montarMensagensAnaliseComCompactacao({
     linhas: preparadas,
     filtros,
     perfil,
   })
-  return { linhas: preparadas, mensagens, compactacao }
+  return { linhas: preparadas, mensagens, compactacao, memoria }
 }
